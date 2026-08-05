@@ -649,6 +649,10 @@
       "dailyActiveTotalLogsIntentions": "Dagelijks actief / Totaal logs & intenties"
     },
     "charts": {
+      "viewToggle": {
+        "count": "Aantal",
+        "percent": "%"
+      },
       "weeklyActiveRate": {
         "title": "Wekelijks actief percentage",
         "desc": "% van ingeschrevenen met ≥1 log in de laatste 7 dagen, per conditie",

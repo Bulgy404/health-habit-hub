@@ -1072,6 +1072,25 @@ async function seedOnePersona(kcAdmin, db, persona) {
     communityDonorId: donorId,
   });
 
+  // buildSrhiHistory()/newIntentionBase() write studyId/groupId: null since
+  // they don't know about enrollment — backfill both here from the actual
+  // enrollment so per-study/per-group analytics (e.g. Admin > Analytics SRHI
+  // trajectory, which filters srhi_responses by studyId) can find this
+  // persona's data. Community-donor userIDs (Neo4j-only, no Mongo docs) are
+  // untouched since this only targets the persona's own userId.
+  if (defaultGroup) {
+    await Promise.all([
+      db.collection('implementation_intentions').updateMany(
+        { userId },
+        { $set: { studyId: defaultStudy._id, groupId: defaultGroup.id } }
+      ),
+      db.collection('srhi_responses').updateMany(
+        { userId },
+        { $set: { studyId: defaultStudy._id, groupId: defaultGroup.id } }
+      ),
+    ]);
+  }
+
   await db.collection('participants').updateOne(
     { userId },
     {

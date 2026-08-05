@@ -261,6 +261,37 @@ After running `make seed`, these credentials work in both the app and the Keyclo
 
 Keycloak admin UI: `http://localhost:8080/admin`
 
+### Rich QA personas (`make seed-user`)
+
+`testuser` above is a bare account with no habit history — useful for testing
+onboarding, but not for testing screens that depend on existing data (My
+Habits with real logs, the SRHI trajectory chart, achievements, the Explore
+graph's donated habits). `make seed-user` fills that gap by seeding one or
+more fully-fledged accounts with weeks of realistic history:
+
+```bash
+make seed-user            # just the "steady" persona (default)
+make seed-user COUNT=5    # all five personas
+```
+
+| Persona      | Story |
+| ------------ | ----- |
+| `steady`     | Several habits at different stages, one graduated to full automaticity, several donated. |
+| `beginner`   | Downloaded the app a few days ago — one tentative habit, minimal history. |
+| `struggler`  | Adherence declining across the board; one habit abandoned outright. |
+| `power_user` | Six habits, two graduated, heavy donation and community activity. |
+| `returning`  | Strong start, three weeks of total silence, now rebuilding. |
+
+Each persona gets its own deterministic account (same credentials every run —
+see `scripts/seed-test-user.js`'s `deriveCredentials()`), so re-running is
+safe: only the habit data is wiped and rebuilt each time, not the Keycloak
+account. Credentials (userId, username, password, recovery phrase) print to
+the terminal at the end of the run — use them to log into the app or restore
+the account via the recovery-phrase flow.
+
+`make seed-user` needs the local Docker stack already running; it's a
+separate step from `make seed` and doesn't run automatically as part of it.
+
 ---
 
 ## 6. Hot Reload

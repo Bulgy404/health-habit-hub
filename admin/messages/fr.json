@@ -649,6 +649,10 @@
       "dailyActiveTotalLogsIntentions": "Actifs quotidiens / Total des journaux et intentions"
     },
     "charts": {
+      "viewToggle": {
+        "count": "Nombre",
+        "percent": "%"
+      },
       "weeklyActiveRate": {
         "title": "Taux d'activité hebdomadaire",
         "desc": "% d'inscrits ayant ≥1 journal au cours des 7 derniers jours, par condition",

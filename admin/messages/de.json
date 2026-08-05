@@ -649,6 +649,10 @@
       "dailyActiveTotalLogsIntentions": "Täglich aktiv / Einträge & Vorsätze insgesamt"
     },
     "charts": {
+      "viewToggle": {
+        "count": "Anzahl",
+        "percent": "%"
+      },
       "weeklyActiveRate": {
         "title": "Wöchentliche Aktivrate",
         "desc": "% der Eingeschriebenen mit ≥1 Eintrag in den letzten 7 Tagen, je Bedingung",

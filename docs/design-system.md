@@ -1,10 +1,11 @@
 # Health Habit Hub — Mobile Design System
 
 A short, definitive reference for the Flutter app's visual language: color
-tokens, when to use which shade of green, and the icon-style convention. This
-exists because a real inconsistency shipped without one — see
-[Background](#background) below — and the fix is to make the rule explicit
-and easy to check against, not just fix the one screen that violated it.
+tokens, when to use which shade of green, the icon-style convention, and the
+shared motion vocabulary. This exists because a real inconsistency shipped
+without one — see [Background](#background) below — and the fix is to make
+the rule explicit and easy to check against, not just fix the one screen that
+violated it.
 
 ## Color tokens
 
@@ -55,6 +56,37 @@ plain inline icons elsewhere in the app freely use filled glyphs
 treatment reads as heavier/more generic against the rest of the app's
 lighter-weight visual language — check which variant a hero icon box is using
 before adding a new one.
+
+## Motion
+
+Defined in [`mobile/lib/theme/motion.dart`](../mobile/lib/theme/motion.dart).
+Use these instead of a fresh `Curves.easeOut`/`AnimatedContainer(duration: ...)`
+pair for any new state-driven or gesture-driven animation, so the app's motion
+stays governed by the same small vocabulary rather than drifting one call site
+at a time.
+
+- **`AppSpring.standard`** (damping `1.0`, response `0.35`) — the default for
+  state changes a user can trigger repeatedly and interrupt mid-flight
+  (selection, reveal). Critically damped: settles smoothly, never overshoots.
+- **`AppSpring.momentum`** (damping `0.8`, response `0.35`) — only for motion
+  that continues a gesture which already carried velocity (a drag/flick
+  release, e.g. the bubble graph). Overshoot reads as physical there; it reads
+  as wrong on anything that just appears.
+- **`AppSpring.quick`** (damping `1.0`, response `0.15`) — high-frequency taps
+  (the log checkbox, habit-type cards) where `standard`'s response is
+  perceptibly slow if tapped repeatedly.
+- **`PressableScale`** — wrap anything tappable that has no other press
+  feedback (no `InkWell` ripple) in this instead of a bare `GestureDetector`;
+  it scales to `0.97` instantly on press-down and springs back on release.
+- **`reducedMotion(context)`** — check this before starting or continuing any
+  `.repeat()`/infinite-loop `AnimationController`, and swap spring/slide
+  transitions for a plain opacity cross-fade when it's `true`.
+- **`AppShadows`** — the single source for card/glow shadow constants; don't
+  redeclare a local `_kCardShadow`-style constant per file.
+
+The admin portal (`admin/src/lib/motion.ts`) mirrors the same damping/response
+values via the `motion` package's spring API (`defaultSpring`, `drawerSpring`,
+`momentumSpring`) — reach for those there instead of a bare CSS `transition`.
 
 ## Background
 

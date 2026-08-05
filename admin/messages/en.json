@@ -649,6 +649,10 @@
       "dailyActiveTotalLogsIntentions": "Daily active / Total logs & intentions"
     },
     "charts": {
+      "viewToggle": {
+        "count": "Count",
+        "percent": "%"
+      },
       "weeklyActiveRate": {
         "title": "Weekly Active Rate",
         "desc": "% of enrolled with ≥1 log in the last 7 days, per condition",

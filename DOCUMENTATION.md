@@ -1047,6 +1047,10 @@ habits become automatic.
   Reminders signal (`computeReminderPlan`), reused rather than a new metric.
   `unlock_tier: 'off'` is a hard cap of 1 per type. **Exact rule and tier
   thresholds: [§13.7](#137-scoring-algorithms--full-reference).**
+  - **Habit stacking (§7.1) is exempt**: `createIntention` skips the guard
+    entirely when `creationMode === 'stacked'`. A stacked habit anchors to one
+    already tracked rather than demanding fresh, separate attention, so it
+    isn't the kind of "new habit" this cap exists to slow down.
 - **API:** a blocked `POST /habits/intentions` returns `409` with
   `{ limitReached: true, reason: 'information_overload', unlockTier, currentTier }`
   so the app can explain *why*, not just refuse.
@@ -1054,8 +1058,12 @@ habits become automatic.
   `PATCH /me/preferences/information-overload-opt-out` (stored in
   `user_preferences`); the opt-out is only honoured when the study/group sets
   `userOptOutAllowed` (enforced server-side, 403 otherwise).
-- **Mobile:** a rationale info card on the creation path; an opt-out toggle in
-  Settings, shown only when the guard is enabled and opt-out is permitted.
+- **Mobile:** a dismissible rationale card (same style as the "what's a
+  habit?" onboarding explainer, tracked under its own persisted dismissal key)
+  on the creation path, stating that the Settings opt-out exists but isn't
+  recommended and that habit stacking is unaffected by the limit; an opt-out
+  toggle in Settings, shown only when the guard is enabled and opt-out is
+  permitted.
 
 ### 13.5 Gamification — badges, levels, praise (§7.5)
 

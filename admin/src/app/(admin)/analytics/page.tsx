@@ -238,6 +238,39 @@ function RcTooltip({
   );
 }
 
+// ── Count / % view toggle ────────────────────────────────────────────────────
+
+function ViewToggle({
+  value,
+  onChange,
+  countLabel,
+  percentLabel,
+}: {
+  value: "count" | "percent";
+  onChange: (v: "count" | "percent") => void;
+  countLabel: string;
+  percentLabel: string;
+}) {
+  return (
+    <div className={styles.viewToggle}>
+      <button
+        type="button"
+        className={value === "count" ? styles.viewToggleBtnActive : styles.viewToggleBtn}
+        onClick={() => onChange("count")}
+      >
+        {countLabel}
+      </button>
+      <button
+        type="button"
+        className={value === "percent" ? styles.viewToggleBtnActive : styles.viewToggleBtn}
+        onClick={() => onChange("percent")}
+      >
+        {percentLabel}
+      </button>
+    </div>
+  );
+}
+
 // ── KPI cards ─────────────────────────────────────────────────────────────────
 
 function KpiCard({
@@ -524,6 +557,8 @@ function AnalyticsView() {
   const [studiesLoading, setStudiesLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string>("");
   const [showQueries, setShowQueries] = useState(false);
+  const [enrollmentView, setEnrollmentView] = useState<"count" | "percent">("count");
+  const [dailyActiveView, setDailyActiveView] = useState<"count" | "percent">("count");
 
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -735,6 +770,31 @@ function AnalyticsView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [analytics, study]
   );
+  // Each group's final (highest) cumulative count, to express the curve as
+  // "% of that group's eventual enrollment reached so far" — lets recruitment
+  // pace be compared across groups with different target sizes.
+  const enrollmentGroupTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const p of analytics?.enrollmentTrend ?? []) {
+      const g = groupLabel(p.groupId);
+      totals[g] = Math.max(totals[g] ?? 0, p.cumulative);
+    }
+    return totals;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analytics, study]);
+  const enrollmentDataPercent = useMemo(
+    () =>
+      enrollmentData.map((row) => {
+        const out: Record<string, number | string> = { date: row.date };
+        for (const g of enrollmentGroups) {
+          const total = enrollmentGroupTotals[g];
+          const v = row[g];
+          out[g] = typeof v === "number" && total > 0 ? Math.round((v / total) * 100) : 0;
+        }
+        return out;
+      }),
+    [enrollmentData, enrollmentGroups, enrollmentGroupTotals]
+  );
 
   // Daily active participants (last 30 days).
   const dailyActiveData = useMemo(
@@ -744,6 +804,19 @@ function AnalyticsView() {
         Active: d.count,
       })),
     [analytics]
+  );
+  const totalEnrolledForRate = useMemo(
+    () => (analytics?.weeklyActiveRate ?? []).reduce((s, r) => s + r.enrolled, 0),
+    [analytics]
+  );
+  const dailyActiveDataPercent = useMemo(
+    () =>
+      dailyActiveData.map((row) => ({
+        date: row.date,
+        Active:
+          totalEnrolledForRate > 0 ? Math.round((row.Active / totalEnrolledForRate) * 100) : 0,
+      })),
+    [dailyActiveData, totalEnrolledForRate]
   );
 
   // Habits donated per group.
@@ -1110,20 +1183,40 @@ function AnalyticsView() {
 
             {/* Enrollment over time */}
             <div className={styles.chartCard}>
-              <p className={styles.chartTitle}>{t("charts.enrollmentOverTime.title")}</p>
-              <p className={styles.chartDesc}>{t("charts.enrollmentOverTime.desc")}</p>
+              <div className={styles.chartCardHeader}>
+                <div>
+                  <p className={styles.chartTitle}>{t("charts.enrollmentOverTime.title")}</p>
+                  <p className={styles.chartDesc}>{t("charts.enrollmentOverTime.desc")}</p>
+                </div>
+                {enrollmentData.length > 0 && (
+                  <ViewToggle
+                    value={enrollmentView}
+                    onChange={setEnrollmentView}
+                    countLabel={t("charts.viewToggle.count")}
+                    percentLabel={t("charts.viewToggle.percent")}
+                  />
+                )}
+              </div>
               {enrollmentData.length === 0 ? (
                 <div className={styles.emptyState}>{t("charts.enrollmentOverTime.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
                   <ResponsiveContainer width="100%" height={220}>
                     <LineChart
-                      data={enrollmentData}
+                      data={enrollmentView === "percent" ? enrollmentDataPercent : enrollmentData}
                       margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11 }}
+                        width={28}
+                        domain={enrollmentView === "percent" ? [0, 100] : undefined}
+                        tickFormatter={
+                          enrollmentView === "percent" ? (v) => `${v}%` : undefined
+                        }
+                      />
                       <Tooltip content={<RcTooltip />} />
                       {enrollmentGroups.map((g, i) => (
                         <Line
@@ -1155,20 +1248,40 @@ function AnalyticsView() {
 
             {/* Daily active participants */}
             <div className={styles.chartCard}>
-              <p className={styles.chartTitle}>{t("charts.dailyActive.title")}</p>
-              <p className={styles.chartDesc}>{t("charts.dailyActive.desc")}</p>
+              <div className={styles.chartCardHeader}>
+                <div>
+                  <p className={styles.chartTitle}>{t("charts.dailyActive.title")}</p>
+                  <p className={styles.chartDesc}>{t("charts.dailyActive.desc")}</p>
+                </div>
+                {dailyActiveData.length > 0 && (
+                  <ViewToggle
+                    value={dailyActiveView}
+                    onChange={setDailyActiveView}
+                    countLabel={t("charts.viewToggle.count")}
+                    percentLabel={t("charts.viewToggle.percent")}
+                  />
+                )}
+              </div>
               {dailyActiveData.length === 0 ? (
                 <div className={styles.emptyState}>{t("charts.dailyActive.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
                   <ResponsiveContainer width="100%" height={220}>
                     <LineChart
-                      data={dailyActiveData}
+                      data={dailyActiveView === "percent" ? dailyActiveDataPercent : dailyActiveData}
                       margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={16} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11 }}
+                        width={28}
+                        domain={dailyActiveView === "percent" ? [0, 100] : undefined}
+                        tickFormatter={
+                          dailyActiveView === "percent" ? (v) => `${v}%` : undefined
+                        }
+                      />
                       <Tooltip content={<RcTooltip />} />
                       <Line
                         type="monotone"
