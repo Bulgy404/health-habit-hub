@@ -53,7 +53,11 @@ import {
   credentialsFromRecoveryPhrase,
 } from '../app/utils/recoveryPhrase.js';
 import { ROLES } from '../app/middleware/auth.js';
-import { submitSrhi } from '../app/services/srhiService.js';
+import {
+  submitSrhi,
+  topUpSrhiWindows,
+  generateWindows,
+} from '../app/services/srhiService.js';
 import { SRHI_ITEM_IDS } from '../app/utils/srhi.js';
 import { createEnrollment } from '../app/services/enrollmentNeo4j.js';
 
@@ -1093,6 +1097,44 @@ async function seedOnePersona(kcAdmin, db, persona) {
       ),
     ]);
   }
+
+  // Give every still-active habit a next SRHI check-in window, matching what
+  // a real habit created via the app always has: generateWindows() seeds one
+  // at creation, topUpSrhiWindows() keeps the buffer full afterward. Persona
+  // habits built via buildSrhiHistory() only ever get *past*, already-
+  // submitted weeks, so their history ends with no pending window; habits
+  // that skip buildSrhiHistory entirely (freshly created / just-stacked
+  // personas) have no windows at all. Reconcile both the same way a real
+  // app-open would (getUpcomingSrhiQuestionnaireItems), so the seeded data
+  // is consistent immediately rather than only after the first login
+  // triggers it lazily.
+  const activeIntentions = await db
+    .collection('implementation_intentions')
+    .find({ userId, status: 'active' })
+    .toArray();
+  await Promise.all(
+    activeIntentions.map(async (intention) => {
+      const existingWindowCount = await db
+        .collection('srhi_responses')
+        .countDocuments({ intentionId: intention._id, userId });
+      if (existingWindowCount === 0) {
+        await generateWindows({
+          db,
+          intentionId: intention._id.toString(),
+          userId,
+          createdAt: intention.createdAt,
+          studyId: intention.studyId ? intention.studyId.toString() : null,
+          groupId: intention.groupId ? intention.groupId.toString() : null,
+        });
+      } else {
+        await topUpSrhiWindows({
+          db,
+          intentionId: intention._id.toString(),
+          userId,
+        });
+      }
+    })
+  );
 
   await db.collection('participants').updateOne(
     { userId },

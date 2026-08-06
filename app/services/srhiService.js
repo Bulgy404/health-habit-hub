@@ -168,10 +168,21 @@ export async function getDueWindows({ db, userId }) {
  * existing local-notification scheduler (`syncQuestionnaireReminders`) picks
  * them up the same way it does every other questionnaire type.
  *
- * Also replenishes each intention's rolling SRHI window buffer on the way
- * (best-effort — see `topUpSrhiWindows`), so the weekly cadence keeps going
- * indefinitely while the habit stays active instead of stopping after
+ * Also replenishes each active intention's rolling SRHI window buffer on the
+ * way (best-effort — see `topUpSrhiWindows`), so the weekly cadence keeps
+ * going indefinitely while the habit stays active instead of stopping after
  * GENERATE_AHEAD weeks.
+ *
+ * The top-up candidates are every *active* intention for this user, not just
+ * ones that already happen to have a pending window: deriving candidates
+ * from existing pending windows (as this used to) means an intention whose
+ * buffer ever drains to exactly zero — e.g. a run of failed/offline syncs
+ * followed by catching up on the last due check-in — can never be
+ * rediscovered, since nothing else ever looks at it again. Querying active
+ * intentions directly closes that gap, and also means a habit whose history
+ * was seeded with only past, already-submitted weeks (see
+ * scripts/seed-test-user.js) gets a next check-in window the first time this
+ * runs, exactly as a normally-created habit would.
  * @param {{ db: object, userId: string, horizon: Date }} deps
  * @returns {Promise<Array>}
  */
@@ -181,6 +192,22 @@ export async function getUpcomingSrhiQuestionnaireItems({
   horizon,
 }) {
   const now = new Date();
+
+  const activeIntentions = await db
+    .collection(INTENTIONS_COLLECTION)
+    .find(
+      { userId: String(userId), status: 'active' },
+      { projection: { _id: 1, behaviorLabel: 1 } }
+    )
+    .toArray();
+  await Promise.all(
+    activeIntentions.map((i) =>
+      topUpSrhiWindows({ db, intentionId: i._id.toString(), userId }).catch(
+        () => {}
+      )
+    )
+  );
+
   const wins = await db
     .collection(COLLECTION)
     .find({
@@ -190,24 +217,10 @@ export async function getUpcomingSrhiQuestionnaireItems({
     })
     .sort({ scheduledFor: 1 })
     .toArray();
-
-  const intentionIds = [...new Set(wins.map((w) => w.intentionId.toString()))];
-  await Promise.all(
-    intentionIds.map((id) =>
-      topUpSrhiWindows({ db, intentionId: id, userId }).catch(() => {})
-    )
-  );
   if (wins.length === 0) return [];
 
-  const intentions = await db
-    .collection(INTENTIONS_COLLECTION)
-    .find(
-      { _id: { $in: wins.map((w) => w.intentionId) }, status: 'active' },
-      { projection: { behaviorLabel: 1 } }
-    )
-    .toArray();
   const labelById = new Map(
-    intentions.map((i) => [i._id.toString(), i.behaviorLabel])
+    activeIntentions.map((i) => [i._id.toString(), i.behaviorLabel])
   );
 
   return wins

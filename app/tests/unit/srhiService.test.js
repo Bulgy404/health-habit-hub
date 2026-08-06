@@ -54,7 +54,10 @@ function makeDb(responses = [], intentions = [], logsByIntention = {}) {
             return api;
           },
           async insertMany(docs) {
-            store.push(...docs);
+            // Real MongoDB auto-assigns _id on insert; match that here so
+            // documents created mid-test (e.g. by topUpSrhiWindows) behave
+            // the same as pre-seeded ones that set _id explicitly.
+            store.push(...docs.map((d) => ({ _id: new ObjectId(), ...d })));
           },
           async countDocuments(filter = {}) {
             return store.filter((d) => {
@@ -92,11 +95,12 @@ function makeDb(responses = [], intentions = [], logsByIntention = {}) {
             return { ...doc };
           },
           find(filter = {}) {
-            const ids = (filter._id?.$in ?? []).map((id) => id.toString());
+            const ids = filter._id?.$in?.map((id) => id.toString());
             const results = intentionStore.filter(
               (i) =>
-                ids.includes(i._id.toString()) &&
-                (!filter.status || i.status === filter.status)
+                (!ids || ids.includes(i._id.toString())) &&
+                (!filter.status || i.status === filter.status) &&
+                (!filter.userId || i.userId === filter.userId)
             );
             return { toArray: async () => results.map((x) => ({ ...x })) };
           },
@@ -340,7 +344,15 @@ test('getUpcomingSrhiQuestionnaireItems: shapes windows like generic due questio
     horizon,
   });
 
-  assert.equal(items.length, 1);
+  // The pre-existing week-4 window plus the 3 freshly topped-up ones (weeks
+  // 5-7) all fall within the 30-day horizon — the query now runs *after*
+  // topping up, so newly generated windows are included in the same
+  // response instead of only surfacing on the next fetch.
+  assert.equal(items.length, 4);
+  assert.deepEqual(
+    items.map((i) => i.occurrence).sort((a, b) => a - b),
+    [4, 5, 6, 7]
+  );
   assert.equal(items[0].questionnaireSlug, 'srhi');
   assert.equal(items[0].intentionId, intentionId.toString());
   assert.match(items[0].questionnaireTitle, /Walking/);
@@ -350,6 +362,99 @@ test('getUpcomingSrhiQuestionnaireItems: shapes windows like generic due questio
     .collection('srhi_responses')
     .countDocuments({ intentionId: intentionId.toString(), submittedAt: null });
   assert.equal(openCount, 4);
+});
+
+test('getUpcomingSrhiQuestionnaireItems: replenishes an active intention whose buffer has fully drained (no pending window at all)', async () => {
+  const intentionId = new ObjectId();
+  const now = new Date();
+  // Every window for this intention has already been submitted — none are
+  // pending. This is exactly what scripts/seed-test-user.js's
+  // buildSrhiHistory() produces for a "still active" persona habit, and
+  // what a real habit could reach after a run of failed/offline syncs. The
+  // old implementation derived its top-up candidates purely from windows
+  // that were still pending, so an intention in this state could never be
+  // rediscovered and would silently stop getting new check-ins forever.
+  const windows = [1, 2, 3, 4].map((weekNumber) => ({
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber,
+    scheduledFor: new Date(
+      now.getTime() + (weekNumber - 4) * 7 * 24 * 60 * 60 * 1000
+    ),
+    submittedAt: now,
+    score: 4,
+    studyId: null,
+    groupId: null,
+    createdAt: now,
+  }));
+  const db = makeDb(windows, [
+    {
+      _id: intentionId,
+      userId: 'u1',
+      status: 'active',
+      behaviorLabel: 'Walking',
+    },
+  ]);
+
+  const horizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const items = await getUpcomingSrhiQuestionnaireItems({
+    db,
+    userId: 'u1',
+    horizon,
+  });
+
+  // 4 new windows (weeks 5-8) were generated to refill the buffer from 0 to
+  // the cap, all within the horizon, and show up as upcoming check-ins.
+  assert.equal(items.length, 4);
+  assert.deepEqual(
+    items.map((i) => i.occurrence).sort((a, b) => a - b),
+    [5, 6, 7, 8]
+  );
+  assert.equal(items[0].intentionId, intentionId.toString());
+
+  const openCount = await db
+    .collection('srhi_responses')
+    .countDocuments({ intentionId: intentionId.toString(), submittedAt: null });
+  assert.equal(openCount, 4);
+});
+
+test('getUpcomingSrhiQuestionnaireItems: does not top up an intention that is no longer active', async () => {
+  const intentionId = new ObjectId();
+  const now = new Date();
+  const windows = [1, 2].map((weekNumber) => ({
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber,
+    scheduledFor: now,
+    submittedAt: now,
+    score: 4,
+    studyId: null,
+    groupId: null,
+    createdAt: now,
+  }));
+  const db = makeDb(windows, [
+    {
+      _id: intentionId,
+      userId: 'u1',
+      status: 'abandoned',
+      behaviorLabel: 'Walking',
+    },
+  ]);
+
+  const horizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const items = await getUpcomingSrhiQuestionnaireItems({
+    db,
+    userId: 'u1',
+    horizon,
+  });
+
+  assert.equal(items.length, 0);
+  const openCount = await db
+    .collection('srhi_responses')
+    .countDocuments({ intentionId: intentionId.toString(), submittedAt: null });
+  assert.equal(openCount, 0);
 });
 
 // ── Automaticity-graduation flow ────────────────────────────────────────────
