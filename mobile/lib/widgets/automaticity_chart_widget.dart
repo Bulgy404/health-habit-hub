@@ -34,7 +34,11 @@ class AutomaticityChartWidget extends StatelessWidget {
   final double height;
 
   static const double _pxPerWeek = 60;
-  static const double _yAxisWidth = 44;
+  // axisNameSize (22) + leftTitles reservedSize (30) below — wider than
+  // SrhiChartWidget's 44 because "100%" needs more room than a single SRHI
+  // digit does; keep in sync with those two values or the y-axis gutter
+  // overflows (fl_chart lays them out in one Flex row internally).
+  static const double _yAxisWidth = 52;
   static const double _xLabelSize = 24;
   static const double _xNameSize = 22;
   static const int _minTimelineWeeks = 4;

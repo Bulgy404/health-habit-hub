@@ -103,6 +103,11 @@ export async function seedDefaultStudy(db) {
       isActive: true,
       groups: DEFAULT_GROUPS,
       questionnaires: [],
+      // §7.3 — on by default, with opt-out permitted, so the guard's
+      // behaviour and the Settings toggle are both visible out of the box
+      // rather than requiring a researcher to configure them via the admin
+      // panel first.
+      informationOverloadGuard: { enabled: true, userOptOutAllowed: true },
       createdAt: now,
       updatedAt: now,
     });

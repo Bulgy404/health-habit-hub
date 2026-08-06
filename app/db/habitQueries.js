@@ -226,7 +226,7 @@ export async function getHabitBubbleGraph(queryNeo4j, lang = 'en') {
  * @param {Function} queryNeo4j
  * @param {string} userId  Keycloak subject UUID
  * @param {string} [lang='en'] - Viewer's app language; picks which translation slot habitLabel resolves to.
- * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension }
+ * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension, createdAt }
  */
 export async function getUserHabits(queryNeo4j, userId, lang = 'en') {
   const normalizedLang = normalizeDisplayLang(lang);
@@ -238,7 +238,8 @@ export async function getUserHabits(queryNeo4j, userId, lang = 'en') {
       ${localizedLabelExpr('h')} AS habitLabel,
       coalesce(h.sentence, '')   AS originalText,
       coalesce(h.language, '')   AS language,
-      c.dimension                AS dimension
+      c.dimension                AS dimension,
+      h.created_at                AS createdAt
     ORDER BY habitLabel
   `,
     {

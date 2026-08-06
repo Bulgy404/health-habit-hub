@@ -83,7 +83,7 @@ class _FakeLocaleNotifier extends LocaleNotifier {
 
 final _fakeDio = Dio();
 
-enum _Mode { success, limitReached, genericError, pending }
+enum _Mode { success, limitReached, genericError, pending, overloadBlocked }
 
 class _FakeMyHabitsService extends MyHabitsService {
   _FakeMyHabitsService.success() : _mode = _Mode.success, super(dio: _fakeDio);
@@ -95,6 +95,9 @@ class _FakeMyHabitsService extends MyHabitsService {
         super(dio: _fakeDio);
   _FakeMyHabitsService.pending()
       : _mode = _Mode.pending,
+        super(dio: _fakeDio);
+  _FakeMyHabitsService.overloadBlocked()
+      : _mode = _Mode.overloadBlocked,
         super(dio: _fakeDio);
 
   final _Mode _mode;
@@ -160,6 +163,11 @@ class _FakeMyHabitsService extends MyHabitsService {
       case _Mode.pending:
         // Never resolves — used to observe the in-flight submitting state.
         return Completer<Intention>().future;
+      case _Mode.overloadBlocked:
+        throw const InformationOverloadException(
+          unlockTier: 'weekly',
+          currentTier: 'daily',
+        );
     }
   }
 }
@@ -214,6 +222,11 @@ Widget _buildSubject({
         builder: (context, state) =>
             const Scaffold(body: Text('MyHabitsScreen')),
       ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) =>
+            const Scaffold(body: Text('SettingsScreen')),
+      ),
     ],
   );
 
@@ -250,6 +263,26 @@ const _shareEnabledConfig = HabitConfig(
   behaviorOptions: [],
   srhiItems: [],
   communityShareDefault: true,
+);
+
+const _overloadOptOutAllowedConfig = HabitConfig(
+  cueCount: 'multi',
+  cueSource: 'self_selected',
+  behaviorOptions: [],
+  srhiItems: [],
+  communityShareDefault: false,
+  informationOverloadEnabled: true,
+  informationOverloadOptOutAllowed: true,
+);
+
+const _overloadOptOutDisallowedConfig = HabitConfig(
+  cueCount: 'multi',
+  cueSource: 'self_selected',
+  behaviorOptions: [],
+  srhiItems: [],
+  communityShareDefault: false,
+  informationOverloadEnabled: true,
+  informationOverloadOptOutAllowed: false,
 );
 
 // ---------------------------------------------------------------------------
@@ -542,6 +575,51 @@ void main() {
     // The button must be re-enabled after the failure, not stuck spinning.
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Create habit'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows a Settings link when the information-overload guard blocks and opt-out is allowed',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      config: _overloadOptOutAllowedConfig,
+      myHabitsService: _FakeMyHabitsService.overloadBlocked(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining("Let's focus on your current habit first"),
+      findsOneWidget,
+    );
+    expect(find.text('You can turn this off in Settings.'), findsOneWidget);
+    expect(find.text('Go to Settings'), findsOneWidget);
+
+    await tester.tap(find.text('Go to Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SettingsScreen'), findsOneWidget);
+  });
+
+  testWidgets(
+      'hides the Settings link when the guard blocks but opt-out is not allowed for this study condition',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      config: _overloadOptOutDisallowedConfig,
+      myHabitsService: _FakeMyHabitsService.overloadBlocked(),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining("Let's focus on your current habit first"),
+      findsOneWidget,
+    );
+    expect(find.text('You can turn this off in Settings.'), findsNothing);
+    expect(find.text('Go to Settings'), findsNothing);
   });
 
   testWidgets('shows a generic error message on an unexpected failure',

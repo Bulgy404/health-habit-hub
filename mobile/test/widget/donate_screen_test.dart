@@ -15,11 +15,11 @@ import 'package:hhh/models/survey.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
+import 'package:hhh/providers/show_in_graph_provider.dart';
 import 'package:hhh/screens/donate_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/habit_service.dart';
 import 'package:hhh/services/survey_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared no-op Dio instance for fake service constructors.
 /// Tests override surveyServiceProvider so HTTP calls never happen.
@@ -58,7 +58,10 @@ class _FakeSurveyService extends SurveyService {
   }
 }
 
-Widget _buildSubject(_FakeSurveyService surveyService) {
+Widget _buildSubject(
+  _FakeSurveyService surveyService, {
+  List<MyHabit> myHabits = const [],
+}) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(_FakeAuthService()),
@@ -66,6 +69,12 @@ Widget _buildSubject(_FakeSurveyService surveyService) {
       // Return empty stats immediately to avoid any network calls.
       habitStatsProvider.overrideWith(
         (_) async => const HabitStats(total: 0, byCategory: [], byDay: []),
+      ),
+      // Drives the share-activity graph / "shared today" state — defaults to
+      // no donated habits, avoiding a real network call to /habits/my-stats.
+      myStatsProvider.overrideWith(
+        (_) async =>
+            MyStats(total: myHabits.length, byDimension: const [], habits: myHabits),
       ),
       // No due questionnaires — avoids a real network call to /questionnaires/due.
       dueQuestionnairesProvider.overrideWith(
@@ -128,15 +137,22 @@ void main() {
   testWidgets(
       'shows a prominent "Share another habit" button once already shared today, and it opens the form',
       (tester) async {
-    final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-'
-        '${now.day.toString().padLeft(2, '0')}';
-    SharedPreferences.setMockInitialValues({
-      'last_habit_share_date': todayStr,
-      'habit_share_streak': 1,
-    });
+    final habitDonatedToday = MyHabit(
+      id: 'h1',
+      label: 'I stretch before bed.',
+      originalText: 'I stretch before bed.',
+      language: 'en',
+      dimensions: const ['TIME'],
+      annotationCounts: const {},
+      createdAt: DateTime.now(),
+    );
 
-    await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing()));
+    await tester.pumpWidget(
+      _buildSubject(
+        _FakeSurveyService.throwing(),
+        myHabits: [habitDonatedToday],
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Shared today'), findsOneWidget);

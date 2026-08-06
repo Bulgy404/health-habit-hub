@@ -6,25 +6,23 @@
 /// [DonateProgressWidget] / [DonateSuccessWidget].
 library;
 
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../models/habit_stats.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
 import '../providers/locale_provider.dart';
+import '../providers/show_in_graph_provider.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
 import '../theme/motion.dart';
-import '../utils/date_format.dart';
 import '../widgets/contribution_graph_widget.dart';
 import 'donate/widgets/donate_form_widget.dart';
 import 'donate/widgets/donate_progress_widget.dart';
@@ -57,87 +55,34 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   String? _surveyId;
   late String _lang;
 
-  /// Whether a habit was already shared today (persisted per device).
-  bool _sharedToday = false;
-
-  /// Number of habits shared on each day this device has shared on,
-  /// keyed by a midnight-normalised date. Feeds the share-activity graph.
-  Map<DateTime, int> _shareCounts = {};
-
-  static const _lastShareDateKey = 'last_habit_share_date';
-  static const _shareCountsKey = 'habit_share_counts_json';
-
   static DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  static String _dateStr(DateTime d) => formatDateYmd(d);
+  static bool _isToday(DateTime d) {
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
 
-  static String _todayStr() => _dateStr(DateTime.now());
+  /// Builds the share-activity graph's day→count map from the user's
+  /// server-side donated habits (grouped by donation date), instead of a
+  /// local per-device counter — so a habit donated from another device, or
+  /// seeded directly into the database (e.g. a demo/study account), shows up
+  /// the same as one donated from this device.
+  static Map<DateTime, int> _shareCountsFromHabits(List<MyHabit> habits) {
+    final counts = <DateTime, int>{};
+    for (final habit in habits) {
+      final createdAt = habit.createdAt;
+      if (createdAt == null) continue;
+      final day = _atMidnight(createdAt);
+      counts[day] = (counts[day] ?? 0) + 1;
+    }
+    return counts;
+  }
 
   @override
   void initState() {
     super.initState();
     _lang = ref.read(localeProvider).languageCode;
     _loadSurveyId();
-    _loadSharedToday();
-  }
-
-  /// Parses the persisted `{"yyyy-MM-dd": count}` JSON blob into a
-  /// midnight-normalised [DateTime] map for [ContributionGraphWidget].
-  static Map<DateTime, int> _decodeShareCounts(String? json) {
-    if (json == null) return {};
-    try {
-      final decoded = jsonDecode(json) as Map<String, dynamic>;
-      final counts = <DateTime, int>{};
-      for (final entry in decoded.entries) {
-        final parts = entry.key.split('-');
-        if (parts.length != 3) continue;
-        final year = int.tryParse(parts[0]);
-        final month = int.tryParse(parts[1]);
-        final day = int.tryParse(parts[2]);
-        if (year == null || month == null || day == null) continue;
-        counts[DateTime(year, month, day)] = (entry.value as num).toInt();
-      }
-      return counts;
-    } catch (_) {
-      return {};
-    }
-  }
-
-  Future<void> _loadSharedToday() async {
-    final prefs = await SharedPreferences.getInstance();
-    final last = prefs.getString(_lastShareDateKey);
-    final counts = _decodeShareCounts(prefs.getString(_shareCountsKey));
-    if (mounted) {
-      setState(() {
-        _sharedToday = last == _todayStr();
-        _shareCounts = counts;
-      });
-    }
-  }
-
-  Future<void> _markSharedToday() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastShareDateKey, _todayStr());
-
-    final today = DateTime.now();
-    final todayKey = _atMidnight(today);
-    final updatedCounts = {
-      ..._shareCounts,
-      todayKey: (_shareCounts[todayKey] ?? 0) + 1,
-    };
-    await prefs.setString(
-      _shareCountsKey,
-      jsonEncode(
-        updatedCounts.map((date, count) => MapEntry(_dateStr(date), count)),
-      ),
-    );
-
-    if (mounted) {
-      setState(() {
-        _sharedToday = true;
-        _shareCounts = updatedCounts;
-      });
-    }
   }
 
   /// The green "today's task" prompt shown until a habit is shared today.
@@ -490,9 +435,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         }
       }
 
-      // Remember that a habit was shared today so the "today's task" prompt
-      // gives way to a thank-you until tomorrow.
-      await _markSharedToday();
+      // Refetch the user's donated habits so the "today's task" prompt gives
+      // way to a thank-you and the share-activity graph picks up the new
+      // donation immediately.
+      ref.invalidate(myStatsProvider);
 
       if (mounted) {
         setState(() {
@@ -572,11 +518,18 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             .toList() ??
         const <DueQuestionnaire>[];
 
+    final myHabits = ref.watch(myStatsProvider).value?.habits ?? const [];
+    final shareCounts = _shareCountsFromHabits(myHabits);
+    final sharedToday = myHabits.any(
+      (h) => h.createdAt != null && _isToday(h.createdAt!),
+    );
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.appTitle), titleSpacing: 16),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dueQuestionnairesProvider);
+          ref.invalidate(myStatsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
@@ -585,7 +538,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: ContributionGraphWidget(
-                counts: _shareCounts,
+                counts: shareCounts,
               ),
             ),
             // ── Today's tasks ─────────────────────────────────────────────────
@@ -604,7 +557,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             // Share-a-habit task (or a thank-you once shared today).
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: _sharedToday ? _sharedTodayCard() : _taskCard(),
+              child: sharedToday ? _sharedTodayCard() : _taskCard(),
             ),
             // A card per questionnaire that is currently due.
             for (final q in dueList)

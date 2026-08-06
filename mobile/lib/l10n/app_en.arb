@@ -2146,6 +2146,14 @@
     "description": "Body of the dismissible explainer card shown when the §7.3 information-overload guard is active for this study"
   },
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
+  "informationOverloadBlockedOptOutHint": "You can turn this off in Settings.",
+  "@informationOverloadBlockedOptOutHint": {
+    "description": "Shown alongside informationOverloadBlocked, only when the participant's study condition permits opting out of the §7.3 guard; links to the Settings toggle."
+  },
+  "informationOverloadBlockedOptOutAction": "Go to Settings",
+  "@informationOverloadBlockedOptOutAction": {
+    "description": "Button label navigating to the Settings screen's information-overload opt-out toggle, shown next to informationOverloadBlockedOptOutHint."
+  },
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
   "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",
   "stackAnchorPickLabel": "Anchor habit",

@@ -1714,6 +1714,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.';
 
   @override
+  String get informationOverloadBlockedOptOutHint =>
+      'You can turn this off in Settings.';
+
+  @override
+  String get informationOverloadBlockedOptOutAction => 'Go to Settings';
+
+  @override
   String get stackOntoExistingHabitTitle => 'Stack onto an existing habit';
 
   @override

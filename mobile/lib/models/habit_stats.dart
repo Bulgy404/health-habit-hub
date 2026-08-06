@@ -100,6 +100,9 @@ class MyHabit {
   /// Maps annotation type identifiers to cumulative counts.
   final Map<String, int> annotationCounts;
 
+  /// When this habit was donated, if known.
+  final DateTime? createdAt;
+
   /// Creates a [MyHabit].
   const MyHabit({
     required this.id,
@@ -108,6 +111,7 @@ class MyHabit {
     required this.language,
     required this.dimensions,
     required this.annotationCounts,
+    this.createdAt,
   });
 
   /// Sum of all annotation counts across all annotation types.
@@ -128,6 +132,7 @@ class MyHabit {
           .cast<String>()
           .toList(),
       annotationCounts: counts,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
     );
   }
 }

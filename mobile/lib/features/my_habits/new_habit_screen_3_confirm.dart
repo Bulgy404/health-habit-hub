@@ -85,6 +85,10 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   bool _reminderEnabled = true;
   bool _submitting = false;
   String? _error;
+  /// Whether [_error] came from the §7.3 information-overload guard and the
+  /// participant's study condition allows opting out — shows a link to the
+  /// Settings toggle rather than leaving the block a dead end.
+  bool _errorIsOverloadOptOutEligible = false;
   late String _intentionStatementEditable;
   late final TextEditingController _statementController;
   late bool _shareWithCommunity;
@@ -235,6 +239,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     setState(() {
       _submitting = true;
       _error = null;
+      _errorIsOverloadOptOutEligible = false;
     });
     // Capture service handles and values up front so the background work below
     // does not touch `ref`/`context` after we navigate away and dispose.
@@ -276,8 +281,15 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
       );
     } on InformationOverloadException {
       // §7.3 — explain the block (focus on the current habit first) rather
-      // than showing the generic limit message.
-      setState(() => _error = l10n.informationOverloadBlocked);
+      // than showing the generic limit message. If this participant's study
+      // condition permits opting out, surface that here too — the only other
+      // place it's mentioned (the info card on step 1) is long gone by the
+      // time the block actually happens.
+      setState(() {
+        _error = l10n.informationOverloadBlocked;
+        _errorIsOverloadOptOutEligible =
+            widget.config.informationOverloadOptOutAllowed;
+      });
     } on ValidationException {
       setState(() => _error = l10n.habitLimitReached);
     } catch (e) {
@@ -511,6 +523,26 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               const SizedBox(height: 16),
               Text(_error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              if (_errorIsOverloadOptOutEligible) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.informationOverloadBlockedOptOutHint,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/settings'),
+                      child: Text(l10n.informationOverloadBlockedOptOutAction),
+                    ),
+                  ],
+                ),
+              ],
             ],
             const SizedBox(height: 32),
             SizedBox(

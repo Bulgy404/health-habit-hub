@@ -146,6 +146,7 @@ export function createHabitsStatsRouter({ getDb, queryNeo4j } = {}) {
             originalText: row.originalText || '',
             language: row.language || '',
             dimensions: [],
+            createdAt: row.createdAt || null,
           });
         }
         if (row.dimension)

@@ -1028,6 +1028,9 @@ async function seedOnePersona(kcAdmin, db, persona) {
       isActive: true,
       groups: [group],
       questionnaires: [],
+      // §7.3 — on by default, with opt-out permitted; matches
+      // defaultStudySeedService.js's/seed-local.js's identical default.
+      informationOverloadGuard: { enabled: true, userOptOutAllowed: true },
       createdAt: now,
       updatedAt: now,
     });

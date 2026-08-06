@@ -1438,6 +1438,8 @@
   "informationOverloadTitle": "One habit at a time",
   "informationOverloadInfo": "To help habits stick, we ask you to focus on your current ones before adding new ones of the same type. New slots open up automatically as your habits become more automatic. Habit stacking isn't affected by this limit. You can turn this off in Settings, but we don't recommend it.",
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
+  "informationOverloadBlockedOptOutHint": "You can turn this off in Settings.",
+  "informationOverloadBlockedOptOutAction": "Go to Settings",
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
   "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",
   "stackAnchorPickLabel": "Anchor habit",

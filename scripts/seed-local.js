@@ -376,6 +376,10 @@ async function seedDefaultStudy() {
       // No questionnaire is pre-enabled — an admin must explicitly turn each
       // one on for the study via the admin UI.
       questionnaires: [],
+      // §7.3 — on by default, with opt-out permitted; see
+      // defaultStudySeedService.js's identical default (this script mirrors
+      // that seed for local dev environments).
+      informationOverloadGuard: { enabled: true, userOptOutAllowed: true },
       createdAt: now,
       updatedAt: now,
     };

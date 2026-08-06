@@ -3134,6 +3134,18 @@ abstract class AppLocalizations {
   /// **'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.'**
   String get informationOverloadBlocked;
 
+  /// Shown alongside informationOverloadBlocked, only when the participant's study condition permits opting out of the §7.3 guard; links to the Settings toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'You can turn this off in Settings.'**
+  String get informationOverloadBlockedOptOutHint;
+
+  /// Button label navigating to the Settings screen's information-overload opt-out toggle, shown next to informationOverloadBlockedOptOutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get informationOverloadBlockedOptOutAction;
+
   /// No description provided for @stackOntoExistingHabitTitle.
   ///
   /// In en, this message translates to:
