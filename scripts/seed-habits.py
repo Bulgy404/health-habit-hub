@@ -497,8 +497,8 @@ async def _e2e_user(client, habits, offsets, total, sem):
     ])
 
 
-async def run_e2e(concurrency: int, habit_count: int) -> None:
-    habits = HABITS[:habit_count]
+async def run_e2e(concurrency: int, habit_count: int, random_pick: bool = False) -> None:
+    habits = random.sample(HABITS, habit_count) if random_pick else HABITS[:habit_count]
     total = len(habits)
     chunk = max(1, (total + concurrency - 1) // concurrency)
     batches = [habits[i:i + chunk] for i in range(0, total, chunk)]
@@ -552,8 +552,8 @@ if __name__ == "__main__":
                         help="(seed mode only) Assign all habits to this single userID "
                              "instead of round-robin across the 10 synthetic seed users.")
     parser.add_argument("--random", action="store_true",
-                        help="(seed mode only) Pick --habits habits at random instead of "
-                             "taking the first N from the list.")
+                        help="Pick --habits habits at random instead of taking the first N "
+                             "from the list. Supported in both modes.")
     args = parser.parse_args()
 
     if args.mode == "seed":
@@ -562,6 +562,9 @@ if __name__ == "__main__":
     else:
         if args.dry_run:
             parser.error("--dry-run is only supported in seed mode")
-        if args.user_id or args.random:
-            parser.error("--user-id/--random are only supported in seed mode")
-        asyncio.run(run_e2e(args.concurrency, args.habits))
+        if args.user_id:
+            parser.error("--user-id is not supported in e2e mode — donated habits' userIDs "
+                          "come from the real anonymous accounts /onboard creates, not a "
+                          "caller-chosen label. Use --concurrency 1 to put all habits under "
+                          "a single freshly-onboarded user instead.")
+        asyncio.run(run_e2e(args.concurrency, args.habits, random_pick=args.random))

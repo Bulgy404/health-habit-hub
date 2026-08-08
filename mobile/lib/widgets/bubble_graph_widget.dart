@@ -13,6 +13,34 @@ import '../models/bubble_graph.dart';
 import 'bubble_graph/bubble_graph_data.dart';
 import 'bubble_graph/bubble_graph_gesture_handler.dart';
 
+/// Resolves a dimension bubble's label in the app's current language.
+///
+/// The backend returns a stable [DimensionBubble.id] (e.g. `'TIME'`) plus an
+/// English [DimensionBubble.label] fallback; the dimension set is fixed
+/// (§classify-context), so labels are looked up from the ARB files here
+/// rather than translated server-side. Falls back to the backend's English
+/// label for any future dimension id not yet covered below.
+String localizedDimensionLabel(AppLocalizations l10n, DimensionBubble dimension) {
+  switch (dimension.id) {
+    case 'TIME':
+      return l10n.bubbleGraphDimensionTime;
+    case 'BEHAVIOR':
+      return l10n.bubbleGraphDimensionBehavior;
+    case 'PHYSICAL_SETTING':
+      return l10n.bubbleGraphDimensionLocation;
+    case 'PRIOR_BEHAVIOR':
+      return l10n.bubbleGraphDimensionPriorBehavior;
+    case 'OTHER_PEOPLE':
+      return l10n.bubbleGraphDimensionSocial;
+    case 'INTERNAL_STATE':
+      return l10n.bubbleGraphDimensionMentalState;
+    case 'REASONING':
+      return l10n.bubbleGraphDimensionReasoning;
+    default:
+      return dimension.label;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public widget
 // ---------------------------------------------------------------------------
@@ -89,7 +117,7 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
       final r = 44.0 + ratio * 56.0; // 44–100 px
       return BubbleNode(
         id: d.id,
-        label: d.label,
+        label: localizedDimensionLabel(l10n, d),
         sublabel: l10n.bubbleGraphHabitCount(d.habitCount),
         radius: r,
         color: colorFor(d.id),
@@ -199,7 +227,7 @@ class _DimensionBar extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              dimension.label,
+              localizedDimensionLabel(l10n, dimension),
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),

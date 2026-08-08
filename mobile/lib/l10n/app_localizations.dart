@@ -2420,6 +2420,48 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 habit} other{{count} habits}}'**
   String bubbleGraphHabitCount(int count);
 
+  /// Bubble graph dimension label: TIME
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get bubbleGraphDimensionTime;
+
+  /// Bubble graph dimension label: BEHAVIOR
+  ///
+  /// In en, this message translates to:
+  /// **'Behavior'**
+  String get bubbleGraphDimensionBehavior;
+
+  /// Bubble graph dimension label: PHYSICAL_SETTING
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get bubbleGraphDimensionLocation;
+
+  /// Bubble graph dimension label: PRIOR_BEHAVIOR
+  ///
+  /// In en, this message translates to:
+  /// **'Prior Behavior'**
+  String get bubbleGraphDimensionPriorBehavior;
+
+  /// Bubble graph dimension label: OTHER_PEOPLE
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get bubbleGraphDimensionSocial;
+
+  /// Bubble graph dimension label: INTERNAL_STATE
+  ///
+  /// In en, this message translates to:
+  /// **'Mental State'**
+  String get bubbleGraphDimensionMentalState;
+
+  /// Bubble graph dimension label: REASONING
+  ///
+  /// In en, this message translates to:
+  /// **'Reasoning'**
+  String get bubbleGraphDimensionReasoning;
+
   /// Bottom sheet title asking why a specific habit was recommended
   ///
   /// In en, this message translates to:

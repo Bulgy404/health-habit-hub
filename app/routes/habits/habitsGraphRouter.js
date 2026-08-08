@@ -15,15 +15,66 @@ function neoIntOrNull(val) {
   return Number(val);
 }
 
-const DIMENSION_LABELS = {
-  TIME: 'Time',
-  BEHAVIOR: 'Behavior',
-  PHYSICAL_SETTING: 'Location',
-  PRIOR_BEHAVIOR: 'Prior Behavior',
-  OTHER_PEOPLE: 'Social',
-  INTERNAL_STATE: 'Mental State',
-  REASONING: 'Reasoning',
+// Kept in sync with the mobile ARB keys bubbleGraphDimension* (app_*.arb) —
+// the client localizes these from its own bundle for any build shipped after
+// that ARB change, but this server-side copy is what already-installed app
+// versions display, since they render whatever `label` this endpoint returns
+// verbatim. Same set of languages habit-sentence translation supports
+// (TRANSLATABLE_LANGS in db/habitQueries.js).
+const DIMENSION_LABELS_BY_LANG = {
+  en: {
+    TIME: 'Time',
+    BEHAVIOR: 'Behavior',
+    PHYSICAL_SETTING: 'Location',
+    PRIOR_BEHAVIOR: 'Prior Behavior',
+    OTHER_PEOPLE: 'Social',
+    INTERNAL_STATE: 'Mental State',
+    REASONING: 'Reasoning',
+  },
+  de: {
+    TIME: 'Zeit',
+    BEHAVIOR: 'Verhalten',
+    PHYSICAL_SETTING: 'Ort',
+    PRIOR_BEHAVIOR: 'Vorheriges Verhalten',
+    OTHER_PEOPLE: 'Sozial',
+    INTERNAL_STATE: 'Geisteszustand',
+    REASONING: 'Begründung',
+  },
+  ja: {
+    TIME: '時間',
+    BEHAVIOR: '行動',
+    PHYSICAL_SETTING: '場所',
+    PRIOR_BEHAVIOR: '先行行動',
+    OTHER_PEOPLE: '社会的',
+    INTERNAL_STATE: '心理状態',
+    REASONING: '理由付け',
+  },
+  fr: {
+    TIME: 'Temps',
+    BEHAVIOR: 'Comportement',
+    PHYSICAL_SETTING: 'Lieu',
+    PRIOR_BEHAVIOR: 'Comportement antérieur',
+    OTHER_PEOPLE: 'Social',
+    INTERNAL_STATE: 'État mental',
+    REASONING: 'Raisonnement',
+  },
+  nl: {
+    TIME: 'Tijd',
+    BEHAVIOR: 'Gedrag',
+    PHYSICAL_SETTING: 'Locatie',
+    PRIOR_BEHAVIOR: 'Voorafgaand gedrag',
+    OTHER_PEOPLE: 'Sociaal',
+    INTERNAL_STATE: 'Mentale toestand',
+    REASONING: 'Redenering',
+  },
 };
+
+function dimensionLabelsForLang(lang) {
+  const code = String(lang || '')
+    .slice(0, 2)
+    .toLowerCase();
+  return DIMENSION_LABELS_BY_LANG[code] || DIMENSION_LABELS_BY_LANG.en;
+}
 
 /**
  * Handles habit graph routes: Neo4j graph and bubble-graph visualizations.
@@ -219,6 +270,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
         if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
       }
 
+      const dimensionLabels = dimensionLabelsForLang(req.query.lang);
       const dimensions = [...dimensionMap.entries()]
         .map(([dimId, habitMap]) => {
           const habits = [...habitMap.values()].map((h) => ({
@@ -227,7 +279,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
           }));
           return {
             id: dimId,
-            label: DIMENSION_LABELS[dimId] || dimId,
+            label: dimensionLabels[dimId] || dimId,
             habitCount: habits.length,
             habits,
           };

@@ -1333,6 +1333,27 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get bubbleGraphDimensionTime => 'Temps';
+
+  @override
+  String get bubbleGraphDimensionBehavior => 'Comportement';
+
+  @override
+  String get bubbleGraphDimensionLocation => 'Lieu';
+
+  @override
+  String get bubbleGraphDimensionPriorBehavior => 'Comportement antérieur';
+
+  @override
+  String get bubbleGraphDimensionSocial => 'Social';
+
+  @override
+  String get bubbleGraphDimensionMentalState => 'État mental';
+
+  @override
+  String get bubbleGraphDimensionReasoning => 'Raisonnement';
+
+  @override
   String recommendationCardWhyTitle(String habitName) {
     return 'Pourquoi « $habitName » ?';
   }

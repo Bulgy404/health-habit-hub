@@ -1673,6 +1673,34 @@
       }
     }
   },
+  "bubbleGraphDimensionTime": "Time",
+  "@bubbleGraphDimensionTime": {
+    "description": "Bubble graph dimension label: TIME"
+  },
+  "bubbleGraphDimensionBehavior": "Behavior",
+  "@bubbleGraphDimensionBehavior": {
+    "description": "Bubble graph dimension label: BEHAVIOR"
+  },
+  "bubbleGraphDimensionLocation": "Location",
+  "@bubbleGraphDimensionLocation": {
+    "description": "Bubble graph dimension label: PHYSICAL_SETTING"
+  },
+  "bubbleGraphDimensionPriorBehavior": "Prior Behavior",
+  "@bubbleGraphDimensionPriorBehavior": {
+    "description": "Bubble graph dimension label: PRIOR_BEHAVIOR"
+  },
+  "bubbleGraphDimensionSocial": "Social",
+  "@bubbleGraphDimensionSocial": {
+    "description": "Bubble graph dimension label: OTHER_PEOPLE"
+  },
+  "bubbleGraphDimensionMentalState": "Mental State",
+  "@bubbleGraphDimensionMentalState": {
+    "description": "Bubble graph dimension label: INTERNAL_STATE"
+  },
+  "bubbleGraphDimensionReasoning": "Reasoning",
+  "@bubbleGraphDimensionReasoning": {
+    "description": "Bubble graph dimension label: REASONING"
+  },
   "recommendationCardWhyTitle": "Why \"{habitName}\"?",
   "@recommendationCardWhyTitle": {
     "description": "Bottom sheet title asking why a specific habit was recommended",
