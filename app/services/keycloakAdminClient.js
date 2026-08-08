@@ -33,9 +33,14 @@ export function createKeycloakAdminClient({
       'KEYCLOAK_ADMIN_CLIENT_SECRET must be set in production — refusing to start with an empty admin client secret.'
     );
   }
-  // The client participants authenticate through — sessions are listed
-  // per-client (Keycloak has no single "all sessions in realm" endpoint).
-  const _participantClientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
+  // The client participant sessions are actually minted under — sessions are
+  // listed per-client (Keycloak has no single "all sessions in realm"
+  // endpoint). The mobile app never performs a direct grant against the
+  // public hhh-flutter client; the backend mints tokens on its behalf via
+  // the confidential hhh-ropc client (see keycloakRopcClient.js), so that's
+  // the client whose sessions actually reflect participant devices.
+  const _participantClientId =
+    process.env.KEYCLOAK_ROPC_CLIENT_ID || 'hhh-ropc';
 
   // Token cache: invalidate 5 seconds before Keycloak's default 60-second TTL
   let _cachedToken = null;
@@ -256,7 +261,8 @@ export function createKeycloakAdminClient({
     },
 
     /**
-     * Lists active sessions for the participant-facing client (hhh-flutter).
+     * Lists active sessions for the participant-facing client (hhh-ropc, the
+     * confidential client the backend uses to mint participant tokens).
      * Keycloak has no "all sessions in a realm" endpoint — only per-client
      * (`/clients/{id}/user-sessions`) or per-user — so this resolves that
      * client's internal UUID first, then lists its sessions.
