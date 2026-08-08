@@ -1,18 +1,18 @@
 name: Mobile Release
 
-# Builds the iOS app and uploads it to TestFlight. Distinct from release.yml
-# (which only cuts GitHub Releases from `v*` tags) — this pipeline actually
-# ships a binary to Apple, so it uses its own `mobile-v*` tag prefix to avoid
-# firing on every backend release tag.
+# Builds the iOS app and uploads it to TestFlight or submits it for App Store
+# review. Distinct from release.yml (which only cuts GitHub Releases from
+# `v*` tags) — this pipeline actually ships a binary to Apple.
+#
+# Manual trigger only (Actions tab → Run workflow) — nothing here fires
+# automatically on push/tag, so pushing a `mobile-v*` tag is just a version
+# bookkeeping convention, not a release trigger.
 #
 # Setup required before this will run successfully: see mobile/RELEASING.md
 # for the full checklist of Apple Developer / App Store Connect steps and
 # the GitHub secrets they produce.
 
 on:
-  push:
-    tags:
-      - 'mobile-v*'
   workflow_dispatch:
     inputs:
       lane:

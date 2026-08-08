@@ -1,14 +1,16 @@
 # Releasing the mobile app
 
 Two release channels, both via `.github/workflows/mobile-release.yml` and
-`fastlane` (`mobile/fastlane/Fastfile`):
+`fastlane` (`mobile/fastlane/Fastfile`). Neither runs automatically — both
+are triggered by hand from the Actions tab (`Run workflow`), so nothing ever
+ships to Apple as a side effect of pushing code or tags.
 
-- **`beta` lane** — builds the app and uploads it to TestFlight. Runs
-  automatically whenever a `mobile-v*` tag is pushed (e.g. `mobile-v1.0.1`).
+- **`beta` lane** — builds the app and uploads it to TestFlight. Trigger from
+  the Actions tab (`Run workflow` → lane: `beta`).
 - **`release` lane** — submits the latest processed TestFlight build for
-  public App Store review. Deliberately **not** wired to the tag push —
-  trigger it by hand from the Actions tab (`Run workflow` → lane: `release`)
-  once you've checked the TestFlight build.
+  public App Store review. Trigger from the Actions tab
+  (`Run workflow` → lane: `release`) once you've checked the TestFlight
+  build.
 
 Backend/admin releases use a separate `v*` tag + `release.yml`, which only
 cuts a GitHub Release and never touches Apple — the two pipelines don't
@@ -110,14 +112,16 @@ that happens).
    increasing build numbers and this repo doesn't track what's already on
    TestFlight).
 2. Commit, push to `main`, wait for the normal CI to pass.
-3. Tag it and push the tag:
+3. Tag it and push the tag (optional — purely for version bookkeeping/git
+   history, does not trigger anything):
    ```bash
    git tag mobile-v1.0.1
    git push origin mobile-v1.0.1
    ```
-4. Watch the **Mobile Release** workflow in the Actions tab. On success the
-   build appears in App Store Connect → TestFlight within a few minutes
-   (Apple's own processing step, not part of this pipeline).
+4. Trigger the build by hand: Actions tab → **Mobile Release** →
+   **Run workflow** → lane **`beta`**. On success the build appears in App
+   Store Connect → TestFlight within a few minutes (Apple's own processing
+   step, not part of this pipeline).
 5. Test it via TestFlight.
 6. When ready for the public App Store: Actions tab → **Mobile Release** →
    **Run workflow** → lane **`release`**. This submits the TestFlight build
