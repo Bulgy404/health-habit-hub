@@ -31,6 +31,7 @@ import argparse
 import asyncio
 import datetime
 import os
+import random
 import time
 import uuid as _uuid_mod
 from pathlib import Path
@@ -380,13 +381,15 @@ async def _seed_one(client, driver, sentence, language, user_id,
         return True
 
 
-async def run_seed(concurrency: int, habit_count: int, dry_run: bool) -> None:
+async def run_seed(concurrency: int, habit_count: int, dry_run: bool,
+                    user_id: Optional[str] = None, random_pick: bool = False) -> None:
     if not _SECRET:
         raise SystemExit("API_SERVICE_SECRET not set — aborting.")
-    habits = HABITS[:habit_count]
+    habits = random.sample(HABITS, habit_count) if random_pick else HABITS[:habit_count]
     total = len(habits)
     sem = asyncio.Semaphore(concurrency)
-    print(f"Mode: seed (direct)  •  {total} habits  •  concurrency={concurrency}")
+    print(f"Mode: seed (direct)  •  {total} habits  •  concurrency={concurrency}"
+          f"  •  user={user_id or 'round-robin ' + str(len(_SEED_USERS)) + ' seed users'}")
     print(f"API service: {_API_BASE}  •  Neo4j: {_NEO4J_URI}\n")
     driver = AsyncGraphDatabase.driver(
         _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD),
@@ -398,7 +401,7 @@ async def run_seed(concurrency: int, habit_count: int, dry_run: bool) -> None:
             await _warmup(client)
             results = await asyncio.gather(*[
                 _seed_one(client, driver, sentence, language,
-                          _SEED_USERS[i % len(_SEED_USERS)],
+                          user_id or _SEED_USERS[i % len(_SEED_USERS)],
                           i + 1, total, sem, dry_run)
                 for i, (sentence, language) in enumerate(habits)
             ], return_exceptions=True)
@@ -545,11 +548,20 @@ if __name__ == "__main__":
                         help=f"Number of habits to process (default: {len(HABITS)})")
     parser.add_argument("--dry-run", action="store_true",
                         help="(seed mode only) Print what would happen without writing.")
+    parser.add_argument("--user-id", default=None,
+                        help="(seed mode only) Assign all habits to this single userID "
+                             "instead of round-robin across the 10 synthetic seed users.")
+    parser.add_argument("--random", action="store_true",
+                        help="(seed mode only) Pick --habits habits at random instead of "
+                             "taking the first N from the list.")
     args = parser.parse_args()
 
     if args.mode == "seed":
-        asyncio.run(run_seed(args.concurrency, args.habits, args.dry_run))
+        asyncio.run(run_seed(args.concurrency, args.habits, args.dry_run,
+                              user_id=args.user_id, random_pick=args.random))
     else:
         if args.dry_run:
             parser.error("--dry-run is only supported in seed mode")
+        if args.user_id or args.random:
+            parser.error("--user-id/--random are only supported in seed mode")
         asyncio.run(run_e2e(args.concurrency, args.habits))
