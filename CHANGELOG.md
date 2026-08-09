@@ -110,6 +110,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Admin study creation returned 400 when a group label was left blank.
 - **The activity heatmap (`ContributionGraphWidget` — My Habits, per-habit activity log, and the donate/share screen) misplaced days logged after the EU Daylight Saving Time change**, e.g. a habit logged on a real Monday rendered in the grid's Sunday row. The grid is built by walking day-by-day from the oldest visible week to today (`cursor.add(const Duration(days: 1))`) on a *local* `DateTime`, whose `add`/`subtract` is real-elapsed-time based, not calendar-aware; crossing the 23-hour spring-forward day (last Sunday of March) overshoots "+1 day" to 01:00 instead of 00:00, silently dropping a calendar day and shifting every subsequent date one weekday out of alignment for the rest of the season. The underlying logged data was never affected — only the grid's own day-stepping arithmetic. Fixed by doing that arithmetic in UTC (DST-free) and converting to local Y/M/D only once each day is stored. See `docs/guides/flutter-architecture.md` → Activity visualization.
 
+### Security
+
+- **`js-yaml` 4.3.0 → 4.3.1** (`app/`) — fixes [GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj) (CVE-2026-59870), quadratic CPU consumption in `!!omap` resolution; the 4.x fix hadn't been backported to the version previously pinned. High severity, direct dependency.
+- **`nanoid` 3.3.16 → 3.3.18** (`admin/`, transitive) — fixes [GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8), custom generators could loop indefinitely when `size` is `0`. High severity.
+- **`json` (RubyGems) 2.20.0 → 2.21.2** (`mobile/`, transitive via fastlane) — fixes a `JSON::ResumableParser#partial_value` freed-buffer dereference that could crash on a truncated duplicate-key stream. Low severity.
+
 ## [0.0.1] — 2026-06-23
 
 Initial release of Health Habit Hub — a research platform for studying health habit formation, developed at TU Dresden as part of the DFG-funded research programme.
