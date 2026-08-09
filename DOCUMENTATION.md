@@ -36,7 +36,7 @@
 > | [`docs/architecture.md`](docs/architecture.md) | Extended architecture narrative |
 > | [`docs/diagrams/`](docs/diagrams/README.md) | Diagrams-as-code (system, sequences, use cases, class model) |
 > | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
-> | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention |
+> | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention, and the spring-based motion vocabulary (`AppSpring`, `PressableScale`, reduced-motion handling) |
 
 ## 1. Project Overview
 
@@ -50,6 +50,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 - **Multi-language support** — English, German, French, Japanese, and Dutch (LibreTranslate for automatic translation + LLM refinement)
 - **Automated notifications** — Redis-coordinated scheduled push notification dispatch, plus per-habit check-in delivery (see _Questionnaire Scheduling & Check-in Delivery_)
 - **Researcher admin panel** — study management, participant tracking, questionnaire authoring and scheduling
+- **Physics-based motion** — a shared spring vocabulary (damping/response, not fixed-duration easing) drives interactive animations in both the mobile app and admin portal, with momentum handoff on drag release and full reduced-motion support; see `docs/design-system.md` → Motion
 
 ---
 
