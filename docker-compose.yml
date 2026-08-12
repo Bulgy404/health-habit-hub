@@ -203,6 +203,8 @@ services:
     networks:
       - hhh-proxy
     depends_on:
+      config-sync:
+        condition: service_completed_successfully
       mongo:
         condition: service_started
       neo4j:
@@ -211,6 +213,15 @@ services:
         condition: service_started
       backup:
         condition: service_started
+    # `build: ./app` means the maintenance scripts at repo-root scripts/ (e.g.
+    # migrate-habits-bcio.js — see DEPLOYMENT.md's `docker exec hhh-app node
+    # scripts/...`) are never baked into this image. Same fix as the other
+    # config-sync consumers below: bind-mount the real checkout instead of
+    # widening the build context (Portainer's git-stack checkout only pulls
+    # the compose file itself, so a relative `./scripts` bind wouldn't work —
+    # see the config-sync comment above).
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/scripts:/usr/src/scripts:ro
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
       interval: 30s

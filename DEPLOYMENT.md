@@ -511,10 +511,22 @@ Expected output:
 [backfill] Done. 42 updated, 0 failed.
 ```
 
-#### 4d. Backfill BCIO Enrichment for Existing Habits (Optional)
+#### 4d. Backfill/Re-map BCIO Enrichment for Existing Habits (Optional)
+
+Maps BCIO concepts for `Context` nodes that don't have one yet (e.g. habits donated before mapping existed, or before a matching-quality fix like a raised `BCIO_MIN_CONFIDENCE`). `scripts/` is bind-mounted into `hhh-app` at `/usr/src/scripts` (sibling of the app's own `/usr/src/app`, not baked into the image build — see the `app` service's `volumes:` in `docker-compose.yml`), so use the absolute path, not a path relative to the container's default `/usr/src/app` working directory:
 
 ```bash
-docker exec hhh-app node scripts/migrate-habits-bcio.js
+# preview first — no writes
+docker exec hhh-app node /usr/src/scripts/migrate-habits-bcio.js --dry-run
+
+# also re-map existing mappings made under a looser threshold than the one
+# currently configured (deletes MAPS_TO edges below the given confidence,
+# then re-attempts them)
+docker exec hhh-app node /usr/src/scripts/migrate-habits-bcio.js --reset-below=0.75 --dry-run
+docker exec hhh-app node /usr/src/scripts/migrate-habits-bcio.js --reset-below=0.75
+
+# plain backfill (unmapped Context nodes only, no reset)
+docker exec hhh-app node /usr/src/scripts/migrate-habits-bcio.js
 ```
 
 ### 5. Test Backup System
