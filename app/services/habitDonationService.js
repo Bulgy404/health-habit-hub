@@ -101,7 +101,7 @@ async function extractContext(uuid, sentence, language, apiBase) {
 }
 
 /** Map BCIO concepts for the given context phrases. */
-async function mapBcio(uuid, contextPhrases, apiBase) {
+export async function mapBcio(uuid, contextPhrases, apiBase) {
   let res;
   try {
     res = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
@@ -322,7 +322,7 @@ const ADMIN_BCIO_LANGS = ['de', 'fr', 'nl'];
  * @param {{ apiBase?: string, translateTerm?: Function }} [deps]
  * @returns {Promise<void>}
  */
-async function _writeBcioMappings(mappings, queryNeo4j, deps = {}) {
+export async function _writeBcioMappings(mappings, queryNeo4j, deps = {}) {
   if (mappings.length === 0) return;
   const { apiBase, translateTerm } = deps;
 

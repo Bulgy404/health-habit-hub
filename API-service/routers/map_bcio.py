@@ -23,7 +23,14 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-_BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.6"))
+# 0.6 was too permissive against the full ~2,500-concept ontology: short,
+# generic context phrases (e.g. TIME phrases like "most mornings") could
+# out-score the correct concept against an unrelated one purely from
+# embedding-similarity noise (observed: matching "relationship status:
+# single" instead of a frequency/routine concept). Raised as a first-pass,
+# unvalidated estimate — retune via the env var once more real mappings have
+# been reviewed; there's no labelled precision/recall set backing 0.75 yet.
+_BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.75"))
 _OWL_PATH = Path(__file__).parent.parent / "data" / "bcio.owl"
 
 # Bounds on context_phrases shape — mirrors the list-length caps used

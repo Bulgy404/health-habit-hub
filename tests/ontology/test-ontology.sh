@@ -190,6 +190,10 @@ assert_cypher_zero \
   "MATCH (c:Comment) WHERE NOT (c)-[:COMMENT_ON]->(:Habit) RETURN c.id AS orphaned_comment"
 
 assert_cypher_zero \
+  "No orphaned BCIOConcept nodes (must be reached via a Context's MAPS_TO)" \
+  "MATCH (b:BCIOConcept) WHERE NOT (:Context)-[:MAPS_TO]->(b) RETURN b.bcio_concept_id AS orphaned_bcio_concept"
+
+assert_cypher_zero \
   "No Habit without a uuid" \
   "MATCH (h:Habit) WHERE h.uuid IS NULL RETURN id(h) AS habit_without_uuid"
 
