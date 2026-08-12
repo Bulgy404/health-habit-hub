@@ -73,6 +73,38 @@ Researchers and admins manage studies, questionnaires, and the knowledge base th
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/assets/mockups/adminPortal.png" width="100%" alt="Admin portal dashboard"/>
+  <br/>
+  <strong>Run the whole study from one dashboard</strong><br/>
+  Configure studies, questionnaires, and the shared knowledge base, track participant progress, and export data — everything researchers and admins need, without touching a database.
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/mockups/iPhoneHabits.png" width="100%" alt="Mobile app — logging a habit"/>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/mockups/iPhoneGraph.png" width="100%" alt="Mobile app — the shared habit graph"/>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <strong>Log a habit in seconds</strong><br/>
+      Describe a real habit in your own words and answer a couple of short questions. No streak-shaming, no clutter — a calm, friendly way to capture what you actually do.
+    </td>
+    <td valign="top">
+      <strong>Explore the shared habit graph</strong><br/>
+      Browse the habits other participants have donated in an interactive bubble-graph view. Related behaviours cluster together, so you can pan, zoom, and tap through the collective picture — and see where your own habits fit in.
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Roles
 
 | Role         | What they do                                                                                                   |
