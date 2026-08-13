@@ -53,6 +53,14 @@ post_install do |installer|
       # (Release/Archive builds only). Disable verification for pods.
       config.build_settings['ENABLE_MODULE_VERIFIER'] = 'NO'
 
+      # Flutter's placeholder "Flutter" pod (satisfies plugin podspecs'
+      # `s.dependency 'Flutter'`; real linking happens outside CocoaPods) has
+      # no real sources, so libtool warns its archived object has no symbols.
+      # Harmless — silence just that specific libtool diagnostic.
+      other_libtoolflags = config.build_settings['OTHER_LIBTOOLFLAGS'] || ['$(inherited)']
+      other_libtoolflags = [other_libtoolflags] if other_libtoolflags.is_a?(String)
+      config.build_settings['OTHER_LIBTOOLFLAGS'] = other_libtoolflags + ['-no_warning_for_no_symbols']
+
       # firebase_core assigns [NSNull null] to NSString* pigeon properties (e.g.
       # deepLinkURLScheme) without an (id) cast. Xcode 15+ treats
       # -Wincompatible-pointer-types as an error by default, which breaks the
