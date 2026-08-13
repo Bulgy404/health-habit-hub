@@ -46,6 +46,13 @@ post_install do |installer|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
 
+      # Xcode 16's Module Verifier compiles each pod as a standalone module to
+      # sanity-check it, but Flutter plugin pods rely on header search paths
+      # Flutter's own build step injects — those aren't present during
+      # verification, so it fails with "Flutter/Flutter.h file not found"
+      # (Release/Archive builds only). Disable verification for pods.
+      config.build_settings['ENABLE_MODULE_VERIFIER'] = 'NO'
+
       # firebase_core assigns [NSNull null] to NSString* pigeon properties (e.g.
       # deepLinkURLScheme) without an (id) cast. Xcode 15+ treats
       # -Wincompatible-pointer-types as an error by default, which breaks the
