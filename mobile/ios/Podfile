@@ -1,6 +1,10 @@
 # Uncomment this line to define a global platform for your project
 platform :ios, '18.0'
 
+# Silence warnings from third-party pod source (Firebase, Sentry, AppAuth, etc.).
+# Only affects Pods targets, not Runner's own code.
+inhibit_all_warnings!
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
