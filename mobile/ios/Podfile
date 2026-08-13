@@ -41,6 +41,17 @@ post_install do |installer|
     flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '18.0'
+
+      # firebase_core assigns [NSNull null] to NSString* pigeon properties (e.g.
+      # deepLinkURLScheme) without an (id) cast. Xcode 15+ treats
+      # -Wincompatible-pointer-types as an error by default, which breaks the
+      # build. Demote it back to a warning until upstream fixes it.
+      # https://github.com/firebase/flutterfire/ (FLTFirebaseCorePlugin.m)
+      if target.name == 'firebase_core'
+        other_cflags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+        other_cflags = [other_cflags] if other_cflags.is_a?(String)
+        config.build_settings['OTHER_CFLAGS'] = other_cflags + ['-Wno-error=incompatible-pointer-types']
+      end
     end
   end
 end
