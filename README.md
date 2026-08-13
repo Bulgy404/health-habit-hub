@@ -85,23 +85,48 @@ Researchers and admins manage studies, questionnaires, and the knowledge base th
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="docs/assets/mockups/iPhoneHabits.png" width="100%" alt="Mobile app — logging a habit"/>
+      <img src="docs/assets/mockups/Homepage.png" width="100%" alt="Mobile app — welcome screen"/>
     </td>
     <td width="50%" align="center">
-      <img src="docs/assets/mockups/iPhoneGraph.png" width="100%" alt="Mobile app — the shared habit graph"/>
+      <img src="docs/assets/mockups/Habits.png" width="100%" alt="Mobile app — My Habits tracking view"/>
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <strong>Log a habit in seconds</strong><br/>
-      Describe a real habit in your own words and answer a couple of short questions. No streak-shaming, no clutter — a calm, friendly way to capture what you actually do.
+      <strong>A citizen-science platform, explained in one screen</strong><br/>
+      No dense onboarding, no lengthy signup — just a quick promise and a way in.
     </td>
+    <td valign="top">
+      <strong>Watch your habits become automatic</strong><br/>
+      A calendar heatmap shows your consistency at a glance, and reminders fade out automatically once a habit sticks.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/mockups/GraphView.png" width="100%" alt="Mobile app — the shared habit graph"/>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/mockups/Recommendations.png" width="100%" alt="Mobile app — personalised recommendations"/>
+    </td>
+  </tr>
+  <tr>
     <td valign="top">
       <strong>Explore the shared habit graph</strong><br/>
       Browse the habits other participants have donated in an interactive bubble-graph view. Related behaviours cluster together, so you can pan, zoom, and tap through the collective picture — and see where your own habits fit in.
     </td>
+    <td valign="top">
+      <strong>Not generic advice. Yours.</strong><br/>
+      Suggestions grounded in behavioural science, each with a plain-language rationale and a one-tap way to add it to your own habits.
+    </td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/assets/mockups/SRHI.png" width="40%" alt="Mobile app — SRHI and automaticity charts"/>
+  <br/>
+  <strong>Habit strength, measured scientifically</strong><br/>
+  Each habit's Self-Report Habit Index (SRHI) and automaticity score are tracked across the study, so participants can see their own progress becoming routine.
+</p>
 
 ---
 

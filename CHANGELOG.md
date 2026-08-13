@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-13
+
+### Fixed
+
+- **Habit graph dimension labels (Time, Behavior, Location, Prior Behavior, Social, Mental State, Reasoning) were always shown in English on the Explore bubble graph, regardless of the participant's app language.** Both the mobile client and the `GET /habits/bubble-graph` endpoint now resolve dimension labels per-language (`app/routes/habits/habitsGraphRouter.js`'s new `DIMENSION_LABELS_BY_LANG`, new ARB keys `bubbleGraphDimension*` across `en`/`de`/`fr`/`ja`/`nl`), matching the same language set habit-sentence translation already supports.
+- **iOS release/archive builds failed on current Xcode tooling.** Three independent issues, all addressed in `mobile/ios/Podfile`'s `post_install` hook: (1) `firebase_core` assigns `[NSNull null]` to an `NSString* _Nullable` pigeon property without an `(id)` cast, which current Xcode treats as a hard `-Wincompatible-pointer-types` error rather than a warning — demoted back to a warning for that pod. (2) Xcode's Module Verifier tried to compile each plugin pod as a standalone module and failed with `Flutter/Flutter.h file not found` (Release/Archive builds only, since the verifier doesn't run for Debug) — disabled verification for pods via `ENABLE_MODULE_VERIFIER`. (3) `firebase_core`/`firebase_messaging` bumped to 4.13.0/16.5.0.
+
+### Changed
+
+- iOS deployment target raised to 26.0.
+- Silenced third-party pod build warnings (Firebase, Sentry, AppAuth, GoogleUtilities) via `inhibit_all_warnings!`, and a harmless `libtool` "no symbols" note from Flutter's placeholder CocoaPods integration pod via `OTHER_LIBTOOLFLAGS`.
+- Refreshed app store mockups/screenshots in the README.
+
 ## [1.0.0] - 2026-08-09
 
 ### Added
