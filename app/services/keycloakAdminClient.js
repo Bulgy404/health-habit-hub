@@ -266,6 +266,13 @@ export function createKeycloakAdminClient({
      * Keycloak has no "all sessions in a realm" endpoint — only per-client
      * (`/clients/{id}/user-sessions`) or per-user — so this resolves that
      * client's internal UUID first, then lists its sessions.
+     *
+     * Includes both online sessions (`/user-sessions`, ~30 min idle timeout)
+     * and offline sessions (`/offline-sessions`). The ROPC grant requests
+     * `offline_access` (see keycloakRopcClient.js) specifically so
+     * participants stay authenticated across infrequent app opens, so most
+     * real participant sessions age out of the online list almost
+     * immediately and only show up as offline sessions.
      * @returns {Promise<Array>}
      */
     async listSessions() {
@@ -280,13 +287,34 @@ export function createKeycloakAdminClient({
       const clientUuid = clients[0]?.id;
       if (!clientUuid) return [];
 
-      const res = await fetch(
-        `${_base}/admin/realms/${_realm}/clients/${clientUuid}/user-sessions?first=0&max=1000`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok)
-        throw new Error(`Keycloak session list failed: ${res.status}`);
-      return res.json();
+      const [onlineRes, offlineRes] = await Promise.all([
+        fetch(
+          `${_base}/admin/realms/${_realm}/clients/${clientUuid}/user-sessions?first=0&max=1000`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+        fetch(
+          `${_base}/admin/realms/${_realm}/clients/${clientUuid}/offline-sessions?first=0&max=1000`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+      ]);
+      if (!onlineRes.ok)
+        throw new Error(`Keycloak session list failed: ${onlineRes.status}`);
+      if (!offlineRes.ok)
+        throw new Error(
+          `Keycloak offline session list failed: ${offlineRes.status}`
+        );
+      const [online, offline] = await Promise.all([
+        onlineRes.json(),
+        offlineRes.json(),
+      ]);
+
+      // A session can appear in both lists right after login (the online
+      // session hasn't idled out yet); de-dupe by id, preferring the offline
+      // entry since it's the one that reflects how long the participant is
+      // actually still authenticated for.
+      const byId = new Map(online.map((s) => [s.id, s]));
+      for (const s of offline) byId.set(s.id, s);
+      return [...byId.values()];
     },
 
     async revokeSession(sessionId) {
