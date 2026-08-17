@@ -79,6 +79,8 @@ restart_server_on() {
 HAS_FALLBACK=false
 if [ -n "$FALLBACK_LLM_MODEL" ] && [ "$FALLBACK_LLM_MODEL" != "$PRIMARY_LLM_MODEL" ]; then
   HAS_FALLBACK=true
+elif [ -n "$FALLBACK_LLM_MODEL" ]; then
+  echo "[lightrag] WARNING: LLM_FALLBACK_MODEL ('${FALLBACK_LLM_MODEL}') is the same as the effective primary model ('${PRIMARY_LLM_MODEL}', from LIGHTRAG_LLM_MODEL or LLM_MODEL) — fallback disabled. If the primary provider goes down, every query will fail with no automatic recovery. Set LLM_FALLBACK_MODEL to a genuinely different model alias."
 fi
 
 # --- Initial model selection ---
