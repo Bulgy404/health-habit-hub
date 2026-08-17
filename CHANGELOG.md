@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-08-17
+
+### Fixed
+
+- **Admin-initiated participant deletion left the participant's Keycloak account fully live.** `DELETE /admin/participants/:id` (the Participants page's delete/anonymize action) only anonymized the Mongo `participants` doc via `softDeleteParticipant()` — unlike the participant's own self-service `DELETE /users/me`, it never called `keycloak.deleteUser()` or cleared `deviceTokens`. The removed participant could still sign in, refresh tokens indefinitely, and remained a valid push-notification target, while no longer appearing in the Participants list. `softDeleteParticipant()` (`app/services/adminParticipantService.js`) now also deletes the participant's `deviceTokens` and Keycloak identity, matching the self-service flow; a failed Keycloak deletion is logged rather than left silently inconsistent.
+
+### Added
+
+- **Admin Devices tab now resolves each session's Keycloak `userId` against the Participants collection** instead of showing a bare, uncorrelatable UUID. `GET /admin/sessions` batches a single Mongo lookup per page and returns `username` + `participantStatus` (`active` / `deleted` / `no_matching_participant`) per session; the Devices table shows the resolved username, a "Deleted" badge for anonymized-but-still-Keycloak-live accounts, and a "No matching participant" badge for orphaned Keycloak sessions with no Mongo record at all — exactly the gap the previous fix above closes going forward.
+
 ## [1.1.2] - 2026-08-17
 
 ### Fixed
