@@ -26,11 +26,20 @@ ACTIVE_MODEL=""
 
 probe_model() {
   # $1 = model name. Returns 0 (success) if it answers 200, 1 otherwise.
+  #
+  # Must request response_format=json_object, same as LightRAG's real
+  # extract/keyword/query calls (lightrag-hku always asks for structured
+  # JSON output for those roles). Some vLLM backends support plain chat
+  # completions fine while their guided-JSON/structured-output path 500s
+  # independently — a bare unstructured ping would then report the model
+  # "healthy" and this script would never fail over, even though every real
+  # request keeps failing (see the alias-huge-no-thinking incident: JSON-mode
+  # calls errored with Hosted_vllmException while the model itself was up).
   code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 -X POST \
     "${LLM_BINDING_HOST}/chat/completions" \
     -H "Authorization: Bearer ${LLM_BINDING_API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "{\"model\":\"$1\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1}" \
+    -d "{\"model\":\"$1\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with {\\\"ok\\\":true}\"}],\"max_tokens\":16,\"response_format\":{\"type\":\"json_object\"}}" \
     2>/dev/null || echo "000")
   [ "$code" = "200" ]
 }
