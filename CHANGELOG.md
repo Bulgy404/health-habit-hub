@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-08-17
+
+### Fixed
+
+- **LightRAG queries silently returned "No relevant context found for the query." during an upstream model outage, with no automatic recovery.** Three compounding issues: (1) `LIGHTRAG_LLM_MODEL`'s compose-file default (`alias-huge-no-thinking`) wasn't visible as a Portainer stack variable, and happened to equal `LLM_FALLBACK_MODEL` — `lightrag/entrypoint.sh`'s auto-failover only activates when the two differ, so it was silently disabled; the default is now `alias-ha`, matching `LLM_MODEL`. (2) Even with a correct fallback configured, `entrypoint.sh`'s health probe sent a bare, unstructured "ping" completion, while LightRAG's real extract/keyword/query calls always request `response_format=json_object` — the affected vLLM backend served plain completions fine while its JSON-mode path 500'd independently, so the probe kept reporting the primary as healthy and never switched over. The probe now sends the same JSON-mode request shape LightRAG actually uses. (3) Added a startup warning when `LIGHTRAG_LLM_MODEL == LLM_FALLBACK_MODEL`, so this exact collision is never silent again.
+- **The release workflow's CI gate could be blocked by an unrelated, coincidentally-same-commit CI run.** Pushing a changelog commit to `main` and then tagging it triggers two separate `CI` workflow runs against the identical SHA (`ci.yml` matches both `branches: [main]` and `tags: ['v*']`); `release.yml`'s gate queried check-runs by name only, so a transient flake in the unrelated `main`-triggered run could grab priority over the tag's own passing run and block publication (hit during the v1.1.3 release — see release notes). The gate now filters workflow runs by `head_branch == the tag name`, scoping it to the run that actually validated the tag being released.
+
 ## [1.1.3] - 2026-08-17
 
 ### Fixed
