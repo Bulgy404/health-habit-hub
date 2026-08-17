@@ -205,6 +205,8 @@ services:
     depends_on:
       config-sync:
         condition: service_completed_successfully
+      keycloak-init:
+        condition: service_completed_successfully
       mongo:
         condition: service_started
       neo4j:

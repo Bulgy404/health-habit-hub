@@ -68,6 +68,8 @@ services:
     depends_on:
       proxy:
         condition: service_started
+      keycloak-init:
+        condition: service_completed_successfully
       mongo:
         condition: service_started
       neo4j:
