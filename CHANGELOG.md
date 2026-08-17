@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-17
+
+### Fixed
+
+- **Admin Devices tab showed no active sessions even for participants actively using the app.** `keycloakAdminClient.js`'s `listSessions()` only queried Keycloak's `/user-sessions` endpoint (online SSO sessions, ~30-minute idle timeout), but the ROPC grant that mints participant tokens requests `offline_access` specifically so the app stays authenticated across infrequent opens (`keycloakRopcClient.js`) — so real participant sessions age out of the online list almost immediately and only exist as offline sessions. `listSessions()` now merges `/user-sessions` and `/offline-sessions`, de-duped by session id.
+- **`app` could start serving requests before `keycloak-init` finished granting its Keycloak service account the `realm-admin` role**, intermittently 403ing any Keycloak admin-API call (onboarding's user creation, session listing, etc.) made shortly after a fresh stack start — surfaced reliably in the nightly E2E smoke test (`POST /onboard` → `Keycloak create user failed: 403`) and possible after a production redeploy. `app` now `depends_on: keycloak-init: condition: service_completed_successfully` in both `docker-compose.yml` and `docker-compose.local.yml`.
+
 ## [1.1.1] - 2026-08-13
 
 ### Fixed
