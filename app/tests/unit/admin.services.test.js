@@ -295,7 +295,10 @@ test('softDeleteParticipant deletes the Keycloak identity and device tokens', as
   const result = await softDeleteParticipant({ db, id: 'u1', keycloak });
   assert.deepStrictEqual(result, { ok: true });
   assert.deepStrictEqual(deletedUserIds, ['u1']);
-  const remainingTokens = await db.collection('deviceTokens').find({}).toArray();
+  const remainingTokens = await db
+    .collection('deviceTokens')
+    .find({})
+    .toArray();
   assert.deepStrictEqual(
     remainingTokens.map((t) => t.userId),
     ['u2']
