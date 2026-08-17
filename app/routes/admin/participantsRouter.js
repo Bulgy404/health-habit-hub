@@ -638,7 +638,11 @@ export function createParticipantsRouter({
     try {
       const { id } = req.params;
       const database = await getDb();
-      const result = await softDeleteParticipant({ db: database, id });
+      const result = await softDeleteParticipant({
+        db: database,
+        id,
+        keycloak: getKeycloak(),
+      });
 
       if (result === null) {
         return res.status(404).json({ error: 'Participant not found' });

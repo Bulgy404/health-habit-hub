@@ -160,7 +160,9 @@
     "confirmRevoke": "Révoquer cette session d'appareil ? L'utilisateur sera déconnecté.",
     "loadFailed": "Échec du chargement des sessions",
     "revokeFailed": "Échec de la révocation de la session",
-    "totalPageInfo": "{total} au total · page {page} sur {totalPages}"
+    "totalPageInfo": "{total} au total · page {page} sur {totalPages}",
+    "noMatchingParticipant": "Aucun participant correspondant",
+    "deleted": "Supprimé"
   },
   "backups": {
     "title": "Sauvegardes",

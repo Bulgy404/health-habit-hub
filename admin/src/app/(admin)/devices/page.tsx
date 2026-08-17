@@ -9,6 +9,8 @@ import styles from "@/components/admin-page.module.css";
 interface DeviceSession {
   id: string;
   participantId: string;
+  username: string | null;
+  participantStatus: "active" | "deleted" | "no_matching_participant";
   deviceType: string;
   appVersion: string;
   lastSeen: string | null;
@@ -16,9 +18,17 @@ interface DeviceSession {
 
 function normalise(raw: unknown): DeviceSession {
   const j = (raw ?? {}) as Record<string, unknown>;
+  const participantStatus = j.participantStatus;
   return {
     id: String(j.id ?? j.sessionId ?? ""),
     participantId: String(j.participantId ?? j.userId ?? ""),
+    username: j.username ? String(j.username) : null,
+    participantStatus:
+      participantStatus === "active" ||
+      participantStatus === "deleted" ||
+      participantStatus === "no_matching_participant"
+        ? participantStatus
+        : "no_matching_participant",
     deviceType: String(j.deviceType ?? "unknown"),
     appVersion: String(j.appVersion ?? ""),
     lastSeen: j.lastSeen ? String(j.lastSeen) : null,
@@ -137,7 +147,34 @@ export default function DevicesPage() {
               {sessions.map((s) => (
                 <tr key={s.id}>
                   <td>
-                    <span className={styles.code}>{s.participantId || "—"}</span>
+                    {s.participantStatus === "no_matching_participant" ? (
+                      <>
+                        <span
+                          className={styles.badge}
+                          style={{ background: "#fef2f2", color: "#dc2626" }}
+                        >
+                          {t("noMatchingParticipant")}
+                        </span>
+                        <div>
+                          <span className={styles.code}>{s.participantId || "—"}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          {s.username ?? "—"}
+                          {s.participantStatus === "deleted" && (
+                            <span
+                              className={styles.badge}
+                              style={{ background: "#f3f4f6", color: "#6b7280", marginLeft: "0.4rem" }}
+                            >
+                              {t("deleted")}
+                            </span>
+                          )}
+                        </div>
+                        <span className={styles.code}>{s.participantId || "—"}</span>
+                      </>
+                    )}
                   </td>
                   <td>{s.deviceType}</td>
                   <td>{s.appVersion || "—"}</td>

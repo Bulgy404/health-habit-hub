@@ -160,7 +160,9 @@
     "confirmRevoke": "Deze apparaatsessie intrekken? De gebruiker wordt afgemeld.",
     "loadFailed": "Sessies konden niet worden geladen",
     "revokeFailed": "Sessie kon niet worden ingetrokken",
-    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}"
+    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}",
+    "noMatchingParticipant": "Geen bijbehorende deelnemer",
+    "deleted": "Verwijderd"
   },
   "backups": {
     "title": "Back-ups",

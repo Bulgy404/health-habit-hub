@@ -107,6 +107,15 @@ function createMockDb() {
           }
           return { matchedCount: 0, modifiedCount: 0 };
         },
+        async deleteMany(filter) {
+          let deletedCount = 0;
+          for (const [k, doc] of store) {
+            if (filter.userId && doc.userId !== filter.userId) continue;
+            store.delete(k);
+            deletedCount++;
+          }
+          return { deletedCount };
+        },
       };
     },
     _seed(name, docs) {
@@ -137,6 +146,9 @@ function createMockKeycloak() {
       return [{ id: 'sess-1', userId: 'user-1', lastAccess: Date.now() }];
     },
     async revokeSession() {},
+    async deleteUser(userId) {
+      this._users?.delete(userId);
+    },
   };
 }
 

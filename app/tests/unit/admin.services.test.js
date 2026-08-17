@@ -122,6 +122,17 @@ function makeDb(initial = {}) {
           s.splice(idx, 1);
           return { deletedCount: 1 };
         },
+        async deleteMany(filter) {
+          const before = s.length;
+          const remaining = s.filter((d) => {
+            for (const [k, v] of Object.entries(filter)) {
+              if (d[k] !== v) return true;
+            }
+            return false;
+          });
+          stores[name] = remaining;
+          return { deletedCount: before - remaining.length };
+        },
         async countDocuments(filter = {}) {
           return s.filter((doc) => {
             if (
@@ -265,6 +276,43 @@ test('softDeleteParticipant returns null when participant not found', async () =
   const db = makeDb({ participants: [] });
   const result = await softDeleteParticipant({ db, id: 'missing' });
   assert.strictEqual(result, null);
+});
+
+test('softDeleteParticipant deletes the Keycloak identity and device tokens', async () => {
+  const db = makeDb({
+    participants: [{ userId: 'u1', username: 'p-u1', group: 'G1' }],
+    deviceTokens: [
+      { userId: 'u1', token: 't1' },
+      { userId: 'u2', token: 't2' },
+    ],
+  });
+  const deletedUserIds = [];
+  const keycloak = {
+    async deleteUser(userId) {
+      deletedUserIds.push(userId);
+    },
+  };
+  const result = await softDeleteParticipant({ db, id: 'u1', keycloak });
+  assert.deepStrictEqual(result, { ok: true });
+  assert.deepStrictEqual(deletedUserIds, ['u1']);
+  const remainingTokens = await db.collection('deviceTokens').find({}).toArray();
+  assert.deepStrictEqual(
+    remainingTokens.map((t) => t.userId),
+    ['u2']
+  );
+});
+
+test('softDeleteParticipant still anonymizes the participant when Keycloak deletion fails', async () => {
+  const db = makeDb({
+    participants: [{ userId: 'u1', username: 'p-u1', group: 'G1' }],
+  });
+  const keycloak = {
+    async deleteUser() {
+      throw new Error('Keycloak unreachable');
+    },
+  };
+  const result = await softDeleteParticipant({ db, id: 'u1', keycloak });
+  assert.deepStrictEqual(result, { ok: true });
 });
 
 // ── adminHabitService ─────────────────────────────────────────────────────────

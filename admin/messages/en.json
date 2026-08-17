@@ -160,7 +160,9 @@
     "noSessions": "No active device sessions.",
     "confirmRevoke": "Revoke this device session? The user will be signed out.",
     "loadFailed": "Failed to load sessions",
-    "revokeFailed": "Failed to revoke session"
+    "revokeFailed": "Failed to revoke session",
+    "noMatchingParticipant": "No matching participant",
+    "deleted": "Deleted"
   },
   "backups": {
     "title": "Backups",

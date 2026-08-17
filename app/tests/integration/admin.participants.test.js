@@ -150,6 +150,15 @@ function createMockDb() {
           store.set(key, { ...matched, ...update.$set });
           return { matchedCount: 1, modifiedCount: 1 };
         },
+        async deleteMany(query) {
+          let deletedCount = 0;
+          for (const [key, doc] of store) {
+            if (query.userId && doc.userId !== query.userId) continue;
+            store.delete(key);
+            deletedCount++;
+          }
+          return { deletedCount };
+        },
       };
     },
   };
@@ -188,6 +197,9 @@ function createMockKeycloak() {
     async updateUserAttribute(userId, key, value) {
       const user = users.get(userId);
       if (user) user.attributes[key] = value;
+    },
+    async deleteUser(userId) {
+      users.delete(userId);
     },
   };
 }

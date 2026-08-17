@@ -160,7 +160,9 @@
     "noSessions": "Keine aktiven Gerätesitzungen.",
     "confirmRevoke": "Diese Gerätesitzung widerrufen? Die Person wird abgemeldet.",
     "loadFailed": "Sitzungen konnten nicht geladen werden",
-    "revokeFailed": "Sitzung konnte nicht widerrufen werden"
+    "revokeFailed": "Sitzung konnte nicht widerrufen werden",
+    "noMatchingParticipant": "Keine passende teilnehmende Person",
+    "deleted": "Gelöscht"
   },
   "backups": {
     "title": "Backups",

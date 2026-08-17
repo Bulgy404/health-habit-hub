@@ -848,11 +848,46 @@ export function createAdminRouter({
       // Keycloak's session list has no server-side pagination params to push
       // this down to — bounded here so the browser never has to render an
       // unbounded list.
+      const pageSessions = all.slice(skip, skip + limit);
+
+      // Cross-reference each session's Keycloak userId (== the `userId` shown
+      // on the Participants page) against the participants collection, so the
+      // admin can tell who a session actually belongs to instead of matching
+      // raw UUIDs by eye — and so a session with no matching participant
+      // (e.g. an identity an admin removed before softDeleteParticipant
+      // started also deleting the Keycloak account) is visibly flagged
+      // rather than silently unexplained.
+      const userIds = [
+        ...new Set(pageSessions.map((s) => s.userId).filter(Boolean)),
+      ];
+      const participantsByUserId = new Map();
+      if (userIds.length > 0) {
+        const database = await getDb();
+        const docs = await database
+          .collection('participants')
+          .find({ userId: { $in: userIds } })
+          .project({ userId: 1, username: 1, deletedAt: 1 })
+          .toArray();
+        for (const doc of docs) participantsByUserId.set(doc.userId, doc);
+      }
+      const sessions = pageSessions.map((s) => {
+        const participant = participantsByUserId.get(s.userId);
+        return {
+          ...s,
+          username: participant?.username ?? null,
+          participantStatus: !participant
+            ? 'no_matching_participant'
+            : participant.deletedAt
+              ? 'deleted'
+              : 'active',
+        };
+      });
+
       res.json({
         total: all.length,
         page,
         limit,
-        sessions: all.slice(skip, skip + limit),
+        sessions,
       });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

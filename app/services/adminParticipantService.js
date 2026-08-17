@@ -2,6 +2,9 @@ import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { generateTokenCard } from './tokenCardService.js';
 import { recoveryPhrasesEnabled } from '../utils/recoveryPhrase.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'adminParticipantService' });
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
 function randomPassword() {
@@ -136,7 +139,17 @@ export async function getParticipant({ db, id }) {
  * @param {{ db: object, id: string }} deps
  * @returns {Promise<{ ok: boolean }|null>}
  */
-export async function softDeleteParticipant({ db, id }) {
+/**
+ * Soft-deletes a participant from the admin panel: anonymizes the Mongo
+ * participant doc, stops push notifications, and — like the participant's
+ * own self-service `DELETE /users/me` (see usersRouter.js) — removes the
+ * Keycloak identity so the account can no longer sign in or keep a session
+ * alive. Without this, an admin-removed participant kept a fully live
+ * Keycloak account (still shows up in the Devices tab, refresh tokens still
+ * work) even though they'd vanished from the Participants list.
+ * @param {{ db: object, id: string, keycloak?: { deleteUser: Function } }} deps
+ */
+export async function softDeleteParticipant({ db, id, keycloak }) {
   const hash = createHash('sha256').update(id).digest('hex').slice(0, 8);
   const anonymizedUsername = `deleted-${hash}`;
 
@@ -149,6 +162,24 @@ export async function softDeleteParticipant({ db, id }) {
 
   if (result.matchedCount === 0) {
     return null;
+  }
+
+  await db.collection('deviceTokens').deleteMany({ userId: id });
+
+  if (keycloak?.deleteUser) {
+    try {
+      await keycloak.deleteUser(id);
+    } catch (err) {
+      log.error(
+        { err, userId: id },
+        'Keycloak identity deletion failed for soft-deleted participant'
+      );
+    }
+  } else {
+    log.warn(
+      { userId: id },
+      'no Keycloak admin client available — identity not deleted'
+    );
   }
 
   return { ok: true };

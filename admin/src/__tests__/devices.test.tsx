@@ -18,6 +18,8 @@ jest.mock("next/navigation", () => ({
 const sessionA = {
   id: "s1",
   participantId: "u1",
+  username: "p-u1",
+  participantStatus: "active",
   deviceType: "ios",
   appVersion: "1.2.3",
   lastSeen: "2026-07-10T09:00:00.000Z",
@@ -25,6 +27,8 @@ const sessionA = {
 const sessionB = {
   id: "s2",
   participantId: "u2",
+  username: null,
+  participantStatus: "no_matching_participant",
   deviceType: "android",
   appVersion: "1.3.0",
   lastSeen: null,
@@ -32,6 +36,8 @@ const sessionB = {
 const sessionC = {
   id: "s3",
   participantId: "u3",
+  username: "deleted-abc123",
+  participantStatus: "deleted",
   deviceType: "web",
   appVersion: "2.0.0",
   lastSeen: "2026-07-11T09:00:00.000Z",
@@ -92,6 +98,17 @@ describe("DevicesPage", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
+  it("shows the resolved participant username for an active session", async () => {
+    render(<DevicesPage />);
+    expect(await screen.findByText("p-u1")).toBeInTheDocument();
+  });
+
+  it("flags a session with no matching participant instead of just showing the raw id", async () => {
+    render(<DevicesPage />);
+    expect(await screen.findByText("No matching participant")).toBeInTheDocument();
+    expect(screen.getByText("u2")).toBeInTheDocument();
+  });
+
   it("revoking a session asks for confirmation and does not call DELETE when cancelled", async () => {
     const user = userEvent.setup();
     window.confirm = jest.fn().mockReturnValue(false);
@@ -144,6 +161,10 @@ describe("DevicesPage", () => {
 
     await screen.findByText("u3");
     expect(screen.getByText(/page 2 of 3/i)).toBeInTheDocument();
+    // sessionC's participant was soft-deleted — shown with a "Deleted" badge
+    // next to its anonymized username, not just silently as an active one.
+    expect(screen.getByText("deleted-abc123")).toBeInTheDocument();
+    expect(screen.getByText("Deleted")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /previous/i })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /^next$/i })).not.toBeDisabled();
   });
