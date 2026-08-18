@@ -1,13 +1,24 @@
 import express from 'express';
+import multer from 'multer';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { logger } from '../../utils/logger.js';
+import { isValidUuid } from '../../utils/constants.js';
 
 const log = logger.child({ module: 'voiceTranscribeRouter' });
 
 // Generous but bounded — mirrors API-service's own _MAX_AUDIO_BYTES; guards
 // against buffering an oversized body into memory before forwarding/storing.
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
+
+// Only /donations/:uuid/audio needs this — it writes the file part's bytes
+// straight to disk, so it must actually parse the multipart envelope rather
+// than store it verbatim (unlike /share/transcribe below, which forwards
+// the whole raw body to a downstream multipart-aware endpoint untouched).
+const uploadAudio = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_AUDIO_BYTES },
+});
 
 /**
  * Voice input for habit donation: stateless transcription + (once a
@@ -90,61 +101,81 @@ export function createVoiceRouter({
   // that has already been submitted via POST /habits/share. Requires a
   // matching, not-yet-attached habit_donations record owned by the caller —
   // this is the only point at which audio is ever written to disk.
-  router.post('/donations/:uuid/audio', async (req, res) => {
-    const userId = req.user?.sub;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
-    const { uuid } = req.params;
-
-    try {
-      const database = await getDb();
-      const donation = await database
-        .collection('habit_donations')
-        .findOne({ uuid, userId });
-      if (!donation) {
-        return res.status(404).json({ error: 'Donation not found' });
-      }
-      if (donation.audioClip) {
-        return res.status(409).json({ error: 'Audio already attached' });
+  router.post(
+    '/donations/:uuid/audio',
+    uploadAudio.single('file'),
+    async (req, res) => {
+      const userId = req.user?.sub;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const { uuid } = req.params;
+      // Validate the shape before `uuid` is trusted for anything sensitive —
+      // it's used both in a Mongo query and (via `filename`) in a filesystem
+      // path below, and a habit_donations lookup alone isn't a recognised
+      // sanitizer for either of those.
+      if (!isValidUuid(uuid)) {
+        return res.status(400).json({ error: 'Invalid donation id' });
       }
 
-      const body = await readBody(req);
-      if (body.length === 0) {
+      const file = req.file;
+      if (!file || file.buffer.length === 0) {
         return res.status(400).json({ error: 'Empty audio upload' });
       }
 
-      const contentType = req.headers['content-type'] || 'audio/m4a';
-      const ext = contentType.includes('wav')
-        ? 'wav'
-        : contentType.includes('mp4') || contentType.includes('m4a')
-          ? 'm4a'
-          : 'bin';
-      const filename = `${uuid}.${ext}`;
+      try {
+        const database = await getDb();
+        const donation = await database
+          .collection('habit_donations')
+          .findOne({ uuid, userId });
+        if (!donation) {
+          return res.status(404).json({ error: 'Donation not found' });
+        }
+        if (donation.audioClip) {
+          return res.status(409).json({ error: 'Audio already attached' });
+        }
 
-      await mkdir(storageDir, { recursive: true });
-      await writeFile(path.join(storageDir, filename), body);
+        const mimeType = file.mimetype || 'audio/m4a';
+        const ext = mimeType.includes('wav')
+          ? 'wav'
+          : mimeType.includes('mp4') || mimeType.includes('m4a')
+            ? 'm4a'
+            : 'bin';
+        const filename = `${uuid}.${ext}`;
 
-      const audioClip = {
-        filename,
-        mimeType: contentType,
-        sizeBytes: body.length,
-        durationSec: null,
-        storedAt: new Date(),
-      };
-      await database
-        .collection('habit_donations')
-        .updateOne(
-          { uuid, userId },
-          { $set: { audioClip, updatedAt: new Date() } }
-        );
+        await mkdir(storageDir, { recursive: true });
+        await writeFile(path.join(storageDir, filename), file.buffer);
 
-      res.status(201).json({ ok: true });
-    } catch (err) {
-      if (err.status === 413) {
-        return res.status(413).json({ error: err.message });
+        const audioClip = {
+          filename,
+          mimeType,
+          sizeBytes: file.buffer.length,
+          durationSec: null,
+          storedAt: new Date(),
+        };
+        await database
+          .collection('habit_donations')
+          .updateOne(
+            { uuid, userId },
+            { $set: { audioClip, updatedAt: new Date() } }
+          );
+
+        res.status(201).json({ ok: true });
+      } catch (err) {
+        log.error({ err, uuid }, 'audio attach failed');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      log.error({ err, uuid }, 'audio attach failed');
-      res.status(500).json({ error: 'Internal server error' });
     }
+  );
+
+  // multer surfaces an oversized upload as a middleware error before the
+  // route handler above ever runs — catch it here for a specific 413
+  // instead of falling through to a generic 500.
+  router.use((err, _req, res, next) => {
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: `Audio file exceeds the ${MAX_AUDIO_BYTES / (1024 * 1024)}MB limit.`,
+      });
+    }
+    next(err);
   });
 
   return router;

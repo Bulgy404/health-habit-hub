@@ -19,6 +19,7 @@ import { getHabitQueue, startHabitWorker } from '../lib/habitQueue.js';
  * @param {Function} [opts.neo4jRun] - Neo4j run function (injected in tests)
  * @param {string} [opts.apiServiceUrl]
  * @param {string} [opts.libreTranslateUrl]
+ * @param {string} [opts.audioStorageDir] - Directory for recorded habit-donation voice clips
  * @returns {express.Router}
  */
 export function createHabitsRouter({
@@ -26,6 +27,7 @@ export function createHabitsRouter({
   neo4jRun,
   apiServiceUrl,
   libreTranslateUrl,
+  audioStorageDir,
   enableQueue = false,
 } = {}) {
   const router = express.Router();
@@ -73,7 +75,7 @@ export function createHabitsRouter({
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
   router.use('/', createHabitsGraphRouter({ queryNeo4j, getDb }));
-  router.use('/', createVoiceRouter({ getDb, apiServiceUrl }));
+  router.use('/', createVoiceRouter({ getDb, apiServiceUrl, audioStorageDir }));
 
   // Start the BullMQ worker only for a real running app (see queueEnabled above).
   if (queueEnabled) {

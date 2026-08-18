@@ -272,7 +272,7 @@ test('Integration: submit SLIQ response → fetch by slug → verify answers mat
 test('POST /questionnaire-responses with a valid habitUuid links the response and the habit_donations record', async () => {
   const token = makeToken('user-donation-q1', ['user']);
   await db.collection('habit_donations').insertOne({
-    uuid: 'donation-uuid-1',
+    uuid: '11111111-1111-4111-8111-111111111111',
     userId: 'user-donation-q1',
     questionnaireSlug: 'who5',
     questionnaireResponseId: null,
@@ -281,25 +281,25 @@ test('POST /questionnaire-responses with a valid habitUuid links the response an
   const res = await request('POST', '/questionnaire-responses', token, {
     questionnaireSlug: 'who5',
     answers: { who5_1: '4' },
-    habitUuid: 'donation-uuid-1',
+    habitUuid: '11111111-1111-4111-8111-111111111111',
   });
   assert.strictEqual(res.status, 201);
 
   const stored = await db
     .collection('form_responses')
     .findOne({ userId: 'user-donation-q1', questionnaireSlug: 'who5' });
-  assert.strictEqual(stored.habitUuid, 'donation-uuid-1');
+  assert.strictEqual(stored.habitUuid, '11111111-1111-4111-8111-111111111111');
 
   const donation = await db
     .collection('habit_donations')
-    .findOne({ uuid: 'donation-uuid-1' });
+    .findOne({ uuid: '11111111-1111-4111-8111-111111111111' });
   assert.ok(donation.questionnaireResponseId, 'should be linked back');
 });
 
 test("POST /questionnaire-responses with habitUuid for someone else's donation does not get the bypass or the link", async () => {
   const token = makeToken('user-donation-q2-attacker', ['user']);
   await db.collection('habit_donations').insertOne({
-    uuid: 'donation-uuid-2',
+    uuid: '22222222-2222-4222-8222-222222222222',
     userId: 'someone-else',
     questionnaireSlug: 'who5',
     questionnaireResponseId: null,
@@ -308,7 +308,7 @@ test("POST /questionnaire-responses with habitUuid for someone else's donation d
   const res = await request('POST', '/questionnaire-responses', token, {
     questionnaireSlug: 'who5',
     answers: { who5_1: '4' },
-    habitUuid: 'donation-uuid-2',
+    habitUuid: '22222222-2222-4222-8222-222222222222',
   });
   // No window exists for 'who5' in this mock either, so the ungated
   // fallback still accepts the submission — the point is it must NOT be
@@ -323,7 +323,7 @@ test("POST /questionnaire-responses with habitUuid for someone else's donation d
 
   const donation = await db
     .collection('habit_donations')
-    .findOne({ uuid: 'donation-uuid-2' });
+    .findOne({ uuid: '22222222-2222-4222-8222-222222222222' });
   assert.strictEqual(donation.questionnaireResponseId, null);
 });
 
@@ -333,6 +333,16 @@ test('POST /questionnaire-responses rejects a non-string habitUuid', async () =>
     questionnaireSlug: 'who5',
     answers: { who5_1: '4' },
     habitUuid: 12345,
+  });
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /questionnaire-responses rejects a habitUuid that is not a well-formed UUID', async () => {
+  const token = makeToken('user-donation-q4', ['user']);
+  const res = await request('POST', '/questionnaire-responses', token, {
+    questionnaireSlug: 'who5',
+    answers: { who5_1: '4' },
+    habitUuid: '../../etc/passwd',
   });
   assert.strictEqual(res.status, 400);
 });

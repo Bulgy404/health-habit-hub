@@ -52,6 +52,7 @@ export function createApiRouter({
   recommenderUrl,
   apiServiceUrl,
   libreTranslateUrl,
+  audioStorageDir,
   db,
   neo4jRun,
   keycloak,
@@ -259,6 +260,7 @@ export function createApiRouter({
       neo4jRun,
       apiServiceUrl,
       libreTranslateUrl,
+      audioStorageDir,
       enableQueue,
     })
   );

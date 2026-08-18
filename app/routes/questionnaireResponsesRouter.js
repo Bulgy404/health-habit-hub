@@ -11,6 +11,7 @@ import {
   getQuestionnaireCompletionStatus,
 } from '../services/questionnaireScheduleService.js';
 import { requireServiceToken } from '../middleware/requireServiceToken.js';
+import { isValidUuid } from '../utils/constants.js';
 
 const log = logger.child({ module: 'questionnaireResponsesRouter' });
 
@@ -250,8 +251,10 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
         return res.status(400).json({ error: 'answers must be an object' });
       }
-      if (habitUuid !== undefined && typeof habitUuid !== 'string') {
-        return res.status(400).json({ error: 'habitUuid must be a string' });
+      if (habitUuid !== undefined && !isValidUuid(habitUuid)) {
+        return res
+          .status(400)
+          .json({ error: 'habitUuid must be a valid UUID' });
       }
 
       const database = await getDb();

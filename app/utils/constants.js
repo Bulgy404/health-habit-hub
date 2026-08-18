@@ -31,3 +31,24 @@ export const DIMENSIONS = [
   'BEHAVIOR',
   'REASONING',
 ];
+
+/** Matches the lowercase-hex format `node:crypto`'s randomUUID() produces. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * True when `value` is a well-formed UUID string.
+ *
+ * Every `uuid` this app hands to a caller (habit donation ids, etc.) is
+ * always server-generated via `randomUUID()` — this checks the *shape*
+ * before a caller-supplied uuid is trusted for anything sensitive, e.g.
+ * used in a filesystem path or as a MongoDB query value. A DB lookup that
+ * only succeeds for pre-generated values is not a substitute for this: it
+ * still means an arbitrary string was passed to `path.join`/a Mongo filter
+ * before that lookup runs.
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isValidUuid(value) {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
