@@ -49,6 +49,10 @@ interface StudyGroup {
   // (null = inherit study-level).
   donationInputMode?: "text" | "speech" | "both" | null;
   donationQuestionnaireSlug?: string | null;
+  // Which optional donation questions show (null = inherit study-level).
+  donationAskFrequency?: boolean | null;
+  donationAskHealthBenefit?: boolean | null;
+  donationAskWellbeing?: boolean | null;
 }
 
 /** §7.3 Information Overload guard — a growing per-type habit cap. */
@@ -77,6 +81,9 @@ export interface StudySummary {
   gamificationEnabled: boolean;
   donationInputMode: "text" | "speech" | "both";
   donationQuestionnaireSlug: string | null;
+  donationAskFrequency: boolean;
+  donationAskHealthBenefit: boolean;
+  donationAskWellbeing: boolean;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };

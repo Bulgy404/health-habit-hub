@@ -124,6 +124,12 @@ export const informationOverloadGuardSchema = z.object({
 
 /** Donation input mode — text-only, speech-only, or participant's choice. */
 const donationInputModeSchema = z.enum(['text', 'speech', 'both']);
+/**
+ * Which optional self-report questions are shown after a habit donation.
+ * Each defaults to `true` (shown) when absent; a group-level `null` inherits
+ * the study-level value (same override pattern as the flags above).
+ */
+const donationQuestionFlagSchema = z.boolean();
 /** Slug of a `questionnaires` pool document to offer after every donation, or null for none. */
 const donationQuestionnaireSlugSchema = z.string().min(1).max(200).nullable();
 /**
@@ -154,6 +160,10 @@ export const createStudySchema = z.object({
   // Habit-donation input mode + optional post-donation questionnaire.
   donationInputMode: donationInputModeSchema.optional(),
   donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),
+  // Which optional self-report questions the donation form shows.
+  donationAskFrequency: donationQuestionFlagSchema.optional(),
+  donationAskHealthBenefit: donationQuestionFlagSchema.optional(),
+  donationAskWellbeing: donationQuestionFlagSchema.optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
   reminders: remindersSchema.optional(),
@@ -180,6 +190,10 @@ export const updateStudySchema = z
     // Habit-donation input mode + optional post-donation questionnaire.
     donationInputMode: donationInputModeSchema.optional(),
     donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),
+    // Which optional self-report questions the donation form shows.
+    donationAskFrequency: donationQuestionFlagSchema.optional(),
+    donationAskHealthBenefit: donationQuestionFlagSchema.optional(),
+    donationAskWellbeing: donationQuestionFlagSchema.optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
     reminders: remindersSchema.optional(),
@@ -245,6 +259,10 @@ export const updateGroupConfigSchema = z
     donationInputMode: donationInputModeSchema.optional().nullable(),
     // null = inherit; '' = explicit no-questionnaire; non-empty = a slug override.
     donationQuestionnaireSlug: groupDonationQuestionnaireSlugSchema.optional(),
+    // Group-level donation-question overrides (null = inherit study-level).
+    donationAskFrequency: donationQuestionFlagSchema.optional().nullable(),
+    donationAskHealthBenefit: donationQuestionFlagSchema.optional().nullable(),
+    donationAskWellbeing: donationQuestionFlagSchema.optional().nullable(),
     // null = inherit the study-level habit-entry-mode setting for this group.
     habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
     structuredActivityKeys: z

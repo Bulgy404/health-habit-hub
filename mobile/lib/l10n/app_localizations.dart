@@ -2858,6 +2858,30 @@ abstract class AppLocalizations {
   /// **'Microphone access is needed to speak your habit — you can type it instead.'**
   String get donateVoiceMicPermissionDenied;
 
+  /// Label under the round hold-to-speak button on the voice donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to speak'**
+  String get donateVoiceHoldToSpeak;
+
+  /// Label under the round hold-to-speak button while recording is in progress
+  ///
+  /// In en, this message translates to:
+  /// **'Recording… release to stop'**
+  String get donateVoiceRecording;
+
+  /// Tooltip/label for the small edit icon that unlocks the greyed transcript field for manual correction
+  ///
+  /// In en, this message translates to:
+  /// **'Edit text'**
+  String get donateVoiceEditTranscript;
+
+  /// Placeholder shown in the greyed transcript field before any speech has been transcribed
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the button below and describe your habit'**
+  String get donateVoiceTranscriptPlaceholder;
+
   /// Button to proceed from the cue-setting step to the next step
   ///
   /// In en, this message translates to:

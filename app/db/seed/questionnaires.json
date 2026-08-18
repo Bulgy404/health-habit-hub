@@ -2258,5 +2258,400 @@
     "isLibrary": true,
     "scope": "study",
     "languages": ["en", "de", "fr", "ja", "nl"]
+  },
+  {
+    "_id": "questionnaire-who5",
+    "slug": "who-5",
+    "title": {
+      "en": "WHO-5 Well-Being Index",
+      "de": "WHO-5 Fragebogen zum Wohlbefinden",
+      "fr": "Indice de bien-être (WHO-5)",
+      "ja": "WHO-5 精神的健康状態表",
+      "nl": "WHO-5 Welzijnsindex"
+    },
+    "description": {
+      "en": "A validated 5-item scale measuring current mental well-being over the past two weeks.",
+      "de": "Eine validierte 5-Item-Skala zur Erfassung des aktuellen psychischen Wohlbefindens in den letzten zwei Wochen.",
+      "fr": "Une échelle validée à 5 items évaluant le bien-être mental actuel au cours des deux dernières semaines.",
+      "ja": "過去2週間の現在の精神的健康状態を測定する、妥当性が確認された5項目の尺度です。",
+      "nl": "Een gevalideerde schaal met 5 items die het huidige mentale welzijn van de afgelopen twee weken meet."
+    },
+    "version": "1.0.0",
+    "active": true,
+    "questions": [
+      {
+        "id": "who5_q1",
+        "text": {
+          "en": "Over the last two weeks, I have felt cheerful and in good spirits.",
+          "de": "In den letzten zwei Wochen war ich froh und guter Laune.",
+          "fr": "Au cours des deux dernières semaines, je me suis senti(e) bien et de bonne humeur.",
+          "ja": "最近2週間、明るく、楽しい気分で過ごした。",
+          "nl": "Gedurende de laatste twee weken voelde ik me vrolijk en in een opperbeste stemming."
+        },
+        "type": "single_choice",
+        "options": [
+          {
+            "value": "5",
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Constant"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "Most of the time",
+              "de": "Meistens",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "More than half of the time",
+              "de": "Etwas mehr als die Hälfte der Zeit",
+              "fr": "Plus de la moitié du temps",
+              "ja": "半分以上の期間",
+              "nl": "Meer dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "Less than half of the time",
+              "de": "Etwas weniger als die Hälfte der Zeit",
+              "fr": "Moins de la moitié du temps",
+              "ja": "半分以下の期間",
+              "nl": "Minder dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "1",
+            "label": {
+              "en": "Some of the time",
+              "de": "Ab und zu",
+              "fr": "De temps en temps",
+              "ja": "ほんのたまに",
+              "nl": "Soms"
+            }
+          },
+          {
+            "value": "0",
+            "label": {
+              "en": "At no time",
+              "de": "Zu keinem Zeitpunkt",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Helemaal niet"
+            }
+          }
+        ],
+        "required": true
+      },
+      {
+        "id": "who5_q2",
+        "text": {
+          "en": "Over the last two weeks, I have felt calm and relaxed.",
+          "de": "In den letzten zwei Wochen habe ich mich ruhig und entspannt gefühlt.",
+          "fr": "Au cours des deux dernières semaines, je me suis senti(e) calme et tranquille.",
+          "ja": "最近2週間、落ち着いた、リラックスした気分で過ごした。",
+          "nl": "Gedurende de laatste twee weken voelde ik me rustig en ontspannen."
+        },
+        "type": "single_choice",
+        "options": [
+          {
+            "value": "5",
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Constant"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "Most of the time",
+              "de": "Meistens",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "More than half of the time",
+              "de": "Etwas mehr als die Hälfte der Zeit",
+              "fr": "Plus de la moitié du temps",
+              "ja": "半分以上の期間",
+              "nl": "Meer dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "Less than half of the time",
+              "de": "Etwas weniger als die Hälfte der Zeit",
+              "fr": "Moins de la moitié du temps",
+              "ja": "半分以下の期間",
+              "nl": "Minder dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "1",
+            "label": {
+              "en": "Some of the time",
+              "de": "Ab und zu",
+              "fr": "De temps en temps",
+              "ja": "ほんのたまに",
+              "nl": "Soms"
+            }
+          },
+          {
+            "value": "0",
+            "label": {
+              "en": "At no time",
+              "de": "Zu keinem Zeitpunkt",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Helemaal niet"
+            }
+          }
+        ],
+        "required": true
+      },
+      {
+        "id": "who5_q3",
+        "text": {
+          "en": "Over the last two weeks, I have felt active and vigorous.",
+          "de": "In den letzten zwei Wochen habe ich mich energisch und aktiv gefühlt.",
+          "fr": "Au cours des deux dernières semaines, je me suis senti(e) plein(e) d'énergie et vigoureux(se).",
+          "ja": "最近2週間、意欲的で、活動的に過ごした。",
+          "nl": "Gedurende de laatste twee weken voelde ik me actief en doelbewust."
+        },
+        "type": "single_choice",
+        "options": [
+          {
+            "value": "5",
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Constant"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "Most of the time",
+              "de": "Meistens",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "More than half of the time",
+              "de": "Etwas mehr als die Hälfte der Zeit",
+              "fr": "Plus de la moitié du temps",
+              "ja": "半分以上の期間",
+              "nl": "Meer dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "Less than half of the time",
+              "de": "Etwas weniger als die Hälfte der Zeit",
+              "fr": "Moins de la moitié du temps",
+              "ja": "半分以下の期間",
+              "nl": "Minder dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "1",
+            "label": {
+              "en": "Some of the time",
+              "de": "Ab und zu",
+              "fr": "De temps en temps",
+              "ja": "ほんのたまに",
+              "nl": "Soms"
+            }
+          },
+          {
+            "value": "0",
+            "label": {
+              "en": "At no time",
+              "de": "Zu keinem Zeitpunkt",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Helemaal niet"
+            }
+          }
+        ],
+        "required": true
+      },
+      {
+        "id": "who5_q4",
+        "text": {
+          "en": "Over the last two weeks, I woke up feeling fresh and rested.",
+          "de": "In den letzten zwei Wochen habe ich mich beim Aufwachen frisch und ausgeruht gefühlt.",
+          "fr": "Au cours des deux dernières semaines, je me suis réveillé(e) en me sentant frais(che) et dispos(e).",
+          "ja": "最近2週間、ぐっすりと休め、気持ちよくめざめた。",
+          "nl": "Gedurende de laatste twee weken voelde ik me fris en uitgerust wanneer ik wakker werd."
+        },
+        "type": "single_choice",
+        "options": [
+          {
+            "value": "5",
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Constant"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "Most of the time",
+              "de": "Meistens",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "More than half of the time",
+              "de": "Etwas mehr als die Hälfte der Zeit",
+              "fr": "Plus de la moitié du temps",
+              "ja": "半分以上の期間",
+              "nl": "Meer dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "Less than half of the time",
+              "de": "Etwas weniger als die Hälfte der Zeit",
+              "fr": "Moins de la moitié du temps",
+              "ja": "半分以下の期間",
+              "nl": "Minder dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "1",
+            "label": {
+              "en": "Some of the time",
+              "de": "Ab und zu",
+              "fr": "De temps en temps",
+              "ja": "ほんのたまに",
+              "nl": "Soms"
+            }
+          },
+          {
+            "value": "0",
+            "label": {
+              "en": "At no time",
+              "de": "Zu keinem Zeitpunkt",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Helemaal niet"
+            }
+          }
+        ],
+        "required": true
+      },
+      {
+        "id": "who5_q5",
+        "text": {
+          "en": "Over the last two weeks, my daily life has been filled with things that interest me.",
+          "de": "In den letzten zwei Wochen war mein Alltag voller Dinge, die mich interessieren.",
+          "fr": "Au cours des deux dernières semaines, ma vie quotidienne a été remplie de choses intéressantes.",
+          "ja": "最近2週間、日常生活の中に、興味のあることがたくさんあった。",
+          "nl": "Gedurende de laatste twee weken was mijn dagelijkse leven gevuld met dingen die me interesseren."
+        },
+        "type": "single_choice",
+        "options": [
+          {
+            "value": "5",
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Constant"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "Most of the time",
+              "de": "Meistens",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "More than half of the time",
+              "de": "Etwas mehr als die Hälfte der Zeit",
+              "fr": "Plus de la moitié du temps",
+              "ja": "半分以上の期間",
+              "nl": "Meer dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "Less than half of the time",
+              "de": "Etwas weniger als die Hälfte der Zeit",
+              "fr": "Moins de la moitié du temps",
+              "ja": "半分以下の期間",
+              "nl": "Minder dan de helft van de tijd"
+            }
+          },
+          {
+            "value": "1",
+            "label": {
+              "en": "Some of the time",
+              "de": "Ab und zu",
+              "fr": "De temps en temps",
+              "ja": "ほんのたまに",
+              "nl": "Soms"
+            }
+          },
+          {
+            "value": "0",
+            "label": {
+              "en": "At no time",
+              "de": "Zu keinem Zeitpunkt",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Helemaal niet"
+            }
+          }
+        ],
+        "required": true
+      }
+    ],
+    "isLibrary": true,
+    "scope": "study",
+    "languages": ["en", "de", "fr", "ja", "nl"]
   }
 ]

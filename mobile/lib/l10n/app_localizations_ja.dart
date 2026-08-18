@@ -1485,6 +1485,18 @@ class AppLocalizationsJa extends AppLocalizations {
       '習慣を話すにはマイクへのアクセスが必要です。代わりに入力することもできます。';
 
   @override
+  String get donateVoiceHoldToSpeak => '押しながら話す';
+
+  @override
+  String get donateVoiceRecording => '録音中… 離すと停止します';
+
+  @override
+  String get donateVoiceEditTranscript => 'テキストを編集';
+
+  @override
+  String get donateVoiceTranscriptPlaceholder => '下のボタンを押しながら習慣を話してください';
+
+  @override
   String get setCueNextButton => '次へ';
 
   @override

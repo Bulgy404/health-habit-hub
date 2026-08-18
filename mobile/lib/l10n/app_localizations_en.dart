@@ -1559,6 +1559,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Microphone access is needed to speak your habit — you can type it instead.';
 
   @override
+  String get donateVoiceHoldToSpeak => 'Hold to speak';
+
+  @override
+  String get donateVoiceRecording => 'Recording… release to stop';
+
+  @override
+  String get donateVoiceEditTranscript => 'Edit text';
+
+  @override
+  String get donateVoiceTranscriptPlaceholder =>
+      'Hold the button below and describe your habit';
+
+  @override
   String get setCueNextButton => 'Next';
 
   @override

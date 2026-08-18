@@ -76,20 +76,20 @@ function makeDb() {
   return { collection, stores };
 }
 
-test('seedDefaultQuestionnaires: inserts sliq and rand-36 by slug', async () => {
+test('seedDefaultQuestionnaires: inserts sliq, rand-36 and who-5 by slug', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   const slugs = [...db.stores.questionnaires.values()]
     .map((d) => d.slug)
     .sort();
-  assert.deepStrictEqual(slugs, ['rand-36', 'sliq']);
+  assert.deepStrictEqual(slugs, ['rand-36', 'sliq', 'who-5']);
 });
 
 test('seedDefaultQuestionnaires: is idempotent (re-run does not duplicate)', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   await seedDefaultQuestionnaires(db);
-  assert.strictEqual(db.stores.questionnaires.size, 2);
+  assert.strictEqual(db.stores.questionnaires.size, 3);
 });
 
 test('retireLegacySrhiLibraryEntry: removes a leftover srhi questionnaire doc and its assignments', async () => {
@@ -113,7 +113,7 @@ test('retireLegacySrhiLibraryEntry: no-op when nothing srhi-related exists', asy
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   await retireLegacySrhiLibraryEntry(db);
-  assert.strictEqual(db.stores.questionnaires.size, 2);
+  assert.strictEqual(db.stores.questionnaires.size, 3);
 });
 
 test('seedDefaultStudy: creates a default study with no questionnaires enabled', async () => {

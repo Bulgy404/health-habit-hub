@@ -1996,6 +1996,22 @@
   "@donateVoiceMicPermissionDenied": {
     "description": "Error shown when microphone permission is denied on the donation form"
   },
+  "donateVoiceHoldToSpeak": "Hold to speak",
+  "@donateVoiceHoldToSpeak": {
+    "description": "Label under the round hold-to-speak button on the voice donation form"
+  },
+  "donateVoiceRecording": "Recording… release to stop",
+  "@donateVoiceRecording": {
+    "description": "Label under the round hold-to-speak button while recording is in progress"
+  },
+  "donateVoiceEditTranscript": "Edit text",
+  "@donateVoiceEditTranscript": {
+    "description": "Tooltip/label for the small edit icon that unlocks the greyed transcript field for manual correction"
+  },
+  "donateVoiceTranscriptPlaceholder": "Hold the button below and describe your habit",
+  "@donateVoiceTranscriptPlaceholder": {
+    "description": "Placeholder shown in the greyed transcript field before any speech has been transcribed"
+  },
   "setCueNextButton": "Next",
   "@setCueNextButton": {
     "description": "Button to proceed from the cue-setting step to the next step"

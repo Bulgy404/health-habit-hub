@@ -1129,7 +1129,13 @@
       "entryModeStructuredLabel": "Strukturiert ({count})",
       "entryModeFreeTextLabel": "Freitext",
       "entryModeNaLabel": "Nicht zutreffend (Erstellung aus)",
-      "entryModeSummaryPerGroup": "Pro Gruppe ({on}/{total} strukturiert)"
+      "entryModeSummaryPerGroup": "Pro Gruppe ({on}/{total} strukturiert)",
+      "donationQuestionsLabel": "Spenden-Fragen",
+      "donationQuestionsHint": "Welche optionalen Selbstauskunftsfragen nach einer Gewohnheitsspende erscheinen. Die Beschreibung der Gewohnheit wird immer angezeigt.",
+      "donationQuestionsFrequencyLabel": "Wie oft übst du diese Gewohnheit aus?",
+      "donationQuestionsHealthBenefitLabel": "Wie sehr nützt sie deiner Meinung nach deiner Gesundheit?",
+      "donationQuestionsWellbeingLabel": "Wie sehr verbessert sie deiner Meinung nach dein Wohlbefinden?",
+      "donationQuestionsCount": "{on}/{total} angezeigt"
     },
     "remindersTab": {
       "habitLabel": "Gewohnheits-Erinnerung",

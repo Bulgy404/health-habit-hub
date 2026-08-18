@@ -61,6 +61,10 @@ interface StudyGroup {
   // (null = inherit study-level).
   donationInputMode?: "text" | "speech" | "both" | null;
   donationQuestionnaireSlug?: string | null;
+  // Which optional donation questions show (null = inherit study-level).
+  donationAskFrequency?: boolean | null;
+  donationAskHealthBenefit?: boolean | null;
+  donationAskWellbeing?: boolean | null;
 }
 
 /** §7.3 Information Overload guard — a growing per-type habit cap. */
@@ -96,6 +100,9 @@ interface StudySummary {
   gamificationEnabled: boolean;
   donationInputMode: "text" | "speech" | "both";
   donationQuestionnaireSlug: string | null;
+  donationAskFrequency: boolean;
+  donationAskHealthBenefit: boolean;
+  donationAskWellbeing: boolean;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };
@@ -1817,7 +1824,18 @@ type HabitCreationValue = {
   structuredActivityKeys: string[];
 };
 
-type HabitCreationSection = "recommender" | "onboarding" | "habitCreation";
+type HabitCreationSection =
+  | "recommender"
+  | "onboarding"
+  | "habitCreation"
+  | "donationInput"
+  | "donationQuestions";
+
+type DonationQuestionsValue = {
+  frequency: boolean;
+  healthBenefit: boolean;
+  wellbeing: boolean;
+};
 
 function isBoolEnabled(
   scope: "study" | "group",
@@ -1966,20 +1984,74 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
       )
   );
 
+  // ── Habit-donation input mode ("text" | "speech" | "both") ───────────────
+  const [donationInputScope, setDonationInputScope] = useState<"study" | "group">(() =>
+    study.groups.some((g) => g.donationInputMode != null) ? "group" : "study"
+  );
+  const [studyDonationInput, setStudyDonationInput] = useState(study.donationInputMode);
+  const [groupDonationInput, setGroupDonationInput] = useState<
+    Record<string, "text" | "speech" | "both">
+  >(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [g.id, g.donationInputMode ?? study.donationInputMode])
+    )
+  );
+
+  // ── Which optional donation questions show (frequency / health / wellbeing) ─
+  const [donationQuestionsScope, setDonationQuestionsScope] = useState<
+    "study" | "group"
+  >(() =>
+    study.groups.some(
+      (g) =>
+        g.donationAskFrequency != null ||
+        g.donationAskHealthBenefit != null ||
+        g.donationAskWellbeing != null
+    )
+      ? "group"
+      : "study"
+  );
+  const [studyDonationQuestions, setStudyDonationQuestions] =
+    useState<DonationQuestionsValue>({
+      frequency: study.donationAskFrequency,
+      healthBenefit: study.donationAskHealthBenefit,
+      wellbeing: study.donationAskWellbeing,
+    });
+  const [groupDonationQuestions, setGroupDonationQuestions] = useState<
+    Record<string, DonationQuestionsValue>
+  >(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        {
+          frequency: g.donationAskFrequency ?? study.donationAskFrequency,
+          healthBenefit:
+            g.donationAskHealthBenefit ?? study.donationAskHealthBenefit,
+          wellbeing: g.donationAskWellbeing ?? study.donationAskWellbeing,
+        },
+      ])
+    )
+  );
+
   const [saving, setSaving] = useState<Record<HabitCreationSection, boolean>>({
     recommender: false,
     onboarding: false,
     habitCreation: false,
+    donationInput: false,
+    donationQuestions: false,
   });
   const [saved, setSaved] = useState<Record<HabitCreationSection, boolean>>({
     recommender: false,
     onboarding: false,
     habitCreation: false,
+    donationInput: false,
+    donationQuestions: false,
   });
   const [errors, setErrors] = useState<Record<HabitCreationSection, string>>({
     recommender: "",
     onboarding: "",
     habitCreation: "",
+    donationInput: "",
+    donationQuestions: "",
   });
 
   async function handleSaveRecommender() {
@@ -2108,6 +2180,92 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     }
   }
 
+  async function handleSaveDonationInput() {
+    setSaving((p) => ({ ...p, donationInput: true }));
+    setErrors((p) => ({ ...p, donationInput: "" }));
+    try {
+      if (donationInputScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({ donationInputMode: studyDonationInput }),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ donationInputMode: null }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ donationInputMode: groupDonationInput[g.id] }),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, donationInput: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        donationInput: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, donationInput: false }));
+    }
+  }
+
+  async function handleSaveDonationQuestions() {
+    setSaving((p) => ({ ...p, donationQuestions: true }));
+    setErrors((p) => ({ ...p, donationQuestions: "" }));
+    const toBody = (v: DonationQuestionsValue) => ({
+      donationAskFrequency: v.frequency,
+      donationAskHealthBenefit: v.healthBenefit,
+      donationAskWellbeing: v.wellbeing,
+    });
+    try {
+      if (donationQuestionsScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify(toBody(studyDonationQuestions)),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({
+                donationAskFrequency: null,
+                donationAskHealthBenefit: null,
+                donationAskWellbeing: null,
+              }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify(toBody(groupDonationQuestions[g.id])),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, donationQuestions: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        donationQuestions:
+          err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, donationQuestions: false }));
+    }
+  }
+
   const showActivityTypesManager =
     habitCreationScope === "study"
       ? studyHabitCreation.enabled && studyHabitCreation.entryMode === "structured"
@@ -2185,6 +2343,51 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         groupHabitCreation,
         study.groups
       ),
+    },
+    {
+      key: "donationInput",
+      title: t("behaviorChangeTab.donationInputLabel"),
+      enabled: true,
+      status:
+        donationInputScope === "study"
+          ? {
+              text: t("behaviorChangeTab.donationInputTextOption"),
+              speech: t("behaviorChangeTab.donationInputSpeechOption"),
+              both: t("behaviorChangeTab.donationInputBothOption"),
+            }[studyDonationInput]
+          : t("habitCreationTab.summaryPerGroup", {
+              on: study.groups.length,
+              total: study.groups.length,
+            }),
+    },
+    {
+      key: "donationQuestions",
+      title: t("habitCreationTab.donationQuestionsLabel"),
+      enabled:
+        donationQuestionsScope === "study"
+          ? studyDonationQuestions.frequency ||
+            studyDonationQuestions.healthBenefit ||
+            studyDonationQuestions.wellbeing
+          : study.groups.some(
+              (g) =>
+                groupDonationQuestions[g.id]?.frequency ||
+                groupDonationQuestions[g.id]?.healthBenefit ||
+                groupDonationQuestions[g.id]?.wellbeing
+            ),
+      status:
+        donationQuestionsScope === "study"
+          ? t("habitCreationTab.donationQuestionsCount", {
+              on: [
+                studyDonationQuestions.frequency,
+                studyDonationQuestions.healthBenefit,
+                studyDonationQuestions.wellbeing,
+              ].filter(Boolean).length,
+              total: 3,
+            })
+          : t("habitCreationTab.summaryPerGroup", {
+              on: study.groups.length,
+              total: study.groups.length,
+            }),
     },
   ];
 
@@ -2416,6 +2619,181 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           </button>
         </div>
       </div>
+
+      {/* Habit-donation input mode */}
+      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-donationInput">
+        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.donationInputLabel")}</p>
+        <span className={styles.hint}>{t("behaviorChangeTab.donationInputHint")}</span>
+        {errors.donationInput && <div className={styles.errorMsg}>{errors.donationInput}</div>}
+
+        {donationInputScope === "study" ? (
+          <div className={styles.formGroup}>
+            <select
+              className={styles.select}
+              value={studyDonationInput}
+              onChange={(e) =>
+                setStudyDonationInput(e.target.value as "text" | "speech" | "both")
+              }
+            >
+              <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
+              <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
+              <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
+            </select>
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <select
+                  className={styles.select}
+                  value={groupDonationInput[g.id] ?? "text"}
+                  onChange={(e) =>
+                    setGroupDonationInput((p) => ({
+                      ...p,
+                      [g.id]: e.target.value as "text" | "speech" | "both",
+                    }))
+                  }
+                >
+                  <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
+                  <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
+                  <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={donationInputScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) => setDonationInputScope(e.target.checked ? "group" : "study")}
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.donationInput && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveDonationInput}
+            disabled={saving.donationInput}
+          >
+            <SpinnerLabel loading={saving.donationInput} label={tc("save")} />
+          </button>
+        </div>
+      </div>
+
+      {/* Which optional donation questions show */}
+      <div
+        className={styles.reminderTypeSection}
+        data-testid="habit-creation-section-donationQuestions"
+      >
+        <p className={styles.cueConfigGroupLabel}>
+          {t("habitCreationTab.donationQuestionsLabel")}
+        </p>
+        <span className={styles.hint}>{t("habitCreationTab.donationQuestionsHint")}</span>
+        {errors.donationQuestions && (
+          <div className={styles.errorMsg}>{errors.donationQuestions}</div>
+        )}
+
+        {donationQuestionsScope === "study" ? (
+          <DonationQuestionsToggles
+            value={studyDonationQuestions}
+            onChange={(patch) =>
+              setStudyDonationQuestions((v) => ({ ...v, ...patch }))
+            }
+            t={t}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => {
+              const v = groupDonationQuestions[g.id];
+              if (!v) return null;
+              return (
+                <div key={g.id} className={styles.reminderGroupRow}>
+                  <p className={styles.cueConfigGroupLabel}>
+                    {g.label || t("groupFallbackLabel", { index: g.index })}
+                  </p>
+                  <DonationQuestionsToggles
+                    value={v}
+                    onChange={(patch) =>
+                      setGroupDonationQuestions((p) => ({
+                        ...p,
+                        [g.id]: { ...p[g.id], ...patch },
+                      }))
+                    }
+                    t={t}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={donationQuestionsScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) =>
+            setDonationQuestionsScope(e.target.checked ? "group" : "study")
+          }
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.donationQuestions && (
+            <span className={styles.savedMsg}>{t("saved")}</span>
+          )}
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveDonationQuestions}
+            disabled={saving.donationQuestions}
+          >
+            <SpinnerLabel loading={saving.donationQuestions} label={tc("save")} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The three donation-question on/off switches, reused study- and per-group. */
+function DonationQuestionsToggles({
+  value,
+  onChange,
+  t,
+}: {
+  value: DonationQuestionsValue;
+  onChange: (patch: Partial<DonationQuestionsValue>) => void;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div className={styles.reminderSwitchGroup}>
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={value.frequency}
+        onChange={(e) => onChange({ frequency: e.target.checked })}
+        label={t("habitCreationTab.donationQuestionsFrequencyLabel")}
+      />
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={value.healthBenefit}
+        onChange={(e) => onChange({ healthBenefit: e.target.checked })}
+        label={t("habitCreationTab.donationQuestionsHealthBenefitLabel")}
+      />
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={value.wellbeing}
+        onChange={(e) => onChange({ wellbeing: e.target.checked })}
+        label={t("habitCreationTab.donationQuestionsWellbeingLabel")}
+      />
     </div>
   );
 }
@@ -3374,7 +3752,6 @@ type BehaviorSection =
   | "habitStacking"
   | "reminderContent"
   | "infoOverload"
-  | "donationInput"
   | "donationQuestionnaire";
 type Scope = "study" | "group";
 
@@ -3433,19 +3810,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     Object.fromEntries(groups.map((g) => [g.id, g.informationOverloadGuard ?? studyGuard]))
   );
 
-  // ── Habit-donation input mode ("text" | "speech" | "both") ───────────────
-  const [donationInputScope, setDonationInputScope] = useState<Scope>(() =>
-    groups.some((g) => g.donationInputMode != null) ? "group" : "study"
-  );
-  const [studyDonationInput, setStudyDonationInput] = useState(study.donationInputMode);
-  const [groupDonationInput, setGroupDonationInput] = useState<
-    Record<string, "text" | "speech" | "both">
-  >(() =>
-    Object.fromEntries(
-      groups.map((g) => [g.id, g.donationInputMode ?? study.donationInputMode])
-    )
-  );
-
   // ── Post-donation questionnaire (a pool slug, or none) ────────────────────
   const [donationQuestionnaires, setDonationQuestionnaires] = useState<QuestionnaireSummary[]>([]);
   useEffect(() => {
@@ -3478,21 +3842,18 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
-    donationInput: false,
     donationQuestionnaire: false,
   });
   const [saved, setSaved] = useState<Record<BehaviorSection, boolean>>({
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
-    donationInput: false,
     donationQuestionnaire: false,
   });
   const [errors, setErrors] = useState<Record<BehaviorSection, string>>({
     habitStacking: "",
     reminderContent: "",
     infoOverload: "",
-    donationInput: "",
     donationQuestionnaire: "",
   });
 
@@ -3568,20 +3929,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
       }
     });
 
-  const saveDonationInput = () =>
-    runSave("donationInput", async () => {
-      if (donationInputScope === "study") {
-        await putStudy({ donationInputMode: studyDonationInput });
-        await Promise.all(
-          groups.map((g) => patchGroup(g.id, { donationInputMode: null }).catch(() => {}))
-        );
-      } else {
-        await Promise.all(
-          groups.map((g) => patchGroup(g.id, { donationInputMode: groupDonationInput[g.id] }))
-        );
-      }
-    });
-
   const saveDonationQuestionnaire = () =>
     runSave("donationQuestionnaire", async () => {
       if (donationQSlugScope === "study") {
@@ -3637,19 +3984,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
               on: groups.filter((g) => groupOverload[g.id]?.enabled).length,
               total: groups.length,
             }),
-    },
-    {
-      key: "donationInput",
-      title: t("behaviorChangeTab.donationInputLabel"),
-      enabled: true,
-      status:
-        donationInputScope === "study"
-          ? {
-              text: t("behaviorChangeTab.donationInputTextOption"),
-              speech: t("behaviorChangeTab.donationInputSpeechOption"),
-              both: t("behaviorChangeTab.donationInputBothOption"),
-            }[studyDonationInput]
-          : t("behaviorChangeTab.summaryPerGroup", { on: groups.length, total: groups.length }),
     },
     {
       key: "donationQuestionnaire",
@@ -3839,55 +4173,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
         )}
         {perGroupToggle(guardScope, setGuardScope)}
         {sectionFooter("infoOverload", saveInfoOverload)}
-      </div>
-
-      {/* Habit-donation input mode */}
-      <div className={styles.reminderTypeSection} data-testid="behavior-section-donationInput">
-        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.donationInputLabel")}</p>
-        <span className={styles.hint}>{t("behaviorChangeTab.donationInputHint")}</span>
-        {errors.donationInput && <div className={styles.errorMsg}>{errors.donationInput}</div>}
-
-        {donationInputScope === "study" ? (
-          <div className={styles.formGroup}>
-            <select
-              className={styles.select}
-              value={studyDonationInput}
-              onChange={(e) =>
-                setStudyDonationInput(e.target.value as "text" | "speech" | "both")
-              }
-            >
-              <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
-              <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
-              <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
-            </select>
-          </div>
-        ) : (
-          <div className={styles.reminderGroupList}>
-            {groups.map((g) => (
-              <div key={g.id} className={styles.reminderGroupRow}>
-                <p className={styles.cueConfigGroupLabel}>
-                  {g.label || t("groupFallbackLabel", { index: g.index })}
-                </p>
-                <select
-                  className={styles.select}
-                  value={groupDonationInput[g.id] ?? "text"}
-                  onChange={(e) =>
-                    setGroupDonationInput((p) => ({
-                      ...p,
-                      [g.id]: e.target.value as "text" | "speech" | "both",
-                    }))
-                  }
-                >
-                  <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
-                  <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
-                  <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
-        {perGroupToggle(donationInputScope, setDonationInputScope)}
-        {sectionFooter("donationInput", saveDonationInput)}
       </div>
 
       {/* Post-donation questionnaire */}

@@ -1595,6 +1595,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'L\'accès au microphone est nécessaire pour parler votre habitude — vous pouvez aussi la taper.';
 
   @override
+  String get donateVoiceHoldToSpeak => 'Maintenez pour parler';
+
+  @override
+  String get donateVoiceRecording => 'Enregistrement… relâchez pour arrêter';
+
+  @override
+  String get donateVoiceEditTranscript => 'Modifier le texte';
+
+  @override
+  String get donateVoiceTranscriptPlaceholder =>
+      'Maintenez le bouton ci-dessous et décrivez votre habitude';
+
+  @override
   String get setCueNextButton => 'Suivant';
 
   @override

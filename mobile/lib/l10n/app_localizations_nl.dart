@@ -1571,6 +1571,19 @@ class AppLocalizationsNl extends AppLocalizations {
       'Microfoontoegang is nodig om je gewoonte in te spreken — je kunt het ook typen.';
 
   @override
+  String get donateVoiceHoldToSpeak => 'Ingedrukt houden om te spreken';
+
+  @override
+  String get donateVoiceRecording => 'Opnemen… loslaten om te stoppen';
+
+  @override
+  String get donateVoiceEditTranscript => 'Tekst bewerken';
+
+  @override
+  String get donateVoiceTranscriptPlaceholder =>
+      'Houd de onderstaande knop ingedrukt en beschrijf je gewoonte';
+
+  @override
   String get setCueNextButton => 'Volgende';
 
   @override

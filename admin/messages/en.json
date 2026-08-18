@@ -1129,7 +1129,13 @@
       "entryModeStructuredLabel": "Structured ({count})",
       "entryModeFreeTextLabel": "Free text",
       "entryModeNaLabel": "N/A (creation off)",
-      "entryModeSummaryPerGroup": "Per group ({on}/{total} structured)"
+      "entryModeSummaryPerGroup": "Per group ({on}/{total} structured)",
+      "donationQuestionsLabel": "Donation Questions",
+      "donationQuestionsHint": "Which optional self-report questions appear after a habit donation. The habit description itself is always shown.",
+      "donationQuestionsFrequencyLabel": "How often do you do this habit?",
+      "donationQuestionsHealthBenefitLabel": "How much do you think it benefits your health?",
+      "donationQuestionsWellbeingLabel": "How much do you think it improves your wellbeing?",
+      "donationQuestionsCount": "{on}/{total} shown"
     },
     "remindersTab": {
       "habitLabel": "Habit reminder",

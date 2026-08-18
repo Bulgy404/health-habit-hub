@@ -49,6 +49,27 @@ final donationQuestionnaireSlugProvider = Provider<String?>((ref) {
       .maybeWhen(data: (c) => c.donationQuestionnaireSlug, orElse: () => null);
 });
 
+/// Which optional self-report questions the donation form shows (frequency,
+/// perceived health benefit, perceived wellbeing impact). Each defaults to
+/// `true` while loading or on error, matching the backend default.
+final donationAskFrequencyProvider = Provider<bool>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.donationAskFrequency, orElse: () => true);
+});
+
+final donationAskHealthBenefitProvider = Provider<bool>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.donationAskHealthBenefit, orElse: () => true);
+});
+
+final donationAskWellbeingProvider = Provider<bool>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.donationAskWellbeing, orElse: () => true);
+});
+
 /// All active implementation intentions for the current user.
 final intentionsProvider = FutureProvider<List<Intention>>((ref) {
   return ref.watch(myHabitsServiceProvider).listIntentions();

@@ -1078,7 +1078,13 @@
       "entryModeStructuredLabel": "Gestructureerd ({count})",
       "entryModeFreeTextLabel": "Vrije tekst",
       "entryModeNaLabel": "N.v.t. (aanmaken uit)",
-      "entryModeSummaryPerGroup": "Per groep ({on}/{total} gestructureerd)"
+      "entryModeSummaryPerGroup": "Per groep ({on}/{total} gestructureerd)",
+      "donationQuestionsLabel": "Donatievragen",
+      "donationQuestionsHint": "Welke optionele zelfrapportagevragen na een gewoontedonatie verschijnen. De beschrijving van de gewoonte wordt altijd getoond.",
+      "donationQuestionsFrequencyLabel": "Hoe vaak doe je deze gewoonte?",
+      "donationQuestionsHealthBenefitLabel": "Hoeveel denk je dat het je gezondheid ten goede komt?",
+      "donationQuestionsWellbeingLabel": "Hoeveel denk je dat het je welzijn verbetert?",
+      "donationQuestionsCount": "{on}/{total} getoond"
     },
     "remindersTab": {
       "habitLabel": "Gewoonteherinnering",

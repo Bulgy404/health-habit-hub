@@ -1078,7 +1078,13 @@
       "entryModeStructuredLabel": "Structurée ({count})",
       "entryModeFreeTextLabel": "Texte libre",
       "entryModeNaLabel": "N/A (création désactivée)",
-      "entryModeSummaryPerGroup": "Par groupe ({on}/{total} structurés)"
+      "entryModeSummaryPerGroup": "Par groupe ({on}/{total} structurés)",
+      "donationQuestionsLabel": "Questions de don",
+      "donationQuestionsHint": "Quelles questions d'auto-évaluation facultatives apparaissent après un don d'habitude. La description de l'habitude est toujours affichée.",
+      "donationQuestionsFrequencyLabel": "À quelle fréquence pratiquez-vous cette habitude ?",
+      "donationQuestionsHealthBenefitLabel": "Dans quelle mesure pensez-vous qu'elle profite à votre santé ?",
+      "donationQuestionsWellbeingLabel": "Dans quelle mesure pensez-vous qu'elle améliore votre bien-être ?",
+      "donationQuestionsCount": "{on}/{total} affichées"
     },
     "remindersTab": {
       "habitLabel": "Rappel d'habitude",

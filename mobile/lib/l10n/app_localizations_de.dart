@@ -1595,6 +1595,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Für die Sprachaufnahme wird Mikrofonzugriff benötigt — du kannst deine Gewohnheit auch eintippen.';
 
   @override
+  String get donateVoiceHoldToSpeak => 'Zum Sprechen gedrückt halten';
+
+  @override
+  String get donateVoiceRecording => 'Aufnahme … zum Stoppen loslassen';
+
+  @override
+  String get donateVoiceEditTranscript => 'Text bearbeiten';
+
+  @override
+  String get donateVoiceTranscriptPlaceholder =>
+      'Halte die Taste unten gedrückt und beschreibe deine Gewohnheit';
+
+  @override
   String get setCueNextButton => 'Weiter';
 
   @override

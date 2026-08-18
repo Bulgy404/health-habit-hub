@@ -71,6 +71,9 @@ class HabitConfig {
     this.informationOverloadOptOutAllowed = false,
     this.donationInputMode = 'text',
     this.donationQuestionnaireSlug,
+    this.donationAskFrequency = true,
+    this.donationAskHealthBenefit = true,
+    this.donationAskWellbeing = true,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -146,6 +149,18 @@ class HabitConfig {
   /// habit donation, or `null` when none is configured.
   final String? donationQuestionnaireSlug;
 
+  /// Whether the donation form shows the "how often" frequency question.
+  /// Resolved from the participant's study/group; defaults `true`.
+  final bool donationAskFrequency;
+
+  /// Whether the donation form shows the perceived health-benefit rating.
+  /// Resolved from the participant's study/group; defaults `true`.
+  final bool donationAskHealthBenefit;
+
+  /// Whether the donation form shows the perceived wellbeing-impact rating.
+  /// Resolved from the participant's study/group; defaults `true`.
+  final bool donationAskWellbeing;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -189,6 +204,10 @@ class HabitConfig {
         donationInputMode: json['donationInputMode'] as String? ?? 'text',
         donationQuestionnaireSlug:
             json['donationQuestionnaireSlug'] as String?,
+        donationAskFrequency: json['donationAskFrequency'] as bool? ?? true,
+        donationAskHealthBenefit:
+            json['donationAskHealthBenefit'] as bool? ?? true,
+        donationAskWellbeing: json['donationAskWellbeing'] as bool? ?? true,
       );
 }
 

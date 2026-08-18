@@ -404,9 +404,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         data: {
           'sentence': values.sentence,
           'language': _lang,
-          'frequency': values.frequency,
-          'health_benefit': values.healthBenefit,
-          'wellbeing_impact': values.wellbeing,
+          // Optional self-report ratings — omitted when the study hides them.
+          if (values.frequency != null) 'frequency': values.frequency,
+          if (values.healthBenefit != null)
+            'health_benefit': values.healthBenefit,
+          if (values.wellbeing != null) 'wellbeing_impact': values.wellbeing,
           'inputMode': values.inputMode,
           if (values.transcript != null) 'transcript': values.transcript,
           if (values.transcriptEdited != null)
@@ -434,9 +436,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       if (_surveyId != null) {
         try {
           await ref.read(surveyServiceProvider).submitResult(_surveyId!, {
-            'frequency': values.frequency,
-            'health_benefit': values.healthBenefit,
-            'wellbeing_impact': values.wellbeing,
+            if (values.frequency != null) 'frequency': values.frequency,
+            if (values.healthBenefit != null)
+              'health_benefit': values.healthBenefit,
+            if (values.wellbeing != null) 'wellbeing_impact': values.wellbeing,
           });
         } catch (_) {
           // Non-critical — habit is already saved.

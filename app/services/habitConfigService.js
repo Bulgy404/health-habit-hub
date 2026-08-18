@@ -107,6 +107,12 @@ export async function resolveHabitConfig({
   // questionnaire.
   let donationInputMode = 'text';
   let donationQuestionnaireSlug = null;
+  // Which optional self-report questions the donation form shows. Same
+  // nullable study→group override pattern as the flags above. Defaults
+  // preserve today's behaviour: all three questions shown.
+  let donationAskFrequency = true;
+  let donationAskHealthBenefit = true;
+  let donationAskWellbeing = true;
   // Onboarding + self-habit-creation flags. Default enabled for everyone
   // (public/free-entry users). Study level sets the baseline; a non-null
   // group-level value overrides it.
@@ -164,6 +170,15 @@ export async function resolveHabitConfig({
         if (typeof study.donationQuestionnaireSlug === 'string') {
           donationQuestionnaireSlug = study.donationQuestionnaireSlug;
         }
+        if (study.donationAskFrequency != null) {
+          donationAskFrequency = study.donationAskFrequency !== false;
+        }
+        if (study.donationAskHealthBenefit != null) {
+          donationAskHealthBenefit = study.donationAskHealthBenefit !== false;
+        }
+        if (study.donationAskWellbeing != null) {
+          donationAskWellbeing = study.donationAskWellbeing !== false;
+        }
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
@@ -215,6 +230,15 @@ export async function resolveHabitConfig({
             donationQuestionnaireSlug = null;
           } else if (typeof group?.donationQuestionnaireSlug === 'string') {
             donationQuestionnaireSlug = group.donationQuestionnaireSlug;
+          }
+          if (group?.donationAskFrequency != null) {
+            donationAskFrequency = group.donationAskFrequency !== false;
+          }
+          if (group?.donationAskHealthBenefit != null) {
+            donationAskHealthBenefit = group.donationAskHealthBenefit !== false;
+          }
+          if (group?.donationAskWellbeing != null) {
+            donationAskWellbeing = group.donationAskWellbeing !== false;
           }
         }
 
@@ -283,6 +307,10 @@ export async function resolveHabitConfig({
     // Donation input mode + post-donation questionnaire.
     donationInputMode,
     donationQuestionnaireSlug,
+    // Which optional self-report questions the donation form shows.
+    donationAskFrequency,
+    donationAskHealthBenefit,
+    donationAskWellbeing,
     ...appSettings,
   };
 }

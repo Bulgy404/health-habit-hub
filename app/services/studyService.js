@@ -332,6 +332,9 @@ export async function getStudy({ db, id }) {
       typeof study.donationQuestionnaireSlug === 'string'
         ? study.donationQuestionnaireSlug
         : null,
+    donationAskFrequency: study.donationAskFrequency !== false,
+    donationAskHealthBenefit: study.donationAskHealthBenefit !== false,
+    donationAskWellbeing: study.donationAskWellbeing !== false,
     reminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
     endOfStudyNotification: normalizeEndOfStudyContent(study),
@@ -409,6 +412,12 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
     $set.donationInputMode = updates.donationInputMode;
   if (updates.donationQuestionnaireSlug !== undefined)
     $set.donationQuestionnaireSlug = updates.donationQuestionnaireSlug;
+  if (updates.donationAskFrequency !== undefined)
+    $set.donationAskFrequency = updates.donationAskFrequency;
+  if (updates.donationAskHealthBenefit !== undefined)
+    $set.donationAskHealthBenefit = updates.donationAskHealthBenefit;
+  if (updates.donationAskWellbeing !== undefined)
+    $set.donationAskWellbeing = updates.donationAskWellbeing;
   if (updates.structuredActivityKeys !== undefined)
     $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
       ? updates.structuredActivityKeys
@@ -771,6 +780,12 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
     updated.donationInputMode = config.donationInputMode;
   if (config.donationQuestionnaireSlug !== undefined)
     updated.donationQuestionnaireSlug = config.donationQuestionnaireSlug;
+  if (config.donationAskFrequency !== undefined)
+    updated.donationAskFrequency = config.donationAskFrequency;
+  if (config.donationAskHealthBenefit !== undefined)
+    updated.donationAskHealthBenefit = config.donationAskHealthBenefit;
+  if (config.donationAskWellbeing !== undefined)
+    updated.donationAskWellbeing = config.donationAskWellbeing;
 
   groups[groupIndex] = updated;
 

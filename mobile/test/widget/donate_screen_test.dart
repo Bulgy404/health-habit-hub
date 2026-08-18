@@ -156,7 +156,7 @@ void main() {
     await tester.tap(find.text('Start sharing'));
     await tester.pump();
 
-    expect(find.text('Speak instead'), findsNothing);
+    expect(find.text('Hold to speak'), findsNothing);
   });
 
   testWidgets('voice input control is shown when donationInputMode is speech',
@@ -169,7 +169,7 @@ void main() {
     await tester.tap(find.text('Start sharing'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Speak instead'), findsOneWidget);
+    expect(find.text('Hold to speak'), findsOneWidget);
   });
 
   testWidgets('voice input control is shown when donationInputMode is both',
@@ -182,7 +182,7 @@ void main() {
     await tester.tap(find.text('Start sharing'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Speak instead'), findsOneWidget);
+    expect(find.text('Hold to speak'), findsOneWidget);
   });
 
   testWidgets(
