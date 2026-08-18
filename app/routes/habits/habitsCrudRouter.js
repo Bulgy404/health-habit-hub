@@ -3,8 +3,12 @@ import { randomUUID } from 'node:crypto';
 import {
   enqueueHabitDonation,
   shareHabit,
+  createDonationRecord,
+  getPostDonationQuestionnaire,
+  markDonationOutcome,
 } from '../../services/habitDonationService.js';
 import { getEnrollment } from '../../services/enrollmentNeo4j.js';
+import { resolveHabitConfig } from '../../services/habitConfigService.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../../models/habitComment.js';
 import { translateHabit, translateTerm } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
@@ -419,7 +423,11 @@ export function createHabitsCrudRouter({
       habitType,
       stackedOnUuid,
       creationMode,
+      inputMode,
+      transcript,
+      transcriptEdited,
     } = req.body || {};
+    const requestedInputMode = inputMode === 'speech' ? 'speech' : 'text';
     // §7.4/§7.1 — optional on the donation path: the structured New Habit
     // flow sends an explicit choice, but free-text community donations
     // (donate_screen.dart) never do. Pass through only a recognised explicit
@@ -475,15 +483,58 @@ export function createHabitsCrudRouter({
     try {
       const uuid = randomUUID();
 
-      // Resolve the participant's studyId so Neo4j Habit nodes can be tagged
-      // for research queries — best-effort, null for non-enrolled users.
+      // Resolve the participant's studyId/groupId so Neo4j Habit nodes can
+      // be tagged for research queries — best-effort, null for non-enrolled
+      // users.
       let studyId = null;
+      let groupId = null;
       try {
         const enrollment = await getEnrollment(queryNeo4j, userId);
         studyId = enrollment?.studyId ?? null;
+        groupId = enrollment?.groupId ?? null;
       } catch {
         // Non-fatal: missing studyId is fine, habit is still stored.
       }
+
+      // Resolve the admin-configured donation input mode + optional
+      // post-donation questionnaire for this participant's study/group.
+      // Reject a speech submission the config doesn't actually permit
+      // server-side, rather than trusting the client-declared mode.
+      const database = await getDb();
+      const resolvedConfig = await resolveHabitConfig({
+        db: database,
+        userId,
+        neo4jRun: queryNeo4j,
+        lang: language.slice(0, 2).toLowerCase(),
+      });
+      if (
+        requestedInputMode === 'speech' &&
+        resolvedConfig.donationInputMode === 'text'
+      ) {
+        return res.status(403).json({
+          error: 'Speech input is not enabled for this study/group.',
+        });
+      }
+
+      const postDonationQuestionnaireSlug = await getPostDonationQuestionnaire({
+        db: database,
+        slug: resolvedConfig.donationQuestionnaireSlug,
+      });
+      await createDonationRecord({
+        db: database,
+        uuid,
+        userID: userId,
+        studyId,
+        groupId,
+        inputMode: requestedInputMode,
+        transcript:
+          requestedInputMode === 'speech' && typeof transcript === 'string'
+            ? transcript
+            : null,
+        transcriptEdited:
+          requestedInputMode === 'speech' ? transcriptEdited === true : null,
+        questionnaireSlug: postDonationQuestionnaireSlug,
+      });
 
       // When no queue is available (e.g. test mode), fall back to the
       // synchronous pipeline so tests can verify end-to-end behaviour.
@@ -508,7 +559,16 @@ export function createHabitsCrudRouter({
           translateTerm,
           translateUrl,
         });
-        return res.status(result.is_habit ? 201 : 200).json(result);
+        await markDonationOutcome({
+          db: database,
+          uuid,
+          isHabit: result.is_habit,
+        });
+        return res.status(result.is_habit ? 201 : 200).json({
+          ...result,
+          uuid,
+          postDonationQuestionnaireSlug,
+        });
       }
 
       // Classification (and the rest of the pipeline) now runs inside the
@@ -535,8 +595,10 @@ export function createHabitsCrudRouter({
 
       return res.status(202).json({
         jobId,
+        uuid,
         status: 'pending',
         message: 'Your habit has been submitted and is being analyzed.',
+        postDonationQuestionnaireSlug,
       });
     } catch (err) {
       if (err.status && Number.isInteger(err.status)) {

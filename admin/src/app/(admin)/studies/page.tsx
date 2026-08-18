@@ -57,6 +57,10 @@ interface StudyGroup {
   reminderContentMode?: "generic" | "implementation_intention" | null;
   informationOverloadGuard?: InformationOverloadGuard | null;
   gamificationEnabled?: boolean | null;
+  // Habit-donation input mode + optional post-donation questionnaire
+  // (null = inherit study-level).
+  donationInputMode?: "text" | "speech" | "both" | null;
+  donationQuestionnaireSlug?: string | null;
 }
 
 /** §7.3 Information Overload guard — a growing per-type habit cap. */
@@ -90,6 +94,8 @@ interface StudySummary {
   reminderContentMode: "generic" | "implementation_intention";
   informationOverloadGuard: InformationOverloadGuard | null;
   gamificationEnabled: boolean;
+  donationInputMode: "text" | "speech" | "both";
+  donationQuestionnaireSlug: string | null;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };
@@ -109,7 +115,7 @@ interface QuestionnaireSummary {
   description: LocaleText;
   isLibrary: boolean;
   active: boolean;
-  scope: "study" | "habit";
+  scope: "study" | "habit" | "donation";
 }
 
 interface StudyCode {
@@ -3364,7 +3370,12 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 
 // ── Behavior-change tab ───────────────────────────────────────────────────────
 
-type BehaviorSection = "habitStacking" | "reminderContent" | "infoOverload";
+type BehaviorSection =
+  | "habitStacking"
+  | "reminderContent"
+  | "infoOverload"
+  | "donationInput"
+  | "donationQuestionnaire";
 type Scope = "study" | "group";
 
 const EMPTY_GUARD: InformationOverloadGuard = {
@@ -3422,20 +3433,67 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     Object.fromEntries(groups.map((g) => [g.id, g.informationOverloadGuard ?? studyGuard]))
   );
 
+  // ── Habit-donation input mode ("text" | "speech" | "both") ───────────────
+  const [donationInputScope, setDonationInputScope] = useState<Scope>(() =>
+    groups.some((g) => g.donationInputMode != null) ? "group" : "study"
+  );
+  const [studyDonationInput, setStudyDonationInput] = useState(study.donationInputMode);
+  const [groupDonationInput, setGroupDonationInput] = useState<
+    Record<string, "text" | "speech" | "both">
+  >(() =>
+    Object.fromEntries(
+      groups.map((g) => [g.id, g.donationInputMode ?? study.donationInputMode])
+    )
+  );
+
+  // ── Post-donation questionnaire (a pool slug, or none) ────────────────────
+  const [donationQuestionnaires, setDonationQuestionnaires] = useState<QuestionnaireSummary[]>([]);
+  useEffect(() => {
+    apiFetch(QUESTIONNAIRES_API, token)
+      .then((qs) => setDonationQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []))
+      .catch(() => setDonationQuestionnaires([]));
+  }, [token]);
+  // null/absent = inherit the study value; '' = this group explicitly has no
+  // questionnaire; a non-empty string = a slug override (see
+  // habitConfigService.js's resolveHabitConfig for the matching backend logic).
+  const [donationQSlugScope, setDonationQSlugScope] = useState<Scope>(() =>
+    groups.some((g) => g.donationQuestionnaireSlug != null) ? "group" : "study"
+  );
+  const [studyDonationQSlug, setStudyDonationQSlug] = useState<string | null>(
+    study.donationQuestionnaireSlug
+  );
+  // Per-group live values are always concrete once in "group" scope — '' for
+  // explicitly none, never null (null only ever means "inherit", represented
+  // by falling out of "group" scope entirely, matching every other toggle).
+  const [groupDonationQSlug, setGroupDonationQSlug] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [
+        g.id,
+        g.donationQuestionnaireSlug ?? study.donationQuestionnaireSlug ?? "",
+      ])
+    )
+  );
+
   const [saving, setSaving] = useState<Record<BehaviorSection, boolean>>({
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
+    donationInput: false,
+    donationQuestionnaire: false,
   });
   const [saved, setSaved] = useState<Record<BehaviorSection, boolean>>({
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
+    donationInput: false,
+    donationQuestionnaire: false,
   });
   const [errors, setErrors] = useState<Record<BehaviorSection, string>>({
     habitStacking: "",
     reminderContent: "",
     infoOverload: "",
+    donationInput: "",
+    donationQuestionnaire: "",
   });
 
   function putStudy(body: object) {
@@ -3510,6 +3568,36 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
       }
     });
 
+  const saveDonationInput = () =>
+    runSave("donationInput", async () => {
+      if (donationInputScope === "study") {
+        await putStudy({ donationInputMode: studyDonationInput });
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { donationInputMode: null }).catch(() => {}))
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { donationInputMode: groupDonationInput[g.id] }))
+        );
+      }
+    });
+
+  const saveDonationQuestionnaire = () =>
+    runSave("donationQuestionnaire", async () => {
+      if (donationQSlugScope === "study") {
+        await putStudy({ donationQuestionnaireSlug: studyDonationQSlug });
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { donationQuestionnaireSlug: null }).catch(() => {}))
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) =>
+            patchGroup(g.id, { donationQuestionnaireSlug: groupDonationQSlug[g.id] })
+          )
+        );
+      }
+    });
+
   // ── Overview strip ───────────────────────────────────────────────────────
   const summarizeBoolScope = (scope: Scope, sv: boolean, gv: Record<string, boolean>) => {
     if (scope === "study")
@@ -3547,6 +3635,34 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
             : t("behaviorChangeTab.summaryOff")
           : t("behaviorChangeTab.summaryPerGroup", {
               on: groups.filter((g) => groupOverload[g.id]?.enabled).length,
+              total: groups.length,
+            }),
+    },
+    {
+      key: "donationInput",
+      title: t("behaviorChangeTab.donationInputLabel"),
+      enabled: true,
+      status:
+        donationInputScope === "study"
+          ? {
+              text: t("behaviorChangeTab.donationInputTextOption"),
+              speech: t("behaviorChangeTab.donationInputSpeechOption"),
+              both: t("behaviorChangeTab.donationInputBothOption"),
+            }[studyDonationInput]
+          : t("behaviorChangeTab.summaryPerGroup", { on: groups.length, total: groups.length }),
+    },
+    {
+      key: "donationQuestionnaire",
+      title: t("behaviorChangeTab.donationQuestionnaireLabel"),
+      enabled:
+        donationQSlugScope === "study"
+          ? !!studyDonationQSlug
+          : groups.some((g) => !!groupDonationQSlug[g.id]),
+      status:
+        donationQSlugScope === "study"
+          ? studyDonationQSlug || t("behaviorChangeTab.summaryOff")
+          : t("behaviorChangeTab.summaryPerGroup", {
+              on: groups.filter((g) => !!groupDonationQSlug[g.id]).length,
               total: groups.length,
             }),
     },
@@ -3723,6 +3839,116 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
         )}
         {perGroupToggle(guardScope, setGuardScope)}
         {sectionFooter("infoOverload", saveInfoOverload)}
+      </div>
+
+      {/* Habit-donation input mode */}
+      <div className={styles.reminderTypeSection} data-testid="behavior-section-donationInput">
+        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.donationInputLabel")}</p>
+        <span className={styles.hint}>{t("behaviorChangeTab.donationInputHint")}</span>
+        {errors.donationInput && <div className={styles.errorMsg}>{errors.donationInput}</div>}
+
+        {donationInputScope === "study" ? (
+          <div className={styles.formGroup}>
+            <select
+              className={styles.select}
+              value={studyDonationInput}
+              onChange={(e) =>
+                setStudyDonationInput(e.target.value as "text" | "speech" | "both")
+              }
+            >
+              <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
+              <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
+              <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
+            </select>
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <select
+                  className={styles.select}
+                  value={groupDonationInput[g.id] ?? "text"}
+                  onChange={(e) =>
+                    setGroupDonationInput((p) => ({
+                      ...p,
+                      [g.id]: e.target.value as "text" | "speech" | "both",
+                    }))
+                  }
+                >
+                  <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
+                  <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
+                  <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        {perGroupToggle(donationInputScope, setDonationInputScope)}
+        {sectionFooter("donationInput", saveDonationInput)}
+      </div>
+
+      {/* Post-donation questionnaire */}
+      <div
+        className={styles.reminderTypeSection}
+        data-testid="behavior-section-donationQuestionnaire"
+      >
+        <p className={styles.cueConfigGroupLabel}>
+          {t("behaviorChangeTab.donationQuestionnaireLabel")}
+        </p>
+        <span className={styles.hint}>{t("behaviorChangeTab.donationQuestionnaireHint")}</span>
+        {errors.donationQuestionnaire && (
+          <div className={styles.errorMsg}>{errors.donationQuestionnaire}</div>
+        )}
+
+        {donationQSlugScope === "study" ? (
+          <div className={styles.formGroup}>
+            <select
+              className={styles.select}
+              value={studyDonationQSlug ?? ""}
+              onChange={(e) => setStudyDonationQSlug(e.target.value || null)}
+            >
+              <option value="">{t("behaviorChangeTab.donationQuestionnaireNoneOption")}</option>
+              {donationQuestionnaires
+                .filter((q) => q.active)
+                .map((q) => (
+                  <option key={q.slug} value={q.slug}>
+                    {q.title.en || q.slug}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <select
+                  className={styles.select}
+                  value={groupDonationQSlug[g.id] ?? ""}
+                  onChange={(e) =>
+                    setGroupDonationQSlug((p) => ({ ...p, [g.id]: e.target.value }))
+                  }
+                >
+                  <option value="">{t("behaviorChangeTab.donationQuestionnaireNoneOption")}</option>
+                  {donationQuestionnaires
+                    .filter((q) => q.active)
+                    .map((q) => (
+                      <option key={q.slug} value={q.slug}>
+                        {q.title.en || q.slug}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        {perGroupToggle(donationQSlugScope, setDonationQSlugScope)}
+        {sectionFooter("donationQuestionnaire", saveDonationQuestionnaire)}
       </div>
     </div>
   );

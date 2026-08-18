@@ -106,6 +106,18 @@ function createMockDb() {
           }
           return results[0] || null;
         },
+        async updateOne(query, update) {
+          let results = [...getCol(name)];
+          if (query) {
+            for (const [k, v] of Object.entries(query)) {
+              results = results.filter((d) => d[k] === v);
+            }
+          }
+          const doc = results[0];
+          if (!doc) return { matchedCount: 0 };
+          if (update.$set) Object.assign(doc, update.$set);
+          return { matchedCount: 1 };
+        },
       };
     },
   };
@@ -132,6 +144,7 @@ let port;
 let jwksServer;
 let jwksPort;
 let neo4jMock;
+let db;
 const realFetch = global.fetch;
 
 before(async () => {
@@ -145,7 +158,7 @@ before(async () => {
   jwksPort = jwksServer.address().port;
 
   neo4jMock = createNeo4jMock();
-  const db = createMockDb();
+  db = createMockDb();
   const app = express();
   app.use(express.json());
   app.use(
@@ -254,6 +267,74 @@ test('Integration: submit SLIQ response → fetch by slug → verify answers mat
   assert.strictEqual(body.questionnaireSlug, 'sliq');
   assert.deepStrictEqual(body.answers, answers);
   assert.ok(body.submittedAt, 'should have submittedAt');
+});
+
+test('POST /questionnaire-responses with a valid habitUuid links the response and the habit_donations record', async () => {
+  const token = makeToken('user-donation-q1', ['user']);
+  await db.collection('habit_donations').insertOne({
+    uuid: 'donation-uuid-1',
+    userId: 'user-donation-q1',
+    questionnaireSlug: 'who5',
+    questionnaireResponseId: null,
+  });
+
+  const res = await request('POST', '/questionnaire-responses', token, {
+    questionnaireSlug: 'who5',
+    answers: { who5_1: '4' },
+    habitUuid: 'donation-uuid-1',
+  });
+  assert.strictEqual(res.status, 201);
+
+  const stored = await db
+    .collection('form_responses')
+    .findOne({ userId: 'user-donation-q1', questionnaireSlug: 'who5' });
+  assert.strictEqual(stored.habitUuid, 'donation-uuid-1');
+
+  const donation = await db
+    .collection('habit_donations')
+    .findOne({ uuid: 'donation-uuid-1' });
+  assert.ok(donation.questionnaireResponseId, 'should be linked back');
+});
+
+test("POST /questionnaire-responses with habitUuid for someone else's donation does not get the bypass or the link", async () => {
+  const token = makeToken('user-donation-q2-attacker', ['user']);
+  await db.collection('habit_donations').insertOne({
+    uuid: 'donation-uuid-2',
+    userId: 'someone-else',
+    questionnaireSlug: 'who5',
+    questionnaireResponseId: null,
+  });
+
+  const res = await request('POST', '/questionnaire-responses', token, {
+    questionnaireSlug: 'who5',
+    answers: { who5_1: '4' },
+    habitUuid: 'donation-uuid-2',
+  });
+  // No window exists for 'who5' in this mock either, so the ungated
+  // fallback still accepts the submission — the point is it must NOT be
+  // linked to a donation record it doesn't own.
+  assert.strictEqual(res.status, 201);
+
+  const stored = await db.collection('form_responses').findOne({
+    userId: 'user-donation-q2-attacker',
+    questionnaireSlug: 'who5',
+  });
+  assert.strictEqual(stored.habitUuid, undefined);
+
+  const donation = await db
+    .collection('habit_donations')
+    .findOne({ uuid: 'donation-uuid-2' });
+  assert.strictEqual(donation.questionnaireResponseId, null);
+});
+
+test('POST /questionnaire-responses rejects a non-string habitUuid', async () => {
+  const token = makeToken('user-donation-q3', ['user']);
+  const res = await request('POST', '/questionnaire-responses', token, {
+    questionnaireSlug: 'who5',
+    answers: { who5_1: '4' },
+    habitUuid: 12345,
+  });
+  assert.strictEqual(res.status, 400);
 });
 
 test('GET /questionnaire-responses/me — returns all responses ordered by most recent first', async () => {

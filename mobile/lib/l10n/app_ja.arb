@@ -843,6 +843,26 @@
   "@loggedToday": {
     "description": "Shown on habit card when today is already logged"
   },
+  "logForAnotherDay": "別の日を記録",
+  "@logForAnotherDay": {
+    "description": "Tooltip on habit card's log checkbox; long-press opens the backfill sheet"
+  },
+  "backfillSheetTitle": "別の日を記録する",
+  "@backfillSheetTitle": {
+    "description": "Title of the bottom sheet for logging a habit on a past day"
+  },
+  "backfillSheetSubtitle": "日付をタップして完了にする、またはもう一度タップして取り消します。",
+  "@backfillSheetSubtitle": {
+    "description": "Subtitle explaining the backfill sheet"
+  },
+  "today": "今日",
+  "@today": {
+    "description": "Label for today's date row in the backfill sheet"
+  },
+  "yesterday": "昨日",
+  "@yesterday": {
+    "description": "Label for yesterday's date row in the backfill sheet"
+  },
   "pickBehaviorTitle": "どんな習慣を身につけたいですか？",
   "@pickBehaviorTitle": {
     "description": "Screen 1 of new habit flow"
@@ -1131,6 +1151,48 @@
   "@dailyReminderLabel": {
     "description": "Label of the reminder section in habit creation"
   },
+  "habitCadenceQuestion": "頻度は？",
+  "@habitCadenceQuestion": {
+    "description": "Label of the cadence (daily vs weekly target) section in habit creation"
+  },
+  "habitCadenceDaily": "毎日",
+  "@habitCadenceDaily": {
+    "description": "Segmented-button option: the habit is tracked every day"
+  },
+  "habitCadenceWeeklyOption": "週に n 回",
+  "@habitCadenceWeeklyOption": {
+    "description": "Segmented-button option: the habit has a weekly target count instead of a daily one"
+  },
+  "habitCadenceTargetLabel": "週に{count}回",
+  "@habitCadenceTargetLabel": {
+    "description": "Shows the currently selected weekly target count next to the stepper",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "weeklyProgressLabel": "今週 {done} / {target}",
+  "@weeklyProgressLabel": {
+    "description": "Progress chip on a weekly-cadence habit card/detail screen, e.g. \"2 / 3 this week\"",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "weeklyStreakLabel": "{count}週連続",
+  "@weeklyStreakLabel": {
+    "description": "Streak stat for a weekly-cadence habit, in weeks rather than days",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noReminders": "リマインダーなし",
   "@noReminders": {
     "description": "Shown when reminders are disabled"
@@ -1361,6 +1423,10 @@
   "donateTodaysTasksEyebrow": "今日のタスク",
   "donateCommunityLabel": "コミュニティ",
   "donateDayStreakLabel": "連続日数",
+  "donateHabitHintTitle": "習慣とは？",
+  "donateHabitHintBody": "習慣とは、具体的で繰り返し行える行動のことで、単なる大まかな目標ではありません。良い説明には、行動そのものに加えて、いつ・どこで行うか、そして時にはなぜ行うかという文脈も含まれます。",
+  "donateHabitHintExampleIntro": "例：",
+  "donateHabitHintExampleSentence": "[T]朝食後[/T]、[R]もっと元気になりたいので[/R][L]公園で[/L][B]20分間散歩します[/B]。",
   "donateFormDescribeHabitLabel": "あなたの習慣を教えてください",
   "donateFormHabitHint": "例：毎朝30分散歩する",
   "donateFormHabitValidationError": "習慣を説明してください（10文字以上）",
@@ -1369,14 +1435,14 @@
   "donateFormFrequencyWeekly": "週1回",
   "donateFormFrequencySeveralPerWeek": "週に数回",
   "donateFormFrequencyDaily": "毎日",
-  "donateFormDurationQuestion": "この習慣はどのくらい続けていますか？",
-  "donateFormDurationUnder1Month": "1か月未満",
-  "donateFormDuration1To3Months": "1〜3か月",
-  "donateFormDuration3To12Months": "3〜12か月",
-  "donateFormDurationOver1Year": "1年以上",
-  "donateFormHealthBenefitQuestion": "この習慣はあなたの健康にどれくらい役立っていますか？",
+  "donateFormHealthBenefitQuestion": "この習慣はあなたの健康にどれくらい役立っていると思いますか？",
   "donateFormRatingCaption": "1 = まったく当てはまらない · 5 = 非常に当てはまる",
-  "donateFormWellbeingQuestion": "この習慣はあなたの幸福感をどれくらい高めていますか？",
+  "donateFormWellbeingQuestion": "この習慣はあなたの幸福感をどれくらい高めていると思いますか？",
+  "donateVoiceStartRecording": "代わりに話す",
+  "donateVoiceStopRecording": "録音を停止",
+  "donateVoiceTranscribing": "文字起こし中…",
+  "donateVoiceTranscriptionFailed": "文字起こしできませんでした。もう一度お試しいただくか、入力してください。",
+  "donateVoiceMicPermissionDenied": "習慣を話すにはマイクへのアクセスが必要です。代わりに入力することもできます。",
   "setCueNextButton": "次へ",
   "setCueNoneAvailableTitle": "まだきっかけが登録されていません",
   "setCueNoneAvailableSubtitle": "研究担当者がまもなくきっかけを設定します",
@@ -1389,6 +1455,7 @@
   "setCueRemoveTooltip": "きっかけを削除",
   "setCueExtraPlaceholder": "例：平日の自宅で",
   "couldNotLogToday": "本日の記録を保存できませんでした：{error}",
+  "couldNotLogDay": "記録を更新できませんでした：{error}",
   "continueButton": "次へ",
   "describeYourHabitMinLength": "習慣を入力してください(3文字以上)",
   "yourHabitLabel": "あなたの習慣",

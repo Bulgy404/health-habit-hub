@@ -1298,6 +1298,36 @@ abstract class AppLocalizations {
   /// **'Logged ✓'**
   String get loggedToday;
 
+  /// Tooltip on habit card's log checkbox; long-press opens the backfill sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Log for another day'**
+  String get logForAnotherDay;
+
+  /// Title of the bottom sheet for logging a habit on a past day
+  ///
+  /// In en, this message translates to:
+  /// **'Log a different day'**
+  String get backfillSheetTitle;
+
+  /// Subtitle explaining the backfill sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a day to mark it done, or tap again to undo it.'**
+  String get backfillSheetSubtitle;
+
+  /// Label for today's date row in the backfill sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// Label for yesterday's date row in the backfill sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
   /// Screen 1 of new habit flow
   ///
   /// In en, this message translates to:
@@ -1741,6 +1771,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Daily reminder'**
   String get dailyReminderLabel;
+
+  /// Label of the cadence (daily vs weekly target) section in habit creation
+  ///
+  /// In en, this message translates to:
+  /// **'How often?'**
+  String get habitCadenceQuestion;
+
+  /// Segmented-button option: the habit is tracked every day
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get habitCadenceDaily;
+
+  /// Segmented-button option: the habit has a weekly target count instead of a daily one
+  ///
+  /// In en, this message translates to:
+  /// **'N times a week'**
+  String get habitCadenceWeeklyOption;
+
+  /// Shows the currently selected weekly target count next to the stepper
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 time a week} other{{count} times a week}}'**
+  String habitCadenceTargetLabel(int count);
+
+  /// Progress chip on a weekly-cadence habit card/detail screen, e.g. "2 / 3 this week"
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {target} this week'**
+  String weeklyProgressLabel(int done, int target);
+
+  /// Streak stat for a weekly-cadence habit, in weeks rather than days
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1-week streak} other{{count}-week streak}}'**
+  String weeklyStreakLabel(int count);
 
   /// Shown when reminders are disabled
   ///
@@ -2672,6 +2738,30 @@ abstract class AppLocalizations {
   /// **'Day streak'**
   String get donateDayStreakLabel;
 
+  /// Title of the dismissible educational hint card on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s a habit?'**
+  String get donateHabitHintTitle;
+
+  /// Body text of the dismissible educational hint card on the donation form, explaining what a habit and its context are
+  ///
+  /// In en, this message translates to:
+  /// **'A habit is a specific, repeatable action, not just a general goal. A good description names the action itself, plus the context around it: when or where you do it, and sometimes why.'**
+  String get donateHabitHintBody;
+
+  /// Label introducing the worked example sentence below the hint body
+  ///
+  /// In en, this message translates to:
+  /// **'For example:'**
+  String get donateHabitHintExampleIntro;
+
+  /// Worked example habit sentence for the donation-form hint card. [T]/[B]/[L]/[R] tags mark the Time/Behavior/Location/Reasoning phrases that get colour-coded to match the Explore graph's dimension colours — keep each tag pair wrapped tightly around the corresponding translated phrase, but the phrases and tags may be reordered freely to fit natural word order in this language.
+  ///
+  /// In en, this message translates to:
+  /// **'[T]After breakfast[/T], I will [B]go for a 20-minute walk[/B] [L]in the park[/L] because [R]I want more energy[/R].'**
+  String get donateHabitHintExampleSentence;
+
   /// Label above the habit description text field on the donation form
   ///
   /// In en, this message translates to:
@@ -2723,37 +2813,7 @@ abstract class AppLocalizations {
   /// Rating question label on the donation form
   ///
   /// In en, this message translates to:
-  /// **'How long have you had this habit?'**
-  String get donateFormDurationQuestion;
-
-  /// Duration rating option on the donation form
-  ///
-  /// In en, this message translates to:
-  /// **'< 1 month'**
-  String get donateFormDurationUnder1Month;
-
-  /// Duration rating option on the donation form
-  ///
-  /// In en, this message translates to:
-  /// **'1–3 months'**
-  String get donateFormDuration1To3Months;
-
-  /// Duration rating option on the donation form
-  ///
-  /// In en, this message translates to:
-  /// **'3–12 months'**
-  String get donateFormDuration3To12Months;
-
-  /// Duration rating option on the donation form
-  ///
-  /// In en, this message translates to:
-  /// **'> 1 year'**
-  String get donateFormDurationOver1Year;
-
-  /// Rating question label on the donation form
-  ///
-  /// In en, this message translates to:
-  /// **'How much does it benefit your health?'**
+  /// **'How much do you think this habit benefits your health?'**
   String get donateFormHealthBenefitQuestion;
 
   /// Caption explaining the 1-5 rating scale endpoints on the donation form
@@ -2765,8 +2825,38 @@ abstract class AppLocalizations {
   /// Rating question label on the donation form
   ///
   /// In en, this message translates to:
-  /// **'How much does it improve your wellbeing?'**
+  /// **'How much do you think this habit improves your wellbeing?'**
   String get donateFormWellbeingQuestion;
+
+  /// Button label to start recording a spoken habit description on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Speak instead'**
+  String get donateVoiceStartRecording;
+
+  /// Button label to stop recording a spoken habit description on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Stop recording'**
+  String get donateVoiceStopRecording;
+
+  /// Label shown while a recorded habit description is being transcribed
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribing…'**
+  String get donateVoiceTranscribing;
+
+  /// Error shown when speech-to-text transcription fails on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t transcribe that — please try again or type it instead.'**
+  String get donateVoiceTranscriptionFailed;
+
+  /// Error shown when microphone permission is denied on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone access is needed to speak your habit — you can type it instead.'**
+  String get donateVoiceMicPermissionDenied;
 
   /// Button to proceed from the cue-setting step to the next step
   ///
@@ -2839,6 +2929,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not log today: {error}'**
   String couldNotLogToday(String error);
+
+  /// Snackbar shown when logging/unlogging a past day in the backfill sheet fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update log: {error}'**
+  String couldNotLogDay(String error);
 
   /// Generic button to proceed to the next screen
   ///

@@ -23,6 +23,7 @@ class HabitOnboardingPrefs {
   static const _cueIntroKey = 'cue_onboarding_seen_v1';
   static const _dotLegendIntroKey = 'dot_legend_onboarding_seen_v1';
   static const _overloadGuardIntroKey = 'overload_guard_onboarding_seen_v1';
+  static const _donateHabitIntroKey = 'donate_habit_onboarding_seen_v1';
 
   /// Returns true if the "what's a habit?" explainer has already been
   /// dismissed once.
@@ -55,6 +56,16 @@ class HabitOnboardingPrefs {
   /// shown again.
   static Future<void> markOverloadGuardIntroSeen() =>
       _markSeen(_overloadGuardIntroKey);
+
+  /// Returns true if the donation screen's "what's a habit?" explainer card
+  /// has already been dismissed once.
+  static Future<bool> hasSeenDonateHabitIntro() =>
+      _hasSeen(_donateHabitIntroKey);
+
+  /// Marks the donation screen's explainer card as seen so it is not shown
+  /// again.
+  static Future<void> markDonateHabitIntroSeen() =>
+      _markSeen(_donateHabitIntroKey);
 
   static Future<bool> _hasSeen(String key) async {
     final prefs = await SharedPreferences.getInstance();

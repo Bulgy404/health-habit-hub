@@ -53,9 +53,25 @@ function createMockDb() {
     collection(name) {
       if (!collections[name]) collections[name] = [];
       const col = collections[name];
+      // Generic exact-match filter over whichever plain-value fields the
+      // caller queried on — sufficient for the simple {uuid}/{uuid, userId}
+      // style lookups the donation/questionnaire linkage code makes; not a
+      // real Mongo query engine.
+      const matches = (doc, query) =>
+        Object.entries(query || {}).every(([k, v]) => doc[k] === v);
       return {
         async insertOne(doc) {
           col.push({ ...doc });
+          return { insertedId: doc._id ?? `mock-id-${col.length}` };
+        },
+        async findOne(query) {
+          return col.find((d) => matches(d, query)) ?? null;
+        },
+        async updateOne(query, update) {
+          const doc = col.find((d) => matches(d, query));
+          if (!doc) return { matchedCount: 0 };
+          if (update.$set) Object.assign(doc, update.$set);
+          return { matchedCount: 1 };
         },
         find(query) {
           let results = [...col];
@@ -363,6 +379,39 @@ test('POST /api/v1/habits/donate returns 201 with uuid for valid habit', async (
   assert.strictEqual(body.is_habit, true);
   assert.ok(body.uuid, 'Response should include uuid');
   assert.ok(body.message);
+});
+
+test('POST /api/v1/habits/donate creates a habit_donations record keyed by the same uuid, defaulting to text input mode', async () => {
+  const res = await post(
+    '/api/v1/habits/donate',
+    { sentence: 'I go for a walk every evening', language: 'en' },
+    makeToken('user-donation-1')
+  );
+  const body = await res.json();
+  assert.strictEqual(res.status, 201);
+  assert.strictEqual(body.postDonationQuestionnaireSlug, null);
+
+  const donations = mockDb._getAll('habit_donations');
+  const record = donations.find((d) => d.uuid === body.uuid);
+  assert.ok(record, 'a habit_donations record should exist for this uuid');
+  assert.strictEqual(record.userId, 'user-donation-1');
+  assert.strictEqual(record.inputMode, 'text');
+  assert.strictEqual(record.audioClip, null);
+});
+
+test('POST /api/v1/habits/donate rejects inputMode "speech" when the resolved config only permits text (default for an unenrolled user)', async () => {
+  const res = await post(
+    '/api/v1/habits/donate',
+    {
+      sentence: 'I stretch for five minutes after waking up',
+      language: 'en',
+      inputMode: 'speech',
+    },
+    makeToken('user-donation-2')
+  );
+  assert.strictEqual(res.status, 403);
+  const body = await res.json();
+  assert.ok(body.error);
 });
 
 test('POST /api/v1/habits/donate creates a Habit node in Neo4j', async () => {

@@ -1,4 +1,6 @@
 %% UC-06 — Complete questionnaire
+%% Also entered directly (bypassing the list below) as the post-donation questionnaire
+%% from UC-03: F navigates straight to /questionnaire/:slug?habitUuid=:uuid.
 sequenceDiagram
     autonumber
     actor P as Participant
@@ -11,21 +13,30 @@ sequenceDiagram
     F->>B: GET /api/v1/participant/questionnaires
     B->>M: Resolve study enrollment -> assigned questionnaires
     M-->>B: questionnaire definitions (scope: study | habit)
-    B->>M: getQuestionnaireCompletionStatus: for every returned slug,<br/>find questionnaire_windows for this user (earliest open one -><br/>available/nextDueAt; latest closed one -> completedAt)
+    B->>M: getQuestionnaireCompletionStatus: for every returned slug,<br/>find questionnaire_windows for this user (earliest open one →<br/>available/nextDueAt, latest closed one → completedAt)
     Note over B,M: Study-scoped definitions are always listed once assigned.<br/>A habit-scoped one (e.g. an admin-defined check-in, see UC-20) is only<br/>listed once the participant has an actual window for it — i.e. has already<br/>created a relevant habit (see UC-35). SRHI itself never appears here at<br/>all: it's unconditional and has no `questionnaires` collection entry —<br/>it lives only in My Habits (UC-13).
     B-->>F: questionnaires + {available, completedAt, nextDueAt} per slug
     F->>F: available=true -> green, tappable button<br/>available=false -> greyed-out tile, non-interactive,<br/>showing "Completed on {completedAt}" (or "Not yet available")
     P->>F: Tap an available questionnaire, answer questions, submit
-    F->>B: POST /api/v1/questionnaire-responses {questionnaireSlug, answers}
-    B->>M: getQuestionnaireCompletionStatus for this one slug
-    alt slug has a window AND it's not currently available
-        B-->>F: 409 — already completed / next occurrence not due yet
-        F->>F: Show "already completed" error (handles a stale cache/race,<br/>since the UI already hides this case)
-    else available, or no window at all (ad-hoc, ungated)
+    F->>B: POST /api/v1/questionnaire-responses<br/>{questionnaireSlug, answers, habitUuid?}
+    alt habitUuid supplied (post-donation entry from UC-03)
+        B->>M: Verify a matching, not-yet-answered<br/>habit_donations record exists for this user+slug
+        Note over B,M: A valid match always bypasses the window-due<br/>check below outright — it's a one-off ad-hoc fill by<br/>construction. An invalid/reused habitUuid instead<br/>falls through to the normal gated path.
+    else no habitUuid
+        B->>M: getQuestionnaireCompletionStatus for this one slug
+        alt slug has a window AND it's not currently available
+            B-->>F: 409 — already completed / next occurrence not due yet
+            F->>F: Show "already completed" error (handles a stale cache/race,<br/>since the UI already hides this case)
+        end
+    end
+    alt not rejected with 409 above
         B->>B: Validate answers against question schema
-        B->>M: insert(form_responses)
+        B->>M: insert(form_responses {..., habitUuid?})
         B->>M: markWindowSubmitted: close the earliest open window,<br/>stamp submittedAt + link responseId (best-effort — logged, not fatal)
+        opt habitUuid was verified above
+            B->>M: set habit_donations.questionnaireResponseId
+        end
         B->>N4: Link response metadata to participant graph (where applicable)
         B-->>F: 201 response recorded
-        F->>F: Invalidate participantQuestionnairesProvider +<br/>dueQuestionnairesProvider — this item greys out immediately,<br/>without waiting for a restart. Answers can't be changed after this;<br/>the tile turns green again once the next occurrence's window is due.
+        F->>F: Invalidate participantQuestionnairesProvider +<br/>dueQuestionnairesProvider — this item greys out immediately,<br/>without waiting for a restart. Answers can't be changed after this —<br/>the tile turns green again once the next occurrence's window is due.
     end

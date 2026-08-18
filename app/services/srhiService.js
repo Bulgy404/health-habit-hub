@@ -9,6 +9,10 @@ import {
   computeAutonomyScore,
   currentStreakDays,
   adherenceRate,
+  normalizeCadence,
+  currentStreakWeeks,
+  weeklyAdherenceRate,
+  consecutiveMissedWeeks,
 } from './reminderPlanService.js';
 import {
   BADGES,
@@ -331,8 +335,17 @@ async function checkAutomaticityGraduation({
     .find({ intentionId: intentionOid, userId: String(userId) })
     .toArray();
   const config = await readGamificationConfig(db);
-  const silentDays = daysSinceLastEnactedLog(logs, now);
-  if (silentDays < config.graduationSilenceDays) return null;
+  // Weekly-cadence habits measure "gone quiet" in missed target weeks, not
+  // raw calendar days — a compliant 3x/week habit's normal inter-session
+  // gaps would otherwise trip a raw-day threshold well before it's actually
+  // silent (see reminderPlanService.consecutiveMissedWeeks's doc comment).
+  const cadence = normalizeCadence(intention.cadence);
+  const isSilent =
+    cadence.type === 'weekly'
+      ? consecutiveMissedWeeks(logs, cadence.targetPerWeek, now) >=
+        config.graduationSilenceWeeks
+      : daysSinceLastEnactedLog(logs, now) >= config.graduationSilenceDays;
+  if (!isSilent) return null;
 
   if (score < config.graduationScoreThreshold) {
     return { candidate: true, graduated: false };
@@ -421,7 +434,7 @@ export function daysSinceLastEnactedLog(logs, now) {
  */
 export async function getTrajectory({ db, intentionId, userId }) {
   const oid = new ObjectId(intentionId);
-  const [docs, logs, reminderConfig] = await Promise.all([
+  const [docs, logs, reminderConfig, intention] = await Promise.all([
     db
       .collection(COLLECTION)
       .find({ intentionId: oid, userId: String(userId) })
@@ -432,7 +445,17 @@ export async function getTrajectory({ db, intentionId, userId }) {
       .find({ intentionId: oid, userId: String(userId) })
       .toArray(),
     readReminderConfig(db),
+    // Needed for cadence — a weekly-cadence intention's historical trend must
+    // replay the same weekly adherence/streak math computeReminderPlan uses,
+    // not the daily-cadence functions unconditionally.
+    db
+      .collection(INTENTIONS_COLLECTION)
+      .findOne(
+        { _id: oid, userId: String(userId) },
+        { projection: { cadence: 1 } }
+      ),
   ]);
+  const cadence = normalizeCadence(intention?.cadence);
 
   const submitted = docs
     .filter((d) => d.submittedAt != null && d.score != null)
@@ -447,13 +470,32 @@ export async function getTrajectory({ db, intentionId, userId }) {
         .map((s) => Number(s.score));
       const latestSrhi = priorScores[priorScores.length - 1] ?? null;
       const logsUpToDate = logs.filter((l) => new Date(l.date) <= asOf);
+      const adherence14d =
+        cadence.type === 'weekly'
+          ? weeklyAdherenceRate(
+              logsUpToDate,
+              cadence.targetPerWeek,
+              reminderConfig.weeklyAdherenceWindowWeeks,
+              asOf
+            )
+          : adherenceRate(logsUpToDate, 14, asOf);
+      const streakDays =
+        cadence.type === 'weekly'
+          ? currentStreakWeeks(
+              logsUpToDate,
+              cadence.targetPerWeek,
+              reminderConfig.streakCapWeeks,
+              asOf
+            )
+          : currentStreakDays(logsUpToDate, asOf);
+      const streakCap =
+        cadence.type === 'weekly'
+          ? reminderConfig.streakCapWeeks
+          : reminderConfig.streakCapDays;
       autonomyScore = computeAutonomyScore(
-        {
-          latestSrhi,
-          adherence14d: adherenceRate(logsUpToDate, 14, asOf),
-          streakDays: currentStreakDays(logsUpToDate, asOf),
-        },
-        reminderConfig
+        { latestSrhi, adherence14d, streakDays },
+        reminderConfig,
+        streakCap
       ).autonomyScore;
     }
     return {

@@ -1,22 +1,38 @@
 %% UC-03 — Donate habit (async BullMQ job: classify → context → BCIO → translate → persist → embed)
-%% Source: app/routes/habits/habitsCrudRouter.js, app/services/habitDonationService.js, app/lib/habitQueue.js
+%% Optional voice input (stateless transcription) + habit_donations linkage record +
+%% optional post-donation questionnaire (extends UC-06).
+%% Source: app/routes/habits/habitsCrudRouter.js, app/routes/habits/voiceTranscribeRouter.js,
+%% app/services/habitDonationService.js, app/lib/habitQueue.js, API-service/routers/transcribe_audio.py
 sequenceDiagram
     autonumber
     actor P as Participant
     participant F as Flutter App
     participant B as Backend (habitsCrudRouter)
+    participant Mongo as MongoDB (habit_donations)
     participant Q as Redis (BullMQ habitQueue)
     participant W as Habit donation worker
     participant AI as API-service (FastAPI)
     participant LT as LibreTranslate
     participant N4 as Neo4j
 
-    P->>F: Describe habit sentence
-    F->>B: POST /api/v1/habits/donate {sentence, language}
+    opt Voice input (admin-enabled: speech-only or participant's choice)
+        P->>F: Record spoken habit sentence
+        F->>B: POST /api/v1/habits/share/transcribe (multipart audio)
+        B->>AI: POST /llm/transcribe-audio
+        AI-->>B: {transcript}
+        B-->>F: {transcript}
+        Note over F: Stateless — nothing persisted yet.<br/>Participant reviews/edits the transcript<br/>before it becomes `sentence` below.
+        F-->>P: Editable transcript
+    end
+
+    P->>F: Confirm habit sentence
+    F->>B: POST /api/v1/habits/donate<br/>{sentence, language, inputMode, transcript?, transcriptEdited?}
     B->>B: Verify JWT (requireRole: user)
+    B->>B: resolveHabitConfig() — reject 403<br/>if inputMode:"speech" isn't permitted for this study/group
+    B->>Mongo: createDonationRecord({uuid, userId, inputMode, transcript,<br/>questionnaireSlug: resolved donationQuestionnaireSlug})
     B->>Q: enqueueHabitDonation({uuid, sentence, language, studyId, ...})
     Q-->>B: jobId
-    B-->>F: 202 {jobId, status: "pending"}
+    B-->>F: 202 {jobId, uuid, status: "pending", postDonationQuestionnaireSlug}
     F->>F: Poll GET /api/v1/habits/jobs/:jobId
 
     Note over Q,W: Runs off-request in the worker, not on the HTTP thread
@@ -41,9 +57,20 @@ sequenceDiagram
         AI-->>W: embeddings stored (vector index)
         W-->>Q: job result: {is_habit: true, uuid}
     end
+    W->>Mongo: markDonationOutcome({uuid, isHabit}) [best-effort]
 
     F->>B: GET /api/v1/habits/jobs/:jobId
     B->>Q: getJobStatus(jobId)
     Q-->>B: {status: "completed", result}
     B-->>F: 200 {is_habit, uuid?, message}
     F-->>P: "Habit donated" or "Not recognised as a habit"
+
+    opt inputMode was "speech"
+        F->>B: POST /api/v1/habits/donations/:uuid/audio (multipart audio)
+        B->>Mongo: set habit_donations.audioClip [best-effort — never blocks the donation]
+    end
+
+    opt postDonationQuestionnaireSlug was returned
+        F-->>P: Navigate to /questionnaire/:slug?habitUuid=:uuid
+        Note over F,B: Reuses UC-06 unmodified — POST /questionnaire-responses<br/>with habitUuid bypasses the normal scheduled-window gate<br/>and links the response back to this habit_donations record.
+    end

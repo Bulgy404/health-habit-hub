@@ -124,6 +124,7 @@ class _FakeMyHabitsService extends MyHabitsService {
     String? stackedOn,
     String? anchorLabel,
     String creationMode = 'standalone',
+    Cadence cadence = Cadence.daily,
   }) async {
     calls.add({
       'behaviorKey': behaviorKey,
@@ -136,6 +137,7 @@ class _FakeMyHabitsService extends MyHabitsService {
       'stackedOn': stackedOn,
       'anchorLabel': anchorLabel,
       'creationMode': creationMode,
+      'cadence': cadence,
     });
     switch (_mode) {
       case _Mode.success:
@@ -339,7 +341,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byType(Switch), findsOneWidget);
+    expect(find.byKey(const Key('reminderSwitch')), findsOneWidget);
     expect(find.text('19:00'), findsOneWidget);
   });
 
@@ -353,7 +355,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(Switch).first);
+    await tester.tap(find.byKey(const Key('reminderSwitch')));
     await tester.pumpAndSettle();
 
     expect(find.text('No reminders'), findsOneWidget);
@@ -377,7 +379,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Reminder at 20:00 (set by study)'), findsOneWidget);
-    expect(find.byType(Switch), findsNothing);
+    expect(find.byKey(const Key('reminderSwitch')), findsNothing);
   });
 
   testWidgets(
@@ -396,7 +398,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byType(Switch), findsOneWidget);
+    expect(find.byKey(const Key('reminderSwitch')), findsOneWidget);
     expect(find.text('19:00'), findsOneWidget);
   });
 
@@ -417,7 +419,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No reminders (set by study)'), findsOneWidget);
-    expect(find.byType(Switch), findsNothing);
+    expect(find.byKey(const Key('reminderSwitch')), findsNothing);
   });
 
   testWidgets(
@@ -479,7 +481,7 @@ void main() {
       find.text('Share this habit anonymously with the community'),
       findsOneWidget,
     );
-    final shareSwitch = tester.widget<Switch>(find.byType(Switch).last);
+    final shareSwitch = tester.widget<Switch>(find.byKey(const Key('shareWithCommunitySwitch')));
     expect(shareSwitch.value, isTrue);
   });
 
@@ -545,7 +547,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(Switch).first);
+    await tester.tap(find.byKey(const Key('reminderSwitch')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Create habit'));

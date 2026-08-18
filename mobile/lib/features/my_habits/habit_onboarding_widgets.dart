@@ -140,6 +140,7 @@ class OnboardingExplainerCard extends StatelessWidget {
     required this.title,
     required this.body,
     this.onDismiss,
+    this.extra,
     super.key,
   });
 
@@ -154,6 +155,11 @@ class OnboardingExplainerCard extends StatelessWidget {
 
   /// Optional dismiss callback; when null, no dismiss affordance is shown.
   final VoidCallback? onDismiss;
+
+  /// Optional extra content rendered below [body] (e.g. a worked example),
+  /// inside the same card. Null by default so existing call sites are
+  /// unaffected.
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -193,6 +199,7 @@ class OnboardingExplainerCard extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
+                  if (extra != null) ...[const SizedBox(height: 10), extra!],
                 ],
               ),
             ),

@@ -243,34 +243,59 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { questionnaireSlug, answers } = req.body;
+      const { questionnaireSlug, answers, habitUuid } = req.body;
       if (!questionnaireSlug || typeof questionnaireSlug !== 'string') {
         return res.status(400).json({ error: 'questionnaireSlug is required' });
       }
       if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
         return res.status(400).json({ error: 'answers must be an object' });
       }
+      if (habitUuid !== undefined && typeof habitUuid !== 'string') {
+        return res.status(400).json({ error: 'habitUuid must be a string' });
+      }
 
       const database = await getDb();
+
+      // habitUuid identifies this as a post-donation questionnaire submission
+      // (see habitDonationService.createDonationRecord / getPostDonationQuestionnaire)
+      // rather than a regular recurring/scheduled one. Verified against
+      // habit_donations — owned by this user, matching the offered slug, and
+      // not already answered — rather than trusted at face value, since it
+      // bypasses the window-due gate below entirely. An invalid/reused
+      // habitUuid simply falls through to the normal gated path instead of
+      // granting the bypass.
+      let donationRecord = null;
+      if (habitUuid) {
+        donationRecord = await database.collection('habit_donations').findOne({
+          uuid: habitUuid,
+          userId,
+          questionnaireSlug,
+          questionnaireResponseId: null,
+        });
+      }
 
       // A scheduled questionnaire (has ever had a window generated for it)
       // can only be (re)submitted while it has an open window due now — this
       // is what actually blocks editing/resubmitting a completed one, not
       // just the app hiding the button. A slug with no window at all (e.g. a
       // legacy ad-hoc questionnaire outside the assignment system) is left
-      // ungated, matching its previous always-open behaviour.
-      const status = (
-        await getQuestionnaireCompletionStatus({
-          db: database,
-          userId,
-          slugs: [questionnaireSlug],
-        })
-      ).get(questionnaireSlug);
-      if (status && !status.available) {
-        return res.status(409).json({
-          error:
-            'This questionnaire is not currently due — it may already be completed, or the next occurrence is not open yet.',
-        });
+      // ungated, matching its previous always-open behaviour. A verified
+      // post-donation submission (donationRecord above) always bypasses this
+      // check — it's a one-off ad-hoc fill by construction, never scheduled.
+      if (!donationRecord) {
+        const status = (
+          await getQuestionnaireCompletionStatus({
+            db: database,
+            userId,
+            slugs: [questionnaireSlug],
+          })
+        ).get(questionnaireSlug);
+        if (status && !status.available) {
+          return res.status(409).json({
+            error:
+              'This questionnaire is not currently due — it may already be completed, or the next occurrence is not open yet.',
+          });
+        }
       }
 
       const submittedAt = new Date();
@@ -281,7 +306,20 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
           questionnaireSlug,
           answers,
           submittedAt,
+          ...(donationRecord ? { habitUuid } : {}),
         });
+
+      if (donationRecord) {
+        await database.collection('habit_donations').updateOne(
+          { uuid: habitUuid },
+          {
+            $set: {
+              questionnaireResponseId: insertedId,
+              updatedAt: new Date(),
+            },
+          }
+        );
+      }
 
       // Mark the participant's next scheduled window for this questionnaire as
       // completed and link it to the response (best-effort — ad-hoc / unscheduled

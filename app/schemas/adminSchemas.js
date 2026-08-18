@@ -122,6 +122,17 @@ export const informationOverloadGuardSchema = z.object({
   userOptOutAllowed: z.boolean().optional(),
 });
 
+/** Donation input mode — text-only, speech-only, or participant's choice. */
+const donationInputModeSchema = z.enum(['text', 'speech', 'both']);
+/** Slug of a `questionnaires` pool document to offer after every donation, or null for none. */
+const donationQuestionnaireSlugSchema = z.string().min(1).max(200).nullable();
+/**
+ * Group-level variant: null/absent = inherit the study-level value; '' = this
+ * group explicitly has no questionnaire (overriding a non-null study value);
+ * a non-empty string = a real slug override. See habitConfigService.js.
+ */
+const groupDonationQuestionnaireSlugSchema = z.string().max(200).nullable();
+
 export const createStudySchema = z.object({
   name: shortString,
   description: longString.optional(),
@@ -140,6 +151,9 @@ export const createStudySchema = z.object({
   informationOverloadGuard: informationOverloadGuardSchema.optional(),
   // §7.5 Gamification — study-wide on/off toggle.
   gamificationEnabled: z.boolean().optional(),
+  // Habit-donation input mode + optional post-donation questionnaire.
+  donationInputMode: donationInputModeSchema.optional(),
+  donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
   reminders: remindersSchema.optional(),
@@ -163,6 +177,9 @@ export const updateStudySchema = z
     informationOverloadGuard: informationOverloadGuardSchema.optional(),
     // §7.5 Gamification — study-wide on/off toggle.
     gamificationEnabled: z.boolean().optional(),
+    // Habit-donation input mode + optional post-donation questionnaire.
+    donationInputMode: donationInputModeSchema.optional(),
+    donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
     reminders: remindersSchema.optional(),
@@ -224,6 +241,10 @@ export const updateGroupConfigSchema = z
       .nullable(),
     // §7.5 group-level gamification override (null = inherit study-level).
     gamificationEnabled: z.boolean().optional().nullable(),
+    // Group-level donation input mode / questionnaire override (null = inherit study-level).
+    donationInputMode: donationInputModeSchema.optional().nullable(),
+    // null = inherit; '' = explicit no-questionnaire; non-empty = a slug override.
+    donationQuestionnaireSlug: groupDonationQuestionnaireSlugSchema.optional(),
     // null = inherit the study-level habit-entry-mode setting for this group.
     habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
     structuredActivityKeys: z
@@ -300,7 +321,10 @@ export const createQuestionnaireSchema = z.object({
   questions: z.array(questionSchema).max(200).optional(),
   // 'study' (default): anchored to enrollment, applies once per participant.
   // 'habit': anchored to each habit's creation, applies once per habit.
-  scope: z.enum(['study', 'habit']).optional(),
+  // 'donation': never auto-assigned/windowed — purely descriptive, for
+  // questionnaires meant to be offered ad-hoc right after a habit donation
+  // (see donationQuestionnaireSlug in studies/groups config).
+  scope: z.enum(['study', 'habit', 'donation']).optional(),
 });
 
 export const updateQuestionnaireSchema = z.object({
@@ -309,7 +333,7 @@ export const updateQuestionnaireSchema = z.object({
   version: z.string().max(20).optional(),
   languages: languagesSchema.optional(),
   questions: z.array(questionSchema).max(200).optional(),
-  scope: z.enum(['study', 'habit']).optional(),
+  scope: z.enum(['study', 'habit', 'donation']).optional(),
 });
 
 // ── Surveys ───────────────────────────────────────────────────────────────────

@@ -131,6 +131,9 @@ class MyHabitsService {
     String? stackedOn,
     String? anchorLabel,
     String creationMode = 'standalone',
+    // § weekly-frequency habits — daily by default, so a caller that never
+    // passes this gets identical behavior to before this field existed.
+    Cadence cadence = Cadence.daily,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -143,6 +146,7 @@ class MyHabitsService {
           'intentionStatement': intentionStatement,
           'habitType': habitType.wire,
           'creationMode': creationMode,
+          'cadence': cadence.toJson(),
           'stackedOn': ?stackedOn,
           'anchorLabel': ?anchorLabel,
           'reminderTime': ?reminderTime,

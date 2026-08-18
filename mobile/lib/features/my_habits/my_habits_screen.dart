@@ -18,7 +18,9 @@ import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
+import 'backfill_log_sheet.dart';
 import 'habit_onboarding_prefs.dart';
+import 'weekly_progress_chip.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -453,6 +455,19 @@ class _HabitCard extends ConsumerWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    // § weekly-frequency habits — a "2 / 3 this week" summary
+                    // in place of (well, alongside — see _LogCheckbox) a
+                    // daily streak, which doesn't mean much for a habit
+                    // whose target is only a few days a week. Purely
+                    // client-derived from logsMap, already fully fetched.
+                    if (intention.cadence.isWeekly) ...[
+                      const SizedBox(height: 4),
+                      WeeklyProgressChip(
+                        logsMap: logsMap,
+                        targetPerWeek: intention.cadence.targetPerWeek!,
+                        color: typeColor,
+                      ),
+                    ],
                     trajectoryAsync.when(
                       data: (trajectory) {
                         final submitted = trajectory
@@ -525,6 +540,13 @@ class _HabitCard extends ConsumerWidget {
               // on/off toggle than as text.
               Tooltip(
                 message: todayLogged ? l10n.loggedToday : l10n.logToday,
+                // Tooltip's default touch trigger is long-press, which would
+                // otherwise fight with _LogCheckbox's own onLongPress (opens
+                // the backfill sheet) for the same gesture-arena pointer.
+                // Manual keeps hover-to-show on desktop/web but disables the
+                // touch long-press trigger, leaving long-press exclusively
+                // for the backfill sheet on mobile.
+                triggerMode: TooltipTriggerMode.manual,
                 child: _LogCheckbox(
                   checked: todayLogged,
                   color: typeColor,
@@ -555,15 +577,7 @@ class _HabitCard extends ConsumerWidget {
                       // on top of that for the single most frequent action
                       // on this screen was just noise.
                       unawaited(HapticFeedback.lightImpact());
-                      ref.invalidate(intentionLogsProvider(intention.id));
-                      // Also refresh the page-level aggregate contribution
-                      // graph, so today's log shows up immediately instead
-                      // of only after a manual pull-to-refresh.
-                      ref.invalidate(allHabitsActivityProvider);
-                      // Logging XP-earns immediately — refresh so the
-                      // level/XP display doesn't show stale numbers until
-                      // some other screen happens to refetch it.
-                      ref.invalidate(gamificationProvider);
+                      _refreshAfterLogChange(ref);
                     } catch (e) {
                       // A dead session already gets ShellScreen's global
                       // "session expired, sign in again" prompt (triggered
@@ -580,6 +594,22 @@ class _HabitCard extends ConsumerWidget {
                         ),
                       );
                     }
+                  },
+                  // A long press opens the "log a different day" sheet, for
+                  // participants who forgot to check a habit off a day or
+                  // two ago — the tap gesture stays reserved for the single
+                  // most frequent action (today), so this doesn't slow it
+                  // down or risk an accidental sheet open on a normal tap.
+                  onLongPress: () {
+                    unawaited(HapticFeedback.selectionClick());
+                    showBackfillLogSheet(
+                      context: context,
+                      service: ref.read(myHabitsServiceProvider),
+                      intentionId: intention.id,
+                      logsMap: logsMap,
+                      typeColor: typeColor,
+                      onChanged: () => _refreshAfterLogChange(ref),
+                    );
                   },
                 ),
               ),
@@ -662,6 +692,17 @@ class _StackConnectorPainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.continuesBelow != continuesBelow;
 }
 
+/// Invalidates every provider a log change (today's checkbox, or a
+/// backfilled past day from [showBackfillLogSheet]) can affect, so the rest
+/// of the screen — log history, the aggregate contribution graph, and
+/// gamification's XP/streak — reflects it immediately rather than after a
+/// manual pull-to-refresh.
+void _refreshAfterLogChange(WidgetRef ref) {
+  ref.invalidate(intentionLogsProvider);
+  ref.invalidate(allHabitsActivityProvider);
+  ref.invalidate(gamificationProvider);
+}
+
 /// Big, tappable on/off checkbox for "did you do this today", shown on each
 /// habit tile. Deliberately larger than a stock [Checkbox] (which renders at
 /// a fixed ~18dp regardless of layout) so it reads clearly at a glance
@@ -675,11 +716,16 @@ class _LogCheckbox extends StatefulWidget {
     required this.checked,
     required this.color,
     required this.onTap,
+    this.onLongPress,
   });
 
   final bool checked;
   final Color color;
   final VoidCallback onTap;
+
+  /// Opens the "log a different day" backfill sheet. Optional so other
+  /// hypothetical callers of this widget aren't forced to wire it up.
+  final VoidCallback? onLongPress;
 
   @override
   State<_LogCheckbox> createState() => _LogCheckboxState();
@@ -726,6 +772,7 @@ class _LogCheckboxState extends State<_LogCheckbox>
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {

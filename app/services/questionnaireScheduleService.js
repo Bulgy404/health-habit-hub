@@ -120,6 +120,14 @@ export async function resolveEffectiveAssignments({ db, studyId, groupId }) {
  * `'habit'` or `'study'` (the default for missing/undefined `scope`).
  * Single source of truth for the habit-vs-study split so
  * [resolveHabitScopeAssignments] and [generateWindowsForUser] can't drift.
+ *
+ * `'donation'`-scoped questionnaires (offered ad-hoc right after a habit
+ * donation — see habitDonationService) are bucketed alongside `'habit'`
+ * here: neither should ever receive an enrollment-anchored recurring
+ * window. A `'donation'`-scoped questionnaire is not expected to be
+ * assigned via `questionnaire_assignments` at all (it's triggered directly
+ * by the donation flow, not the cadence system) — this is a defensive
+ * exclusion in case one is assigned anyway, not a supported combination.
  * @param {{ db, questionnaireIds: import('mongodb').ObjectId[] }} deps
  * @returns {Promise<Map<string, 'habit' | 'study'>>}
  */
@@ -131,7 +139,7 @@ async function scopeByQuestionnaireId({ db, questionnaireIds }) {
   return new Map(
     qDocs.map((q) => [
       q._id.toString(),
-      q.scope === 'habit' ? 'habit' : 'study',
+      q.scope === 'habit' || q.scope === 'donation' ? 'habit' : 'study',
     ])
   );
 }

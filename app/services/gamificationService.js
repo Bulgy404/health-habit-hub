@@ -25,6 +25,9 @@ import {
   computeReminderPlan,
   currentStreakDays,
   adherenceRate,
+  normalizeCadence,
+  currentStreakWeeks,
+  weeklyAdherenceRate,
 } from './reminderPlanService.js';
 
 /** Badge keys, tied to meaningful states (not arbitrary counts). */
@@ -61,6 +64,9 @@ export const DEFAULT_GAMIFICATION_CONFIG = {
   xpPerSrhiSubmission: 25,
   // Streak milestone bonuses (awarded once the streak reaches the day count).
   streakMilestones: { 7: 50, 14: 120, 30: 300 },
+  // Weekly-cadence equivalent (§ weekly-frequency habits): same XP amounts,
+  // thresholds scaled from days to weeks (~1/2/3 months) rather than days.
+  weeklyStreakMilestones: { 4: 50, 8: 120, 12: 300 },
   // A tier-up is worth far more than routine logging — advancing automaticity
   // is the point. Awarded per tier index reached above 'daily'.
   xpPerTierUp: 200,
@@ -79,6 +85,12 @@ export const DEFAULT_GAMIFICATION_CONFIG = {
   // and has gone quiet for this many days gets its next SRHI submission
   // treated as a graduation check instead of a plain lapse.
   graduationSilenceDays: 7,
+  // Weekly-cadence equivalent of graduationSilenceDays: consecutive missed
+  // target weeks (reminderPlanService.consecutiveMissedWeeks) before a
+  // weekly-cadence habit's next SRHI submission is treated as a graduation
+  // check. Measuring in missed target *weeks* rather than raw days avoids a
+  // compliant 3x/week habit's normal inter-session gaps looking silent.
+  graduationSilenceWeeks: 2,
   // SRHI is a 1-7 scale; this is deliberately a bit above the ~4 commonly
   // cited as "habitual" (Verplanken & Orbell) — retiring a habit from active
   // tracking is a bigger, harder-to-reverse call than just noting habit
@@ -112,6 +124,7 @@ export async function readGamificationConfig(db) {
             'gamification_xp_per_share',
             'gamification_share_streak_weeks_for_badge',
             'gamification_graduation_silence_days',
+            'gamification_graduation_silence_weeks',
             'gamification_graduation_score_threshold',
             'gamification_graduation_bonus_xp',
           ],
@@ -155,6 +168,10 @@ export async function readGamificationConfig(db) {
         'gamification_graduation_silence_days',
         DEFAULT_GAMIFICATION_CONFIG.graduationSilenceDays
       ),
+      graduationSilenceWeeks: num(
+        'gamification_graduation_silence_weeks',
+        DEFAULT_GAMIFICATION_CONFIG.graduationSilenceWeeks
+      ),
       graduationScoreThreshold: num(
         'gamification_graduation_score_threshold',
         DEFAULT_GAMIFICATION_CONFIG.graduationScoreThreshold
@@ -195,11 +212,15 @@ export function levelForXp(totalXp, config = DEFAULT_GAMIFICATION_CONFIG) {
   };
 }
 
-/** Streak-milestone XP for a given streak length. */
-function streakMilestoneXp(streakDays, config) {
+/**
+ * Streak-milestone XP for a given streak length against `milestones` — the
+ * caller picks `config.streakMilestones` (daily-cadence, day counts) or
+ * `config.weeklyStreakMilestones` (weekly-cadence, week counts).
+ */
+function streakMilestoneXp(streakValue, milestones) {
   let xp = 0;
-  for (const [days, bonus] of Object.entries(config.streakMilestones)) {
-    if (streakDays >= Number(days)) xp += bonus;
+  for (const [n, bonus] of Object.entries(milestones)) {
+    if (streakValue >= Number(n)) xp += bonus;
   }
   return xp;
 }
@@ -257,11 +278,13 @@ export function computeHabitGamification({
   config = DEFAULT_GAMIFICATION_CONFIG,
   now = new Date(),
 }) {
+  const cadence = normalizeCadence(intention.cadence);
   const plan = computeReminderPlan({
     intention: {
       id: String(intention._id ?? intention.id),
       reminderTime: intention.reminderTime ?? null,
       createdAt: intention.createdAt,
+      cadence: intention.cadence ?? null,
     },
     srhiScores,
     logs,
@@ -269,18 +292,50 @@ export function computeHabitGamification({
     now,
   });
   const tierIndex = Math.max(FREQUENCIES.indexOf(plan.frequency), 0);
-  const streakDays = currentStreakDays(logs, now);
   const enactedCount = logs.filter((l) => l.enacted).length;
+
+  // Cadence dispatch — for cadence.type === 'daily' (including legacy
+  // intentions with no `cadence` field) this reproduces the exact prior
+  // values: streakDays via currentStreakDays, config.streakMilestones, and
+  // the 14-day STEADY_HABIT threshold, all unchanged.
+  let streakValue;
+  let streakMilestones;
+  let steadyHabitThreshold;
+  let adherence14d;
+  if (cadence.type === 'weekly') {
+    streakValue = currentStreakWeeks(
+      logs,
+      cadence.targetPerWeek,
+      reminderConfig.streakCapWeeks,
+      now
+    );
+    streakMilestones = config.weeklyStreakMilestones;
+    // The weekly milestone table's mid-tier (8 weeks) — STEADY_HABIT's
+    // semantic meaning ("a meaningful sustained stretch") stays the same,
+    // just measured in the cadence-appropriate unit.
+    steadyHabitThreshold = 8;
+    adherence14d = weeklyAdherenceRate(
+      logs,
+      cadence.targetPerWeek,
+      reminderConfig.weeklyAdherenceWindowWeeks,
+      now
+    );
+  } else {
+    streakValue = currentStreakDays(logs, now);
+    streakMilestones = config.streakMilestones;
+    steadyHabitThreshold = 14;
+    adherence14d = adherenceRate(logs, 14, now);
+  }
 
   const xp =
     enactedCount * config.xpPerEnactedLog +
     srhiSubmissionCount * config.xpPerSrhiSubmission +
-    streakMilestoneXp(streakDays, config) +
+    streakMilestoneXp(streakValue, streakMilestones) +
     tierIndex * config.xpPerTierUp;
 
   const badges = [BADGES.FIRST_STEP];
   if (tierIndex >= 1) badges.push(BADGES.BUILDING_MOMENTUM);
-  if (streakDays >= 14) badges.push(BADGES.STEADY_HABIT);
+  if (streakValue >= steadyHabitThreshold) badges.push(BADGES.STEADY_HABIT);
   if (plan.frequency === 'off') badges.push(BADGES.SECOND_NATURE);
   if (intention.creationMode === 'stacked') badges.push(BADGES.HABIT_ARCHITECT);
   if (intention.habitType === 'quit' && plan.frequency === 'off') {
@@ -291,8 +346,13 @@ export function computeHabitGamification({
     xp,
     frequency: plan.frequency,
     badges,
-    streakDays,
-    adherence14d: adherenceRate(logs, 14, now),
+    // Reused field name for backward compatibility (existing API consumers
+    // already read `streakDays`); for a weekly-cadence habit this holds a
+    // *week* count instead of a day count — disambiguated by the sibling
+    // `streakUnit` field below rather than a wire-format rename.
+    streakDays: streakValue,
+    streakUnit: cadence.type === 'weekly' ? 'weeks' : 'days',
+    adherence14d,
   };
 }
 
@@ -580,6 +640,8 @@ export async function computeUserGamification({
       xp: result.xp,
       frequency: result.frequency,
       badges: result.badges,
+      streakDays: result.streakDays,
+      streakUnit: result.streakUnit,
     });
   }
 

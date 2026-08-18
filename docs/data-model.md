@@ -975,7 +975,7 @@ Questionnaire definitions. Loaded from seed data or admin tooling. Only document
 | `version`     | String    | Yes      | Schema version string (e.g. `"1.0"`)                |
 | `questions`   | Array     | Yes      | Array of question objects (type, id, text, options) |
 | `active`      | Boolean   | Yes      | `true` means visible to participants                |
-| `scope`       | String    | No       | `study` (default) — anchored to enrollment, applies once per participant. `habit` — anchored to each habit's creation (+~5s), applies once per habit. Drives how `questionnaire_assignments.cadence` is interpreted; see below. |
+| `scope`       | String    | No       | `study` (default) — anchored to enrollment, applies once per participant. `habit` — anchored to each habit's creation (+~5s), applies once per habit. `donation` — never auto-assigned/windowed; offered ad-hoc immediately after a habit donation when selected as a study/group's `donationQuestionnaireSlug` (see `habit_donations` below). Drives how `questionnaire_assignments.cadence` is interpreted; see below. |
 
 **SRHI is not a document in this collection.** It used to be (`slug: 'srhi'`,
 `scope: 'habit'`), toggled on per study like any other questionnaire, but that
@@ -1008,6 +1008,7 @@ Questionnaire responses submitted by participants via `POST /api/v1/questionnair
 | `questionnaireSlug` | String    | Yes      | Slug of the completed questionnaire          |
 | `answers`           | Object    | Yes      | Map of `questionId → answer value`           |
 | `submitted_at`      | Date      | Yes      | Timestamp of submission                      |
+| `habitUuid`         | String    | No       | Only present for a post-donation questionnaire fill (see `habit_donations` below) — the same `uuid` as the donated habit's Neo4j `Habit` node. Set only after server-side verification that the caller owns a matching, not-yet-answered `habit_donations` record for that slug; a submission carrying an invalid/reused `habitUuid` is stored without it. |
 
 Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at router startup.
 
@@ -1039,7 +1040,48 @@ closes, and a new submission isn't accepted until the next occurrence's
 window opens. A slug that has never had any window (an ad-hoc questionnaire
 outside the assignment/window system) is left ungated, matching its previous
 always-open behaviour. This is enforced server-side, independent of the
-Flutter app's greyed-out UI — a stale client cache can't bypass it.
+Flutter app's greyed-out UI — a stale client cache can't bypass it. A verified
+post-donation submission (a valid `habitUuid`, see `habit_donations` below)
+always bypasses this check outright — it's a one-off ad-hoc fill by
+construction, never scheduled.
+
+---
+
+#### `habit_donations`
+
+One document per donation attempt via `POST /api/v1/habits/share` —
+**accepted and rejected alike** (an accepted donation otherwise lives only in
+Neo4j; this is its Mongo-side anchor). Keyed by the same `uuid` as the
+donation's Neo4j `Habit` node, this is the single join key that later ties an
+optional recorded audio clip and an optional post-donation questionnaire
+response back to one donation — a researcher with a `uuid` can retrieve all
+three. Written by `habitDonationService.createDonationRecord()` synchronously
+in the route handler, before classification runs (whether synchronous or via
+the BullMQ worker), so it exists regardless of the eventual accept/reject
+outcome.
+
+| Field                     | BSON Type      | Required | Description                                                                                                          |
+| -------------------------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `_id`                     | ObjectId       | Auto     |                                                                                                                       |
+| `uuid`                    | String         | Yes      | Matches the Neo4j `Habit.uuid` for this donation                                                                     |
+| `userId`                  | String         | Yes      | Keycloak `sub` of the donating user                                                                                  |
+| `studyId` / `groupId`     | String \| null | No       | Resolved from the user's enrollment at donation time                                                                 |
+| `inputMode`               | String         | Yes      | `"text"` or `"speech"` — how the habit sentence was entered                                                          |
+| `isHabit`                 | Boolean \| null | No      | The classifier's verdict, set best-effort once known (`null` until then — the queued/async donation path only learns this after the initial response is already sent) |
+| `transcript`              | String \| null | No       | Raw speech-to-text output, only for `inputMode: "speech"` — the transcribe endpoint itself is stateless, so the client resends this once alongside the (possibly-edited) final `sentence` at submit time |
+| `transcriptEdited`        | Boolean \| null | No      | Whether the participant edited the transcript before submitting                                                      |
+| `audioClip`               | Object \| null | No       | `{filename, mimeType, sizeBytes, durationSec, storedAt}` — set once the recorded audio is uploaded via `POST /habits/donations/:uuid/audio`, after the donation itself is already submitted |
+| `questionnaireSlug`       | String \| null | No       | Which pool questionnaire (if any) was offered after this donation, resolved from the study/group's `donationQuestionnaireSlug` at submit time |
+| `questionnaireResponseId` | ObjectId \| null | No     | Set once the linked `form_responses` document lands (see above)                                                      |
+| `createdAt` / `updatedAt` | Date           | Yes      |                                                                                                                       |
+
+**Audio storage.** The audio file itself is not stored in this document (or
+in MongoDB at all) — it's written to a Docker volume mounted into the `app`
+container at `AUDIO_STORAGE_DIR` (`/data/audio-recordings`), named
+`{uuid}.{ext}`. Persistence only ever happens once a donation actually
+completes: the transcription step (`POST /habits/share/transcribe`) is
+stateless and writes nothing, so a participant can record, re-record, or
+abandon freely with no server-side cleanup burden.
 
 ---
 
@@ -1290,6 +1332,7 @@ One document per implementation intention (habit plan) created by a user.
 | `durationMinutes`    | Int            | Target session duration                                                                                              |
 | `cues`               | Array          | `[{text, source, cueId?}]` — 1 or 2 cues; source: `"pre_rated"` or `"self_selected"`                                 |
 | `intentionStatement` | String         | Full if-then statement e.g. `"After dinner, I will walk for 20 minutes."`                                            |
+| `cadence`            | Object\|null   | `{type: "daily"\|"weekly", targetPerWeek: Int\|null}` (§13.6 in DOCUMENTATION.md). Absent on documents created before this field existed — read `normalizeCadence()`'s output, not this field directly; do not confuse with the unrelated `questionnaire_assignments.cadence` field above (SRHI check-in scheduling, not a habit's own target frequency) |
 | `reminderTime`       | String\|null   | Daily reminder time `HH:mm` chosen at creation; frequency fades via the adaptive reminder plan (see architecture.md) |
 | `status`             | String         | `"active"`, `"paused"`, `"completed"`, `"abandoned"`                                                                 |
 | `createdAt`          | Date           |                                                                                                                      |
@@ -1313,6 +1356,13 @@ One document per (intention, date) pair — idempotent upsert.
 | `loggedAt`    | Date     |                                           |
 
 Indexes: `{intentionId, date}` unique, `{userId, date}`
+
+Logging is identical regardless of the intention's `cadence` — a weekly-cadence
+habit still gets one `daily_behavior_logs` document per logged day, same as a
+daily habit. Only *interpretation* differs: for a weekly-cadence intention,
+adherence and streaks are computed against `targetPerWeek` logs per
+Monday-anchored calendar week rather than against every calendar day (see
+§13.6 in DOCUMENTATION.md).
 
 ---
 

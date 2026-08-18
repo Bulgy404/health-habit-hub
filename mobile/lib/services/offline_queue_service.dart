@@ -51,9 +51,12 @@ class OfflineQueueService {
           'sentence': values.sentence,
           'language': language,
           'frequency': values.frequency,
-          'duration': values.duration,
           'health_benefit': values.healthBenefit,
           'wellbeing_impact': values.wellbeing,
+          // The recorded audio itself isn't retried through the offline
+          // queue (its local temp file isn't guaranteed to survive), but the
+          // sentence's origin is still worth attributing correctly.
+          'inputMode': values.inputMode,
         },
         attempts: 0,
         queuedAt: DateTime.now(),

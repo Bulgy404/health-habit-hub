@@ -31,7 +31,7 @@ async function getParticipantGroup(db, userId) {
 /**
  * Fallback SurveyJS schema for the habit-donation survey when the stored
  * jsonSchema is empty. Provides multilingual (en/de) ratings about the
- * donated habit's frequency, duration, and perceived health benefit.
+ * donated habit's frequency and perceived health/wellbeing benefit.
  * @returns {object} SurveyJS JSON schema
  */
 function _defaultHabitDonationSchema() {
@@ -74,43 +74,10 @@ function _defaultHabitDonationSchema() {
           },
           {
             type: 'rating',
-            name: 'duration',
-            title: {
-              en: 'How long have you had this habit?',
-              de: 'Wie lange hast du diese Gewohnheit schon?',
-            },
-            rateValues: [
-              {
-                value: 1,
-                text: {
-                  en: 'Less than a month',
-                  de: 'Weniger als einen Monat',
-                },
-              },
-              {
-                value: 2,
-                text: { en: '1–3 months', de: '1–3 Monate' },
-              },
-              {
-                value: 3,
-                text: { en: '3–12 months', de: '3–12 Monate' },
-              },
-              {
-                value: 4,
-                text: {
-                  en: 'More than a year',
-                  de: 'Mehr als ein Jahr',
-                },
-              },
-            ],
-            isRequired: true,
-          },
-          {
-            type: 'rating',
             name: 'health_benefit',
             title: {
-              en: 'How much does this habit benefit your health?',
-              de: 'Wie sehr profitiert deine Gesundheit von dieser Gewohnheit?',
+              en: 'How much do you think this habit benefits your health?',
+              de: 'Wie sehr, glaubst du, nützt diese Gewohnheit deiner Gesundheit?',
             },
             rateMin: 1,
             rateMax: 5,
@@ -122,8 +89,8 @@ function _defaultHabitDonationSchema() {
             type: 'rating',
             name: 'wellbeing_impact',
             title: {
-              en: 'How much does this habit improve your overall wellbeing?',
-              de: 'Wie sehr verbessert diese Gewohnheit dein allgemeines Wohlbefinden?',
+              en: 'How much do you think this habit improves your overall wellbeing?',
+              de: 'Wie sehr, glaubst du, verbessert diese Gewohnheit dein allgemeines Wohlbefinden?',
             },
             rateMin: 1,
             rateMax: 5,

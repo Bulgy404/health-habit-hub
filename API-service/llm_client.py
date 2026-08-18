@@ -28,6 +28,10 @@ _fallback_model = os.getenv("LLM_FALLBACK_MODEL") or None
 _fallback_cooldown_s = float(os.getenv("LLM_FALLBACK_COOLDOWN_S", "300"))
 _temperature = float(os.getenv("LLM_TEMPERATURE", "0.2"))
 _api_base = os.getenv("LLM_API_BASE")
+# Speech-to-text model alias (SCADS.AI: openai/whisper-large-v3-turbo). Single
+# model, no fallback/circuit-breaker dance like chat_complete's — there's
+# nothing to fail over to yet.
+_stt_model = os.getenv("LLM_STT_MODEL", "alias-stt")
 # Keep total time (attempts × timeout) below the Node proxy's
 # RECOMMENDER_TIMEOUT_MS (default 180s), or the client sees a 504.
 _timeout = float(os.getenv("LLM_TIMEOUT_S", "120"))
@@ -200,3 +204,41 @@ async def chat_complete(
         "chat_complete done in %.1fs: model=%s", time.monotonic() - start, fallback_model
     )
     return response.choices[0].message.content or ""
+
+
+async def transcribe_audio(audio_bytes: bytes, filename: str, mime_type: str) -> str:
+    """Transcribe a short audio clip via the STT model alias.
+
+    Reuses the same OpenAI-compatible client/credentials as chat_complete —
+    no separate credential wiring for speech-to-text.
+
+    Args:
+        audio_bytes: Raw audio file content.
+        filename: Original filename (extension matters to the API — it
+            infers the audio format from it).
+        mime_type: Content-Type of the uploaded file.
+
+    Returns:
+        The transcribed text.
+    """
+    start = time.monotonic()
+    logger.info(
+        "transcribe_audio start: model=%s filename=%s bytes=%d",
+        _stt_model, filename, len(audio_bytes),
+    )
+    try:
+        response = await _client.audio.transcriptions.create(
+            model=_stt_model,
+            file=(filename, audio_bytes, mime_type),
+            timeout=_timeout,
+        )
+        logger.info(
+            "transcribe_audio done in %.1fs: model=%s", time.monotonic() - start, _stt_model
+        )
+        return response.text or ""
+    except Exception as exc:
+        logger.error(
+            "transcribe_audio failed after %.1fs: model=%s %s: %s",
+            time.monotonic() - start, _stt_model, type(exc).__name__, exc,
+        )
+        raise

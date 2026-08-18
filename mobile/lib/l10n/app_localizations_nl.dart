@@ -666,6 +666,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String get loggedToday => 'Geregistreerd ✓';
 
   @override
+  String get logForAnotherDay => 'Voor een andere dag registreren';
+
+  @override
+  String get backfillSheetTitle => 'Een andere dag registreren';
+
+  @override
+  String get backfillSheetSubtitle =>
+      'Tik op een dag om deze als gedaan te markeren, of tik opnieuw om dit ongedaan te maken.';
+
+  @override
+  String get today => 'Vandaag';
+
+  @override
+  String get yesterday => 'Gisteren';
+
+  @override
   String get pickBehaviorTitle => 'Welke gewoonte wil je vormen?';
 
   @override
@@ -915,6 +931,42 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get dailyReminderLabel => 'Dagelijkse herinnering';
+
+  @override
+  String get habitCadenceQuestion => 'Hoe vaak?';
+
+  @override
+  String get habitCadenceDaily => 'Dagelijks';
+
+  @override
+  String get habitCadenceWeeklyOption => 'N keer per week';
+
+  @override
+  String habitCadenceTargetLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count keer per week',
+      one: '1 keer per week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weeklyProgressLabel(int done, int target) {
+    return '$done / $target deze week';
+  }
+
+  @override
+  String weeklyStreakLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-weekse reeks',
+      one: '1-weekse reeks',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get noReminders => 'Geen herinneringen';
@@ -1451,6 +1503,20 @@ class AppLocalizationsNl extends AppLocalizations {
   String get donateDayStreakLabel => 'Dagreeks';
 
   @override
+  String get donateHabitHintTitle => 'Wat is een gewoonte?';
+
+  @override
+  String get donateHabitHintBody =>
+      'Een gewoonte is een specifieke, herhaalbare handeling, niet zomaar een algemeen doel. Een goede beschrijving noemt de handeling zelf, plus de context eromheen: wanneer of waar je het doet, en soms waarom.';
+
+  @override
+  String get donateHabitHintExampleIntro => 'Bijvoorbeeld:';
+
+  @override
+  String get donateHabitHintExampleSentence =>
+      '[T]Na het ontbijt[/T] ga ik [B]20 minuten wandelen[/B] [L]in het park[/L] omdat [R]ik meer energie wil[/R].';
+
+  @override
   String get donateFormDescribeHabitLabel => 'Beschrijf je gewoonte';
 
   @override
@@ -1477,29 +1543,32 @@ class AppLocalizationsNl extends AppLocalizations {
   String get donateFormFrequencyDaily => 'Dagelijks';
 
   @override
-  String get donateFormDurationQuestion => 'Hoe lang heb je deze gewoonte al?';
-
-  @override
-  String get donateFormDurationUnder1Month => '< 1 maand';
-
-  @override
-  String get donateFormDuration1To3Months => '1–3 maanden';
-
-  @override
-  String get donateFormDuration3To12Months => '3–12 maanden';
-
-  @override
-  String get donateFormDurationOver1Year => '> 1 jaar';
-
-  @override
   String get donateFormHealthBenefitQuestion =>
-      'Hoeveel voordeel heeft het voor je gezondheid?';
+      'Hoeveel voordeel denk je dat deze gewoonte heeft voor je gezondheid?';
 
   @override
   String get donateFormRatingCaption => '1 = Helemaal niet · 5 = Heel erg';
 
   @override
-  String get donateFormWellbeingQuestion => 'Hoeveel verbetert het je welzijn?';
+  String get donateFormWellbeingQuestion =>
+      'Hoeveel denk je dat deze gewoonte je welzijn verbetert?';
+
+  @override
+  String get donateVoiceStartRecording => 'In plaats daarvan spreken';
+
+  @override
+  String get donateVoiceStopRecording => 'Opname stoppen';
+
+  @override
+  String get donateVoiceTranscribing => 'Wordt getranscribeerd…';
+
+  @override
+  String get donateVoiceTranscriptionFailed =>
+      'Transcriptie mislukt — probeer het opnieuw of typ het in.';
+
+  @override
+  String get donateVoiceMicPermissionDenied =>
+      'Microfoontoegang is nodig om je gewoonte in te spreken — je kunt het ook typen.';
 
   @override
   String get setCueNextButton => 'Volgende';
@@ -1546,6 +1615,11 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String couldNotLogToday(String error) {
     return 'Kon vandaag niet registreren: $error';
+  }
+
+  @override
+  String couldNotLogDay(String error) {
+    return 'Kon registratie niet bijwerken: $error';
   }
 
   @override

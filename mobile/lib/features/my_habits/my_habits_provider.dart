@@ -31,6 +31,24 @@ final habitCreationEnabledProvider = Provider<bool>((ref) {
       .maybeWhen(data: (c) => c.selfHabitCreationEnabled, orElse: () => true);
 });
 
+/// Resolved habit-donation input mode (`'text'`, `'speech'`, or `'both'`)
+/// for the current participant's study/group. Defaults to `'text'` while
+/// loading or on error — a participant never sees a mic button they can't
+/// actually use.
+final donationInputModeProvider = Provider<String>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.donationInputMode, orElse: () => 'text');
+});
+
+/// Slug of the post-donation questionnaire configured for this study/group,
+/// or `null` when none is configured.
+final donationQuestionnaireSlugProvider = Provider<String?>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.donationQuestionnaireSlug, orElse: () => null);
+});
+
 /// All active implementation intentions for the current user.
 final intentionsProvider = FutureProvider<List<Intention>>((ref) {
   return ref.watch(myHabitsServiceProvider).listIntentions();

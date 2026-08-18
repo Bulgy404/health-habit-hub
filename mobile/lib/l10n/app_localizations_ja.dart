@@ -639,6 +639,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loggedToday => '記録済み ✓';
 
   @override
+  String get logForAnotherDay => '別の日を記録';
+
+  @override
+  String get backfillSheetTitle => '別の日を記録する';
+
+  @override
+  String get backfillSheetSubtitle => '日付をタップして完了にする、またはもう一度タップして取り消します。';
+
+  @override
+  String get today => '今日';
+
+  @override
+  String get yesterday => '昨日';
+
+  @override
   String get pickBehaviorTitle => 'どんな習慣を身につけたいですか？';
 
   @override
@@ -877,6 +892,30 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dailyReminderLabel => '毎日のリマインダー';
+
+  @override
+  String get habitCadenceQuestion => '頻度は？';
+
+  @override
+  String get habitCadenceDaily => '毎日';
+
+  @override
+  String get habitCadenceWeeklyOption => '週に n 回';
+
+  @override
+  String habitCadenceTargetLabel(int count) {
+    return '週に$count回';
+  }
+
+  @override
+  String weeklyProgressLabel(int done, int target) {
+    return '今週 $done / $target';
+  }
+
+  @override
+  String weeklyStreakLabel(int count) {
+    return '$count週連続';
+  }
 
   @override
   String get noReminders => 'リマインダーなし';
@@ -1381,6 +1420,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get donateDayStreakLabel => '連続日数';
 
   @override
+  String get donateHabitHintTitle => '習慣とは？';
+
+  @override
+  String get donateHabitHintBody =>
+      '習慣とは、具体的で繰り返し行える行動のことで、単なる大まかな目標ではありません。良い説明には、行動そのものに加えて、いつ・どこで行うか、そして時にはなぜ行うかという文脈も含まれます。';
+
+  @override
+  String get donateHabitHintExampleIntro => '例：';
+
+  @override
+  String get donateHabitHintExampleSentence =>
+      '[T]朝食後[/T]、[R]もっと元気になりたいので[/R][L]公園で[/L][B]20分間散歩します[/B]。';
+
+  @override
   String get donateFormDescribeHabitLabel => 'あなたの習慣を教えてください';
 
   @override
@@ -1405,28 +1458,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get donateFormFrequencyDaily => '毎日';
 
   @override
-  String get donateFormDurationQuestion => 'この習慣はどのくらい続けていますか？';
-
-  @override
-  String get donateFormDurationUnder1Month => '1か月未満';
-
-  @override
-  String get donateFormDuration1To3Months => '1〜3か月';
-
-  @override
-  String get donateFormDuration3To12Months => '3〜12か月';
-
-  @override
-  String get donateFormDurationOver1Year => '1年以上';
-
-  @override
-  String get donateFormHealthBenefitQuestion => 'この習慣はあなたの健康にどれくらい役立っていますか？';
+  String get donateFormHealthBenefitQuestion =>
+      'この習慣はあなたの健康にどれくらい役立っていると思いますか？';
 
   @override
   String get donateFormRatingCaption => '1 = まったく当てはまらない · 5 = 非常に当てはまる';
 
   @override
-  String get donateFormWellbeingQuestion => 'この習慣はあなたの幸福感をどれくらい高めていますか？';
+  String get donateFormWellbeingQuestion => 'この習慣はあなたの幸福感をどれくらい高めていると思いますか？';
+
+  @override
+  String get donateVoiceStartRecording => '代わりに話す';
+
+  @override
+  String get donateVoiceStopRecording => '録音を停止';
+
+  @override
+  String get donateVoiceTranscribing => '文字起こし中…';
+
+  @override
+  String get donateVoiceTranscriptionFailed =>
+      '文字起こしできませんでした。もう一度お試しいただくか、入力してください。';
+
+  @override
+  String get donateVoiceMicPermissionDenied =>
+      '習慣を話すにはマイクへのアクセスが必要です。代わりに入力することもできます。';
 
   @override
   String get setCueNextButton => '次へ';
@@ -1472,6 +1528,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String couldNotLogToday(String error) {
     return '本日の記録を保存できませんでした：$error';
+  }
+
+  @override
+  String couldNotLogDay(String error) {
+    return '記録を更新できませんでした：$error';
   }
 
   @override

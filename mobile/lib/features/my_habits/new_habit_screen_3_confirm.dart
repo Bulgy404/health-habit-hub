@@ -81,6 +81,11 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   // Duration is no longer chosen on this screen (kept fixed for the payload).
   static const int _durationMinutes = 20;
+  // § weekly-frequency habits — daily is the pre-selected default, so a
+  // participant who never touches this control gets identical behavior to
+  // every habit created before this existed.
+  CadenceType _cadenceType = CadenceType.daily;
+  int _targetPerWeek = 3;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 19, minute: 0);
   bool _reminderEnabled = true;
   bool _submitting = false;
@@ -262,6 +267,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             anchorLabel: widget.anchorText,
             creationMode: widget.creationMode,
             reminderTime: effectiveReminderTime,
+            cadence: Cadence(
+              type: _cadenceType,
+              targetPerWeek:
+                  _cadenceType == CadenceType.weekly ? _targetPerWeek : null,
+            ),
           );
       ref.invalidate(intentionsProvider);
       // §7.5 — a new habit earns the First Step badge; refresh so Settings/
@@ -485,6 +495,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               Row(
                 children: [
                   Switch(
+                    key: const Key('reminderSwitch'),
                     value: _reminderEnabled,
                     onChanged: (v) => setState(() => _reminderEnabled = v),
                   ),
@@ -504,11 +515,62 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                 l10n.reminderFadingHint,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            const SizedBox(height: 24),
+            Text(l10n.habitCadenceQuestion,
+                style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            // Switch, not SegmentedButton — matches this screen's own
+            // reminder-enabled/share-with-community toggles instead of
+            // introducing a different control style just for this row.
+            Row(
+              children: [
+                Switch(
+                  key: const Key('cadenceSwitch'),
+                  // On = daily (the default/pre-selected state), off = a
+                  // weekly target — inverted from a naive "on = weekly"
+                  // mapping, which read as backwards: flipping the switch
+                  // *off* to mean daily (the more restrictive/frequent
+                  // option) was confusing.
+                  value: _cadenceType == CadenceType.daily,
+                  onChanged: (isDaily) => setState(() {
+                    _cadenceType =
+                        isDaily ? CadenceType.daily : CadenceType.weekly;
+                  }),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _cadenceType == CadenceType.weekly
+                        ? l10n.habitCadenceWeeklyOption
+                        : l10n.habitCadenceDaily,
+                  ),
+                ),
+              ],
+            ),
+            if (_cadenceType == CadenceType.weekly) ...[
+              Text(
+                l10n.habitCadenceTargetLabel(_targetPerWeek),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Slider(
+                value: _targetPerWeek.toDouble(),
+                min: 1,
+                max: 6,
+                divisions: 5,
+                label: l10n.habitCadenceTargetLabel(_targetPerWeek),
+                onChanged: (v) =>
+                    setState(() => _targetPerWeek = v.round()),
+              ),
+            ],
             if (widget.config.communityShareDefault) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
                   Switch(
+                    key: const Key('shareWithCommunitySwitch'),
                     value: _shareWithCommunity,
                     onChanged: (v) => setState(() => _shareWithCommunity = v),
                   ),

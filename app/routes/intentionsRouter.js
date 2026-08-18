@@ -107,6 +107,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         anchorLabel,
         creationMode,
         reminderTime,
+        cadence,
       } = req.body;
       if (
         reminderTime != null &&
@@ -154,6 +155,31 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         return res.status(400).json({
           error: "creationMode must be 'standalone' or 'stacked'",
         });
+      }
+      // Weekly-frequency habits — optional; omitted/null means daily (the
+      // pre-existing, only-ever-supported behavior). A malformed
+      // `targetPerWeek` alongside `type:'daily'` is silently dropped rather
+      // than rejected (matches normalizeCadence's general leniency) since it
+      // has no effect on a daily-cadence habit either way.
+      let cadenceToStore = null;
+      if (cadence != null) {
+        if (cadence.type !== 'daily' && cadence.type !== 'weekly') {
+          return res
+            .status(400)
+            .json({ error: "cadence.type must be 'daily' or 'weekly'" });
+        }
+        if (cadence.type === 'weekly') {
+          const n = cadence.targetPerWeek;
+          if (!Number.isInteger(n) || n < 1 || n > 7) {
+            return res.status(400).json({
+              error:
+                'cadence.targetPerWeek must be an integer between 1 and 7 when cadence.type is weekly',
+            });
+          }
+          cadenceToStore = { type: 'weekly', targetPerWeek: n };
+        } else {
+          cadenceToStore = { type: 'daily', targetPerWeek: null };
+        }
       }
       const database = await getDb();
       const userId = req.user.sub;
@@ -225,6 +251,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         anchorLabel: anchorLabel ?? null,
         creationMode: creationMode ?? 'standalone',
         reminderTime: reminderTimeToStore,
+        cadence: cadenceToStore,
         cueConfig,
         overload,
       });

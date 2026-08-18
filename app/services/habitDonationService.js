@@ -811,3 +811,96 @@ export async function embedAndStoreHabit({
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Donation input mode (text/speech) + post-donation questionnaire linkage
+// ---------------------------------------------------------------------------
+//
+// `habit_donations` is the one Mongo-side record every donation attempt gets
+// (accepted or rejected) — accepted donations otherwise live in Neo4j only,
+// with no Mongo doc at all. Keyed by the same `uuid` as the Neo4j Habit
+// node, it's the join key that later ties an optional recorded audio clip
+// and an optional post-donation questionnaire response back to one
+// donation. Written before classification runs (synchronous or via the
+// BullMQ worker) so it exists regardless of which path handles the
+// donation, and regardless of the eventual accept/reject outcome.
+
+const DONATION_INPUT_MODES = ['text', 'speech'];
+
+/**
+ * Create the correlation record for one donation attempt.
+ * @param {{ db: object, uuid: string, userID: string, studyId?: string|null, groupId?: string|null, inputMode?: string, transcript?: string|null, transcriptEdited?: boolean|null, questionnaireSlug?: string|null }} params
+ */
+export async function createDonationRecord({
+  db,
+  uuid,
+  userID,
+  studyId = null,
+  groupId = null,
+  inputMode = 'text',
+  transcript = null,
+  transcriptEdited = null,
+  questionnaireSlug = null,
+}) {
+  const now = new Date();
+  await db.collection('habit_donations').insertOne({
+    uuid,
+    userId: userID,
+    studyId,
+    groupId,
+    inputMode: DONATION_INPUT_MODES.includes(inputMode) ? inputMode : 'text',
+    // Set once shareHabit()'s classifier verdict is known — null until then,
+    // since the queued path only learns this after the response is sent.
+    isHabit: null,
+    audioClip: null,
+    // Raw STT output, only meaningful for inputMode: 'speech' — the
+    // transcribe endpoint itself is stateless, so the client resends this
+    // once alongside the (possibly-edited) final `sentence` at submit time.
+    transcript: typeof transcript === 'string' ? transcript : null,
+    transcriptEdited,
+    questionnaireSlug,
+    questionnaireResponseId: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+/**
+ * Best-effort — record shareHabit()'s classifier verdict onto the donation
+ * record once known. Never throws: called from both the synchronous route
+ * handler and the BullMQ worker after shareHabit() resolves, and a failed
+ * write here must not affect a response already sent to the participant.
+ * @param {{ db: object, uuid: string, isHabit: boolean }} params
+ */
+export async function markDonationOutcome({ db, uuid, isHabit }) {
+  try {
+    await db
+      .collection('habit_donations')
+      .updateOne({ uuid }, { $set: { isHabit, updatedAt: new Date() } });
+  } catch (err) {
+    console.warn(
+      `[habitDonation] markDonationOutcome failed for ${uuid}: ${err.message}`
+    );
+  }
+}
+
+/**
+ * Validate the pool questionnaire configured for post-donation display
+ * (habitConfigService's resolved `donationQuestionnaireSlug`) actually
+ * exists and is active. Returns just the slug — the mobile client already
+ * has a full questionnaire fetch/render/submit flow keyed by slug
+ * (`GET /questionnaires/:slug`, the same one `/questionnaire/:slug` uses for
+ * scheduled questionnaires), so there's no need to duplicate its title/
+ * question content here. Returns null when no slug is configured, or the
+ * configured questionnaire is missing/inactive — a misconfigured or
+ * since-deleted questionnaire must never block a donation.
+ * @param {{ db: object, slug: string|null }} params
+ * @returns {Promise<string|null>}
+ */
+export async function getPostDonationQuestionnaire({ db, slug }) {
+  if (!slug) return null;
+  const doc = await db
+    .collection('questionnaires')
+    .findOne({ slug, active: true }, { projection: { slug: 1 } });
+  return doc?.slug ?? null;
+}

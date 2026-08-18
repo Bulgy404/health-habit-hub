@@ -101,6 +101,12 @@ export async function resolveHabitConfig({
   let habitStackingEnabled = true;
   let reminderContentMode = 'generic';
   let informationOverloadGuard = { enabled: false, userOptOutAllowed: false };
+  // Donation input mode + optional post-donation questionnaire — same
+  // nullable study→group override pattern as the three flags above. Defaults
+  // preserve today's behaviour: typed-only donation, no follow-up
+  // questionnaire.
+  let donationInputMode = 'text';
+  let donationQuestionnaireSlug = null;
   // Onboarding + self-habit-creation flags. Default enabled for everyone
   // (public/free-entry users). Study level sets the baseline; a non-null
   // group-level value overrides it.
@@ -148,6 +154,16 @@ export async function resolveHabitConfig({
               study.informationOverloadGuard.userOptOutAllowed === true,
           };
         }
+        if (
+          study.donationInputMode === 'speech' ||
+          study.donationInputMode === 'both' ||
+          study.donationInputMode === 'text'
+        ) {
+          donationInputMode = study.donationInputMode;
+        }
+        if (typeof study.donationQuestionnaireSlug === 'string') {
+          donationQuestionnaireSlug = study.donationQuestionnaireSlug;
+        }
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
@@ -180,6 +196,25 @@ export async function resolveHabitConfig({
               userOptOutAllowed:
                 group.informationOverloadGuard.userOptOutAllowed === true,
             };
+          }
+          if (
+            group?.donationInputMode === 'speech' ||
+            group?.donationInputMode === 'both' ||
+            group?.donationInputMode === 'text'
+          ) {
+            donationInputMode = group.donationInputMode;
+          }
+          // null/absent = inherit the study-level value untouched (same
+          // convention as every other override in this function). Since
+          // this field's own "off" state also needs representing at the
+          // group level, and null is already taken by "inherit", an empty
+          // string is the sentinel for "this group explicitly has no
+          // questionnaire" — overriding a non-null study baseline. A
+          // non-empty string is a real slug override.
+          if (group?.donationQuestionnaireSlug === '') {
+            donationQuestionnaireSlug = null;
+          } else if (typeof group?.donationQuestionnaireSlug === 'string') {
+            donationQuestionnaireSlug = group.donationQuestionnaireSlug;
           }
         }
 
@@ -245,6 +280,9 @@ export async function resolveHabitConfig({
     reminderContentMode,
     informationOverloadGuard,
     informationOverloadUnlockTier,
+    // Donation input mode + post-donation questionnaire.
+    donationInputMode,
+    donationQuestionnaireSlug,
     ...appSettings,
   };
 }

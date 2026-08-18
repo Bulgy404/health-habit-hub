@@ -184,6 +184,10 @@ services:
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
       - API_SERVICE_URL=http://recommender:8000
       - LIBRE_TRANSLATE_URL=http://translate:5000/translate
+      # Voice-input habit donation: recorded audio clips are written here once
+      # a donation is actually submitted (see voiceTranscribeRouter.js), keyed
+      # by the donation's uuid — retrievable later for research review.
+      - AUDIO_STORAGE_DIR=/data/audio-recordings
       - ALLOWED_ORIGINS=https://${DOMAIN}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -224,6 +228,7 @@ services:
     # see the config-sync comment above).
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/scripts:/usr/src/scripts:ro
+      - audio-recordings-data:/data/audio-recordings
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
       interval: 30s
@@ -982,6 +987,10 @@ services:
       - MONGO_PASSWORD=${MONGO_PASSWORD}
       - MONGO_AUTH_SOURCE=admin
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      # Speech-to-text model alias for habit-donation voice input — reuses
+      # the same SCADS.AI credentials as LLM_MODEL (LLM_API_KEY/LLM_API_BASE,
+      # supplied via env_file: stack.env/.env above), just a different alias.
+      - LLM_STT_MODEL=${LLM_STT_MODEL:-alias-stt}
     networks:
       - hhh-proxy
     depends_on:
@@ -1461,3 +1470,8 @@ volumes:
     name: hhh-prometheus-data
   grafana-data:
     name: hhh-grafana-data
+  # Recorded audio clips from habit-donation voice input, mounted into the
+  # app container at AUDIO_STORAGE_DIR. Kept out of the image and out of
+  # git — see docs/data-model.md's habit_donations collection.
+  audio-recordings-data:
+    name: hhh-audio-recordings-data

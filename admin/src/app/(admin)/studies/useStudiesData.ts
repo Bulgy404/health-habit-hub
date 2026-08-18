@@ -45,6 +45,10 @@ interface StudyGroup {
   reminderContentMode?: "generic" | "implementation_intention" | null;
   informationOverloadGuard?: InformationOverloadGuard | null;
   gamificationEnabled?: boolean | null;
+  // Habit-donation input mode + optional post-donation questionnaire
+  // (null = inherit study-level).
+  donationInputMode?: "text" | "speech" | "both" | null;
+  donationQuestionnaireSlug?: string | null;
 }
 
 /** §7.3 Information Overload guard — a growing per-type habit cap. */
@@ -71,6 +75,8 @@ export interface StudySummary {
   reminderContentMode: "generic" | "implementation_intention";
   informationOverloadGuard: InformationOverloadGuard | null;
   gamificationEnabled: boolean;
+  donationInputMode: "text" | "speech" | "both";
+  donationQuestionnaireSlug: string | null;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };

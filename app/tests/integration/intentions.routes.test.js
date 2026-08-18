@@ -434,6 +434,72 @@ test('POST /habits/intentions returns 400 for an invalid habitType (§7.4)', asy
   assert.strictEqual(res.status, 400);
 });
 
+// ── Weekly cadence (§ weekly-frequency habits) ──────────────────────────────
+
+test('POST /habits/intentions accepts a valid weekly cadence and round-trips it via GET', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, cadence: { type: 'weekly', targetPerWeek: 3 } },
+    makeToken(['user'], 'weekly-cadence-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const created = await res.json();
+  assert.deepStrictEqual(created.cadence, { type: 'weekly', targetPerWeek: 3 });
+
+  const listRes = await get(
+    INTENTIONS,
+    makeToken(['user'], 'weekly-cadence-user')
+  );
+  const list = await listRes.json();
+  const found = list.find(
+    (i) => (i.id ?? i._id) === (created.id ?? created._id)
+  );
+  assert.deepStrictEqual(found.cadence, { type: 'weekly', targetPerWeek: 3 });
+});
+
+test('POST /habits/intentions rejects targetPerWeek out of the 1-7 range', async () => {
+  const tooLow = await post(
+    INTENTIONS,
+    { ...validBody, cadence: { type: 'weekly', targetPerWeek: 0 } },
+    makeToken(['user'], 'bad-cadence-low')
+  );
+  assert.strictEqual(tooLow.status, 400);
+
+  const tooHigh = await post(
+    INTENTIONS,
+    { ...validBody, cadence: { type: 'weekly', targetPerWeek: 8 } },
+    makeToken(['user'], 'bad-cadence-high')
+  );
+  assert.strictEqual(tooHigh.status, 400);
+
+  const notInteger = await post(
+    INTENTIONS,
+    { ...validBody, cadence: { type: 'weekly', targetPerWeek: 2.5 } },
+    makeToken(['user'], 'bad-cadence-float')
+  );
+  assert.strictEqual(notInteger.status, 400);
+});
+
+test('POST /habits/intentions rejects an invalid cadence.type', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, cadence: { type: 'monthly' } },
+    makeToken(['user'], 'bad-cadence-type')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /habits/intentions omitted cadence still defaults exactly as before (regression)', async () => {
+  const res = await post(
+    INTENTIONS,
+    validBody, // no cadence field at all
+    makeToken(['user'], 'no-cadence-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.deepStrictEqual(body.cadence, { type: 'daily', targetPerWeek: null });
+});
+
 test('POST /habits/intentions persists a quit habit (§7.4)', async () => {
   const res = await post(
     INTENTIONS,

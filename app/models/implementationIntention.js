@@ -39,6 +39,17 @@
  *                                 created. Lets researchers compare autonomy-tier progression
  *                                 speed for stacked vs. standalone habits. Defaults to
  *                                 'standalone'.
+ *   cadence            object     Optional. { type: 'daily'|'weekly', targetPerWeek: int|null }
+ *                                 — how often the participant commits to doing this habit.
+ *                                 'weekly' habits (e.g. "3x/week") use adherence/streak math
+ *                                 bucketed by calendar week instead of by day; SRHI scoring is
+ *                                 unaffected either way. Absent on documents created before this
+ *                                 field existed, or when `null` — both read identically to
+ *                                 `{type:'daily', targetPerWeek:null}` via
+ *                                 reminderPlanService.normalizeCadence(), the single
+ *                                 backward-compatibility point every consumer goes through.
+ *                                 Deliberately never promoted to `required` (see
+ *                                 backfillHabitFields's doc comment) — no migration needed.
  *   earnedBadges       Array<{    Optional. Gamification badges earned for this habit (§7.5).
  *                                 Only earned badges are persisted; XP/levels are recomputed
  *                                 on read from reminderPlanService signals.
@@ -55,6 +66,9 @@ export const HABIT_TYPES = ['build', 'quit'];
 
 /** Allowed creation modes (§7.1 Habit Stacking). */
 export const CREATION_MODES = ['standalone', 'stacked'];
+
+/** Allowed cadence types — how often the participant commits to a habit. */
+export const CADENCE_TYPES = ['daily', 'weekly'];
 
 export const COLLECTION = 'implementation_intentions';
 
@@ -113,6 +127,17 @@ export const VALIDATOR = {
       creationMode: {
         bsonType: 'string',
         enum: ['standalone', 'stacked'],
+      },
+      // Weekly-frequency habits — deliberately lenient (no required sub-fields,
+      // not in the top-level required[] above) so absence/null on legacy docs
+      // stays valid; normalizeCadence() in reminderPlanService.js is the single
+      // source of truth for "targetPerWeek required when type is weekly".
+      cadence: {
+        bsonType: ['object', 'null'],
+        properties: {
+          type: { bsonType: 'string', enum: ['daily', 'weekly'] },
+          targetPerWeek: { bsonType: ['int', 'null'], minimum: 1, maximum: 7 },
+        },
       },
       // §7.5 Gamification — persisted earned badges (XP/levels recomputed on read).
       earnedBadges: {

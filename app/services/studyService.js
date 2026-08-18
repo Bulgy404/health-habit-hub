@@ -158,6 +158,14 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
           : 'generic',
       informationOverloadGuard: s.informationOverloadGuard ?? null,
       gamificationEnabled: s.gamificationEnabled !== false,
+      donationInputMode:
+        s.donationInputMode === 'speech' || s.donationInputMode === 'both'
+          ? s.donationInputMode
+          : 'text',
+      donationQuestionnaireSlug:
+        typeof s.donationQuestionnaireSlug === 'string'
+          ? s.donationQuestionnaireSlug
+          : null,
       reminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
       endOfStudyNotification: normalizeEndOfStudyContent(s),
@@ -190,6 +198,8 @@ export async function createStudy({
   reminderContentMode = 'generic',
   informationOverloadGuard = null,
   gamificationEnabled = true,
+  donationInputMode = 'text',
+  donationQuestionnaireSlug = null,
   endDate = null,
   endOfStudyNotification,
   reminders,
@@ -236,6 +246,14 @@ export async function createStudy({
         }
       : null,
     gamificationEnabled: gamificationEnabled !== false,
+    donationInputMode:
+      donationInputMode === 'speech' || donationInputMode === 'both'
+        ? donationInputMode
+        : 'text',
+    donationQuestionnaireSlug:
+      typeof donationQuestionnaireSlug === 'string'
+        ? donationQuestionnaireSlug
+        : null,
     reminders: reminders ?? {},
     endDate: endDate ? new Date(endDate) : null,
     endOfStudyNotification: normalizeEndOfStudyContent({
@@ -306,6 +324,14 @@ export async function getStudy({ db, id }) {
         : 'generic',
     informationOverloadGuard: study.informationOverloadGuard ?? null,
     gamificationEnabled: study.gamificationEnabled !== false,
+    donationInputMode:
+      study.donationInputMode === 'speech' || study.donationInputMode === 'both'
+        ? study.donationInputMode
+        : 'text',
+    donationQuestionnaireSlug:
+      typeof study.donationQuestionnaireSlug === 'string'
+        ? study.donationQuestionnaireSlug
+        : null,
     reminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
     endOfStudyNotification: normalizeEndOfStudyContent(study),
@@ -379,6 +405,10 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
       : null;
   if (updates.gamificationEnabled !== undefined)
     $set.gamificationEnabled = updates.gamificationEnabled;
+  if (updates.donationInputMode !== undefined)
+    $set.donationInputMode = updates.donationInputMode;
+  if (updates.donationQuestionnaireSlug !== undefined)
+    $set.donationQuestionnaireSlug = updates.donationQuestionnaireSlug;
   if (updates.structuredActivityKeys !== undefined)
     $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
       ? updates.structuredActivityKeys
@@ -737,6 +767,10 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
           };
   if (config.gamificationEnabled !== undefined)
     updated.gamificationEnabled = config.gamificationEnabled;
+  if (config.donationInputMode !== undefined)
+    updated.donationInputMode = config.donationInputMode;
+  if (config.donationQuestionnaireSlug !== undefined)
+    updated.donationQuestionnaireSlug = config.donationQuestionnaireSlug;
 
   groups[groupIndex] = updated;
 

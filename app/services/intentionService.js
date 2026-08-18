@@ -4,6 +4,7 @@ import {
   FREQUENCIES,
   readReminderConfig,
   computeReminderPlan,
+  normalizeCadence,
 } from './reminderPlanService.js';
 
 /**
@@ -14,7 +15,7 @@ import {
  *   - { limitReached: true, unlockTier, currentTier }     — §7.3 Information
  *     Overload per-type build/quit cap (see checkOverloadGuard)
  *
- * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, anchorLabel?: string|null, creationMode?: string, cueConfig?: object, overload?: object|null }} deps
+ * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, anchorLabel?: string|null, creationMode?: string, cadence?: {type: string, targetPerWeek?: number}|null, cueConfig?: object, overload?: object|null }} deps
  * @returns {Promise<object|{ limitReached: boolean }>} Serialized intention or limit indicator.
  */
 export async function createIntention({
@@ -33,6 +34,7 @@ export async function createIntention({
   anchorLabel = null,
   creationMode = 'standalone',
   reminderTime = null,
+  cadence = null,
   cueConfig,
   overload = null,
 }) {
@@ -84,6 +86,10 @@ export async function createIntention({
     stackedOn: stackedOnOid,
     anchorLabel: anchorLabel ? String(anchorLabel).trim() || null : null,
     creationMode: creationMode === 'stacked' ? 'stacked' : 'standalone',
+    // Always stored explicitly (never omitted), even for daily — so only
+    // pre-existing legacy documents ever rely on normalizeCadence()'s
+    // absent-field fallback going forward.
+    cadence: normalizeCadence(cadence),
     earnedBadges: [],
     reminderTime,
     status: 'active',
@@ -253,6 +259,10 @@ function serialize(doc) {
     stackedOn: doc.stackedOn?.toString() ?? null,
     anchorLabel: doc.anchorLabel ?? null,
     creationMode: doc.creationMode ?? 'standalone',
+    // Normalized so legacy docs (no `cadence` field) and explicit daily
+    // intentions return the identical shape — see
+    // reminderPlanService.normalizeCadence.
+    cadence: normalizeCadence(doc.cadence),
     earnedBadges: (doc.earnedBadges ?? []).map((b) => ({
       badgeKey: b.badgeKey,
       earnedAt: b.earnedAt,

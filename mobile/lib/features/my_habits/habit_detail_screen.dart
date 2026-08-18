@@ -12,9 +12,11 @@ import '../../utils/date_format.dart';
 import '../../widgets/automaticity_chart_widget.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_chart_widget.dart';
+import 'backfill_log_sheet.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
+import 'weekly_progress_chip.dart';
 
 /// A dead session previously showed as a raw `UnauthorisedException: Session
 /// expired` string here — technically correct but unreadable, and easy to
@@ -53,6 +55,12 @@ class HabitDetailScreen extends ConsumerWidget {
             ?.where((i) => i.id == intention!.stackedOn)
             .firstOrNull
         : null;
+    // § weekly-frequency habits — same client-derived "X / Y this week"
+    // logic as the habit card (my_habits_screen.dart); reused here from the
+    // already-watched logsAsync rather than a second fetch.
+    final logsMap = {
+      for (final l in logsAsync.value ?? const <DailyLog>[]) l.date: l.enacted,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -61,6 +69,21 @@ class HabitDetailScreen extends ConsumerWidget {
           if (intention != null && intention.status == 'active')
             PopupMenuButton<String>(
               onSelected: (value) async {
+                if (value == 'backfill') {
+                  showBackfillLogSheet(
+                    context: context,
+                    service: ref.read(myHabitsServiceProvider),
+                    intentionId: intentionId,
+                    logsMap: logsMap,
+                    typeColor: Theme.of(context).colorScheme.primary,
+                    onChanged: () {
+                      ref.invalidate(intentionLogsProvider);
+                      ref.invalidate(allHabitsActivityProvider);
+                      ref.invalidate(gamificationProvider);
+                    },
+                  );
+                  return;
+                }
                 if (value == 'abandon') {
                   final confirmed = await showDialog<bool>(
                     context: context,
@@ -97,6 +120,10 @@ class HabitDetailScreen extends ConsumerWidget {
                 }
               },
               itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'backfill',
+                  child: Text(l10n.logForAnotherDay),
+                ),
                 PopupMenuItem(
                   value: 'abandon',
                   child: Text(l10n.abandonHabit),
@@ -135,6 +162,14 @@ class HabitDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(intention.intentionStatement,
                             style: Theme.of(context).textTheme.bodyMedium),
+                        if (intention.cadence.isWeekly) ...[
+                          const SizedBox(height: 8),
+                          WeeklyProgressChip(
+                            logsMap: logsMap,
+                            targetPerWeek: intention.cadence.targetPerWeek!,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ],
                         // §7.1 — the stacking anchor is its own field, kept
                         // visible after creation too, not just at setup. When
                         // the anchor is itself a tracked habit, show it as a

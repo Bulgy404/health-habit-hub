@@ -6,6 +6,8 @@
 /// [DonateProgressWidget] / [DonateSuccessWidget].
 library;
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -403,11 +405,18 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           'sentence': values.sentence,
           'language': _lang,
           'frequency': values.frequency,
-          'duration': values.duration,
           'health_benefit': values.healthBenefit,
           'wellbeing_impact': values.wellbeing,
+          'inputMode': values.inputMode,
+          if (values.transcript != null) 'transcript': values.transcript,
+          if (values.transcriptEdited != null)
+            'transcriptEdited': values.transcriptEdited,
         },
       );
+
+      final uuid = shareResp.data?['uuid'] as String?;
+      final postDonationQuestionnaireSlug =
+          shareResp.data?['postDonationQuestionnaireSlug'] as String?;
 
       final isHabit = shareResp.data?['is_habit'] as bool? ?? true;
       if (!isHabit) {
@@ -426,12 +435,34 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         try {
           await ref.read(surveyServiceProvider).submitResult(_surveyId!, {
             'frequency': values.frequency,
-            'duration': values.duration,
             'health_benefit': values.healthBenefit,
             'wellbeing_impact': values.wellbeing,
           });
         } catch (_) {
           // Non-critical — habit is already saved.
+        }
+      }
+
+      // ── Step 3: Attach the recorded audio (best-effort) ───────────────────
+      // Persistence only ever happens once a donation actually completes —
+      // the transcribe step itself never wrote anything to disk.
+      if (values.recordedAudioPath != null && uuid != null) {
+        try {
+          final file = File(values.recordedAudioPath!);
+          final formData = FormData.fromMap({
+            'file': await MultipartFile.fromFile(
+              values.recordedAudioPath!,
+              filename: 'recording.m4a',
+            ),
+          });
+          await dio.post<void>(
+            '${AppConfig.apiBaseUrl}/habits/donations/$uuid/audio',
+            data: formData,
+          );
+          if (await file.exists()) await file.delete();
+        } catch (_) {
+          // Non-critical — habit is already saved; the audio simply won't
+          // be retrievable for this donation.
         }
       }
 
@@ -445,6 +476,12 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           _submitting = false;
           _showSuccess = true;
         });
+        // ── Step 4: Offer the post-donation questionnaire, if configured ────
+        if (postDonationQuestionnaireSlug != null && uuid != null) {
+          context.push(
+            '/questionnaire/$postDonationQuestionnaireSlug?habitUuid=$uuid',
+          );
+        }
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;

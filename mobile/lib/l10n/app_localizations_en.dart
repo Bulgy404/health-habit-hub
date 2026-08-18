@@ -660,6 +660,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loggedToday => 'Logged ✓';
 
   @override
+  String get logForAnotherDay => 'Log for another day';
+
+  @override
+  String get backfillSheetTitle => 'Log a different day';
+
+  @override
+  String get backfillSheetSubtitle =>
+      'Tap a day to mark it done, or tap again to undo it.';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
   String get pickBehaviorTitle => 'What habit do you want to form?';
 
   @override
@@ -909,6 +925,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dailyReminderLabel => 'Daily reminder';
+
+  @override
+  String get habitCadenceQuestion => 'How often?';
+
+  @override
+  String get habitCadenceDaily => 'Daily';
+
+  @override
+  String get habitCadenceWeeklyOption => 'N times a week';
+
+  @override
+  String habitCadenceTargetLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count times a week',
+      one: '1 time a week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weeklyProgressLabel(int done, int target) {
+    return '$done / $target this week';
+  }
+
+  @override
+  String weeklyStreakLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-week streak',
+      one: '1-week streak',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get noReminders => 'No reminders';
@@ -1439,6 +1491,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get donateDayStreakLabel => 'Day streak';
 
   @override
+  String get donateHabitHintTitle => 'What\'s a habit?';
+
+  @override
+  String get donateHabitHintBody =>
+      'A habit is a specific, repeatable action, not just a general goal. A good description names the action itself, plus the context around it: when or where you do it, and sometimes why.';
+
+  @override
+  String get donateHabitHintExampleIntro => 'For example:';
+
+  @override
+  String get donateHabitHintExampleSentence =>
+      '[T]After breakfast[/T], I will [B]go for a 20-minute walk[/B] [L]in the park[/L] because [R]I want more energy[/R].';
+
+  @override
   String get donateFormDescribeHabitLabel => 'Describe your habit';
 
   @override
@@ -1465,30 +1531,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get donateFormFrequencyDaily => 'Daily';
 
   @override
-  String get donateFormDurationQuestion => 'How long have you had this habit?';
-
-  @override
-  String get donateFormDurationUnder1Month => '< 1 month';
-
-  @override
-  String get donateFormDuration1To3Months => '1–3 months';
-
-  @override
-  String get donateFormDuration3To12Months => '3–12 months';
-
-  @override
-  String get donateFormDurationOver1Year => '> 1 year';
-
-  @override
   String get donateFormHealthBenefitQuestion =>
-      'How much does it benefit your health?';
+      'How much do you think this habit benefits your health?';
 
   @override
   String get donateFormRatingCaption => '1 = Not at all · 5 = Very much';
 
   @override
   String get donateFormWellbeingQuestion =>
-      'How much does it improve your wellbeing?';
+      'How much do you think this habit improves your wellbeing?';
+
+  @override
+  String get donateVoiceStartRecording => 'Speak instead';
+
+  @override
+  String get donateVoiceStopRecording => 'Stop recording';
+
+  @override
+  String get donateVoiceTranscribing => 'Transcribing…';
+
+  @override
+  String get donateVoiceTranscriptionFailed =>
+      'Couldn\'t transcribe that — please try again or type it instead.';
+
+  @override
+  String get donateVoiceMicPermissionDenied =>
+      'Microphone access is needed to speak your habit — you can type it instead.';
 
   @override
   String get setCueNextButton => 'Next';
@@ -1535,6 +1603,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String couldNotLogToday(String error) {
     return 'Could not log today: $error';
+  }
+
+  @override
+  String couldNotLogDay(String error) {
+    return 'Could not update log: $error';
   }
 
   @override

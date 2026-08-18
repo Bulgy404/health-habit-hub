@@ -16,7 +16,7 @@ export interface QuestionnaireSummary {
   isLibrary: boolean;
   // 'study' (default): anchored to enrollment, applies once per participant.
   // 'habit': anchored to each habit's creation, applies once per habit.
-  scope: "study" | "habit";
+  scope: "study" | "habit" | "donation";
   questionCount: number;
   updatedAt: string | null;
 }

@@ -675,6 +675,161 @@ test('submitSrhi: a strong score after silence graduates the habit', async () =>
   );
 });
 
+// ── Weekly cadence (§ weekly-frequency habits) ──────────────────────────────
+
+/** Monday (UTC) of the week that is `weekOffset` COMPLETED weeks before the real current date. */
+function completedWeekMonday(weekOffset) {
+  const now = new Date();
+  const diffToMonday = (now.getUTCDay() + 6) % 7;
+  const monday = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - diffToMonday
+    )
+  );
+  monday.setUTCDate(monday.getUTCDate() - weekOffset * 7);
+  return monday;
+}
+
+/** `count` enacted logs (Mon, Wed, Fri, ...) in the week `weekOffset` completed weeks back. */
+function logsForCompletedWeek(weekOffset, count) {
+  const monday = completedWeekMonday(weekOffset);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(monday);
+    d.setUTCDate(d.getUTCDate() + i * 2);
+    return { date: d.toISOString().slice(0, 10), enacted: true };
+  });
+}
+
+test('submitSrhi: weekly-cadence habit with a normal inter-session gap is not misclassified as silent', async () => {
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 3,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const intentionDoc = {
+    _id: intentionId,
+    userId: 'u1',
+    status: 'active',
+    habitType: 'build',
+    creationMode: 'standalone',
+    createdAt: new Date(daysAgoIso(60)),
+    reachedAutomaticityAt: new Date(daysAgoIso(20)),
+    earnedBadges: [],
+    cadence: { type: 'weekly', targetPerWeek: 3 },
+  };
+  // Target met (3 logs) two completed weeks back; the most recently
+  // completed week (1 back) and the current in-progress week have nothing
+  // logged yet — a perfectly normal gap for a 3x/week habit that just
+  // hasn't had its next session yet. consecutiveMissedWeeks is 1 (only the
+  // week 1-back is actually missed; counting stops once week 2-back is
+  // found to have met target), below graduationSilenceWeeks(2) — not
+  // silent under weekly rules. The raw day-gap from the most recent log
+  // (2-completed-weeks-back) to "now" is always well over 7 days
+  // regardless of which real weekday this test runs on, so this would be
+  // misclassified as silent under the daily rule (see the companion test
+  // below) — exactly the bug this dispatch fixes.
+  const db = makeDb([window], [intentionDoc], {
+    [intentionId.toString()]: logsForCompletedWeek(2, 3),
+  });
+
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 3,
+    items: itemsForScore(6),
+  });
+
+  assert.equal(result.graduation, undefined);
+});
+
+test('submitSrhi: the same log pattern IS treated as a graduation candidate for a daily-cadence habit', async () => {
+  // Companion to the test above — same underlying logs, but no `cadence`
+  // field (legacy/daily). Demonstrates the dispatch actually changes
+  // behavior, not just that weekly happens to also pass.
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 3,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const intentionDoc = {
+    _id: intentionId,
+    userId: 'u1',
+    status: 'active',
+    habitType: 'build',
+    creationMode: 'standalone',
+    createdAt: new Date(daysAgoIso(60)),
+    reachedAutomaticityAt: new Date(daysAgoIso(20)),
+    earnedBadges: [],
+    // no cadence field — normalizes to daily
+  };
+  const db = makeDb([window], [intentionDoc], {
+    [intentionId.toString()]: logsForCompletedWeek(2, 3),
+  });
+
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 3,
+    items: itemsForScore(6),
+  });
+
+  assert.ok(result.graduation);
+  assert.equal(result.graduation.candidate, true);
+});
+
+test('getTrajectory: dispatches to weekly adherence/streak for a weekly-cadence intention', async () => {
+  const intentionId = new ObjectId();
+  const submittedAt = new Date();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 1,
+    scheduledFor: submittedAt,
+    submittedAt,
+    score: 6,
+    createdAt: submittedAt,
+  };
+  const db = makeDb(
+    [window],
+    [
+      {
+        _id: intentionId,
+        userId: 'u1',
+        status: 'active',
+        cadence: { type: 'weekly', targetPerWeek: 3 },
+      },
+    ],
+    { [intentionId.toString()]: logsForCompletedWeek(1, 3) }
+  );
+
+  const trajectory = await getTrajectory({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+
+  assert.equal(trajectory.length, 1);
+  assert.equal(typeof trajectory[0].autonomyScore, 'number');
+  assert.ok(trajectory[0].autonomyScore > 0); // strong SRHI + met weekly target
+});
+
 test('submitSrhi: a weak score after silence does not graduate the habit', async () => {
   const intentionId = new ObjectId();
   const window = {

@@ -136,7 +136,7 @@ note bottom of KC
   offline session (no idle-gap logouts). Explicit sign-out
   still revokes it. See DOCUMENTATION.md Session & Token Lifetime.
 end note
-UC03 ..> LLM : <<classify + map BCIO>>
+UC03 ..> LLM : <<classify + map BCIO\n+ optional speech-to-text>>
 UC07 ..> LLM : <<RAG generation>>
 UC24 ..> FCM : <<push>>
 UC15 ..> FCM : <<receives>>
@@ -152,6 +152,7 @@ UC33 ..> UC11 : <<include>>
 UC34 ..> UC04 : <<extend>>
 UC07 ..> UC34 : <<uses likes>>
 UC12 ..> UC11 : <<extend>>
+UC03 ..> UC06 : <<extend>>\n(post-donation questionnaire,\nif study/group configures one)
 UC08 ..> UC07 : <<extend>>
 UC38 ..> UC09 : <<extend>>
 

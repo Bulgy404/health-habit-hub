@@ -932,8 +932,11 @@ catalog identified — those five share this section's conventions: the nullable
 study→group config-override pattern (like `recommenderEnabled`), the Mongo
 (event/state) vs. Neo4j (structural/graph) split, transparent
 recomputed-on-read scoring (like `reminderPlanService`), and admin-tunable
-thresholds via `admin_settings`. §13.6 covers the resulting data/research
-signals; §13.7 is the full scoring-algorithm reference for §7.3 and §7.5.
+thresholds via `admin_settings`. §13.6 documents a later addition, flexible
+habit cadence, which extends principle 7 (Flexible Habit Management) rather
+than closing a new catalog gap, but otherwise follows the same conventions.
+§13.7 covers the resulting data/research signals; §13.8 is the full
+scoring-algorithm reference for §7.3 and §7.5.
 
 ### 13.0 All 18 design principles
 
@@ -944,8 +947,8 @@ signals; §13.7 is the full scoring-algorithm reference for §7.3 and §7.5.
 | 3 | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision | ✅ Fulfilled | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`) |
 | 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §13.4 |
 | 5 | **Habit Distinction** — build- and quit-habits need different handling | Decision | ✅ Fulfilled (§7.4) | `habitType` — see §13.1 |
-| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.7 §A) |
-| 7 | **Flexible Habit Management** — pause/skip without penalty | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action |
+| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.8 §A) |
+| 7 | **Flexible Habit Management** — pause/skip without penalty, plus choosing a cadence that fits the habit (§7.6) | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action; `implementation_intentions.cadence` (daily vs. an N-times-a-week target) — see §13.6 |
 | 8 | **Personalization** — goals/reminders/interface adapt to the individual | all 4 stages | ✅ Fulfilled | Cue config, reminder time, locale, habit-entry mode — all resolved per study/group in `habitConfigService.resolveHabitConfig()` |
 | 9 | **Self-Comparison** — compare against your own history | Action–Repetition | ✅ Fulfilled | SRHI trajectory/sparkline, daily-log contribution graph |
 | 10 | **Social Interaction** — compare with other users | Action–Repetition | ✅ Fulfilled, by design | Anonymized community bubble graph + reactions — see the note below |
@@ -954,8 +957,8 @@ signals; §13.7 is the full scoring-algorithm reference for §7.3 and §7.5.
 | 13 | **Praise Rewards** — virtual rewards for achievements | Action–Repetition | ✅ Fulfilled (§7.5) | Badges — see §13.5 |
 | 14 | **Challenges and Levels** — difficulty tiers to sustain engagement | Action–Repetition | ✅ Fulfilled (§7.5) | XP/level curve + per-habit traffic light — see §13.5 |
 | 15 | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition | ✅ Fulfilled (§7.2) | Rotating "when {cue}, {behavior}" templates — see §13.3 |
-| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.7 §A |
-| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.7 §A |
+| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.8 §A |
+| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.8 §A |
 | 18 | **Habit Stacking** — anchor a new habit to an already-automatic one | Automaticity | ✅ Fulfilled (§7.1) | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §13.2 |
 
 **All 18 are implemented.** Principles 1–3, 6–11, and 16–17 predate the §7 work
@@ -1047,7 +1050,7 @@ habits become automatic.
   already reached `unlock_tier` — the reminder-frequency tier from the Fading
   Reminders signal (`computeReminderPlan`), reused rather than a new metric.
   `unlock_tier: 'off'` is a hard cap of 1 per type. **Exact rule and tier
-  thresholds: [§13.7](#137-scoring-algorithms--full-reference).**
+  thresholds: [§13.8](#138-scoring-algorithms--full-reference).**
   - **Habit stacking (§7.1) is exempt**: `createIntention` skips the guard
     entirely when `creationMode === 'stacked'`. A stacked habit anchors to one
     already tracked rather than demanding fresh, separate attention, so it
@@ -1084,7 +1087,7 @@ milestones, not the market's fire-on-every-log pattern.
   a standard curve `xpForLevel(n) = round(base·(n−1)^exp)`. All weights/curve
   params are `admin_settings` keys (`gamification_*`), making them an
   experimental factor. **Exact formulas, defaults, and a worked example:
-  [§13.7](#137-scoring-algorithms--full-reference).**
+  [§13.8](#138-scoring-algorithms--full-reference).**
 - **Badges** (tied to meaningful states, not arbitrary counts): *First Step*
   (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
   streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
@@ -1092,7 +1095,7 @@ milestones, not the market's fire-on-every-log pattern.
   *First Share* (shared/donated a habit for the first time), *Community
   Contributor* (shares/donates habits for several consecutive weeks — see
   "Sharing" below). Exact trigger predicates:
-  [§13.7](#137-scoring-algorithms--full-reference).
+  [§13.8](#138-scoring-algorithms--full-reference).
 
   ![The nine badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
 
@@ -1204,7 +1207,102 @@ habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
   lapsed (still `'active'`, not yet graduated or recovered), where SRHI
   continues by design.
 
-### 13.6 Data & research analysis plan (§8)
+### 13.6 Weekly-Frequency Habits (§7.6)
+
+Some habits are naturally weekly, not daily — "work out 3 times a week," not
+"work out every day." Before this feature, every adherence, streak, and
+gamification calculation assumed daily-calendar-day logging, so a participant
+fully compliant with their own weekly goal would show up as *low* adherence
+and never accumulate a streak. `cadence` lets a habit opt into weekly-target
+semantics instead, while staying provably identical to prior behavior for
+every habit that doesn't opt in.
+
+> **Naming note.** `implementation_intentions.cadence` here is unrelated to
+> the pre-existing `questionnaire_assignments.cadence` field, which schedules
+> recurring SRHI check-ins — same word, different collection, no shared code
+> path. It's also distinct from `reminderPlanService`'s `frequency` tiers (§13.8
+> §A, the reminder-fading traffic light): `frequency` is how often the *app
+> pings*, `cadence` is what the participant *committed to*. Mobile copy always
+> says "How often?" / "N times a week," never "frequency," since both concepts
+> are visible on the same habit card and the wrong word would conflate them.
+
+- **Mongo:** `implementation_intentions.cadence: { type: 'daily'|'weekly',
+  targetPerWeek: int|null }`, lenient schema (bsonType `['object','null']`,
+  not required). Absent on every pre-existing document — there is no backfill
+  migration. `normalizeCadence()` (`reminderPlanService.js`) is the single
+  point every consumer reads through, mapping a missing or malformed field to
+  `{type:'daily', targetPerWeek:null}`; a regression test asserts this is
+  byte-identical to an explicit `{type:'daily'}` for every downstream
+  calculation.
+- **Algorithm** (`reminderPlanService.js`): the shared autonomy-score formula
+  (§13.8 §A) is untouched — cadence only changes which numbers feed it. For a
+  weekly-cadence habit, `weeklyAdherenceRate` replaces the 14-day daily
+  adherence window with `enactedCount / (targetPerWeek · weeklyAdherenceWindowWeeks)`
+  over the last `weeklyAdherenceWindowWeeks` (2) **completed** weeks (the
+  current week is always excluded — the same "don't penalize today for not
+  being logged yet" convention as the daily version, extended to "don't
+  penalize this week"), and `currentStreakWeeks` (capped at `streakCapWeeks`,
+  8) replaces `currentStreakDays` (capped at 14) in the streak component.
+  Weeks are Monday-anchored and bucketed in UTC (`weekKeyUtc`), not local
+  time, to avoid the DST-related day-skipping bug already documented for
+  `ContributionGraphWidget` on mobile. Recovery and graduation-silence
+  detection get weekly equivalents: `weeklyRecoveryTriggered` (the most
+  recently *completed* week missed target → snap straight back to `daily`
+  reminders, replacing the 7-day-adherence check) and `consecutiveMissedWeeks`
+  (replacing `daysSinceLastEnactedLog` in §13.5.2's graduation-silence check,
+  threshold `graduationSilenceWeeks`, default 2).
+- **Gamification** (§7.5): `computeHabitGamification` dispatches the same way
+  — `weeklyStreakMilestones: {4: 50, 8: 120, 12: 300}` (weeks) alongside the
+  existing daily `streakMilestones` (§13.8 §B), and *Steady Habit* retriggers
+  at `currentStreakWeeks ≥ 8` instead of 14 days. The response gains a new
+  `streakUnit: 'days'|'weeks'` field alongside the existing `streakDays`
+  value, so a weekly habit's streak count isn't ambiguous on the wire.
+- **API:** `POST /habits/intentions` accepts `cadence`; `targetPerWeek` must
+  be an integer 1–7 when `type: 'weekly'` (400 otherwise), and is silently
+  normalized to `null` if sent alongside `type: 'daily'`. Cadence is
+  creation-time only — no edit endpoint, consistent with `habitType` also
+  being immutable after creation. Every response's `serialize()` includes the
+  normalized `cadence`, so the client always receives one consistent shape
+  regardless of when the intention was created.
+- **Mobile:** chosen on the habit-creation confirmation screen via a toggle
+  (on = daily, off = "N times a week", revealing a 1–6 slider only when off —
+  the more restrictive/frequent option maps to "on," which reads more
+  naturally than the reverse) — daily stays the pre-selected default, so a
+  participant who never touches the control gets behavior identical to before
+  this feature. A weekly-cadence habit shows a "X of Y this week" progress
+  chip on both the habit card and detail screen, computed client-side from
+  the already-fetched log data (no extra API call); streak stats branch their
+  unit label on the new `streakUnit` field. Logging itself is unchanged —
+  weekly-cadence habits use the exact same daily checkbox and retrospective
+  backfill sheet as daily habits; only how that data is *interpreted* differs.
+
+**Automaticity development compares differently by cadence.** The 14-day
+daily adherence window and the 2-completed-week weekly adherence window both
+span 14 calendar days, so under matched full compliance the adherence
+component saturates at about the same time for either cadence. The streak
+component doesn't: `streakCapDays` (14) caps out in two weeks, while
+`streakCapWeeks` (8) needs eight *weeks* — 56 days — of uninterrupted target-
+hitting. Combined with the weekly habit's SRHI-hysteresis timing, a
+weekly-cadence habit reaches each reminder tier noticeably later in calendar
+days than a daily habit under equivalent full compliance with its own target,
+even though both are driven by the identical weighted formula. The gap is a
+consequence of the measurement windows, not a ceiling — both curves converge
+once every component saturates.
+
+The chart below simulates `computeReminderPlan` day-by-day for two habits
+with an identical weekly SRHI trajectory (3.0 → 6.5 over 12 weeks) and
+perfect, matched compliance with each one's own target — daily logging vs. a
+3×/week target logged exactly on schedule:
+
+![Autonomy score over 12 weeks for a daily-cadence habit vs. a 3x/week weekly-cadence habit, both with matched full compliance and an identical SRHI trajectory. The daily habit reaches the 'weekly' reminder tier on day 36, the weekly habit on day 43 — about a one-week lag. Both converge and reach the 'off' tier together on day 71, once every adherence and streak component has saturated for both.](docs/assets/gamification/cadence-autonomy-comparison.svg)
+
+The daily habit crosses into the `weekly` tier on day 36; the weekly habit
+takes until day 43 — roughly the one extra week its longer streak cap
+demands. Both nonetheless reach full automaticity (`off`) on the same day,
+71, once adherence and streak have both saturated for each — the lag shows up
+mid-course, not as a lower ceiling for weekly-cadence habits.
+
+### 13.7 Data & research analysis plan (§8)
 
 All signals are additive to the existing Mongo/Neo4j split:
 
@@ -1224,7 +1322,7 @@ for Neo4j Browser/Bloom) can show the stacking network directly, and a
 build/quit filter on the community bubble graph is a one-property `WHERE` clause
 (`WHERE h.habit_type = 'quit'`).
 
-### 13.7 Scoring algorithms — full reference
+### 13.8 Scoring algorithms — full reference
 
 Both §7.3 (Information Overload) and §7.5 (Gamification) are driven by scores
 rather than by hand-set flags, and every constant below is a pre-registerable

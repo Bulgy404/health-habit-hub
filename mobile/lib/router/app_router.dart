@@ -97,6 +97,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/questionnaire/:slug',
         builder: (context, state) => QuestionnaireScreen(
           slug: state.pathParameters['slug'] ?? '',
+          habitUuid: state.uri.queryParameters['habitUuid'],
         ),
         routes: [
           GoRoute(

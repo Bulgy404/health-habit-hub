@@ -432,6 +432,105 @@ test('resolveHabitConfig: group-level §7 override wins over study-level', async
   });
 });
 
+test('resolveHabitConfig: donation input mode + questionnaire default for a public/unenrolled user', async () => {
+  const db = makeDb({ enrollment: null });
+  const config = await resolveHabitConfig({ db, userId: 'pub' });
+  assert.equal(config.donationInputMode, 'text');
+  assert.equal(config.donationQuestionnaireSlug, null);
+});
+
+test('resolveHabitConfig: study-level donation config applies without a group override', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationInputMode: 'both',
+      donationQuestionnaireSlug: 'who5',
+      groups: [{ id: groupId, label: 'G1', index: 1 }],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationInputMode, 'both');
+  assert.equal(config.donationQuestionnaireSlug, 'who5');
+});
+
+test('resolveHabitConfig: group-level donation config overrides study-level', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationInputMode: 'text',
+      donationQuestionnaireSlug: 'who5',
+      groups: [
+        {
+          id: groupId,
+          label: 'G1',
+          index: 1,
+          donationInputMode: 'speech',
+          // '' is the group-level sentinel for "explicitly no questionnaire"
+          // — null is reserved for "inherit" (see below).
+          donationQuestionnaireSlug: '',
+        },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationInputMode, 'speech');
+  assert.equal(config.donationQuestionnaireSlug, null);
+});
+
+test('resolveHabitConfig: an explicit group-level null inherits the study value (null means inherit, not "none")', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationQuestionnaireSlug: 'who5',
+      groups: [
+        { id: groupId, label: 'G1', index: 1, donationQuestionnaireSlug: null },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationQuestionnaireSlug, 'who5');
+});
+
+test('resolveHabitConfig: donation questionnaire slug is inherited when the group key is simply absent', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationQuestionnaireSlug: 'who5',
+      groups: [{ id: groupId, label: 'G1', index: 1 }],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationQuestionnaireSlug, 'who5');
+});
+
 test('resolveHabitConfig: invalid admin unlock tier falls back to weekly', async () => {
   const db = makeDb({
     enrollment: null,

@@ -59,11 +59,14 @@ services:
       - BACKUP_API_URL=http://backup:4100
       - BACKUP_API_SECRET=${BACKUP_API_SECRET:-CHANGE_THIS_BACKUP_API_SECRET}
       - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
+      - AUDIO_STORAGE_DIR=/data/audio-recordings
     ports:
       - '3000:3000'
     networks:
       - hhh-proxy
       - hhh-app
+    volumes:
+      - audio-recordings-local-data:/data/audio-recordings
     command: node --watch main.js
     depends_on:
       proxy:
@@ -439,6 +442,7 @@ services:
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-dev-lightrag-secret}
+      - LLM_STT_MODEL=${LLM_STT_MODEL:-alias-stt}
     ports:
       - '8001:8000'
     networks:
@@ -630,6 +634,7 @@ volumes:
   lightrag-data:
   prometheus-data:
   grafana-data:
+  audio-recordings-local-data:
 
 networks:
   hhh-proxy:

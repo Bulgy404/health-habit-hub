@@ -683,6 +683,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loggedToday => 'Eingetragen ✓';
 
   @override
+  String get logForAnotherDay => 'Für einen anderen Tag eintragen';
+
+  @override
+  String get backfillSheetTitle => 'Einen anderen Tag eintragen';
+
+  @override
+  String get backfillSheetSubtitle =>
+      'Tippe auf einen Tag, um ihn als erledigt zu markieren oder es rückgängig zu machen.';
+
+  @override
+  String get today => 'Heute';
+
+  @override
+  String get yesterday => 'Gestern';
+
+  @override
   String get pickBehaviorTitle => 'Welche Gewohnheit möchtest du aufbauen?';
 
   @override
@@ -933,6 +949,42 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dailyReminderLabel => 'Tägliche Erinnerung';
+
+  @override
+  String get habitCadenceQuestion => 'Wie oft?';
+
+  @override
+  String get habitCadenceDaily => 'Täglich';
+
+  @override
+  String get habitCadenceWeeklyOption => 'N-mal pro Woche';
+
+  @override
+  String habitCadenceTargetLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Mal pro Woche',
+      one: '1 Mal pro Woche',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String weeklyProgressLabel(int done, int target) {
+    return '$done / $target diese Woche';
+  }
+
+  @override
+  String weeklyStreakLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-Wochen-Serie',
+      one: '1-Wochen-Serie',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get noReminders => 'Keine Erinnerungen';
@@ -1474,6 +1526,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get donateDayStreakLabel => 'Tage-Serie';
 
   @override
+  String get donateHabitHintTitle => 'Was ist eine Gewohnheit?';
+
+  @override
+  String get donateHabitHintBody =>
+      'Eine Gewohnheit ist eine konkrete, wiederholbare Handlung, kein allgemeines Ziel. Eine gute Beschreibung nennt die Handlung selbst sowie den Kontext dazu: wann oder wo du sie ausführst, und manchmal warum.';
+
+  @override
+  String get donateHabitHintExampleIntro => 'Zum Beispiel:';
+
+  @override
+  String get donateHabitHintExampleSentence =>
+      '[T]Nach dem Frühstück[/T] mache ich einen [B]20-minütigen Spaziergang[/B] [L]im Park[/L], weil [R]ich mehr Energie haben möchte[/R].';
+
+  @override
   String get donateFormDescribeHabitLabel => 'Beschreibe deine Gewohnheit';
 
   @override
@@ -1501,31 +1567,32 @@ class AppLocalizationsDe extends AppLocalizations {
   String get donateFormFrequencyDaily => 'Täglich';
 
   @override
-  String get donateFormDurationQuestion =>
-      'Wie lange hast du diese Gewohnheit schon?';
-
-  @override
-  String get donateFormDurationUnder1Month => '< 1 Monat';
-
-  @override
-  String get donateFormDuration1To3Months => '1–3 Monate';
-
-  @override
-  String get donateFormDuration3To12Months => '3–12 Monate';
-
-  @override
-  String get donateFormDurationOver1Year => '> 1 Jahr';
-
-  @override
   String get donateFormHealthBenefitQuestion =>
-      'Wie sehr nützt es deiner Gesundheit?';
+      'Wie sehr, glaubst du, nützt diese Gewohnheit deiner Gesundheit?';
 
   @override
   String get donateFormRatingCaption => '1 = Gar nicht · 5 = Sehr stark';
 
   @override
   String get donateFormWellbeingQuestion =>
-      'Wie sehr verbessert es dein Wohlbefinden?';
+      'Wie sehr, glaubst du, verbessert diese Gewohnheit dein Wohlbefinden?';
+
+  @override
+  String get donateVoiceStartRecording => 'Stattdessen sprechen';
+
+  @override
+  String get donateVoiceStopRecording => 'Aufnahme beenden';
+
+  @override
+  String get donateVoiceTranscribing => 'Wird transkribiert …';
+
+  @override
+  String get donateVoiceTranscriptionFailed =>
+      'Transkription fehlgeschlagen — bitte erneut versuchen oder eintippen.';
+
+  @override
+  String get donateVoiceMicPermissionDenied =>
+      'Für die Sprachaufnahme wird Mikrofonzugriff benötigt — du kannst deine Gewohnheit auch eintippen.';
 
   @override
   String get setCueNextButton => 'Weiter';
@@ -1572,6 +1639,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String couldNotLogToday(String error) {
     return 'Heutiger Eintrag konnte nicht gespeichert werden: $error';
+  }
+
+  @override
+  String couldNotLogDay(String error) {
+    return 'Eintrag konnte nicht aktualisiert werden: $error';
   }
 
   @override

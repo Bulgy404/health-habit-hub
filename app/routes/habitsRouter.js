@@ -6,6 +6,7 @@ import { makeGetDb } from '../utils/getDb.js';
 import { createHabitsCrudRouter } from './habits/habitsCrudRouter.js';
 import { createHabitsStatsRouter } from './habits/habitsStatsRouter.js';
 import { createHabitsGraphRouter } from './habits/habitsGraphRouter.js';
+import { createVoiceRouter } from './habits/voiceTranscribeRouter.js';
 import { getHabitQueue, startHabitWorker } from '../lib/habitQueue.js';
 
 /**
@@ -72,6 +73,7 @@ export function createHabitsRouter({
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
   router.use('/', createHabitsGraphRouter({ queryNeo4j, getDb }));
+  router.use('/', createVoiceRouter({ getDb, apiServiceUrl }));
 
   // Start the BullMQ worker only for a real running app (see queueEnabled above).
   if (queueEnabled) {

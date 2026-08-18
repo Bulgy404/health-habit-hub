@@ -31,7 +31,7 @@ flowchart TB
 
     %% ------- Data layer -------
     subgraph data["Data Stores"]
-        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts")]
+        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts · habit_donations")]
         neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
         lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
         redis[("Redis 7<br/>API-service response cache · BullMQ habitQueue")]

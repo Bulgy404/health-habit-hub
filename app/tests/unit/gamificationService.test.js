@@ -25,6 +25,35 @@ function logsForDays(days) {
   return logs;
 }
 
+// NOW (2026-06-10) is a Wednesday — see reminderPlanService.test.js's
+// identical helper for why week-offset 0 naturally resolves to the current,
+// in-progress week without any special-casing.
+function completedWeekMonday(weekOffset) {
+  const anchor = new Date(NOW);
+  anchor.setUTCDate(anchor.getUTCDate() - weekOffset * 7);
+  const diffToMonday = (anchor.getUTCDay() + 6) % 7;
+  const monday = new Date(anchor);
+  monday.setUTCDate(monday.getUTCDate() - diffToMonday);
+  return monday;
+}
+
+function logsForWeekOffset(weekOffset, count) {
+  const monday = completedWeekMonday(weekOffset);
+  const logs = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(monday);
+    d.setUTCDate(d.getUTCDate() + i);
+    logs.push({ date: d.toISOString().slice(0, 10), enacted: true });
+  }
+  return logs;
+}
+
+function logsForCompletedWeeks(weeks, perWeek) {
+  const logs = [];
+  for (let w = 1; w <= weeks; w++) logs.push(...logsForWeekOffset(w, perWeek));
+  return logs;
+}
+
 test('xpForLevel: level 1 needs 0 XP and the curve is increasing', () => {
   assert.equal(xpForLevel(1), 0);
   assert.ok(xpForLevel(2) < xpForLevel(3));
@@ -101,6 +130,124 @@ test('computeHabitGamification: automatic quit habit earns Second Nature + Quit 
   }
   // XP should exceed a bare fresh habit's (logs + streak + tier bonus).
   assert.ok(result.xp > DEFAULT_GAMIFICATION_CONFIG.xpPerEnactedLog);
+});
+
+// ── weekly cadence (§ weekly-frequency habits) ──────────────────────────────
+
+test('computeHabitGamification: weekly-cadence habit reports streakDays/streakUnit in weeks', () => {
+  const result = computeHabitGamification({
+    intention: {
+      _id: new ObjectId(),
+      habitType: 'build',
+      creationMode: 'standalone',
+      createdAt: new Date('2026-04-01T00:00:00Z'),
+      cadence: { type: 'weekly', targetPerWeek: 3 },
+    },
+    logs: logsForCompletedWeeks(3, 3),
+    srhiScores: [],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  assert.equal(result.streakDays, 3);
+  assert.equal(result.streakUnit, 'weeks');
+});
+
+test('computeHabitGamification: weekly-cadence STEADY_HABIT triggers at the 8-week mid-tier, not 14', () => {
+  const below = computeHabitGamification({
+    intention: {
+      _id: new ObjectId(),
+      habitType: 'build',
+      creationMode: 'standalone',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      cadence: { type: 'weekly', targetPerWeek: 3 },
+    },
+    logs: logsForCompletedWeeks(7, 3), // 7-week streak — below threshold
+    srhiScores: [],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  assert.ok(!below.badges.includes(BADGES.STEADY_HABIT));
+
+  const atThreshold = computeHabitGamification({
+    intention: {
+      _id: new ObjectId(),
+      habitType: 'build',
+      creationMode: 'standalone',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      cadence: { type: 'weekly', targetPerWeek: 3 },
+    },
+    logs: logsForCompletedWeeks(8, 3), // 8-week streak — at threshold
+    srhiScores: [],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  assert.ok(atThreshold.badges.includes(BADGES.STEADY_HABIT));
+});
+
+test('computeHabitGamification: weekly streak milestone XP crosses the 4/8/12-week table', () => {
+  const fourWeeks = computeHabitGamification({
+    intention: {
+      _id: new ObjectId(),
+      habitType: 'build',
+      creationMode: 'standalone',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      cadence: { type: 'weekly', targetPerWeek: 2 },
+    },
+    logs: logsForCompletedWeeks(4, 2),
+    srhiScores: [],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  const threeWeeks = computeHabitGamification({
+    intention: {
+      _id: new ObjectId(),
+      habitType: 'build',
+      creationMode: 'standalone',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      cadence: { type: 'weekly', targetPerWeek: 2 },
+    },
+    logs: logsForCompletedWeeks(3, 2),
+    srhiScores: [],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  // Crossing the 4-week milestone (50 XP) with the same enacted-log count
+  // (each adds an extra week's worth of logs, so isolate the milestone
+  // bonus by comparing the XP delta against the known per-log XP).
+  const enactedDelta =
+    logsForCompletedWeeks(4, 2).length - logsForCompletedWeeks(3, 2).length;
+  const expectedNonMilestoneDelta =
+    enactedDelta * DEFAULT_GAMIFICATION_CONFIG.xpPerEnactedLog;
+  assert.equal(
+    fourWeeks.xp - threeWeeks.xp,
+    expectedNonMilestoneDelta +
+      DEFAULT_GAMIFICATION_CONFIG.weeklyStreakMilestones[4]
+  );
+});
+
+test('computeHabitGamification: cadence-less (legacy) intention behaves identically to explicit daily', () => {
+  const base = {
+    _id: new ObjectId(),
+    habitType: 'build',
+    creationMode: 'standalone',
+    createdAt: new Date('2026-05-01T00:00:00Z'),
+  };
+  const legacy = computeHabitGamification({
+    intention: base, // no `cadence` field at all
+    logs: logsForDays(10),
+    srhiScores: [5.5],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  const explicitDaily = computeHabitGamification({
+    intention: { ...base, cadence: { type: 'daily', targetPerWeek: null } },
+    logs: logsForDays(10),
+    srhiScores: [5.5],
+    reminderConfig: REMINDER_CONFIG,
+    now: NOW,
+  });
+  assert.deepEqual(legacy, explicitDaily);
+  assert.equal(legacy.streakUnit, 'days');
 });
 
 // ── computeUserGamification (with persistence) ──────────────────────────────

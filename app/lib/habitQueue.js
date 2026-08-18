@@ -1,5 +1,8 @@
 import { Queue, Worker, Job } from 'bullmq';
-import { shareHabit } from '../services/habitDonationService.js';
+import {
+  shareHabit,
+  markDonationOutcome,
+} from '../services/habitDonationService.js';
 import { translateHabit, translateTerm } from '../utils/translate.js';
 import { logger } from '../utils/logger.js';
 import { bullmqJobsFailedTotal } from '../middleware/metrics.js';
@@ -125,6 +128,16 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         translate: translateHabit,
         translateTerm,
         translateUrl,
+      });
+
+      // Best-effort — the habit_donations record for this uuid was already
+      // created synchronously by the route handler before this job was even
+      // enqueued; this just fills in the classifier verdict once known.
+      const database = await getDb();
+      await markDonationOutcome({
+        db: database,
+        uuid,
+        isHabit: result.is_habit,
       });
 
       // Return value is stored in job.returnvalue in Redis.

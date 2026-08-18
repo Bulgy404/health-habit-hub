@@ -160,6 +160,7 @@ classDiagram
         +ObjectId questionnaireId
         +Map answers
         +Date submittedAt
+        +String habitUuid  post-donation fill only, see HabitDonation
     }
     class Profile {
         <<MongoDB profiles>>
@@ -260,6 +261,25 @@ classDiagram
     Habit "1" --> "0..*" Context : HAS_CONTEXT
     Context "1" --> "0..*" BCIOConcept : MAPS_TO
     Habit "*" ..> "1" User : donated by (anonymised)
+
+    class HabitDonation {
+        <<MongoDB habit_donations>>
+        +ObjectId _id
+        +String uuid  == Habit.uuid, the join key
+        +String userId
+        +String studyId
+        +String groupId
+        +String inputMode  text|speech
+        +Boolean isHabit  null until classifier verdict known
+        +String transcript  raw STT output, speech only
+        +Boolean transcriptEdited
+        +Object audioClip  filename, mimeType, sizeBytes, storedAt
+        +String questionnaireSlug
+        +ObjectId questionnaireResponseId
+    }
+    HabitDonation "*" --> "1" User
+    HabitDonation ..> Habit : uuid (one record per donation<br/>attempt, accepted or rejected)
+    HabitDonation ..> FormResponse : questionnaireResponseId<br/>(post-donation questionnaire, if configured)
 
     %% ===================== Study & Questionnaire graph (Neo4j) =====================
     %% MongoDB (Study, Questionnaire above) is the source of truth; these are its

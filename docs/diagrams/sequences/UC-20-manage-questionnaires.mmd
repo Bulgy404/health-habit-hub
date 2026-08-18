@@ -10,7 +10,7 @@ sequenceDiagram
     AP->>B: GET /api/v1/questionnaires
     B->>M: find(questionnaires)
     B-->>AP: definitions {slug, title, questions, scope}
-    R->>AP: Create / edit questionnaire (question types, order, validation, scope: study|habit)
+    R->>AP: Create / edit questionnaire (question types, order, validation, scope: study|habit|donation)
     AP->>B: POST or PUT /api/v1/questionnaires/:id
     B->>B: Validate question schema
     B->>M: upsert(questionnaires)
@@ -21,3 +21,4 @@ sequenceDiagram
     B-->>AP: 200
 
     Note over AP,M: SRHI is the one exception: it's unconditional (no library entry, no<br/>assignment — see intentionsRouter.js) and never appears in this tab. Any<br/>OTHER scope:'habit' questionnaire an admin defines behaves normally here —<br/>assignable/toggleable exactly like a study-scoped one, but its windows anchor<br/>to each participant's habit creation instead of enrollment (see UC-35), and<br/>it's invisible to a participant (Profile / Share tab, UC-06) until they've<br/>actually created a relevant habit.
+    Note over AP,M: scope:'donation' is never assigned via the step above at all — it's<br/>selected directly as a study/group's post-donation questionnaire in<br/>Studies → Behavior Change (UC-36), and offered ad-hoc right after a<br/>habit donation (UC-03), bypassing the assignment/window system entirely.

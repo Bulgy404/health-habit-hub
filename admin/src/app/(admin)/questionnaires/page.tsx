@@ -52,7 +52,7 @@ interface QuestionnaireSummary {
   isLibrary: boolean;
   // 'study' (default): anchored to enrollment, applies once per participant.
   // 'habit': anchored to each habit's creation, applies once per habit.
-  scope: "study" | "habit";
+  scope: "study" | "habit" | "donation";
   questionCount: number;
   updatedAt: string | null;
 }
@@ -289,7 +289,7 @@ function QuestionnaireModal({
   const [slugManual, setSlugManual] = useState(isEdit);
   const [description, setDescription] = useState<LocaleText>(initial?.description ?? {});
   const [version, setVersion] = useState(initial?.version ?? "1");
-  const [scope, setScope] = useState<"study" | "habit">(initial?.scope ?? "study");
+  const [scope, setScope] = useState<"study" | "habit" | "donation">(initial?.scope ?? "study");
   const [languages, setLanguages] = useState<Lang[]>(initial?.languages ?? ["en"]);
   const [activeLang, setActiveLang] = useState<Lang>(initial?.languages?.[0] ?? "en");
   const [questions, setQuestions] = useState<Question[]>(initial?.questions ?? []);
@@ -476,13 +476,18 @@ function QuestionnaireModal({
               <select
                 className={styles.select}
                 value={scope}
-                onChange={(e) => setScope(e.target.value as "study" | "habit")}
+                onChange={(e) => setScope(e.target.value as "study" | "habit" | "donation")}
               >
                 <option value="study">{t("scopeStudyOption")}</option>
                 <option value="habit">{t("scopeHabitOption")}</option>
+                <option value="donation">{t("scopeDonationOption")}</option>
               </select>
               <span className={styles.hint}>
-                {scope === "habit" ? t("scopeHabitHint") : t("scopeStudyHint")}
+                {scope === "habit"
+                  ? t("scopeHabitHint")
+                  : scope === "donation"
+                    ? t("scopeDonationHint")
+                    : t("scopeStudyHint")}
               </span>
             </div>
           </div>
@@ -876,7 +881,7 @@ export default function QuestionnairesPage() {
                           <span className={styles.slugCell}>{q.slug}</span>
                         </td>
                         <td>
-                          {q.scope === "habit" ? t("scopeHabitOption") : t("scopeStudyOption")}
+                          {q.scope === "habit" ? t("scopeHabitOption") : q.scope === "donation" ? t("scopeDonationOption") : t("scopeStudyOption")}
                         </td>
                         <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                         <td>{q.questionCount}</td>
@@ -943,7 +948,7 @@ export default function QuestionnairesPage() {
                             </span>
                           </td>
                           <td>
-                            {q.scope === "habit" ? t("scopeHabitOption") : t("scopeStudyOption")}
+                            {q.scope === "habit" ? t("scopeHabitOption") : q.scope === "donation" ? t("scopeDonationOption") : t("scopeStudyOption")}
                           </td>
                           <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                           <td>{q.questionCount}</td>

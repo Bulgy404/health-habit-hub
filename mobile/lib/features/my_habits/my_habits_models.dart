@@ -69,6 +69,8 @@ class HabitConfig {
     this.reminderContentMode = 'generic',
     this.informationOverloadEnabled = false,
     this.informationOverloadOptOutAllowed = false,
+    this.donationInputMode = 'text',
+    this.donationQuestionnaireSlug,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -136,6 +138,14 @@ class HabitConfig {
   /// when [informationOverloadEnabled] is `true`. Defaults `false`.
   final bool informationOverloadOptOutAllowed;
 
+  /// Habit-donation input mode: `'text'`, `'speech'`, or `'both'`
+  /// (participant's choice). Defaults `'text'`.
+  final String donationInputMode;
+
+  /// Slug of the questionnaire-pool item to offer immediately after every
+  /// habit donation, or `null` when none is configured.
+  final String? donationQuestionnaireSlug;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -176,6 +186,9 @@ class HabitConfig {
             (json['informationOverloadGuard'] as Map<String, dynamic>?)?[
                     'userOptOutAllowed'] as bool? ??
                 false,
+        donationInputMode: json['donationInputMode'] as String? ?? 'text',
+        donationQuestionnaireSlug:
+            json['donationQuestionnaireSlug'] as String?,
       );
 }
 
@@ -231,6 +244,69 @@ enum HabitType {
       value == 'quit' ? HabitType.quit : HabitType.build;
 }
 
+/// How often the participant commits to a habit — not to be confused with
+/// the reminder-fading *tier* (also sometimes called "frequency" elsewhere
+/// in the app, e.g. [Gamification.frequency]), which is how often the app
+/// pings the user, not what the participant targets.
+enum CadenceType {
+  /// The only cadence supported before weekly-frequency habits existed —
+  /// the default for every habit that doesn't explicitly opt into weekly.
+  daily,
+
+  /// A target count of occurrences per week (e.g. "workout 3x/week"),
+  /// tracked via [Cadence.targetPerWeek].
+  weekly;
+
+  /// Wire value sent to / received from the backend.
+  String get wire => name;
+
+  /// Parses the backend string, defaulting to [CadenceType.daily] — mirrors
+  /// the backend's own `normalizeCadence()` (reminderPlanService.js), so a
+  /// habit predating this field, or an explicit `daily`, are indistinguishable.
+  static CadenceType fromWire(String? value) =>
+      value == 'weekly' ? CadenceType.weekly : CadenceType.daily;
+}
+
+/// How often the participant commits to a habit (§ weekly-frequency habits).
+class Cadence {
+  /// Creates a [Cadence].
+  const Cadence({required this.type, this.targetPerWeek});
+
+  /// The default cadence for a habit that doesn't opt into a weekly target —
+  /// identical to how a pre-existing habit with no `cadence` field at all
+  /// normalizes server-side.
+  static const daily = Cadence(type: CadenceType.daily);
+
+  /// Daily or weekly.
+  final CadenceType type;
+
+  /// Target occurrences per week (1-7); only meaningful when [type] is
+  /// [CadenceType.weekly], always `null` for daily.
+  final int? targetPerWeek;
+
+  /// Whether this is a weekly-frequency habit.
+  bool get isWeekly => type == CadenceType.weekly;
+
+  /// Deserialises from the intentions API response. Missing/malformed input
+  /// (e.g. a legacy API response predating this field) resolves to
+  /// [Cadence.daily], matching the backend's own normalization.
+  factory Cadence.fromJson(Map<String, dynamic>? json) {
+    final type = CadenceType.fromWire(json?['type'] as String?);
+    if (type != CadenceType.weekly) return Cadence.daily;
+    final target = (json?['targetPerWeek'] as num?)?.toInt();
+    if (target == null) return Cadence.daily;
+    return Cadence(type: CadenceType.weekly, targetPerWeek: target);
+  }
+
+  /// Serialises for the create-intention request body. Always sent
+  /// explicitly (never omitted), matching how `habitType`/`creationMode`
+  /// are already always-sent rather than conditionally left out.
+  Map<String, dynamic> toJson() => {
+        'type': type.wire,
+        'targetPerWeek': targetPerWeek,
+      };
+}
+
 /// An implementation intention created by the user.
 class Intention {
   /// Creates an [Intention].
@@ -244,6 +320,7 @@ class Intention {
     required this.status,
     required this.createdAt,
     this.habitType = HabitType.build,
+    this.cadence = Cadence.daily,
     this.stackedOn,
     this.anchorLabel,
     this.creationMode = 'standalone',
@@ -278,6 +355,11 @@ class Intention {
 
   /// Whether this is a build or quit habit (§7.4 Habit Distinction).
   final HabitType habitType;
+
+  /// How often the participant commits to this habit (§ weekly-frequency
+  /// habits) — daily by default, matching every habit created before this
+  /// existed.
+  final Cadence cadence;
 
   /// When set, the id of the anchor intention this habit was stacked onto
   /// (§7.1 Habit Stacking); `null` for standalone habits or when the anchor
@@ -325,6 +407,7 @@ class Intention {
         status: json['status'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         habitType: HabitType.fromWire(json['habitType'] as String?),
+        cadence: Cadence.fromJson(json['cadence'] as Map<String, dynamic>?),
         stackedOn: json['stackedOn'] as String?,
         anchorLabel: json['anchorLabel'] as String?,
         creationMode: json['creationMode'] as String? ?? 'standalone',

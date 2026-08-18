@@ -33,6 +33,10 @@ dependencies:
   connectivity_plus: ^7.1.1
   shared_preferences: ^2.3.5
   package_info_plus: ^10.2.0
+  # Habit-donation voice input. record's own hasPermission() requests mic
+  # access natively — no separate permission_handler dependency needed.
+  record: ^6.1.1
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

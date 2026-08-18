@@ -9,6 +9,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/features/my_habits/my_habits_models.dart';
+import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/features/questionnaire/questionnaire_service.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/models/survey.dart';
@@ -61,6 +63,7 @@ class _FakeSurveyService extends SurveyService {
 Widget _buildSubject(
   _FakeSurveyService surveyService, {
   List<MyHabit> myHabits = const [],
+  String donationInputMode = 'text',
 }) {
   return ProviderScope(
     overrides: [
@@ -79,6 +82,17 @@ Widget _buildSubject(
       // No due questionnaires — avoids a real network call to /questionnaires/due.
       dueQuestionnairesProvider.overrideWith(
         (_) async => const <DueQuestionnaire>[],
+      ),
+      // Avoids a real network call to /me/habit-config (DonateFormWidget
+      // reads donationInputModeProvider, which derives from this).
+      habitConfigProvider.overrideWith(
+        (_) async => HabitConfig(
+          cueCount: 'multi',
+          cueSource: 'self_selected',
+          behaviorOptions: const [],
+          srhiItems: const [],
+          donationInputMode: donationInputMode,
+        ),
       ),
     ],
     child: MaterialApp(
@@ -132,6 +146,43 @@ void main() {
     await tester.pump();
 
     expect(find.text('How often do you do this habit?'), findsOneWidget);
+  });
+
+  testWidgets('voice input control is hidden when donationInputMode is text (default)',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start sharing'));
+    await tester.pump();
+
+    expect(find.text('Speak instead'), findsNothing);
+  });
+
+  testWidgets('voice input control is shown when donationInputMode is speech',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildSubject(_FakeSurveyService.throwing(), donationInputMode: 'speech'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start sharing'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Speak instead'), findsOneWidget);
+  });
+
+  testWidgets('voice input control is shown when donationInputMode is both',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildSubject(_FakeSurveyService.throwing(), donationInputMode: 'both'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start sharing'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Speak instead'), findsOneWidget);
   });
 
   testWidgets(

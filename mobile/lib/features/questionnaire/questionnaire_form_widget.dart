@@ -19,11 +19,16 @@ class QuestionnaireFormWidget extends ConsumerStatefulWidget {
   /// Called after the response has been successfully submitted to the backend.
   final VoidCallback onSubmitted;
 
+  /// When set, identifies this as a post-donation questionnaire fill tied to
+  /// one specific habit donation — see [QuestionnaireService.submitResponse].
+  final String? habitUuid;
+
   /// Creates a [QuestionnaireFormWidget].
   const QuestionnaireFormWidget({
     super.key,
     required this.definition,
     required this.onSubmitted,
+    this.habitUuid,
   });
 
   @override
@@ -195,6 +200,7 @@ class _QuestionnaireFormWidgetState
       await service.submitResponse(
         questionnaireSlug: widget.definition.slug,
         answers: answers,
+        habitUuid: widget.habitUuid,
       );
       if (!mounted) return;
       notifier.reset();

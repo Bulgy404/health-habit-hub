@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Habit-donation voice input: recording a spoken habit sentence, sent
+         off-device for speech-to-text transcription. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="Health Habit Hub"
         android:name="${applicationName}"

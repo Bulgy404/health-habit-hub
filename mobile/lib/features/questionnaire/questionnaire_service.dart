@@ -32,15 +32,23 @@ class QuestionnaireService {
   }
 
   /// Submits [answers] for [questionnaireSlug].
+  ///
+  /// [habitUuid] identifies this as a post-donation questionnaire fill tied
+  /// to one specific habit donation (see habitDonationService.js /
+  /// ShareHabitScreen) — it bypasses the normal scheduled-window gating and
+  /// links the response back to that donation for research retrieval.
+  /// Omitted for every other (scheduled) questionnaire submission.
   Future<void> submitResponse({
     required String questionnaireSlug,
     required Map<String, dynamic> answers,
+    String? habitUuid,
   }) async {
     await _dio.post<void>(
       '$_baseUrl/questionnaire-responses',
       data: {
         'questionnaireSlug': questionnaireSlug,
         'answers': answers,
+        'habitUuid': ?habitUuid,
       },
     );
   }

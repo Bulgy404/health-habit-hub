@@ -16,8 +16,12 @@ class QuestionnaireScreen extends ConsumerWidget {
   /// The questionnaire slug identifying which questionnaire to display.
   final String slug;
 
+  /// When set, this is a post-donation questionnaire tied to one specific
+  /// habit donation — see [QuestionnaireFormWidget.habitUuid].
+  final String? habitUuid;
+
   /// Creates a [QuestionnaireScreen] for [slug].
-  const QuestionnaireScreen({super.key, required this.slug});
+  const QuestionnaireScreen({super.key, required this.slug, this.habitUuid});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,6 +60,7 @@ class QuestionnaireScreen extends ConsumerWidget {
         ),
         data: (definition) => QuestionnaireFormWidget(
           definition: definition,
+          habitUuid: habitUuid,
           onSubmitted: () =>
               context.pushReplacement('/questionnaire/$slug/confirmation'),
         ),

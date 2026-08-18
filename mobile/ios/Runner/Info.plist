@@ -39,6 +39,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Habit-donation voice input: recording a spoken habit sentence, sent
+	     off-device for speech-to-text transcription. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Health Habit Hub uses your microphone so you can speak a habit to donate instead of typing it.</string>
 	<!-- Dev convenience: allow cleartext HTTP to RFC-1918 LAN hosts (e.g. a Mac
 	     running the local backend/Keycloak) so a cabled physical device can
 	     reach the stack via --dart-define=API_BASE_URL=http://<lan-ip>:3000/...
