@@ -61,9 +61,7 @@ before(async () => {
   app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    const roles = (req.get('x-test-roles') || '')
-      .split(',')
-      .filter(Boolean);
+    const roles = (req.get('x-test-roles') || '').split(',').filter(Boolean);
     req.user = { sub: 'test-admin', realm_access: { roles } };
     next();
   });

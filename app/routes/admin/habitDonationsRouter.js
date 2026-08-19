@@ -153,7 +153,8 @@ export function createHabitDonationsRouter({
       const download =
         req.query.download === '1' || req.query.download === 'true';
       res.set({
-        'Content-Type': donation.audioClip.mimeType || 'application/octet-stream',
+        'Content-Type':
+          donation.audioClip.mimeType || 'application/octet-stream',
         'Content-Length': fileStat.size,
         'Content-Disposition': download
           ? `attachment; filename="${donation.audioClip.filename}"`

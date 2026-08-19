@@ -66,8 +66,7 @@ async function checkMongo() {
 // container healthcheck, which must not fail the whole stack over it.
 export async function checkAudioStorage() {
   const start = Date.now();
-  const dir =
-    process.env.AUDIO_STORAGE_DIR || '/data/audio-recordings';
+  const dir = process.env.AUDIO_STORAGE_DIR || '/data/audio-recordings';
   const probePath = path.join(dir, `.healthcheck-${randomUUID()}`);
   try {
     await writeFile(probePath, 'ok');
