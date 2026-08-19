@@ -41,7 +41,18 @@ function makeToken(roles = ['user'], sub = 'rt-user') {
 
 // ── In-memory mock DB ─────────────────────────────────────────────────────────
 
-const deviceTokens = new Map(); // userId -> doc
+// Array of docs (not a Map) — a participant can now have more than one
+// (userId, deviceId) pair, which a single-key Map couldn't represent.
+const deviceTokens = [];
+
+function docMatchesFilter(doc, filter) {
+  return Object.entries(filter).every(([key, value]) => {
+    if (value && typeof value === 'object' && '$exists' in value) {
+      return value.$exists ? key in doc : !(key in doc);
+    }
+    return doc[key] === value;
+  });
+}
 
 function createMockDb() {
   return {
@@ -49,16 +60,26 @@ function createMockDb() {
       if (name === 'deviceTokens') {
         return {
           async updateOne(filter, update, opts) {
-            const existing = deviceTokens.get(filter.userId);
+            const existing = deviceTokens.find((d) =>
+              docMatchesFilter(d, filter)
+            );
             if (existing) {
               Object.assign(existing, update.$set);
               return { matchedCount: 1, modifiedCount: 1 };
             }
             if (opts?.upsert) {
-              deviceTokens.set(filter.userId, { ...update.$set });
+              deviceTokens.push({ ...update.$set });
               return { matchedCount: 0, upsertedCount: 1 };
             }
             return { matchedCount: 0 };
+          },
+          async deleteOne(filter) {
+            const idx = deviceTokens.findIndex((d) =>
+              docMatchesFilter(d, filter)
+            );
+            if (idx === -1) return { deletedCount: 0 };
+            deviceTokens.splice(idx, 1);
+            return { deletedCount: 1 };
           },
         };
       }
@@ -74,6 +95,11 @@ function createMockDb() {
       };
     },
   };
+}
+
+/** Finds the one stored deviceTokens doc for a plain userId (no deviceId) — mirrors the old Map.get(userId) convenience used throughout this file's existing assertions. */
+function getByUserId(userId) {
+  return deviceTokens.find((d) => d.userId === userId);
 }
 
 // ── Test server ───────────────────────────────────────────────────────────────
@@ -160,7 +186,7 @@ test('registers an FCM token for the authenticated user', async () => {
   const body = await res.json();
   assert.strictEqual(body.ok, true);
 
-  const stored = deviceTokens.get('rt-user');
+  const stored = getByUserId('rt-user');
   assert.strictEqual(stored.token, 'fcm-token-1');
   assert.ok(stored.updatedAt instanceof Date || stored.updatedAt);
 });
@@ -174,6 +200,98 @@ test('re-registering replaces the stored token (upsert, one doc per user)', asyn
   );
   assert.strictEqual(res.status, 200);
 
-  const stored = deviceTokens.get('rt-user-2');
+  const stored = getByUserId('rt-user-2');
   assert.strictEqual(stored.token, 'fcm-token-new');
+});
+
+// ── Multi-device registration (deviceId) ──────────────────────────────────────
+
+test('two devices for the same participant are kept as separate docs when each sends a deviceId', async () => {
+  const user = makeToken(['user'], 'rt-user-multi');
+  await post(
+    RT,
+    {
+      token: 'fcm-phone',
+      deviceId: 'device-a',
+      platform: 'ios',
+      model: 'iPhone16,1',
+      appVersion: '1.1.1+5',
+    },
+    user
+  );
+  await post(
+    RT,
+    {
+      token: 'fcm-tablet',
+      deviceId: 'device-b',
+      platform: 'android',
+      model: 'Pixel Tablet',
+      appVersion: '1.1.1+5',
+    },
+    user
+  );
+
+  const docs = deviceTokens.filter((d) => d.userId === 'rt-user-multi');
+  assert.strictEqual(docs.length, 2, 'each deviceId gets its own doc');
+  const byDeviceId = Object.fromEntries(docs.map((d) => [d.deviceId, d]));
+  assert.strictEqual(byDeviceId['device-a'].token, 'fcm-phone');
+  assert.strictEqual(byDeviceId['device-a'].model, 'iPhone16,1');
+  assert.strictEqual(byDeviceId['device-b'].token, 'fcm-tablet');
+  assert.strictEqual(byDeviceId['device-b'].model, 'Pixel Tablet');
+});
+
+test('re-registering the same deviceId updates that device in place, not a new doc', async () => {
+  const user = makeToken(['user'], 'rt-user-samedevice');
+  await post(
+    RT,
+    { token: 'fcm-v1', deviceId: 'device-x', appVersion: '1.1.0+4' },
+    user
+  );
+  await post(
+    RT,
+    { token: 'fcm-v2', deviceId: 'device-x', appVersion: '1.1.1+5' },
+    user
+  );
+
+  const docs = deviceTokens.filter((d) => d.userId === 'rt-user-samedevice');
+  assert.strictEqual(docs.length, 1);
+  assert.strictEqual(docs[0].token, 'fcm-v2');
+  assert.strictEqual(docs[0].appVersion, '1.1.1+5');
+});
+
+test("a deviceId registration supersedes and removes an older build's legacy no-deviceId doc for the same user", async () => {
+  const user = makeToken(['user'], 'rt-user-upgrading');
+  // Simulates an app build that predates device tracking.
+  await post(RT, { token: 'fcm-legacy' }, user);
+  assert.strictEqual(
+    deviceTokens.filter((d) => d.userId === 'rt-user-upgrading').length,
+    1
+  );
+
+  // Same participant, now on an updated build that sends a deviceId.
+  await post(
+    RT,
+    { token: 'fcm-legacy', deviceId: 'device-y', platform: 'android' },
+    user
+  );
+
+  const docs = deviceTokens.filter((d) => d.userId === 'rt-user-upgrading');
+  assert.strictEqual(
+    docs.length,
+    1,
+    'the legacy no-deviceId doc should be removed, leaving only the new device-scoped one'
+  );
+  assert.strictEqual(docs[0].deviceId, 'device-y');
+});
+
+test('deviceId is optional — omitting it keeps the original single-doc-per-user fallback', async () => {
+  const res = await post(
+    RT,
+    { token: 'fcm-no-device-id' },
+    makeToken(['user'], 'rt-user-nodeviceid')
+  );
+  assert.strictEqual(res.status, 200);
+  const stored = getByUserId('rt-user-nodeviceid');
+  assert.strictEqual(stored.token, 'fcm-no-device-id');
+  assert.strictEqual('deviceId' in stored, false);
 });

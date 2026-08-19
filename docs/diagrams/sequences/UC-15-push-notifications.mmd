@@ -8,10 +8,11 @@ sequenceDiagram
 
     F->>FCM: Request device token (firebase_messaging)
     FCM-->>F: fcmToken
-    F->>B: POST /api/v1/participant/register-token {fcmToken}
-    B->>M: Store token for userId
+    F->>F: Best-effort gather deviceId/platform/model<br/>(device_info_plus) + appVersion (packageInfoProvider)<br/>— never blocks registration if this fails
+    F->>B: POST /api/v1/participant/register-token<br/>{token, deviceId?, platform?, model?, appVersion?}
+    B->>M: Upsert deviceTokens doc by {userId, deviceId} —<br/>one document per device, so a participant with<br/>several devices gets several docs (no deviceId,<br/>e.g. an app build predating device tracking:<br/>falls back to one doc per userId, as before)
     B-->>F: 200 registered
-    Note over B,FCM: Later: researcher campaign (UC-24) targets this user, or the<br/>habit-creation check-in push fires (data: {type: "srhi", screen: "habits",<br/>intentionId}, see UC-13/UC-35)
+    Note over B,FCM: Admin Participants page's Devices column (UC-18) reads these deviceTokens<br/>docs via GET /admin/devices — the only place device model/platform/app<br/>version is known, since Keycloak sessions carry none of it. Later: a<br/>researcher campaign (UC-24) targets this user, or the habit-creation<br/>check-in push fires (data: {type: "srhi", screen: "habits", intentionId},<br/>see UC-13/UC-35)
     B->>FCM: send(message, tokens, data: {screen})
     FCM-->>F: Push notification delivered
     F->>F: routeFromNotificationPayload(data): screen "habits" -> /habits<br/>(My Habits), "questionnaire" -> /settings/profile (My Profile),<br/>"explore" -> /explore, default -> /share

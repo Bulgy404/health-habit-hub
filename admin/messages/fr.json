@@ -148,21 +148,8 @@
     "totalPageInfo": "{total} au total · page {page} sur {totalPages}"
   },
   "devices": {
-    "title": "Appareils",
-    "subtitle": "Sessions d'appareils actives. Révoquez une session pour déconnecter cet appareil.",
-    "participant": "Participant",
-    "device": "Appareil",
-    "appVersion": "Version de l'application",
-    "lastSeen": "Dernière connexion",
     "revoke": "Révoquer",
-    "revokingEllipsis": "Révocation…",
-    "noSessions": "Aucune session d'appareil active.",
-    "confirmRevoke": "Révoquer cette session d'appareil ? L'utilisateur sera déconnecté.",
-    "loadFailed": "Échec du chargement des sessions",
-    "revokeFailed": "Échec de la révocation de la session",
-    "totalPageInfo": "{total} au total · page {page} sur {totalPages}",
-    "noMatchingParticipant": "Aucun participant correspondant",
-    "deleted": "Supprimé"
+    "revokingEllipsis": "Révocation…"
   },
   "backups": {
     "title": "Sauvegardes",
@@ -344,6 +331,9 @@
     "deviceCount": "{count} appareil(s)",
     "confirmRevokeAccess": "Révoquer l'accès de {username} sur {count} appareil(s) ? Cette personne sera déconnectée et devra se reconnecter.",
     "revokeAccessFailed": "Échec de la révocation d'un ou plusieurs appareils",
+    "deviceListTitle": "Appareils — {name}",
+    "unknownDevice": "Appareil inconnu",
+    "appVersionLabel": "v{version}",
     "newParticipantTitle": "Nouveau participant",
     "creatingEllipsis": "Création…",
     "participantCreated": "Participant créé",

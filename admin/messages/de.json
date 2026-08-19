@@ -148,21 +148,8 @@
     "approveFailed": "Kommentar konnte nicht genehmigt werden"
   },
   "devices": {
-    "title": "Geräte",
-    "subtitle": "Aktive Gerätesitzungen. Widerrufe eine Sitzung, um dieses Gerät abzumelden.",
-    "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
-    "participant": "Teilnehmende Person",
-    "device": "Gerät",
-    "appVersion": "App-Version",
-    "lastSeen": "Zuletzt aktiv",
     "revoke": "Widerrufen",
-    "revokingEllipsis": "Wird widerrufen…",
-    "noSessions": "Keine aktiven Gerätesitzungen.",
-    "confirmRevoke": "Diese Gerätesitzung widerrufen? Die Person wird abgemeldet.",
-    "loadFailed": "Sitzungen konnten nicht geladen werden",
-    "revokeFailed": "Sitzung konnte nicht widerrufen werden",
-    "noMatchingParticipant": "Keine passende teilnehmende Person",
-    "deleted": "Gelöscht"
+    "revokingEllipsis": "Wird widerrufen…"
   },
   "backups": {
     "title": "Backups",
@@ -345,6 +332,9 @@
     "deviceCount": "{count} Gerät(e)",
     "confirmRevokeAccess": "Zugriff für {username} auf {count} Gerät(en) widerrufen? Die Person wird abgemeldet und muss sich erneut anmelden.",
     "revokeAccessFailed": "Ein oder mehrere Geräte konnten nicht widerrufen werden",
+    "deviceListTitle": "Geräte — {name}",
+    "unknownDevice": "Unbekanntes Gerät",
+    "appVersionLabel": "v{version}",
     "newParticipantTitle": "Neue teilnehmende Person",
     "creatingEllipsis": "Wird erstellt…",
     "participantCreated": "Teilnehmende Person erstellt",

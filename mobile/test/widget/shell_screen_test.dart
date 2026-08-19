@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
@@ -90,6 +91,19 @@ Widget _buildSubject(
       habitReminderSyncProvider.overrideWithValue(() async {}),
       recommenderEnabledProvider.overrideWithValue(recommenderEnabled),
       habitCreationEnabledProvider.overrideWithValue(habitCreationEnabled),
+      // Resolved synchronously in tests — without this, ShellScreen's
+      // startup mic-permission check (`ref.read(habitConfigProvider.future)`)
+      // triggers a real, unmocked network fetch whose dio timeout timer
+      // outlives the test's widget tree teardown, tripping flutter_test's
+      // "Timer is still pending" assertion.
+      habitConfigProvider.overrideWith(
+        (ref) async => const HabitConfig(
+          cueCount: 'multi',
+          cueSource: 'self_selected',
+          behaviorOptions: [],
+          srhiItems: [],
+        ),
+      ),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -199,6 +213,14 @@ void main() {
           habitReminderSyncProvider.overrideWithValue(() async {}),
           recommenderEnabledProvider.overrideWithValue(true),
           habitCreationEnabledProvider.overrideWithValue(true),
+          habitConfigProvider.overrideWith(
+            (ref) async => const HabitConfig(
+              cueCount: 'multi',
+              cueSource: 'self_selected',
+              behaviorOptions: [],
+              srhiItems: [],
+            ),
+          ),
         ],
         child: MaterialApp.router(
           routerConfig: router,

@@ -1,5 +1,8 @@
 %% UC-18 — Manage participants
-%% Devices/sessions merged into this page: admin/src/app/(admin)/participants/page.tsx
+%% Devices merged into this page: admin/src/app/(admin)/participants/page.tsx
+%% Two separate data sources feed this one page — never conflated:
+%%   sessions (Keycloak logins, GET/DELETE /admin/sessions) drives Revoke Access only
+%%   devices  (deviceTokens registrations, GET /admin/devices) drives the Devices column/modal only
 sequenceDiagram
     autonumber
     actor R as Researcher / Admin
@@ -13,12 +16,22 @@ sequenceDiagram
     B->>M: find(participants, {deletedAt: null}) + enrollment join
     M-->>B: participant list + progress
     B-->>AP: participants
-    AP->>B: GET /api/v1/admin/sessions (paginated)
-    B->>KC: list active sessions
-    KC-->>B: sessions
-    B-->>AP: sessions
-    AP->>AP: group sessions by participantId (== Keycloak sub == Participant.id)<br/>render as a "Devices" column — a participant may have several
-    R->>AP: Create / edit / soft-delete participant / revoke device access
+
+    par Sessions (for Revoke Access)
+        AP->>B: GET /api/v1/admin/sessions (paginated)
+        B->>KC: list active sessions
+        KC-->>B: sessions
+        B-->>AP: sessions
+        AP->>AP: group sessions by participantId (== Keycloak sub == Participant.id)<br/>used only to enable/drive the Revoke Access action below
+    and Devices (for the Devices column)
+        AP->>B: GET /api/v1/admin/devices (paginated)
+        B->>M: find(deviceTokens, {}) + participant cross-reference by userId
+        M-->>B: device docs {deviceId, platform, model, appVersion, updatedAt}
+        B-->>AP: devices
+        AP->>AP: group devices by userId (== Participant.id)<br/>render as a clickable "Devices" column — a participant may have several
+    end
+
+    R->>AP: Create / edit / soft-delete participant / view devices / revoke access
     alt create
         AP->>B: POST /api/v1/admin/participants
         B->>KC: Create Keycloak user (role user, group attribute)
@@ -27,12 +40,14 @@ sequenceDiagram
         AP->>B: DELETE /api/v1/admin/participants/:id
         B->>M: $set {deletedAt: now}
         B->>KC: Disable Keycloak user
-    else revoke access (one participant, possibly several devices)
+    else view devices
+        R->>AP: Click a participant's Devices badge
+        AP->>AP: open modal listing that participant's devices<br/>(platform, model, app version, last seen — no API call, already loaded)
+    else revoke access (one participant, possibly several sessions)
+        Note over AP,KC: Independent of the Devices column above — revokes<br/>Keycloak login sessions, not device registrations
         loop each session belonging to this participant
             AP->>B: DELETE /api/v1/admin/sessions/:id
             B->>KC: revoke session
         end
     end
     B-->>AP: 200 / 201
-
-    Note over AP: Sessions with no matching participant record<br/>(orphaned Keycloak sessions) aren't shown here —<br/>see the standalone Devices page instead

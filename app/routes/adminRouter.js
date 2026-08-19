@@ -11,6 +11,7 @@ import {
   approveComment,
 } from '../db/habitQueries.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
+import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
 import {
   getHabitsFeed,
   buildHabitsCSV,
@@ -891,6 +892,73 @@ export function createAdminRouter({
         limit,
         sessions,
       });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/devices — registered participant devices (deviceTokens
+  // collection), distinct from /sessions above (Keycloak login sessions).
+  // A participant can have several: one deviceTokens doc per physical
+  // device, each carrying that device's platform/model/appVersion — see
+  // participantRouter.js's POST /register-token.
+  router.get('/devices', async (req, res) => {
+    try {
+      const database = await getDb();
+      const collection = database.collection(COLLECTION_DEVICE_TOKENS);
+
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(
+        200,
+        Math.max(1, parseInt(req.query.limit, 10) || 100)
+      );
+      const skip = (page - 1) * limit;
+
+      const [total, docs] = await Promise.all([
+        collection.countDocuments({}),
+        collection
+          .find({})
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+      ]);
+
+      // Same participant cross-reference pattern as /sessions above — so an
+      // admin sees who a device belongs to instead of a raw Keycloak sub.
+      const userIds = [...new Set(docs.map((d) => d.userId).filter(Boolean))];
+      const participantsByUserId = new Map();
+      if (userIds.length > 0) {
+        const participantDocs = await database
+          .collection('participants')
+          .find({ userId: { $in: userIds } })
+          .project({ userId: 1, username: 1, deletedAt: 1 })
+          .toArray();
+        for (const doc of participantDocs)
+          participantsByUserId.set(doc.userId, doc);
+      }
+
+      const devices = docs.map((d) => {
+        const participant = participantsByUserId.get(d.userId);
+        return {
+          id: d._id.toString(),
+          userId: d.userId,
+          deviceId: d.deviceId ?? null,
+          platform: d.platform ?? null,
+          model: d.model ?? null,
+          appVersion: d.appVersion ?? null,
+          updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : null,
+          username: participant?.username ?? null,
+          participantStatus: !participant
+            ? 'no_matching_participant'
+            : participant.deletedAt
+              ? 'deleted'
+              : 'active',
+        };
+      });
+
+      res.json({ total, page, limit, devices });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

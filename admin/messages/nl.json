@@ -148,21 +148,8 @@
     "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}"
   },
   "devices": {
-    "title": "Apparaten",
-    "subtitle": "Actieve apparaatsessies. Trek een sessie in om dat apparaat af te melden.",
-    "participant": "Deelnemer",
-    "device": "Apparaat",
-    "appVersion": "App-versie",
-    "lastSeen": "Laatst actief",
     "revoke": "Intrekken",
-    "revokingEllipsis": "Bezig met intrekken…",
-    "noSessions": "Geen actieve apparaatsessies.",
-    "confirmRevoke": "Deze apparaatsessie intrekken? De gebruiker wordt afgemeld.",
-    "loadFailed": "Sessies konden niet worden geladen",
-    "revokeFailed": "Sessie kon niet worden ingetrokken",
-    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}",
-    "noMatchingParticipant": "Geen bijbehorende deelnemer",
-    "deleted": "Verwijderd"
+    "revokingEllipsis": "Bezig met intrekken…"
   },
   "backups": {
     "title": "Back-ups",
@@ -344,6 +331,9 @@
     "deviceCount": "{count} apparaat/apparaten",
     "confirmRevokeAccess": "Toegang voor {username} op {count} apparaat/apparaten intrekken? Deze persoon wordt uitgelogd en moet opnieuw inloggen.",
     "revokeAccessFailed": "Intrekken van een of meer apparaten is mislukt",
+    "deviceListTitle": "Apparaten — {name}",
+    "unknownDevice": "Onbekend apparaat",
+    "appVersionLabel": "v{version}",
     "newParticipantTitle": "Nieuwe deelnemer",
     "creatingEllipsis": "Bezig met aanmaken…",
     "participantCreated": "Deelnemer aangemaakt",

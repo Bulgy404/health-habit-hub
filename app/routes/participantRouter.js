@@ -169,6 +169,18 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
    *               token:
    *                 type: string
    *                 description: Firebase Cloud Messaging device token
+   *               deviceId:
+   *                 type: string
+   *                 description: Stable per-device identifier (identifierForVendor on iOS, ANDROID_ID on Android). When present, this device's registration is kept separate from the participant's other devices instead of overwriting them.
+   *               platform:
+   *                 type: string
+   *                 description: e.g. "ios", "android", "web"
+   *               model:
+   *                 type: string
+   *                 description: Device model string
+   *               appVersion:
+   *                 type: string
+   *                 description: "App version, e.g. 1.1.1+5"
    *     responses:
    *       200:
    *         description: Token registered or updated
@@ -188,23 +200,48 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
       const userId = req.user?.sub;
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-      const { token } = req.body;
+      const { token, deviceId, platform, model, appVersion } = req.body;
       if (!token || typeof token !== 'string') {
         return res.status(400).json({ error: 'token is required' });
       }
 
+      // A deviceId lets this participant register several devices, each
+      // keeping its own doc (see notificationService.js / notificationCampaignService.js,
+      // which already query deviceTokens with .find({userId}) — i.e. already
+      // tolerate multiple docs per user, so no push-sending changes needed
+      // here). Without one (older app builds that predate device tracking),
+      // fall back to the original single-doc-per-user upsert so those
+      // installs keep working unchanged.
+      const hasDeviceId = typeof deviceId === 'string' && deviceId.length > 0;
+      const filter = hasDeviceId
+        ? { userId: String(userId), deviceId: String(deviceId) }
+        : { userId: String(userId) };
+
+      const setFields = {
+        userId: String(userId),
+        token: String(token),
+        updatedAt: new Date(),
+      };
+      if (hasDeviceId) setFields.deviceId = String(deviceId);
+      if (typeof platform === 'string') setFields.platform = platform;
+      if (typeof model === 'string') setFields.model = model;
+      if (typeof appVersion === 'string') setFields.appVersion = appVersion;
+
       const database = await getDb();
-      await database.collection(COLLECTION_DEVICE_TOKENS).updateOne(
-        { userId: String(userId) },
-        {
-          $set: {
-            userId: String(userId),
-            token: String(token),
-            updatedAt: new Date(),
-          },
-        },
-        { upsert: true }
-      );
+      const collection = database.collection(COLLECTION_DEVICE_TOKENS);
+      await collection.updateOne(filter, { $set: setFields }, { upsert: true });
+      if (hasDeviceId) {
+        // An app build older than device tracking would have left a single
+        // legacy doc keyed only by {userId} (no deviceId field). Once this
+        // same participant registers with a deviceId (i.e. updated to a
+        // build that supports it), that legacy doc is superseded — remove
+        // it so it doesn't linger as a stale, unidentifiable "device" and
+        // double up push sends to what's really the same device.
+        await collection.deleteOne({
+          userId: String(userId),
+          deviceId: { $exists: false },
+        });
+      }
 
       res.json({ ok: true });
     } catch (err) {

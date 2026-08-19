@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:record/record.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
@@ -139,6 +140,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkConsentVersion();
       _initNotifications();
+      _initMicPermissionIfVoiceEnabled();
       _syncHabitReminders();
       _watchConnectivity();
       // _watchConnectivity only fires on a connectivity *change*, so a cold
@@ -296,6 +298,28 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
           .routeForMessage(message);
       if (route != null) context.go(route);
     });
+  }
+
+  /// When voice is this study/group's donation input mode, requests
+  /// microphone permission here — alongside notification permission above —
+  /// instead of the first time the participant actually holds the record
+  /// button in the donate form (`DonateFormWidget._startRecording`). Bundling
+  /// both prompts at first app entry means donating by voice later never
+  /// interrupts the flow with a permission dialog.
+  Future<void> _initMicPermissionIfVoiceEnabled() async {
+    try {
+      final config = await ref.read(habitConfigProvider.future);
+      if (config.donationInputMode != 'voice') return;
+      final recorder = AudioRecorder();
+      try {
+        await recorder.hasPermission();
+      } finally {
+        await recorder.dispose();
+      }
+    } catch (_) {
+      // Config fetch failed, or the recorder plugin is unavailable — the
+      // donate form's own lazy hasPermission() check covers this later.
+    }
   }
 
   DateTime? _lastSessionExpiredPromptAt;

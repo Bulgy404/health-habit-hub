@@ -5,6 +5,7 @@ import path from 'node:path';
 import { ObjectId } from 'mongodb';
 import { isValidUuid } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
+import { makeGetDb } from '../../utils/getDb.js';
 
 const log = logger.child({ module: 'habitDonationsRouter' });
 
@@ -33,9 +34,7 @@ export function createHabitDonationsRouter({
     process.env.AUDIO_STORAGE_DIR ||
     '/data/audio-recordings';
 
-  async function getDb() {
-    return db;
-  }
+  const getDb = makeGetDb(db);
 
   /**
    * Fetches a Habit node's donation-form self-report answers from Neo4j.

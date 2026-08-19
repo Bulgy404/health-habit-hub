@@ -37,6 +37,16 @@ interface DeviceSession {
   lastSeen: string | null;
 }
 
+interface DeviceInfo {
+  id: string;
+  userId: string;
+  deviceId: string | null;
+  platform: string | null;
+  model: string | null;
+  appVersion: string | null;
+  updatedAt: string | null;
+}
+
 interface QuestionnaireWindow {
   questionnaireSlug: string;
   occurrence: number;
@@ -112,6 +122,19 @@ function normaliseSession(raw: unknown): DeviceSession {
   };
 }
 
+function normaliseDevice(raw: unknown): DeviceInfo {
+  const j = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: String(j.id ?? ""),
+    userId: String(j.userId ?? ""),
+    deviceId: j.deviceId ? String(j.deviceId) : null,
+    platform: j.platform ? String(j.platform) : null,
+    model: j.model ? String(j.model) : null,
+    appVersion: j.appVersion ? String(j.appVersion) : null,
+    updatedAt: j.updatedAt ? String(j.updatedAt) : null,
+  };
+}
+
 function fmt(ts: string | null, withTime = false): string {
   if (!ts) return "—";
   const d = new Date(ts);
@@ -149,6 +172,18 @@ export default function ParticipantsPage() {
   const [revokingParticipantId, setRevokingParticipantId] = useState<
     string | null
   >(null);
+
+  // Real device metadata (platform/model/app version), grouped by userId —
+  // separate from sessionsByParticipant above, which is Keycloak login
+  // sessions and drives Revoke Access only. Devices come from actual app
+  // registrations (GET /admin/devices) and are purely informational: this is
+  // what the Devices column displays and what the device-list modal shows.
+  const [devicesByParticipant, setDevicesByParticipant] = useState<
+    Map<string, DeviceInfo[]>
+  >(new Map());
+  const [deviceListFor, setDeviceListFor] = useState<Participant | null>(
+    null
+  );
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -268,6 +303,43 @@ export default function ParticipantsPage() {
   useEffect(() => {
     loadSessions();
   }, [loadSessions]);
+
+  // Same walk-every-page approach as loadSessions above — GET /admin/devices
+  // has the same 200/page cap with no server-side "all participants" option.
+  const loadDevices = useCallback(async () => {
+    if (!token) return;
+    try {
+      const grouped = new Map<string, DeviceInfo[]>();
+      const DEVICES_PAGE_SIZE = 200;
+      let devicesPage = 1;
+      let fetched = 0;
+      let devicesTotal = Infinity;
+      while (fetched < devicesTotal) {
+        const data = await apiFetch(
+          apiUrl(`/admin/devices?page=${devicesPage}&limit=${DEVICES_PAGE_SIZE}`),
+          token
+        );
+        const list = ((data?.devices ?? []) as unknown[]).map(normaliseDevice);
+        for (const d of list) {
+          if (!d.userId) continue;
+          const existing = grouped.get(d.userId) ?? [];
+          existing.push(d);
+          grouped.set(d.userId, existing);
+        }
+        fetched += list.length;
+        devicesTotal = Number(data?.total ?? list.length);
+        devicesPage += 1;
+        if (list.length === 0) break; // safety net against an unexpected infinite loop
+      }
+      setDevicesByParticipant(grouped);
+    } catch {
+      // Non-critical — the Devices column just falls back to "no devices".
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadDevices();
+  }, [loadDevices]);
 
   async function handleCreate() {
     if (!token) return;
@@ -703,27 +775,27 @@ export default function ParticipantsPage() {
                   </td>
                   <td>
                     {(() => {
-                      const sessions = sessionsByParticipant.get(p.id) ?? [];
-                      if (sessions.length === 0) {
+                      const devices = devicesByParticipant.get(p.id) ?? [];
+                      if (devices.length === 0) {
                         return <span className={styles.muted}>{t("noDevices")}</span>;
                       }
                       return (
-                        <div>
+                        <button
+                          type="button"
+                          className={styles.clickableRow}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            padding: 0,
+                            font: "inherit",
+                            textAlign: "left",
+                          }}
+                          onClick={() => setDeviceListFor(p)}
+                        >
                           <span className={styles.badge}>
-                            {t("deviceCount", { count: sessions.length })}
+                            {t("deviceCount", { count: devices.length })}
                           </span>
-                          <div style={{ marginTop: "0.25rem" }}>
-                            {sessions.map((s) => (
-                              <div
-                                key={s.id}
-                                className={styles.muted}
-                                style={{ fontSize: "0.85em" }}
-                              >
-                                {s.deviceType} · {fmt(s.lastSeen, true)}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                        </button>
                       );
                     })()}
                   </td>
@@ -1033,6 +1105,56 @@ export default function ParticipantsPage() {
                   setPhraseFor(null);
                   setPhraseCopied(false);
                 }}
+              >
+                {tc("close")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Device list modal ────────────────────────────────────── */}
+      {deviceListFor && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setDeviceListFor(null)}
+        >
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>
+              {t("deviceListTitle", {
+                name: deviceListFor.username || deviceListFor.id,
+              })}
+            </h2>
+            {(devicesByParticipant.get(deviceListFor.id) ?? []).length === 0 ? (
+              <p className={styles.muted} style={{ marginTop: "1rem" }}>
+                {t("noDevices")}
+              </p>
+            ) : (
+              <div className={styles.credBox} style={{ marginTop: "1rem" }}>
+                {(devicesByParticipant.get(deviceListFor.id) ?? []).map((d) => (
+                  <div key={d.id} className={styles.credRow}>
+                    <span>
+                      {d.model ?? t("unknownDevice")}
+                      {d.platform && (
+                        <span className={styles.muted} style={{ marginLeft: 8 }}>
+                          {d.platform}
+                        </span>
+                      )}
+                      {d.appVersion && (
+                        <span className={styles.muted} style={{ marginLeft: 8 }}>
+                          {t("appVersionLabel", { version: d.appVersion })}
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.muted}>{fmt(d.updatedAt, true)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={styles.formActions}>
+              <button
+                className={styles.saveButton}
+                onClick={() => setDeviceListFor(null)}
               >
                 {tc("close")}
               </button>

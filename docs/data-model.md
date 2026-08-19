@@ -667,6 +667,7 @@ collections with no direct foreign-key relationships shown here).
 | `admin_settings`              | Key-value platform configuration                                                                                                                                                            | No                           |
 | `recommendations_log`         | Accepted/dismissed recommendation events (legacy)                                                                                                                                           | No                           |
 | `users`                       | Per-user preferences (preferredLanguage)                                                                                                                                                    | No                           |
+| `deviceTokens`                | FCM push-token registrations — one document per participant device                                                                                                                          | No                           |
 | `questionnaires`              | Questionnaire definitions (slug, title, questions)                                                                                                                                          | No                           |
 | `form_responses`              | Questionnaire form submissions (answers) from participants                                                                                                                                  | No                           |
 | `studies`                     | Research studies: groups, feature toggles, end date + end-of-study notification                                                                                                             | Yes (`isActive`/`deletedAt`) |
@@ -957,6 +958,52 @@ Per-user preferences. Created/upserted by `PUT /api/v1/users/me`. If no record e
   "_id": { "$oid": "65a1b2c3d4e5f6a7b8c9d0f1" },
   "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "preferredLanguage": "de"
+}
+```
+
+---
+
+#### `deviceTokens`
+
+FCM push-token registration, one document per participant device. Written by
+`POST /api/v1/participant/register-token`, read by `notificationService.js`
+and `notificationCampaignService.js` (both query with `.find({userId})`, not
+`findOne`, so they've always tolerated multiple documents per participant —
+only the write side needed to change to actually produce more than one).
+Also the source for the admin Participants page's Devices column/modal, via
+`GET /api/v1/admin/devices`.
+
+A `deviceId`-keyed document (current app builds) is scoped to one physical
+device and upserted by `{userId, deviceId}`, so a participant with several
+devices gets one document each. A document with no `deviceId` (registered by
+an app build that predates device tracking) is upserted by `{userId}` alone —
+the original one-document-per-participant behavior — and gets deleted the
+next time that same participant registers with a `deviceId` (i.e. once their
+app updates), so it never lingers as a stale, unidentifiable device.
+
+| Field         | BSON Type      | Required | Description                                                                                                  |
+| ------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `_id`         | ObjectId       | Auto     | MongoDB document ID                                                                                             |
+| `userId`      | String         | Yes      | Keycloak `sub` of the participant this device belongs to                                                        |
+| `deviceId`    | String \| null | No       | Stable per-device identifier — `identifierForVendor` on iOS, `ANDROID_ID` on Android. Absent on legacy documents |
+| `token`       | String         | Yes      | Current FCM push token for this device                                                                          |
+| `platform`    | String \| null | No       | `"ios"`, `"android"`, or `"web"` — absent on legacy documents                                                   |
+| `model`       | String \| null | No       | Device model string. iOS: raw hardware identifier from `utsname.machine` (e.g. `"iPhone16,1"` — no human-readable name is available from the plugin without an external lookup table). Android: `AndroidDeviceInfo.model` (already human-readable, e.g. `"Pixel 8"`) |
+| `appVersion`  | String \| null | No       | `"<version>+<buildNumber>"`, e.g. `"1.1.1+5"` — matches the format used in `CHANGELOG.md`                       |
+| `updatedAt`   | Date           | Yes      | Last time this device (re-)registered — drives the admin Devices modal's "last seen" and push-target freshness  |
+
+**Example document:**
+
+```json
+{
+  "_id": { "$oid": "65a1b2c3d4e5f6a7b8c9d0f2" },
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "deviceId": "ABCD1234-VENDOR-ID",
+  "token": "fcm-token-abc123",
+  "platform": "ios",
+  "model": "iPhone16,1",
+  "appVersion": "1.1.1+5",
+  "updatedAt": { "$date": "2026-08-19T11:34:02.398Z" }
 }
 ```
 

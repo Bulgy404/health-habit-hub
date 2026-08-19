@@ -183,7 +183,7 @@ health-habit-hub/
 │   │   │   ├── (admin)/            # Admin-only page group (auth-gated): participants, studies,
 │   │   │   │                       # questionnaires, cue-pools, comments, restore-attempts, backups,
 │   │   │   │                       # audit-log, analytics, insights, knowledge-base, profile-fields,
-│   │   │   │                       # devices, donations, settings, system, team, help
+│   │   │   │                       # donations, settings, system, team, help
 │   │   │   ├── api/                # API route handlers (NextAuth, etc.)
 │   │   │   ├── access-denied/      # Shown when role check fails
 │   │   │   ├── layout.tsx          # Root layout
@@ -563,7 +563,7 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 
 ### Features
 
-- **Participant management** — list, create, and manage study participants; each row also shows that participant's active device sessions (a participant can have several) with a "Revoke Access" action revoking all of them at once. The standalone Devices page still exists separately — it's the only place that surfaces sessions with no matching participant record
+- **Participant management** — list, create, and manage study participants; each row shows that participant's registered devices (a participant can have several) — click to see each device's platform, model, and app version. Separately, a "Revoke Access" action force-signs-out the participant everywhere by revoking every Keycloak session they have — independent of the device list, since a device registration and a login session aren't reliably the same thing
 - **Donation review** — click a habit donation to see its voice transcript, play back or download the recorded audio, its donation-form self-report answers, and any linked post-donation questionnaire response
 - **Questionnaire authoring** — create and publish questionnaires
 - **Study configuration** — manage study groups, per-group cue config, and enrollment codes

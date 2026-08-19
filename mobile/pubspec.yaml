@@ -37,6 +37,10 @@ dependencies:
   # access natively — no separate permission_handler dependency needed.
   record: ^7.1.1
   path_provider: ^2.1.5
+  # Device model/platform, sent alongside the FCM token at registration so
+  # the admin portal can show a participant's actual devices instead of an
+  # anonymous login session.
+  device_info_plus: ^13.2.0
 
 dev_dependencies:
   flutter_test:

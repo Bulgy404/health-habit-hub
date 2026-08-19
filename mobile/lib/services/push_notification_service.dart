@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../providers/package_info_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Background message handler — must be a top-level function.
@@ -126,10 +130,15 @@ Future<void> showForegroundNotification(RemoteMessage message) async {
 ///
 /// Inject with [Riverpod] via [pushNotificationServiceProvider].
 class PushNotificationService {
-  /// Creates a [PushNotificationService] using [dio].
-  PushNotificationService({required Dio dio}) : _dio = dio;
+  /// Creates a [PushNotificationService] using [dio]. [ref] is kept only to
+  /// read [packageInfoProvider] at registration time (reusing the app's
+  /// single [PackageInfo] fetch rather than requesting it again here).
+  PushNotificationService({required Dio dio, required Ref ref})
+    : _dio = dio,
+      _ref = ref;
 
   final Dio _dio;
+  final Ref _ref;
 
   /// Initialises Firebase Messaging:
   /// 1. Requests notification permission (iOS prompt, Android 13+ prompt).
@@ -178,12 +187,55 @@ class PushNotificationService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
-  /// POSTs the [token] to `POST /api/v1/participant/register-token`.
+  /// POSTs the [token] to `POST /api/v1/participant/register-token`, along
+  /// with this device's id/platform/model and the app version — so the
+  /// admin portal can show a participant's actual devices instead of just
+  /// an anonymous Keycloak login session. Device info gathering is
+  /// best-effort: if it fails for any reason (unsupported platform, plugin
+  /// error), token registration still proceeds with just the token, since
+  /// push delivery must never depend on this.
   Future<void> _registerToken(String token) async {
+    final deviceInfo = await _tryGatherDeviceInfo();
     await _dio.post<void>(
       '${AppConfig.apiBaseUrl}/participant/register-token',
-      data: {'token': token},
+      data: {'token': token, ...?deviceInfo},
     );
+  }
+
+  /// Returns `{deviceId, platform, model, appVersion}` or `null` if
+  /// gathering any of it fails.
+  Future<Map<String, String>?> _tryGatherDeviceInfo() async {
+    try {
+      final packageInfo = await _ref.read(packageInfoProvider.future);
+      final appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      final deviceInfoPlugin = DeviceInfoPlugin();
+
+      if (Platform.isIOS) {
+        final info = await deviceInfoPlugin.iosInfo;
+        return {
+          'deviceId': info.identifierForVendor ?? '',
+          'platform': 'ios',
+          // No human-readable model name is available from this plugin
+          // without an external lookup table (e.g. "iPhone16,1" rather than
+          // "iPhone 15 Pro") — utsname.machine is the raw hardware
+          // identifier, used as-is.
+          'model': info.utsname.machine,
+          'appVersion': appVersion,
+        };
+      }
+      if (Platform.isAndroid) {
+        final info = await deviceInfoPlugin.androidInfo;
+        return {
+          'deviceId': info.id,
+          'platform': 'android',
+          'model': info.model,
+          'appVersion': appVersion,
+        };
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Returns the GoRouter route extracted from [message.data], or `null` if
@@ -200,5 +252,5 @@ class PushNotificationService {
 
 /// Provides the singleton [PushNotificationService] instance.
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
-  return PushNotificationService(dio: ref.watch(dioProvider));
+  return PushNotificationService(dio: ref.watch(dioProvider), ref: ref);
 });

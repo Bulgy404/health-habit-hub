@@ -16,6 +16,7 @@ sequenceDiagram
     participant N4 as Neo4j
 
     opt Voice input (admin-enabled: speech-only or participant's choice)
+        Note over P,F: Microphone permission was already requested at first app<br/>launch (see shell startup, alongside notification permission)<br/>when this study/group has voice input enabled — so recording<br/>here does not itself trigger a first-time permission prompt.
         P->>F: Record spoken habit sentence
         F->>B: POST /api/v1/habits/share/transcribe (multipart audio)
         B->>AI: POST /llm/transcribe-audio

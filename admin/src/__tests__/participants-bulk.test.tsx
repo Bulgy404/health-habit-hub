@@ -48,6 +48,34 @@ function mockFetchImplementation() {
         }),
       } as unknown as Response);
     }
+    if (!opts?.method && url.includes("/admin/devices")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          total: 2,
+          devices: [
+            {
+              id: "d1",
+              userId: "u1",
+              deviceId: "dev-1",
+              platform: "ios",
+              model: "iPhone 15 Pro",
+              appVersion: "1.1.1+5",
+              updatedAt: "2026-01-05T00:00:00.000Z",
+            },
+            {
+              id: "d2",
+              userId: "u1",
+              deviceId: "dev-2",
+              platform: "android",
+              model: "Pixel 8",
+              appVersion: "1.1.0+4",
+              updatedAt: "2026-01-06T00:00:00.000Z",
+            },
+          ],
+        }),
+      } as unknown as Response);
+    }
     if (opts?.method === "DELETE" && url.includes("/admin/sessions/")) {
       return Promise.resolve({ ok: true, json: async () => ({ ok: true }) } as unknown as Response);
     }
@@ -146,14 +174,77 @@ describe("ParticipantsPage bulk operations", () => {
     });
   });
 
-  it("shows a device count for a participant with sessions, and revokes all of them at once", async () => {
+  it("shows a device count sourced from GET /admin/devices, independent of login sessions", async () => {
+    render(<ParticipantsPage />);
+    await screen.findByText("p-u1");
+
+    // p-u1 has two mocked devices (iPhone 15 Pro + Pixel 8); p-u2 has none.
+    expect(await screen.findByText("2 device(s)")).toBeInTheDocument();
+    expect(screen.getAllByText("No devices").length).toBeGreaterThan(0);
+  });
+
+  it("clicking the device count opens a modal listing each device's model, platform, and app version", async () => {
     const user = userEvent.setup();
     render(<ParticipantsPage />);
     await screen.findByText("p-u1");
 
-    // p-u1 has two mocked sessions (ios + android); p-u2 has none.
-    expect(await screen.findByText("2 device(s)")).toBeInTheDocument();
-    expect(screen.getAllByText("No devices").length).toBeGreaterThan(0);
+    await user.click(await screen.findByText("2 device(s)"));
+
+    expect(await screen.findByText(/iPhone 15 Pro/)).toBeInTheDocument();
+    expect(screen.getByText(/Pixel 8/)).toBeInTheDocument();
+    expect(screen.getByText("ios")).toBeInTheDocument();
+    expect(screen.getByText("android")).toBeInTheDocument();
+    expect(screen.getByText("v1.1.1+5")).toBeInTheDocument();
+    expect(screen.getByText("v1.1.0+4")).toBeInTheDocument();
+  });
+
+  it("renders a device with no captured metadata as 'Unknown device' instead of crashing", async () => {
+    global.fetch = jest.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (!opts?.method && url.includes("/admin/devices")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            total: 1,
+            devices: [
+              {
+                id: "d-legacy",
+                userId: "u1",
+                deviceId: null,
+                platform: null,
+                model: null,
+                appVersion: null,
+                updatedAt: "2026-01-02T00:00:00.000Z",
+              },
+            ],
+          }),
+        } as unknown as Response);
+      }
+      if (!opts?.method && url.includes("/admin/sessions")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ total: 0, sessions: [] }),
+        } as unknown as Response);
+      }
+      if (url.includes("/test-tools")) {
+        return Promise.resolve({ ok: true, json: async () => ({ enabled: false }) } as unknown as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ participants: [participantA, participantB], total: 2 }),
+      } as unknown as Response);
+    });
+    const user = userEvent.setup();
+    render(<ParticipantsPage />);
+    await screen.findByText("p-u1");
+
+    await user.click(await screen.findByText("1 device(s)"));
+    expect(await screen.findByText("Unknown device")).toBeInTheDocument();
+  });
+
+  it("revoke button revokes all login sessions for a participant, unaffected by device count", async () => {
+    const user = userEvent.setup();
+    render(<ParticipantsPage />);
+    await screen.findByText("p-u1");
 
     const rowU1 = screen.getByText("p-u1").closest("tr")!;
     const { getByRole } = within(rowU1);
@@ -170,13 +261,11 @@ describe("ParticipantsPage bulk operations", () => {
       );
     });
 
-    // Once revoked, the column falls back to "No devices" for that row too.
-    await waitFor(() => {
-      expect(within(rowU1).getByText("No devices")).toBeInTheDocument();
-    });
+    // Revoking sessions doesn't touch device data — the count stays as-is.
+    expect(within(rowU1).getByText("2 device(s)")).toBeInTheDocument();
   });
 
-  it("the revoke button is disabled for a participant with no devices", async () => {
+  it("the revoke button is disabled for a participant with no login sessions", async () => {
     render(<ParticipantsPage />);
     await screen.findByText("p-u2");
 

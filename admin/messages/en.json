@@ -148,21 +148,8 @@
     "approveFailed": "Failed to approve comment"
   },
   "devices": {
-    "title": "Devices",
-    "subtitle": "Active device sessions. Revoke a session to sign that device out.",
-    "totalPageInfo": "{total} total · page {page} of {totalPages}",
-    "participant": "Participant",
-    "device": "Device",
-    "appVersion": "App version",
-    "lastSeen": "Last seen",
     "revoke": "Revoke",
-    "revokingEllipsis": "Revoking…",
-    "noSessions": "No active device sessions.",
-    "confirmRevoke": "Revoke this device session? The user will be signed out.",
-    "loadFailed": "Failed to load sessions",
-    "revokeFailed": "Failed to revoke session",
-    "noMatchingParticipant": "No matching participant",
-    "deleted": "Deleted"
+    "revokingEllipsis": "Revoking…"
   },
   "backups": {
     "title": "Backups",
@@ -345,6 +332,9 @@
     "deviceCount": "{count} device(s)",
     "confirmRevokeAccess": "Revoke access for {username} on {count} device(s)? They will be signed out and must sign in again.",
     "revokeAccessFailed": "Failed to revoke one or more devices",
+    "deviceListTitle": "Devices — {name}",
+    "unknownDevice": "Unknown device",
+    "appVersionLabel": "v{version}",
     "newParticipantTitle": "New participant",
     "creatingEllipsis": "Creating…",
     "participantCreated": "Participant created",

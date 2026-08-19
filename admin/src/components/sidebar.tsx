@@ -17,7 +17,6 @@ import {
   LogOut,
   Activity,
   Users,
-  Tablet,
   Gift,
   MessageSquare,
   Server,
@@ -60,7 +59,6 @@ const NAV_SECTIONS: NavSection[] = [
     titleKey: "operations",
     items: [
       { href: "/participants", labelKey: "participants", Icon: Users, adminOnly: true },
-      { href: "/devices", labelKey: "devices", Icon: Tablet, adminOnly: true },
       { href: "/donations", labelKey: "donations", Icon: Gift, adminOnly: true },
       { href: "/comments", labelKey: "comments", Icon: MessageSquare, adminOnly: true },
     ],
