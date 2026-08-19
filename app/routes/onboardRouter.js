@@ -57,6 +57,17 @@ export function createOnboardRouter({ keycloak, db } = {}) {
       });
       await kcAdmin.assignRole(keycloakUserId || userId, ROLES.USER);
 
+      // Keycloak's user-create API never actually honours a client-supplied
+      // `id` (it always assigns its own) — `keycloakUserId` above is the
+      // real one, looked up post-creation. The Mongo participant record
+      // below must use it, not the throwaway `userId` generated locally,
+      // since `keycloakUserId` is what actually appears as `sub` in every
+      // JWT this participant authenticates with — storing the wrong one
+      // silently breaks any lookup keyed by the authenticated user's real
+      // identity (session/device matching, credential rotation, account
+      // deletion, group-targeted survey resolution, etc).
+      const realUserId = keycloakUserId || userId;
+
       // Step 2: mint a token pair server-side (confidential ROPC client —
       // the mobile app never performs this grant itself).
       const tokenResult = await mintTokenForUser({ username, password });
@@ -76,10 +87,10 @@ export function createOnboardRouter({ keycloak, db } = {}) {
       try {
         const database = await getDb();
         await database.collection('participants').updateOne(
-          { userId },
+          { userId: realUserId },
           {
             $setOnInsert: {
-              userId,
+              userId: realUserId,
               username,
               group: null,
               enrolledAt: new Date(),

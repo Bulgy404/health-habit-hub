@@ -66,9 +66,20 @@ export async function createParticipant({ db, kc }) {
   const keycloakUserId = await kc.createUser({ userId, username, password });
   await kc.assignRole(keycloakUserId || userId, 'user');
 
+  // Keycloak's user-create API never actually honours a client-supplied
+  // `id` (it always assigns its own) — `keycloakUserId` above is the real
+  // one, looked up post-creation. Everything persisted or returned from
+  // here on must use it, not the throwaway `userId` generated locally,
+  // since `keycloakUserId` is what actually appears as `sub` in every JWT
+  // this participant authenticates with — storing the wrong one silently
+  // breaks any lookup keyed by the authenticated user's real identity
+  // (session/device matching, credential rotation, account deletion,
+  // group-targeted survey resolution, etc).
+  const realUserId = keycloakUserId || userId;
+
   // Generate PDF while we still have the plaintext password
   const tokenCardPdf = await generateTokenCard(
-    userId,
+    realUserId,
     username,
     password,
     'both'
@@ -79,7 +90,7 @@ export async function createParticipant({ db, kc }) {
 
   const now = new Date();
   await db.collection('participants').insertOne({
-    userId,
+    userId: realUserId,
     username,
     passwordHash,
     tokenCardPdf,
@@ -90,9 +101,9 @@ export async function createParticipant({ db, kc }) {
   });
 
   return {
-    userId,
+    userId: realUserId,
     username,
-    tokenCardUrl: `/api/v1/admin/participants/${userId}/token-card`,
+    tokenCardUrl: `/api/v1/admin/participants/${realUserId}/token-card`,
   };
 }
 

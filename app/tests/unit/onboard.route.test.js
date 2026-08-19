@@ -47,9 +47,28 @@ before(async () => {
       };
     }
 
-    // Admin user creation
-    if (urlStr.includes('/admin/realms/') && urlStr.includes('/users')) {
+    // Admin user creation (POST) — real Keycloak never actually honours a
+    // client-supplied `id` in this payload, it always assigns its own.
+    if (
+      urlStr.includes('/admin/realms/') &&
+      urlStr.endsWith('/users') &&
+      opts?.method === 'POST'
+    ) {
       return { ok: true, status: 201, json: async () => ({}) };
+    }
+
+    // Post-creation lookup by username, used to discover Keycloak's real
+    // assigned id — deliberately distinct from whatever `id` createUser()
+    // asked for above, matching real Keycloak's actual behaviour.
+    if (
+      urlStr.includes('/admin/realms/') &&
+      urlStr.includes('/users?username=')
+    ) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [{ id: 'keycloak-real-assigned-id' }],
+      };
     }
 
     if (urlStr.includes('/admin/realms/') && urlStr.includes('/roles/')) {
@@ -155,4 +174,61 @@ test('POST /api/v1/onboard password is 32 hex characters (16 bytes)', async () =
     /^[0-9a-f]{32}$/,
     'password should be 32 hex chars (16 bytes)'
   );
+});
+
+// Minimal fake db, just enough for onboardRouter's
+// participants.updateOne({userId}, {$setOnInsert: {...}}, {upsert: true}).
+function makeFakeDb() {
+  const participants = [];
+  return {
+    docs: participants,
+    collection(name) {
+      if (name !== 'participants')
+        throw new Error(`unexpected collection ${name}`);
+      return {
+        async updateOne(filter, update) {
+          const existing = participants.find((d) => d.userId === filter.userId);
+          if (!existing) participants.push({ ...update.$setOnInsert });
+          return { acknowledged: true };
+        },
+      };
+    },
+  };
+}
+
+test("POST /api/v1/onboard persists the Mongo participant record keyed by Keycloak's real assigned id, not the locally-generated placeholder", async () => {
+  // Keycloak's user-create API never actually honours a client-supplied `id`
+  // (it always assigns its own) — this regression-tests that the id
+  // ultimately stored on the participants doc is the one the mock's
+  // username-lookup returns ('keycloak-real-assigned-id', see the shared
+  // fetch mock above), not onboardRouter's own locally-generated `userId`.
+  // A prior bug stored the wrong one, silently breaking every lookup keyed
+  // by the authenticated participant's real `req.user.sub` (device/session
+  // matching, credential rotation, account deletion, group-targeted survey
+  // resolution).
+  const fakeDb = makeFakeDb();
+  const testApp2 = express();
+  testApp2.use(express.json());
+  testApp2.use(
+    '/api/v1/onboard',
+    createOnboardRouter({ keycloak: {}, db: fakeDb })
+  );
+  const server2 = createServer(testApp2);
+  await new Promise((resolve) => server2.listen(0, '127.0.0.1', resolve));
+  const baseUrl2 = `http://127.0.0.1:${server2.address().port}`;
+
+  try {
+    const res = await fetch(`${baseUrl2}/api/v1/onboard`, { method: 'POST' });
+    assert.strictEqual(res.status, 201);
+
+    assert.strictEqual(fakeDb.docs.length, 1, 'should persist one participant');
+    assert.strictEqual(
+      fakeDb.docs[0].userId,
+      'keycloak-real-assigned-id',
+      'stored userId must be the real Keycloak-assigned id'
+    );
+  } finally {
+    server2.closeAllConnections();
+    server2.close();
+  }
 });

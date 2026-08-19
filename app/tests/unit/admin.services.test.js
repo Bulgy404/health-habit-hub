@@ -209,6 +209,31 @@ test('createParticipant creates user in db and keycloak', async () => {
   assert.strictEqual(created.length, 1);
 });
 
+test("createParticipant persists Keycloak's real assigned id, not the locally-generated placeholder — Keycloak never honours a client-supplied `id` on user creation", async () => {
+  const db = makeDb({ participants: [] });
+  const kc = {
+    // Real createUser() looks the user back up post-creation and returns
+    // Keycloak's own assigned id, which is never the same as the `id` we
+    // asked for in the create payload — simulate that distinctness here.
+    async createUser() {
+      return 'keycloak-assigned-id-distinct-from-input';
+    },
+    async assignRole() {},
+  };
+  const result = await createParticipant({ db, kc });
+  assert.strictEqual(result.userId, 'keycloak-assigned-id-distinct-from-input');
+  assert.ok(
+    result.tokenCardUrl.includes('keycloak-assigned-id-distinct-from-input')
+  );
+
+  const [stored] = await db.collection('participants').find({}).toArray();
+  assert.strictEqual(
+    stored.userId,
+    'keycloak-assigned-id-distinct-from-input',
+    'the stored participant must be keyed by the real Keycloak id — every JWT this participant authenticates with carries that id as `sub`, and any lookup keyed by req.user.sub (sessions, credential rotation, account deletion, group-targeted surveys) silently fails to match otherwise'
+  );
+});
+
 test('assignGroup updates MongoDB and calls kc.updateUserAttribute', async () => {
   const db = makeDb({
     participants: [
