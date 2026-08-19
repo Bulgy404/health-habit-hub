@@ -342,6 +342,17 @@ void main() {
       // shown at all — it goes straight to the questionnaire.
       expect(find.text('Habit shared successfully!'), findsNothing);
       expect(find.text('Questionnaire: who5'), findsOneWidget);
+
+      // The donate form stays mounted (never disposed) underneath the pushed
+      // questionnaire route — merely offstage, which is why skipOffstage:
+      // false is needed to find it here — so it must have been reset before
+      // being covered: returning to /share afterwards (a StatefulShellRoute
+      // branch in the real app, which resumes this exact instance rather
+      // than a fresh one) must show a blank form, not the just-submitted text.
+      final habitField = tester.widget<TextFormField>(
+        find.byType(TextFormField, skipOffstage: false),
+      );
+      expect(habitField.controller?.text ?? '', isEmpty);
     },
   );
 

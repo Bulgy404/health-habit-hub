@@ -487,6 +487,13 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         // there's no need to wait on anything else first.
         if (postDonationQuestionnaireSlug != null && uuid != null) {
           setState(() => _submitting = false);
+          // The donate form stays mounted underneath (survey mode never
+          // turns off here, unlike the success-screen path below) — reset it
+          // now, before the questionnaire covers it, so returning to /share
+          // afterwards (this is a StatefulShellRoute branch: `context.go`
+          // lands back on this same instance, not a fresh one) shows a blank
+          // form rather than the just-submitted text/transcript.
+          _formKey.currentState?.reset();
           context.push(
             '/questionnaire/$postDonationQuestionnaireSlug?habitUuid=$uuid',
           );
