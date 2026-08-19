@@ -10,7 +10,9 @@ import { bullmqJobsFailedTotal } from '../middleware/metrics.js';
 const log = logger.child({ module: 'habitQueue' });
 const QUEUE_NAME = 'habit-donations';
 
-function redisConnection() {
+// Exported so other queues (e.g. transcribeQueue.js) share the exact same
+// connection config without duplicating the REDIS_URL fallback.
+export function redisConnection() {
   return { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 }
 
@@ -104,6 +106,7 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         habitType,
         stackedOnUuid,
         creationMode,
+        skipClassification,
       } = job.data;
 
       // Classification now happens here rather than synchronously in the
@@ -122,6 +125,7 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         habitType,
         stackedOnUuid,
         creationMode,
+        skipClassification,
         queryNeo4j,
         getDb,
         apiBase,

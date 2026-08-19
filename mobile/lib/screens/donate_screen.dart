@@ -402,7 +402,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       final shareResp = await dio.post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/habits/share',
         data: {
-          'sentence': values.sentence,
+          // Structured donations resolve their sentence server-side from
+          // behaviorKey — the server ignores this field in that case, but
+          // a value is only ever sent for the modes that need it.
+          if (values.behaviorKey == null) 'sentence': values.sentence,
+          if (values.behaviorKey != null) 'behaviorKey': values.behaviorKey,
           'language': _lang,
           // Optional self-report ratings — omitted when the study hides them.
           if (values.frequency != null) 'frequency': values.frequency,
@@ -475,15 +479,22 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       ref.invalidate(myStatsProvider);
 
       if (mounted) {
-        setState(() {
-          _submitting = false;
-          _showSuccess = true;
-        });
-        // ── Step 4: Offer the post-donation questionnaire, if configured ────
+        // ── Step 4: When a post-donation questionnaire is configured, skip
+        // the "share another habit" success screen entirely and go straight
+        // there — it previously only flashed for ~2s before being covered by
+        // the questionnaire anyway, racing against its own "share another
+        // habit" button. The slug is already known synchronously above, so
+        // there's no need to wait on anything else first.
         if (postDonationQuestionnaireSlug != null && uuid != null) {
+          setState(() => _submitting = false);
           context.push(
             '/questionnaire/$postDonationQuestionnaireSlug?habitUuid=$uuid',
           );
+        } else {
+          setState(() {
+            _submitting = false;
+            _showSuccess = true;
+          });
         }
       }
     } on DioException catch (e) {

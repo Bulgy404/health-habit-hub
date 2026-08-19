@@ -36,6 +36,7 @@ echo ""
 echo "This operation will:"
 echo "  - STOP and OVERWRITE MongoDB data"
 echo "  - STOP and OVERWRITE LightRAG index"
+echo "  - OVERWRITE audio recordings"
 echo "  - STOP and OVERWRITE Neo4j graph data"
 echo "  - OVERWRITE Keycloak database and realm config (if backup present)"
 echo "  - RESTART all affected containers"
@@ -75,7 +76,7 @@ log_error() {
 # ── 1. MongoDB ────────────────────────────────────────────────────────────────
 
 echo ""
-echo "1/3 Restoring MongoDB..."
+echo "1/4 Restoring MongoDB..."
 if [ -d "$RESTORE_DIR/mongo" ]; then
   # Credentials go in a 0600 temp config file (--config), read via the
   # documented `uri` field, rather than --username/--password on the command
@@ -104,7 +105,7 @@ fi
 # ── 2. LightRAG index ─────────────────────────────────────────────────────────
 
 echo ""
-echo "2/3 Restoring LightRAG index..."
+echo "2/4 Restoring LightRAG index..."
 if [ -f "$RESTORE_DIR/lightrag-data.tar.gz" ] && [ -s "$RESTORE_DIR/lightrag-data.tar.gz" ]; then
   echo "  Stopping LightRAG..."
   if docker stop hhh-lightrag >/dev/null 2>&1; then
@@ -130,10 +131,33 @@ else
   echo "Warning: No LightRAG backup found in archive"
 fi
 
-# ── 3. Neo4j ──────────────────────────────────────────────────────────────────
+# ── 3. Audio recordings ──────────────────────────────────────────────────────
+# Unlike LightRAG/Neo4j, no container is stopped/restarted here — the audio
+# volume is mounted into the long-running `app` container (not a dedicated
+# restartable data-store service), and overwriting flat audio files while it
+# has the volume mounted is safe, the same way the MongoDB restore above runs
+# live without stopping `app`.
 
 echo ""
-echo "3/3 Restoring Neo4j..."
+echo "3/4 Restoring audio recordings..."
+if [ -f "$RESTORE_DIR/audio-recordings.tar.gz" ] && [ -s "$RESTORE_DIR/audio-recordings.tar.gz" ]; then
+  if docker run --rm \
+    -v hhh-audio-recordings-data:/audio \
+    -v "$RESTORE_DIR:/backup:ro" \
+    alpine:latest \
+    sh -c "rm -rf /audio/* && tar -xzf /backup/audio-recordings.tar.gz -C /audio/"; then
+    echo "✓ Audio recordings restored"
+  else
+    log_error "Audio" "volume restore failed"
+  fi
+else
+  echo "Warning: No audio recordings backup found in archive"
+fi
+
+# ── 4. Neo4j ──────────────────────────────────────────────────────────────────
+
+echo ""
+echo "4/4 Restoring Neo4j..."
 if [ -d "$RESTORE_DIR/neo4j" ] && [ -f "$RESTORE_DIR/neo4j/neo4j.dump" ]; then
   echo "  Stopping Neo4j..."
   if docker stop hhh-neo4j >/dev/null 2>&1; then
@@ -159,7 +183,7 @@ else
   echo "Warning: No Neo4j backup found in archive"
 fi
 
-# ── 4. Keycloak ───────────────────────────────────────────────────────────────
+# ── Keycloak ──────────────────────────────────────────────────────────────────
 # Restores both the realm config (via admin API partialImport) and the actual
 # Postgres database (via pg_restore) — the DB holds user accounts/credentials,
 # which the realm export never contained. --skip-keycloak skips both.

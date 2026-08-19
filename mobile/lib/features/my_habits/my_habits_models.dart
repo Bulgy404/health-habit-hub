@@ -6,11 +6,7 @@ library;
 /// A single SRHI item (id, English text, German text).
 class SrhiItem {
   /// Creates a [SrhiItem].
-  const SrhiItem({
-    required this.id,
-    required this.en,
-    required this.de,
-  });
+  const SrhiItem({required this.id, required this.en, required this.de});
 
   /// Unique question identifier.
   final String id;
@@ -23,10 +19,10 @@ class SrhiItem {
 
   /// Deserialises from JSON.
   factory SrhiItem.fromJson(Map<String, dynamic> json) => SrhiItem(
-        id: json['id'] as String,
-        en: json['en'] as String,
-        de: json['de'] as String,
-      );
+    id: json['id'] as String,
+    en: json['en'] as String,
+    de: json['de'] as String,
+  );
 }
 
 /// One selectable entry in the structured-activity catalog, already resolved
@@ -44,9 +40,9 @@ class BehaviorOption {
 
   /// Deserialises from JSON.
   factory BehaviorOption.fromJson(Map<String, dynamic> json) => BehaviorOption(
-        key: json['key'] as String? ?? '',
-        label: json['label'] as String? ?? '',
-      );
+    key: json['key'] as String? ?? '',
+    label: json['label'] as String? ?? '',
+  );
 }
 
 /// Resolved cue configuration returned by GET /api/v1/me/habit-config.
@@ -69,7 +65,7 @@ class HabitConfig {
     this.reminderContentMode = 'generic',
     this.informationOverloadEnabled = false,
     this.informationOverloadOptOutAllowed = false,
-    this.donationInputMode = 'text',
+    this.donationInputMode = 'freeText',
     this.donationQuestionnaireSlug,
     this.donationAskFrequency = true,
     this.donationAskHealthBenefit = true,
@@ -141,8 +137,8 @@ class HabitConfig {
   /// when [informationOverloadEnabled] is `true`. Defaults `false`.
   final bool informationOverloadOptOutAllowed;
 
-  /// Habit-donation input mode: `'text'`, `'speech'`, or `'both'`
-  /// (participant's choice). Defaults `'text'`.
+  /// Unified entry mode, shared by the New Habit wizard and the donation
+  /// flow: `'freeText'`, `'structured'`, or `'voice'`. Defaults `'freeText'`.
   final String donationInputMode;
 
   /// Slug of the questionnaire-pool item to offer immediately after every
@@ -163,62 +159,57 @@ class HabitConfig {
 
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
-        cueCount: json['cueCount'] as String? ?? 'multi',
-        cueSource: json['cueSource'] as String? ?? 'high_quality',
-        cuePoolId: json['cuePoolId'] as String?,
-        behaviorOptions: (json['behaviorOptions'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(BehaviorOption.fromJson)
-                .toList() ??
-            const [],
-        maxHabits: json['maxHabits'] as int?,
-        srhiItems: (json['srhiItems'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(SrhiItem.fromJson)
-                .toList() ??
-            const [],
-        assignedCues: (json['assignedCues'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(IntentionCue.fromJson)
-                .toList() ??
-            const [],
-        recommenderEnabled: json['recommenderEnabled'] as bool? ?? true,
-        guidedHabitCreationEnabled:
-            json['guidedHabitCreationEnabled'] as bool? ?? true,
-        communityShareDefault:
-            json['communityShareDefault'] as bool? ?? true,
-        onboardingEnabled: json['onboardingEnabled'] as bool? ?? true,
-        selfHabitCreationEnabled:
-            json['selfHabitCreationEnabled'] as bool? ?? true,
-        habitStackingEnabled: json['habitStackingEnabled'] as bool? ?? true,
-        reminderContentMode:
-            json['reminderContentMode'] as String? ?? 'generic',
-        informationOverloadEnabled:
-            (json['informationOverloadGuard'] as Map<String, dynamic>?)?[
-                    'enabled'] as bool? ??
-                false,
-        informationOverloadOptOutAllowed:
-            (json['informationOverloadGuard'] as Map<String, dynamic>?)?[
-                    'userOptOutAllowed'] as bool? ??
-                false,
-        donationInputMode: json['donationInputMode'] as String? ?? 'text',
-        donationQuestionnaireSlug:
-            json['donationQuestionnaireSlug'] as String?,
-        donationAskFrequency: json['donationAskFrequency'] as bool? ?? true,
-        donationAskHealthBenefit:
-            json['donationAskHealthBenefit'] as bool? ?? true,
-        donationAskWellbeing: json['donationAskWellbeing'] as bool? ?? true,
-      );
+    cueCount: json['cueCount'] as String? ?? 'multi',
+    cueSource: json['cueSource'] as String? ?? 'high_quality',
+    cuePoolId: json['cuePoolId'] as String?,
+    behaviorOptions:
+        (json['behaviorOptions'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(BehaviorOption.fromJson)
+            .toList() ??
+        const [],
+    maxHabits: json['maxHabits'] as int?,
+    srhiItems:
+        (json['srhiItems'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(SrhiItem.fromJson)
+            .toList() ??
+        const [],
+    assignedCues:
+        (json['assignedCues'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(IntentionCue.fromJson)
+            .toList() ??
+        const [],
+    recommenderEnabled: json['recommenderEnabled'] as bool? ?? true,
+    guidedHabitCreationEnabled:
+        json['guidedHabitCreationEnabled'] as bool? ?? true,
+    communityShareDefault: json['communityShareDefault'] as bool? ?? true,
+    onboardingEnabled: json['onboardingEnabled'] as bool? ?? true,
+    selfHabitCreationEnabled: json['selfHabitCreationEnabled'] as bool? ?? true,
+    habitStackingEnabled: json['habitStackingEnabled'] as bool? ?? true,
+    reminderContentMode: json['reminderContentMode'] as String? ?? 'generic',
+    informationOverloadEnabled:
+        (json['informationOverloadGuard'] as Map<String, dynamic>?)?['enabled']
+            as bool? ??
+        false,
+    informationOverloadOptOutAllowed:
+        (json['informationOverloadGuard']
+                as Map<String, dynamic>?)?['userOptOutAllowed']
+            as bool? ??
+        false,
+    donationInputMode: json['donationInputMode'] as String? ?? 'freeText',
+    donationQuestionnaireSlug: json['donationQuestionnaireSlug'] as String?,
+    donationAskFrequency: json['donationAskFrequency'] as bool? ?? true,
+    donationAskHealthBenefit: json['donationAskHealthBenefit'] as bool? ?? true,
+    donationAskWellbeing: json['donationAskWellbeing'] as bool? ?? true,
+  );
 }
 
 /// A single cue attached to an implementation intention.
 class IntentionCue {
   /// Creates an [IntentionCue].
-  const IntentionCue({
-    required this.text,
-    required this.source,
-    this.cueId,
-  });
+  const IntentionCue({required this.text, required this.source, this.cueId});
 
   /// Human-readable cue text (e.g. `'After my morning coffee'`).
   final String text;
@@ -231,17 +222,17 @@ class IntentionCue {
 
   /// Deserialises from JSON.
   factory IntentionCue.fromJson(Map<String, dynamic> json) => IntentionCue(
-        text: json['text'] as String,
-        source: json['source'] as String,
-        cueId: json['cueId'] as String?,
-      );
+    text: json['text'] as String,
+    source: json['source'] as String,
+    cueId: json['cueId'] as String?,
+  );
 
   /// Serialises to JSON.
   Map<String, dynamic> toJson() => {
-        'text': text,
-        'source': source,
-        if (cueId != null) 'cueId': cueId,
-      };
+    'text': text,
+    'source': source,
+    if (cueId != null) 'cueId': cueId,
+  };
 }
 
 /// The kind of habit a participant is forming: building a new behaviour or
@@ -321,9 +312,9 @@ class Cadence {
   /// explicitly (never omitted), matching how `habitType`/`creationMode`
   /// are already always-sent rather than conditionally left out.
   Map<String, dynamic> toJson() => {
-        'type': type.wire,
-        'targetPerWeek': targetPerWeek,
-      };
+    'type': type.wire,
+    'targetPerWeek': targetPerWeek,
+  };
 }
 
 /// An implementation intention created by the user.
@@ -414,30 +405,31 @@ class Intention {
 
   /// Deserialises from the intentions API response.
   factory Intention.fromJson(Map<String, dynamic> json) => Intention(
-        id: (json['_id'] ?? json['id']) as String,
-        behaviorKey: json['behaviorKey'] as String,
-        behaviorLabel: json['behaviorLabel'] as String,
-        durationMinutes: (json['durationMinutes'] as num).toInt(),
-        cues: (json['cues'] as List<dynamic>)
-            .cast<Map<String, dynamic>>()
-            .map(IntentionCue.fromJson)
-            .toList(),
-        intentionStatement: json['intentionStatement'] as String,
-        status: json['status'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        habitType: HabitType.fromWire(json['habitType'] as String?),
-        cadence: Cadence.fromJson(json['cadence'] as Map<String, dynamic>?),
-        stackedOn: json['stackedOn'] as String?,
-        anchorLabel: json['anchorLabel'] as String?,
-        creationMode: json['creationMode'] as String? ?? 'standalone',
-        earnedBadges: (json['earnedBadges'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(EarnedBadge.fromJson)
-                .toList() ??
-            const [],
-        completedReason: json['completedReason'] as String?,
-        bankedXp: (json['bankedXp'] as num?)?.toInt(),
-      );
+    id: (json['_id'] ?? json['id']) as String,
+    behaviorKey: json['behaviorKey'] as String,
+    behaviorLabel: json['behaviorLabel'] as String,
+    durationMinutes: (json['durationMinutes'] as num).toInt(),
+    cues: (json['cues'] as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map(IntentionCue.fromJson)
+        .toList(),
+    intentionStatement: json['intentionStatement'] as String,
+    status: json['status'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    habitType: HabitType.fromWire(json['habitType'] as String?),
+    cadence: Cadence.fromJson(json['cadence'] as Map<String, dynamic>?),
+    stackedOn: json['stackedOn'] as String?,
+    anchorLabel: json['anchorLabel'] as String?,
+    creationMode: json['creationMode'] as String? ?? 'standalone',
+    earnedBadges:
+        (json['earnedBadges'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(EarnedBadge.fromJson)
+            .toList() ??
+        const [],
+    completedReason: json['completedReason'] as String?,
+    bankedXp: (json['bankedXp'] as num?)?.toInt(),
+  );
 }
 
 /// The participant's §7.3 Information Overload preferences and eligibility.
@@ -462,8 +454,7 @@ class InformationOverloadPrefs {
   factory InformationOverloadPrefs.fromJson(Map<String, dynamic> json) =>
       InformationOverloadPrefs(
         optOut: json['informationOverloadOptOut'] as bool? ?? false,
-        guardEnabled:
-            json['informationOverloadGuardEnabled'] as bool? ?? false,
+        guardEnabled: json['informationOverloadGuardEnabled'] as bool? ?? false,
         optOutAllowed:
             json['informationOverloadOptOutAllowed'] as bool? ?? false,
       );
@@ -528,35 +519,37 @@ class Gamification {
   final int shareStreakWeeks;
 
   /// Distinct earned badge keys, for a compact profile display.
-  Set<String> get distinctBadgeKeys =>
-      badges.map((b) => b.badgeKey).toSet();
+  Set<String> get distinctBadgeKeys => badges.map((b) => b.badgeKey).toSet();
 
   /// Deserialises from the /habits/intentions/gamification response.
   factory Gamification.fromJson(Map<String, dynamic> json) => Gamification(
-        enabled: json['enabled'] as bool? ?? true,
-        totalXp: (json['totalXp'] as num?)?.toInt() ?? 0,
-        level: (json['level'] as num?)?.toInt() ?? 1,
-        xpIntoLevel: (json['xpIntoLevel'] as num?)?.toInt() ?? 0,
-        xpToNextLevel: (json['xpToNextLevel'] as num?)?.toInt() ?? 0,
-        nextLevelXp: (json['nextLevelXp'] as num?)?.toInt() ?? 0,
-        badges: (json['badges'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(GamificationBadge.fromJson)
-                .toList() ??
-            const [],
-        newlyEarned: (json['newlyEarned'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(GamificationBadge.fromJson)
-                .toList() ??
-            const [],
-        newlyLost: (json['newlyLost'] as List<dynamic>?)
-                ?.cast<Map<String, dynamic>>()
-                .map(GamificationBadge.fromJson)
-                .toList() ??
-            const [],
-        shareCount: (json['shareCount'] as num?)?.toInt() ?? 0,
-        shareStreakWeeks: (json['shareStreakWeeks'] as num?)?.toInt() ?? 0,
-      );
+    enabled: json['enabled'] as bool? ?? true,
+    totalXp: (json['totalXp'] as num?)?.toInt() ?? 0,
+    level: (json['level'] as num?)?.toInt() ?? 1,
+    xpIntoLevel: (json['xpIntoLevel'] as num?)?.toInt() ?? 0,
+    xpToNextLevel: (json['xpToNextLevel'] as num?)?.toInt() ?? 0,
+    nextLevelXp: (json['nextLevelXp'] as num?)?.toInt() ?? 0,
+    badges:
+        (json['badges'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(GamificationBadge.fromJson)
+            .toList() ??
+        const [],
+    newlyEarned:
+        (json['newlyEarned'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(GamificationBadge.fromJson)
+            .toList() ??
+        const [],
+    newlyLost:
+        (json['newlyLost'] as List<dynamic>?)
+            ?.cast<Map<String, dynamic>>()
+            .map(GamificationBadge.fromJson)
+            .toList() ??
+        const [],
+    shareCount: (json['shareCount'] as num?)?.toInt() ?? 0,
+    shareStreakWeeks: (json['shareStreakWeeks'] as num?)?.toInt() ?? 0,
+  );
 }
 
 /// One earned badge in a [Gamification] summary (badge key + owning habit).
@@ -591,9 +584,9 @@ class EarnedBadge {
 
   /// Deserialises from JSON.
   factory EarnedBadge.fromJson(Map<String, dynamic> json) => EarnedBadge(
-        badgeKey: json['badgeKey'] as String,
-        earnedAt: DateTime.parse(json['earnedAt'] as String),
-      );
+    badgeKey: json['badgeKey'] as String,
+    earnedAt: DateTime.parse(json['earnedAt'] as String),
+  );
 }
 
 /// A single daily behavior log entry.
@@ -620,11 +613,11 @@ class DailyLog {
 
   /// Deserialises from the daily logs API response.
   factory DailyLog.fromJson(Map<String, dynamic> json) => DailyLog(
-        intentionId: json['intentionId'] as String? ?? '',
-        date: json['date'] as String,
-        enacted: json['enacted'] as bool,
-        loggedAt: DateTime.parse(json['loggedAt'] as String),
-      );
+    intentionId: json['intentionId'] as String? ?? '',
+    date: json['date'] as String,
+    enacted: json['enacted'] as bool,
+    loggedAt: DateTime.parse(json['loggedAt'] as String),
+  );
 }
 
 /// An open SRHI measurement window (due for submission).
@@ -659,15 +652,15 @@ class SrhiWindow {
 
   /// Deserialises from the SRHI windows API response.
   factory SrhiWindow.fromJson(Map<String, dynamic> json) => SrhiWindow(
-        id: json['id'] as String,
-        intentionId: json['intentionId'] as String,
-        weekNumber: (json['weekNumber'] as num).toInt(),
-        scheduledFor: DateTime.parse(json['scheduledFor'] as String),
-        submittedAt: json['submittedAt'] != null
-            ? DateTime.parse(json['submittedAt'] as String)
-            : null,
-        score: json['score'] != null ? (json['score'] as num).toDouble() : null,
-      );
+    id: json['id'] as String,
+    intentionId: json['intentionId'] as String,
+    weekNumber: (json['weekNumber'] as num).toInt(),
+    scheduledFor: DateTime.parse(json['scheduledFor'] as String),
+    submittedAt: json['submittedAt'] != null
+        ? DateTime.parse(json['submittedAt'] as String)
+        : null,
+    score: json['score'] != null ? (json['score'] as num).toDouble() : null,
+  );
 }
 
 /// One data point in the SRHI trajectory for a habit.
@@ -709,8 +702,7 @@ class SrhiTrajectoryPoint {
   factory SrhiTrajectoryPoint.fromJson(Map<String, dynamic> json) =>
       SrhiTrajectoryPoint(
         weekNumber: (json['weekNumber'] as num).toInt(),
-        score:
-            json['score'] != null ? (json['score'] as num).toDouble() : null,
+        score: json['score'] != null ? (json['score'] as num).toDouble() : null,
         submittedAt: json['submittedAt'] != null
             ? DateTime.parse(json['submittedAt'] as String)
             : null,

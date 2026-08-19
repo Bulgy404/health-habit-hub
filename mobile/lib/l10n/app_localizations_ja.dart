@@ -595,6 +595,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get backToProfile => 'プロフィールに戻る';
 
   @override
+  String get backToShare => 'もう一つ習慣を共有する';
+
+  @override
   String get thankYou => 'ありがとうございます';
 
   @override
@@ -1495,6 +1498,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get donateVoiceTranscriptPlaceholder => '下のボタンを押しながら習慣を話してください';
+
+  @override
+  String get donateStructuredPickerLabel => '何をしましたか?';
+
+  @override
+  String get donateStructuredPickerHint => '最も当てはまる活動を選んでください';
+
+  @override
+  String get donateStructuredEmptyState => 'まだ利用できる活動がありません。後ほど再度お試しください。';
 
   @override
   String get setCueNextButton => '次へ';

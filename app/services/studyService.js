@@ -18,6 +18,27 @@ import {
 import { syncStudyQuestionnaireGraph } from './questionnaireScheduleService.js';
 
 /**
+ * Normalise a study/group doc's donation input mode to the unified
+ * freeText|structured|voice enum, falling back to the legacy
+ * habitEntryMode:'structured' for docs written before this field existed
+ * (no backfill migration — same normalization-point convention as every
+ * other §7.x-style field). Mirrors habitConfigService.js's resolution.
+ * @param {{ donationInputMode?: unknown, habitEntryMode?: unknown }} doc
+ * @returns {'freeText'|'structured'|'voice'}
+ */
+function normalizeDonationInputMode(doc) {
+  if (
+    doc?.donationInputMode === 'structured' ||
+    doc?.donationInputMode === 'voice' ||
+    doc?.donationInputMode === 'freeText'
+  ) {
+    return doc.donationInputMode;
+  }
+  if (doc?.habitEntryMode === 'structured') return 'structured';
+  return 'freeText';
+}
+
+/**
  * When a study's groups shrink, every reference to a removed group
  * (enrollments, enrollment codes, questionnaire assignments, SRHI responses,
  * implementation intentions, and the Neo4j ENROLLED_IN edge) must move onto
@@ -158,14 +179,14 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
           : 'generic',
       informationOverloadGuard: s.informationOverloadGuard ?? null,
       gamificationEnabled: s.gamificationEnabled !== false,
-      donationInputMode:
-        s.donationInputMode === 'speech' || s.donationInputMode === 'both'
-          ? s.donationInputMode
-          : 'text',
+      donationInputMode: normalizeDonationInputMode(s),
       donationQuestionnaireSlug:
         typeof s.donationQuestionnaireSlug === 'string'
           ? s.donationQuestionnaireSlug
           : null,
+      donationAskFrequency: s.donationAskFrequency !== false,
+      donationAskHealthBenefit: s.donationAskHealthBenefit !== false,
+      donationAskWellbeing: s.donationAskWellbeing !== false,
       reminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
       endOfStudyNotification: normalizeEndOfStudyContent(s),
@@ -198,7 +219,7 @@ export async function createStudy({
   reminderContentMode = 'generic',
   informationOverloadGuard = null,
   gamificationEnabled = true,
-  donationInputMode = 'text',
+  donationInputMode = 'freeText',
   donationQuestionnaireSlug = null,
   endDate = null,
   endOfStudyNotification,
@@ -246,10 +267,10 @@ export async function createStudy({
         }
       : null,
     gamificationEnabled: gamificationEnabled !== false,
-    donationInputMode:
-      donationInputMode === 'speech' || donationInputMode === 'both'
-        ? donationInputMode
-        : 'text',
+    donationInputMode: normalizeDonationInputMode({
+      donationInputMode,
+      habitEntryMode,
+    }),
     donationQuestionnaireSlug:
       typeof donationQuestionnaireSlug === 'string'
         ? donationQuestionnaireSlug
@@ -324,10 +345,7 @@ export async function getStudy({ db, id }) {
         : 'generic',
     informationOverloadGuard: study.informationOverloadGuard ?? null,
     gamificationEnabled: study.gamificationEnabled !== false,
-    donationInputMode:
-      study.donationInputMode === 'speech' || study.donationInputMode === 'both'
-        ? study.donationInputMode
-        : 'text',
+    donationInputMode: normalizeDonationInputMode(study),
     donationQuestionnaireSlug:
       typeof study.donationQuestionnaireSlug === 'string'
         ? study.donationQuestionnaireSlug

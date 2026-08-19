@@ -15,6 +15,7 @@ import '../../../config/app_config.dart';
 import '../../../core/dio_provider.dart';
 import '../../../features/my_habits/habit_onboarding_prefs.dart';
 import '../../../features/my_habits/habit_onboarding_widgets.dart';
+import '../../../features/my_habits/my_habits_models.dart';
 import '../../../features/my_habits/my_habits_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
@@ -70,6 +71,10 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
   int? _healthBenefit;
   int? _wellbeing;
 
+  // ── Structured entry mode ─────────────────────────────────────────────
+  String? _selectedBehaviorKey;
+  String? _selectedBehaviorLabel;
+
   // null while the dismissal pref is still loading — kept hidden until then
   // so the hint never flashes on screen only to immediately disappear.
   bool? _hasSeenHabitHint;
@@ -87,6 +92,19 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
   // the backend whether the participant edited it afterwards.
   String? _lastTranscript;
   bool _usedSpeech = false;
+  // Bumped every time a new recording starts. Each transcription attempt
+  // captures its value up front and re-checks it before ever writing to
+  // state, so if the participant re-records while a previous take is still
+  // being transcribed (queued async — see _pollTranscriptionJob), the
+  // stale result is dropped instead of clobbering the newer one: last
+  // recording wins.
+  int _recordingGeneration = 0;
+
+  // How long to keep polling a transcription job before giving up and
+  // surfacing an error. Generous: SCADS.AI retries up to 3x with
+  // exponential backoff server-side (see lib/transcribeQueue.js) before a
+  // job is even marked failed.
+  static const _transcribePollTimeout = Duration(seconds: 45);
 
   @override
   void initState() {
@@ -121,14 +139,22 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
       _usedSpeech = false;
       _voiceError = null;
       _editingTranscript = false;
+      _selectedBehaviorKey = null;
+      _selectedBehaviorLabel = null;
     });
   }
 
   /// Hold-to-speak: begin recording. A fresh recording replaces whatever the
   /// previous transcription produced (see [_transcribe], which overwrites the
   /// field), so we lock editing back down while a new take is captured.
+  ///
+  /// Deliberately does NOT block on `_isTranscribing` — a participant can
+  /// start re-recording immediately even while an earlier take is still
+  /// being transcribed; [_recordingGeneration] makes sure only the last one
+  /// ever gets saved.
   Future<void> _startRecording() async {
-    if (_isRecording || _isTranscribing) return;
+    if (_isRecording) return;
+    final generation = ++_recordingGeneration;
     setState(() {
       _voiceError = null;
       _editingTranscript = false;
@@ -136,7 +162,7 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
 
     final l10n = AppLocalizations.of(context)!;
     if (!await _recorder.hasPermission()) {
-      if (!mounted) return;
+      if (!mounted || generation != _recordingGeneration) return;
       setState(() => _voiceError = l10n.donateVoiceMicPermissionDenied);
       return;
     }
@@ -148,15 +174,18 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
       const RecordConfig(encoder: AudioEncoder.aacLc, numChannels: 1),
       path: path,
     );
-    if (mounted) setState(() => _isRecording = true);
+    if (mounted && generation == _recordingGeneration) {
+      setState(() => _isRecording = true);
+    }
   }
 
   /// Hold-to-speak: release stops recording and hands off to transcription.
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
+    final generation = _recordingGeneration;
     final path = await _recorder.stop();
     setState(() => _isRecording = false);
-    if (path != null) await _transcribe(path);
+    if (path != null) await _transcribe(path, generation);
   }
 
   /// Unlock the greyed transcript field for manual correction and focus it.
@@ -165,7 +194,10 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
     _habitFocus.requestFocus();
   }
 
-  Future<void> _transcribe(String path) async {
+  /// Uploads [path] for transcription and applies the result — unless a
+  /// newer recording has started in the meantime (see [_recordingGeneration]),
+  /// in which case this outcome is silently dropped.
+  Future<void> _transcribe(String path, int generation) async {
     setState(() => _isTranscribing = true);
     final l10n = AppLocalizations.of(context)!;
     try {
@@ -177,8 +209,22 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
         '${AppConfig.apiBaseUrl}/habits/share/transcribe',
         data: formData,
       );
-      final transcript = response.data?['transcript'] as String? ?? '';
-      if (!mounted) return;
+
+      String transcript;
+      final jobId = response.data?['jobId'] as String?;
+      if (response.statusCode == 202 && jobId != null) {
+        // Async path: the backend queued the clip (BullMQ + Redis) so
+        // SCADS.AI gets however long it needs without holding this HTTP
+        // request open — poll for the result instead.
+        final result = await _pollTranscriptionJob(dio, jobId, generation);
+        if (result == null) return; // superseded by a newer recording
+        transcript = result;
+      } else {
+        // Fallback: queue disabled server-side, response is synchronous.
+        transcript = response.data?['transcript'] as String? ?? '';
+      }
+
+      if (!mounted || generation != _recordingGeneration) return;
       setState(() {
         habitController.text = transcript;
         _recordedAudioPath = path;
@@ -187,11 +233,43 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
         _isTranscribing = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _recordingGeneration) return;
       setState(() {
         _isTranscribing = false;
         _voiceError = l10n.donateVoiceTranscriptionFailed;
       });
+    }
+  }
+
+  /// Polls `GET /habits/share/transcribe/:jobId` roughly once a second
+  /// until the job completes, fails, or [_transcribePollTimeout] elapses.
+  /// Returns `null` (instead of throwing) the moment a newer recording has
+  /// superseded [generation], so the caller can bail out quietly rather
+  /// than surface a spurious error for a take the participant already
+  /// abandoned.
+  Future<String?> _pollTranscriptionJob(
+    Dio dio,
+    String jobId,
+    int generation,
+  ) async {
+    final deadline = DateTime.now().add(_transcribePollTimeout);
+    while (true) {
+      if (!mounted || generation != _recordingGeneration) return null;
+      if (DateTime.now().isAfter(deadline)) {
+        throw Exception('Transcription timed out');
+      }
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted || generation != _recordingGeneration) return null;
+
+      final res = await dio.get<Map<String, dynamic>>(
+        '${AppConfig.apiBaseUrl}/habits/share/transcribe/$jobId',
+      );
+      final status = res.data?['status'] as String?;
+      if (status == 'done') return res.data?['text'] as String? ?? '';
+      if (status == 'failed') {
+        throw Exception(res.data?['failReason'] ?? 'Transcription failed');
+      }
+      // status is 'waiting' / 'active' / 'delayed' — keep polling.
     }
   }
 
@@ -213,13 +291,28 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
         (askWellbeing && w == null)) {
       return null;
     }
+
+    final donationInputMode = ref.read(donationInputModeProvider);
+    if (donationInputMode == 'structured') {
+      if (_selectedBehaviorKey == null) return null;
+      return DonateFormValues(
+        sentence: _selectedBehaviorLabel ?? '',
+        behaviorKey: _selectedBehaviorKey,
+        behaviorLabel: _selectedBehaviorLabel,
+        frequency: f,
+        healthBenefit: h,
+        wellbeing: w,
+        inputMode: 'structured',
+      );
+    }
+
     final sentence = habitController.text.trim();
     return DonateFormValues(
       sentence: sentence,
       frequency: f,
       healthBenefit: h,
       wellbeing: w,
-      inputMode: _usedSpeech ? 'speech' : 'text',
+      inputMode: _usedSpeech ? 'voice' : 'freeText',
       transcript: _usedSpeech ? _lastTranscript : null,
       transcriptEdited: _usedSpeech ? sentence != _lastTranscript : null,
       recordedAudioPath: _usedSpeech ? _recordedAudioPath : null,
@@ -231,8 +324,14 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.appColors;
     final donationInputMode = ref.watch(donationInputModeProvider);
-    final showVoiceInput =
-        donationInputMode == 'speech' || donationInputMode == 'both';
+    final isStructured = donationInputMode == 'structured';
+    final showVoiceInput = donationInputMode == 'voice';
+    final behaviorOptions = ref
+        .watch(habitConfigProvider)
+        .maybeWhen(
+          data: (c) => c.behaviorOptions,
+          orElse: () => const <BehaviorOption>[],
+        );
     // Which optional self-report questions the study wants shown.
     final askFrequency = ref.watch(donationAskFrequencyProvider);
     final askHealthBenefit = ref.watch(donationAskHealthBenefitProvider);
@@ -252,98 +351,120 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
             ),
             const SizedBox(height: 16),
           ],
-          // ── Habit text input ──────────────────────────────────────────────
+          // ── Habit input ──────────────────────────────────────────────────
           Text(
-            l10n.donateFormDescribeHabitLabel,
+            isStructured
+                ? l10n.donateStructuredPickerLabel
+                : l10n.donateFormDescribeHabitLabel,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
-          if (showVoiceInput) ...[
-            const SizedBox(height: 16),
-            // In voice mode the speech button is the focal control: a large
-            // round hold-to-speak button, centered, with the transcript field
-            // demoted to a greyed-out, read-only preview underneath.
-            Center(
-              child: _VoiceInputControl(
-                isRecording: _isRecording,
-                isTranscribing: _isTranscribing,
-                enabled: !widget.submitting,
-                error: _voiceError,
-                onHoldStart: _startRecording,
-                onHoldEnd: _stopRecording,
-              ),
+          if (isStructured) ...[
+            const SizedBox(height: 4),
+            Text(
+              l10n.donateStructuredPickerHint,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
             ),
-            const SizedBox(height: 16),
-          ],
-          if (!showVoiceInput) const SizedBox(height: 4),
-          Builder(
-            builder: (context) {
-              // Voice mode greys the field and locks it until the participant
-              // taps the edit icon, keeping the focus on speaking rather than
-              // typing. Text-only mode keeps the plain white editable field.
-              final readOnly =
-                  showVoiceInput && !_editingTranscript && !widget.submitting;
-              final fillColor =
-                  readOnly ? const Color(0xFFF3F4F6) : Colors.white;
-              return TextFormField(
-                controller: habitController,
-                focusNode: _habitFocus,
-                maxLines: 3,
-                maxLength: 500,
-                enabled: !widget.submitting,
-                readOnly: readOnly,
-                // This form's cards are intentionally light-themed regardless
-                // of app theme (fillColor is hardcoded), so the text and hint
-                // colors must be pinned dark too — otherwise dark mode's
-                // default light text renders white-on-white and is unreadable.
-                style: TextStyle(
-                  color: readOnly
-                      ? const Color(0xFF6B7280)
-                      : const Color(0xFF111827),
+            const SizedBox(height: 12),
+            _StructuredBehaviorPicker(
+              options: behaviorOptions,
+              selectedKey: _selectedBehaviorKey,
+              enabled: !widget.submitting,
+              emptyStateLabel: l10n.donateStructuredEmptyState,
+              onSelected: (option) => setState(() {
+                _selectedBehaviorKey = option.key;
+                _selectedBehaviorLabel = option.label;
+              }),
+            ),
+          ] else ...[
+            if (showVoiceInput) ...[
+              const SizedBox(height: 16),
+              // In voice mode the speech button is the focal control: a large
+              // round hold-to-speak button, centered, with the transcript field
+              // demoted to a greyed-out, read-only preview underneath.
+              Center(
+                child: _VoiceInputControl(
+                  isRecording: _isRecording,
+                  isTranscribing: _isTranscribing,
+                  enabled: !widget.submitting,
+                  error: _voiceError,
+                  onHoldStart: _startRecording,
+                  onHoldEnd: _stopRecording,
                 ),
-                cursorColor: const Color(0xFF45B700),
-                decoration: InputDecoration(
-                  hintText: showVoiceInput
-                      ? l10n.donateVoiceTranscriptPlaceholder
-                      : l10n.donateFormHabitHint,
-                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
-                  filled: true,
-                  fillColor: fillColor,
-                  // Small edit affordance: only shown in voice mode while the
-                  // field is still locked, so a wrong transcription can be
-                  // corrected without leaving voice mode.
-                  suffixIcon: readOnly
-                      ? IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          color: const Color(0xFF2E8C00),
-                          tooltip: l10n.donateVoiceEditTranscript,
-                          onPressed: _startEditingTranscript,
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              const SizedBox(height: 16),
+            ],
+            if (!showVoiceInput) const SizedBox(height: 4),
+            Builder(
+              builder: (context) {
+                // Voice mode greys the field and locks it until the participant
+                // taps the edit icon, keeping the focus on speaking rather than
+                // typing. Text-only mode keeps the plain white editable field.
+                final readOnly =
+                    showVoiceInput && !_editingTranscript && !widget.submitting;
+                final fillColor = readOnly
+                    ? const Color(0xFFF3F4F6)
+                    : Colors.white;
+                return TextFormField(
+                  controller: habitController,
+                  focusNode: _habitFocus,
+                  maxLines: 3,
+                  maxLength: 500,
+                  enabled: !widget.submitting,
+                  readOnly: readOnly,
+                  // This form's cards are intentionally light-themed regardless
+                  // of app theme (fillColor is hardcoded), so the text and hint
+                  // colors must be pinned dark too — otherwise dark mode's
+                  // default light text renders white-on-white and is unreadable.
+                  style: TextStyle(
+                    color: readOnly
+                        ? const Color(0xFF6B7280)
+                        : const Color(0xFF111827),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF45B700),
-                      width: 1.5,
+                  cursorColor: const Color(0xFF45B700),
+                  decoration: InputDecoration(
+                    hintText: showVoiceInput
+                        ? l10n.donateVoiceTranscriptPlaceholder
+                        : l10n.donateFormHabitHint,
+                    hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+                    filled: true,
+                    fillColor: fillColor,
+                    // Small edit affordance: only shown in voice mode while the
+                    // field is still locked, so a wrong transcription can be
+                    // corrected without leaving voice mode.
+                    suffixIcon: readOnly
+                        ? IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            color: const Color(0xFF2E8C00),
+                            tooltip: l10n.donateVoiceEditTranscript,
+                            onPressed: _startEditingTranscript,
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF45B700),
+                        width: 1.5,
+                      ),
                     ),
                   ),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().length < 10) {
-                    return l10n.donateFormHabitValidationError;
-                  }
-                  return null;
-                },
-              );
-            },
-          ),
+                  validator: (v) {
+                    if (v == null || v.trim().length < 10) {
+                      return l10n.donateFormHabitValidationError;
+                    }
+                    return null;
+                  },
+                );
+              },
+            ),
+          ],
           if (widget.notAHabitMsg != null) ...[
             const SizedBox(height: 4),
             _NotAHabitBanner(message: widget.notAHabitMsg!),
@@ -400,7 +521,10 @@ class DonateFormWidgetState extends ConsumerState<DonateFormWidget> {
 
 /// Immutable snapshot of a completed [DonateFormWidget].
 class DonateFormValues {
-  /// The habit description entered by the user.
+  /// The habit description entered by the user, or — in `'structured'` mode
+  /// — the resolved label of the selected catalog entry (kept for local
+  /// display only; the server re-resolves the label itself from
+  /// [behaviorKey] rather than trusting this).
   final String sentence;
 
   /// Frequency rating (1–4), or `null` when the study hides this question.
@@ -412,21 +536,28 @@ class DonateFormValues {
   /// Wellbeing impact rating (1–5), or `null` when the study hides this question.
   final int? wellbeing;
 
-  /// `'text'` or `'speech'` — how [sentence] was entered.
+  /// `'freeText'`, `'structured'`, or `'voice'` — how [sentence] was entered.
   final String inputMode;
 
   /// The raw speech-to-text output, before any edits — only set when
-  /// [inputMode] is `'speech'`.
+  /// [inputMode] is `'voice'`.
   final String? transcript;
 
   /// Whether [sentence] differs from [transcript] — only meaningful when
-  /// [inputMode] is `'speech'`.
+  /// [inputMode] is `'voice'`.
   final bool? transcriptEdited;
 
   /// Local path of the recorded audio clip, kept so the caller can upload it
   /// (`POST /habits/donations/:uuid/audio`) after a successful submit — only
-  /// set when [inputMode] is `'speech'`.
+  /// set when [inputMode] is `'voice'`.
   final String? recordedAudioPath;
+
+  /// The picked activity_types catalog key — only set when [inputMode] is
+  /// `'structured'`. Submitted instead of a typed sentence.
+  final String? behaviorKey;
+
+  /// Display label of [behaviorKey], for local UI purposes only.
+  final String? behaviorLabel;
 
   /// Creates a [DonateFormValues].
   const DonateFormValues({
@@ -434,10 +565,12 @@ class DonateFormValues {
     this.frequency,
     this.healthBenefit,
     this.wellbeing,
-    this.inputMode = 'text',
+    this.inputMode = 'freeText',
     this.transcript,
     this.transcriptEdited,
     this.recordedAudioPath,
+    this.behaviorKey,
+    this.behaviorLabel,
   });
 }
 
@@ -470,12 +603,17 @@ class _VoiceInputControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final busy = isTranscribing || !enabled;
-    final label = isTranscribing
+    // Only the overall "form is submitting" state disables the button.
+    // Transcription running in the background does NOT block a re-record —
+    // holding the button again starts a fresh take immediately; only the
+    // last one taken is kept (see _recordingGeneration in the parent state).
+    final busy = !enabled;
+    final showSpinner = isTranscribing && !isRecording;
+    final label = isRecording
+        ? l10n.donateVoiceRecording
+        : isTranscribing
         ? l10n.donateVoiceTranscribing
-        : isRecording
-            ? l10n.donateVoiceRecording
-            : l10n.donateVoiceHoldToSpeak;
+        : l10n.donateVoiceHoldToSpeak;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -495,24 +633,24 @@ class _VoiceInputControl extends StatelessWidget {
                   : const Color(0xFF45B700),
               boxShadow: [
                 BoxShadow(
-                  color: (isRecording
-                          ? const Color(0xFFDC2626)
-                          : const Color(0xFF45B700))
-                      .withValues(alpha: isRecording ? 0.35 : 0.25),
+                  color:
+                      (isRecording
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF45B700))
+                          .withValues(alpha: isRecording ? 0.35 : 0.25),
                   blurRadius: isRecording ? 24 : 14,
                   spreadRadius: isRecording ? 4 : 0,
                 ),
               ],
             ),
             child: Center(
-              child: isTranscribing
+              child: showSpinner
                   ? const SizedBox(
                       width: 28,
                       height: 28,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
                   : Icon(
@@ -543,6 +681,66 @@ class _VoiceInputControl extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Catalog picker shown when the study's entry mode is `'structured'` —
+/// mirrors `new_habit_screen_1_behavior.dart`'s `_BehaviorList`, but selects
+/// locally into the parent's state (`setState`) instead of navigating to a
+/// sub-route, since donation submits everything from this one screen.
+class _StructuredBehaviorPicker extends StatelessWidget {
+  const _StructuredBehaviorPicker({
+    required this.options,
+    required this.selectedKey,
+    required this.enabled,
+    required this.emptyStateLabel,
+    required this.onSelected,
+  });
+
+  final List<BehaviorOption> options;
+  final String? selectedKey;
+  final bool enabled;
+  final String emptyStateLabel;
+  final ValueChanged<BehaviorOption> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (options.isEmpty) {
+      return Text(
+        emptyStateLabel,
+        style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+      );
+    }
+    return Column(
+      children: [
+        for (final option in options)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Card(
+              margin: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(
+                  color: selectedKey == option.key
+                      ? const Color(0xFF45B700)
+                      : const Color(0xFFE5E7EB),
+                  width: selectedKey == option.key ? 1.5 : 1,
+                ),
+              ),
+              child: ListTile(
+                title: Text(option.label),
+                trailing: selectedKey == option.key
+                    ? const Icon(Icons.check_circle, color: Color(0xFF45B700))
+                    : const Icon(
+                        Icons.radio_button_unchecked,
+                        color: Color(0xFFE5E7EB),
+                      ),
+                onTap: enabled ? () => onSelected(option) : null,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -620,10 +818,7 @@ class _RatingQuestion extends StatelessWidget {
             final value = i + 1;
             final isSelected = selected == value;
             final chip = Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
                 borderRadius: BorderRadius.circular(100),
@@ -650,10 +845,7 @@ class _RatingQuestion extends StatelessWidget {
             // chip is actually tappable, so a disabled chip stays inert
             // rather than showing press feedback for a no-op.
             return enabled
-                ? PressableScale(
-                    onTap: () => onSelected(value),
-                    child: chip,
-                  )
+                ? PressableScale(onTap: () => onSelected(value), child: chip)
                 : chip;
           }),
         ),

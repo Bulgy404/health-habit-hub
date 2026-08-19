@@ -563,7 +563,8 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 
 ### Features
 
-- **Participant management** — list, create, and manage study participants
+- **Participant management** — list, create, and manage study participants; each row also shows that participant's active device sessions (a participant can have several) with a "Revoke Access" action revoking all of them at once. The standalone Devices page still exists separately — it's the only place that surfaces sessions with no matching participant record
+- **Donation review** — click a habit donation to see its voice transcript, play back or download the recorded audio, its donation-form self-report answers, and any linked post-donation questionnaire response
 - **Questionnaire authoring** — create and publish questionnaires
 - **Study configuration** — manage study groups, per-group cue config, and enrollment codes
 - **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s _Community Signals_ section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment

@@ -104,6 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: 'confirmation',
             builder: (context, state) => QuestionnaireConfirmationScreen(
               slug: state.pathParameters['slug'] ?? '',
+              habitUuid: state.uri.queryParameters['habitUuid'],
             ),
           ),
         ],

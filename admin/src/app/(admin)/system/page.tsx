@@ -143,6 +143,7 @@ const REFRESH_MS = 30_000;
 const SERVICE_LABELS: Record<string, string> = {
   mongo: "MongoDB",
   neo4j: "Neo4j",
+  audioStorage: "Audio Storage",
   keycloak: "Keycloak",
   recommender: "Recommender",
 };

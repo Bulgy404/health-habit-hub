@@ -29,6 +29,14 @@ interface CreatedParticipant {
   password?: string;
 }
 
+interface DeviceSession {
+  id: string;
+  participantId: string;
+  deviceType: string;
+  appVersion: string;
+  lastSeen: string | null;
+}
+
 interface QuestionnaireWindow {
   questionnaireSlug: string;
   occurrence: number;
@@ -93,6 +101,17 @@ function normalise(raw: unknown): Participant {
   };
 }
 
+function normaliseSession(raw: unknown): DeviceSession {
+  const j = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: String(j.id ?? j.sessionId ?? ""),
+    participantId: String(j.participantId ?? j.userId ?? ""),
+    deviceType: String(j.deviceType ?? "unknown"),
+    appVersion: String(j.appVersion ?? ""),
+    lastSeen: j.lastSeen ? String(j.lastSeen) : null,
+  };
+}
+
 function fmt(ts: string | null, withTime = false): string {
   if (!ts) return "—";
   const d = new Date(ts);
@@ -109,12 +128,27 @@ export default function ParticipantsPage() {
   const { token } = useAdminGuard();
   const t = useTranslations("participants");
   const tc = useTranslations("common");
+  // Device-session vocabulary (revoke/revoking) is shared verbatim with the
+  // standalone Devices page (admin/src/app/(admin)/devices/page.tsx) — same
+  // action, same words, reused rather than duplicated under participants.*.
+  const td = useTranslations("devices");
   const PAGE_SIZE = 50;
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+
+  // Device sessions, grouped by participantId (Keycloak sub — same value as
+  // Participant.id). Fetched independently of the participants page's own
+  // pagination: a session's owner can be on any participants page, so every
+  // session needs to be loaded up front rather than paginated in lockstep.
+  const [sessionsByParticipant, setSessionsByParticipant] = useState<
+    Map<string, DeviceSession[]>
+  >(new Map());
+  const [revokingParticipantId, setRevokingParticipantId] = useState<
+    string | null
+  >(null);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -195,6 +229,45 @@ export default function ParticipantsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Sessions endpoint is capped at limit=200/page server-side with no way to
+  // scope it to only the participants currently on-screen, so this walks
+  // every page once to build the full per-participant grouping.
+  const loadSessions = useCallback(async () => {
+    if (!token) return;
+    try {
+      const grouped = new Map<string, DeviceSession[]>();
+      const SESSIONS_PAGE_SIZE = 200;
+      let sessionsPage = 1;
+      let fetched = 0;
+      let sessionsTotal = Infinity;
+      while (fetched < sessionsTotal) {
+        const data = await apiFetch(
+          apiUrl(`/admin/sessions?page=${sessionsPage}&limit=${SESSIONS_PAGE_SIZE}`),
+          token
+        );
+        const list = ((data?.sessions ?? []) as unknown[]).map(normaliseSession);
+        for (const s of list) {
+          if (!s.participantId) continue;
+          const existing = grouped.get(s.participantId) ?? [];
+          existing.push(s);
+          grouped.set(s.participantId, existing);
+        }
+        fetched += list.length;
+        sessionsTotal = Number(data?.total ?? list.length);
+        sessionsPage += 1;
+        if (list.length === 0) break; // safety net against an unexpected infinite loop
+      }
+      setSessionsByParticipant(grouped);
+    } catch {
+      // Non-critical — the Devices column just falls back to "no devices"
+      // for everyone; the standalone Devices page is unaffected.
+    }
+  }, [token]);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   async function handleCreate() {
     if (!token) return;
@@ -315,6 +388,47 @@ export default function ParticipantsPage() {
       setTotal((prev) => Math.max(0, prev - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("deleteFailed"));
+    }
+  }
+
+  async function handleRevokeAccess(p: Participant) {
+    if (!token) return;
+    const sessions = sessionsByParticipant.get(p.id) ?? [];
+    if (sessions.length === 0) return;
+    if (
+      !confirm(
+        t("confirmRevokeAccess", { username: p.username || p.id, count: sessions.length })
+      )
+    ) {
+      return;
+    }
+    setRevokingParticipantId(p.id);
+    try {
+      // allSettled, not all — a participant with several devices should still
+      // lose access to whichever ones actually revoked even if one call fails,
+      // rather than the whole action silently no-op-ing on a partial error.
+      const results = await Promise.allSettled(
+        sessions.map((s) =>
+          apiFetch(apiUrl(`/admin/sessions/${s.id}`), token, { method: "DELETE" }).then(
+            () => s.id
+          )
+        )
+      );
+      const revokedIds = new Set(
+        results
+          .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+          .map((r) => r.value)
+      );
+      setSessionsByParticipant((prev) => {
+        const next = new Map(prev);
+        const remaining = (next.get(p.id) ?? []).filter((s) => !revokedIds.has(s.id));
+        if (remaining.length > 0) next.set(p.id, remaining);
+        else next.delete(p.id);
+        return next;
+      });
+      if (revokedIds.size < results.length) setError(t("revokeAccessFailed"));
+    } finally {
+      setRevokingParticipantId(null);
     }
   }
 
@@ -502,13 +616,14 @@ export default function ParticipantsPage() {
                 <th>{t("enrolled")}</th>
                 <th>{t("lastActive")}</th>
                 <th>{t("surveys")}</th>
+                <th>{t("devicesColumn")}</th>
                 <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
               {Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className={styles.skeletonRow}>
-                  {Array.from({ length: 8 }).map((__, j) => (
+                  {Array.from({ length: 9 }).map((__, j) => (
                     <td key={j}>
                       <span
                         className={styles.skeletonBar}
@@ -541,6 +656,7 @@ export default function ParticipantsPage() {
                 <th>{t("enrolled")}</th>
                 <th>{t("lastActive")}</th>
                 <th>{t("surveys")}</th>
+                <th>{t("devicesColumn")}</th>
                 <th>{tc("actions")}</th>
               </tr>
             </thead>
@@ -586,6 +702,32 @@ export default function ParticipantsPage() {
                       : "—"}
                   </td>
                   <td>
+                    {(() => {
+                      const sessions = sessionsByParticipant.get(p.id) ?? [];
+                      if (sessions.length === 0) {
+                        return <span className={styles.muted}>{t("noDevices")}</span>;
+                      }
+                      return (
+                        <div>
+                          <span className={styles.badge}>
+                            {t("deviceCount", { count: sessions.length })}
+                          </span>
+                          <div style={{ marginTop: "0.25rem" }}>
+                            {sessions.map((s) => (
+                              <div
+                                key={s.id}
+                                className={styles.muted}
+                                style={{ fontSize: "0.85em" }}
+                              >
+                                {s.deviceType} · {fmt(s.lastSeen, true)}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </td>
+                  <td>
                     <button
                       className={`${styles.actionBtn} ${styles.primaryBtn}`}
                       onClick={() => openProgress(p)}
@@ -604,6 +746,16 @@ export default function ParticipantsPage() {
                     )}
                     <button
                       className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                      onClick={() => handleRevokeAccess(p)}
+                      disabled={
+                        revokingParticipantId === p.id ||
+                        (sessionsByParticipant.get(p.id) ?? []).length === 0
+                      }
+                    >
+                      {revokingParticipantId === p.id ? td("revokingEllipsis") : td("revoke")}
+                    </button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
                       onClick={() => handleDelete(p)}
                     >
                       {tc("delete")}
@@ -614,7 +766,7 @@ export default function ParticipantsPage() {
               {participants.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     style={{ textAlign: "center", padding: "2rem" }}
                     className={styles.muted}
                   >

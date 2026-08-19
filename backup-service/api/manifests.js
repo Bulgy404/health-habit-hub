@@ -94,7 +94,7 @@ export function findManifestFilenames(filename) {
 
 /**
  * Writes a manifest for an uploaded backup archive. Uses the same field
- * names as backup.sh's manifest (`mongoOk`/`lightragOk`/`neo4jOk`/
+ * names as backup.sh's manifest (`mongoOk`/`lightragOk`/`audioOk`/`neo4jOk`/
  * `keycloakOk`) so the restore endpoint's "don't restore a known-bad backup"
  * check works identically for both sources — for an upload these flags mean
  * "component present in the archive", which is the strongest signal
@@ -109,6 +109,7 @@ export function writeUploadedManifest({ filename, sizeBytes, presence }) {
     sizeBytes,
     mongoOk: presence.mongo,
     lightragOk: presence.lightrag,
+    audioOk: presence.audio,
     neo4jOk: presence.neo4j,
     keycloakOk: presence.keycloak,
     keycloakSkipped: !presence.keycloak,

@@ -20,6 +20,8 @@ interface Manifest {
   mongoIncluded?: boolean;
   lightragOk: boolean;
   lightragIncluded?: boolean;
+  audioOk: boolean;
+  audioIncluded?: boolean;
   neo4jOk: boolean;
   neo4jIncluded?: boolean;
   keycloakOk: boolean;
@@ -40,6 +42,7 @@ interface ServiceSelection {
   mongo?: boolean;
   neo4j?: boolean;
   lightrag?: boolean;
+  audio?: boolean;
   keycloak?: boolean;
 }
 
@@ -61,12 +64,13 @@ interface JobState {
   result?: {
     mongo: boolean | null;
     lightrag: boolean | null;
+    audio: boolean | null;
     neo4j: boolean | null;
     keycloak: boolean | null;
   };
-  // Live progress within backup.sh's 5 stages (Mongo/LightRAG/Neo4j/Keycloak/
-  // archive) — absent once the phase moves past what has step markers
-  // (e.g. "restoring", which runs restore.sh instead).
+  // Live progress within backup.sh's 6 stages (Mongo/LightRAG/Audio/Neo4j/
+  // Keycloak/archive) — absent once the phase moves past what has step
+  // markers (e.g. "restoring", which runs restore.sh instead).
   step?: number;
   totalSteps?: number;
   stepLabel?: string;
@@ -114,8 +118,8 @@ function componentStatus(
   return ok ? "ok" : "failed";
 }
 
-// Component names (Mongo, LightRAG, Neo4j, Keycloak) are product/technical
-// names and are not translated.
+// Component names (Mongo, LightRAG, Audio, Neo4j, Keycloak) are
+// product/technical names and are not translated.
 function componentBadges(m: Manifest): { label: string; status: ComponentStatus }[] {
   // keycloakDbOk/keycloakDbSkipped are absent on backups taken before the DB
   // dump existed — fold in only when present, so older backups keep judging
@@ -126,6 +130,7 @@ function componentBadges(m: Manifest): { label: string; status: ComponentStatus 
   return [
     { label: "Mongo", status: componentStatus(m.mongoIncluded, m.mongoOk) },
     { label: "LightRAG", status: componentStatus(m.lightragIncluded, m.lightragOk) },
+    { label: "Audio", status: componentStatus(m.audioIncluded, m.audioOk) },
     { label: "Neo4j", status: componentStatus(m.neo4jIncluded, m.neo4jOk) },
     {
       label: "Keycloak",
@@ -915,9 +920,10 @@ function TriggerModal({
   const [mongo, setMongo] = useState(true);
   const [neo4j, setNeo4j] = useState(true);
   const [lightrag, setLightrag] = useState(true);
+  const [audio, setAudio] = useState(true);
   const [keycloak, setKeycloak] = useState(true);
 
-  const noneSelected = !mongo && !neo4j && !lightrag && !keycloak;
+  const noneSelected = !mongo && !neo4j && !lightrag && !audio && !keycloak;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -945,6 +951,11 @@ function TriggerModal({
             onChange={(e) => setLightrag(e.target.checked)}
             label="LightRAG"
           />
+          <ToggleSwitch
+            checked={audio}
+            onChange={(e) => setAudio(e.target.checked)}
+            label="Audio recordings"
+          />
           <div>
             <ToggleSwitch
               checked={keycloak}
@@ -965,7 +976,7 @@ function TriggerModal({
           </button>
           <button
             className={styles.saveButton}
-            onClick={() => onConfirm({ mongo, neo4j, lightrag, keycloak })}
+            onClick={() => onConfirm({ mongo, neo4j, lightrag, audio, keycloak })}
             disabled={submitting || noneSelected}
           >
             <SpinnerLabel loading={submitting} label={t("startBackup")} />

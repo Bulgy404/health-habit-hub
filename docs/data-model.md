@@ -1066,9 +1066,9 @@ outcome.
 | `uuid`                    | String         | Yes      | Matches the Neo4j `Habit.uuid` for this donation                                                                     |
 | `userId`                  | String         | Yes      | Keycloak `sub` of the donating user                                                                                  |
 | `studyId` / `groupId`     | String \| null | No       | Resolved from the user's enrollment at donation time                                                                 |
-| `inputMode`               | String         | Yes      | `"text"` or `"speech"` — how the habit sentence was entered                                                          |
+| `inputMode`               | String         | Yes      | `"freeText"`, `"structured"`, or `"voice"` — how the habit sentence was entered                                      |
 | `isHabit`                 | Boolean \| null | No      | The classifier's verdict, set best-effort once known (`null` until then — the queued/async donation path only learns this after the initial response is already sent) |
-| `transcript`              | String \| null | No       | Raw speech-to-text output, only for `inputMode: "speech"` — the transcribe endpoint itself is stateless, so the client resends this once alongside the (possibly-edited) final `sentence` at submit time |
+| `transcript`              | String \| null | No       | Raw speech-to-text output, only for `inputMode: "voice"` — the transcribe endpoint itself is stateless, so the client resends this once alongside the (possibly-edited) final `sentence` at submit time |
 | `transcriptEdited`        | Boolean \| null | No      | Whether the participant edited the transcript before submitting                                                      |
 | `audioClip`               | Object \| null | No       | `{filename, mimeType, sizeBytes, durationSec, storedAt}` — set once the recorded audio is uploaded via `POST /habits/donations/:uuid/audio`, after the donation itself is already submitted |
 | `questionnaireSlug`       | String \| null | No       | Which pool questionnaire (if any) was offered after this donation, resolved from the study/group's `donationQuestionnaireSlug` at submit time |
@@ -1081,7 +1081,10 @@ container at `AUDIO_STORAGE_DIR` (`/data/audio-recordings`), named
 `{uuid}.{ext}`. Persistence only ever happens once a donation actually
 completes: the transcription step (`POST /habits/share/transcribe`) is
 stateless and writes nothing, so a participant can record, re-record, or
-abandon freely with no server-side cleanup burden.
+abandon freely with no server-side cleanup burden. This volume is included in
+the scheduled backup/restore pipeline and a non-critical `GET /health`
+write-probe — see the Data Storage Rationale table's `audio-recordings-data`
+row in `docs/architecture.md`.
 
 ---
 

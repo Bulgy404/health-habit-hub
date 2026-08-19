@@ -37,12 +37,28 @@ test('checkAllServices returns ok when all services up', async () => {
     const result = await checkAllServices({
       neo4jCheck: okCheck,
       mongoCheck: okCheck,
+      audioStorageCheck: okCheck,
     });
     assert.strictEqual(result.status, 'ok');
     assert.ok(result.services.neo4j);
     assert.ok(result.services.mongo);
+    assert.ok(result.services.audioStorage);
     assert.ok(result.services.keycloak);
     assert.ok(result.services.recommender);
+    assert.strictEqual(result.services.neo4j.status, 'ok');
+    assert.strictEqual(result.services.mongo.status, 'ok');
+  });
+});
+
+test('checkAllServices returns ok when only audioStorage is down (non-critical)', async () => {
+  await withMockFetch(async () => {
+    const result = await checkAllServices({
+      neo4jCheck: okCheck,
+      mongoCheck: okCheck,
+      audioStorageCheck: errCheck,
+    });
+    assert.strictEqual(result.status, 'ok');
+    assert.strictEqual(result.services.audioStorage.status, 'error');
     assert.strictEqual(result.services.neo4j.status, 'ok');
     assert.strictEqual(result.services.mongo.status, 'ok');
   });
@@ -53,6 +69,7 @@ test('checkAllServices returns error when neo4j is down', async () => {
     const result = await checkAllServices({
       neo4jCheck: errCheck,
       mongoCheck: okCheck,
+      audioStorageCheck: okCheck,
     });
     assert.strictEqual(result.status, 'error');
     assert.strictEqual(result.services.neo4j.status, 'error');
@@ -65,6 +82,7 @@ test('checkAllServices returns error when mongo is down', async () => {
     const result = await checkAllServices({
       neo4jCheck: okCheck,
       mongoCheck: errCheck,
+      audioStorageCheck: okCheck,
     });
     assert.strictEqual(result.status, 'error');
     assert.strictEqual(result.services.mongo.status, 'error');
@@ -77,6 +95,7 @@ test('checkAllServices returns ok when only non-critical services are down', asy
     const result = await checkAllServices({
       neo4jCheck: okCheck,
       mongoCheck: okCheck,
+      audioStorageCheck: okCheck,
     });
     assert.strictEqual(result.status, 'ok');
     assert.strictEqual(result.services.neo4j.status, 'ok');
@@ -91,6 +110,7 @@ test('each service entry has status and latencyMs fields', async () => {
     const result = await checkAllServices({
       neo4jCheck: okCheck,
       mongoCheck: okCheck,
+      audioStorageCheck: okCheck,
     });
     for (const [, svc] of Object.entries(result.services)) {
       assert.ok(

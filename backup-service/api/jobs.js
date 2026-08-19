@@ -67,7 +67,7 @@ export function isJobRunning() {
   );
 }
 
-// backup.sh logs each stage as "[<timestamp>] N/5 <description>..." (see
+// backup.sh logs each stage as "[<timestamp>] N/6 <description>..." (see
 // log() in backup.sh) — reused here to drive a live progress bar instead of
 // parsing anything script-specific to this API.
 const STEP_MARKER_RE = /\]\s+(\d+)\/(\d+)\s+([^\n]+)/g;
@@ -143,16 +143,17 @@ function parseRestoreResult(output) {
   return {
     mongo: check('MongoDB'),
     lightrag: check('LightRAG'),
+    audio: check('Audio'),
     neo4j: check('Neo4j'),
     keycloak: check('Keycloak'),
   };
 }
 
 /**
- * Maps a { mongo, neo4j, lightrag, keycloak } services-selection object (any
- * key may be omitted — omitted means "include") to the BACKUP_INCLUDE_* env
- * vars backup.sh reads. Absent by default: every component included, same as
- * before this option existed.
+ * Maps a { mongo, neo4j, lightrag, audio, keycloak } services-selection
+ * object (any key may be omitted — omitted means "include") to the
+ * BACKUP_INCLUDE_* env vars backup.sh reads. Absent by default: every
+ * component included, same as before this option existed.
  */
 function includeEnvFromServices(services) {
   const include = (key) => (services?.[key] === false ? 'false' : 'true');
@@ -160,6 +161,7 @@ function includeEnvFromServices(services) {
     BACKUP_INCLUDE_MONGO: include('mongo'),
     BACKUP_INCLUDE_NEO4J: include('neo4j'),
     BACKUP_INCLUDE_LIGHTRAG: include('lightrag'),
+    BACKUP_INCLUDE_AUDIO: include('audio'),
     BACKUP_INCLUDE_KEYCLOAK: include('keycloak'),
   };
 }

@@ -546,6 +546,7 @@ export async function translateHabit(
  * @param {string} params.translateUrl - LibreTranslate endpoint URL
  * @param {Function} [params.translateTerm] - translateTerm(term, src, tgt, base) => string|null, used to localise new BCIO concept labels for the admin portal
  * @param {string} [params.habitType] - Explicit 'build'|'quit' choice from the structured New Habit flow. Omitted (undefined) for free-text community donations, which fall back to the classifier's own read of the sentence.
+ * @param {boolean} [params.skipClassification] - True for a structured-catalog donation (see habitsCrudRouter.js): `sentence` is already an admin-curated activity_types label, not participant free text, so there's nothing to classify — it's a habit by definition. Skips classifyHabit() only; context extraction, BCIO mapping, translation, persistence, and embedding all run exactly as they do for a classified donation.
  *
  * @returns {{ is_habit: boolean, uuid?: string, message: string }}
  */
@@ -562,6 +563,7 @@ export async function shareHabit({
   habitType,
   stackedOnUuid = null,
   creationMode = 'standalone',
+  skipClassification = false,
   queryNeo4j,
   getDb,
   apiBase,
@@ -569,7 +571,9 @@ export async function shareHabit({
   translateTerm,
   translateUrl,
 }) {
-  const classified = await classifyHabit(sentence, language, userID, apiBase);
+  const classified = skipClassification
+    ? { is_habit: true, confidence: 1, habit_type: undefined }
+    : await classifyHabit(sentence, language, userID, apiBase);
 
   if (!classified.is_habit) {
     return persistRejectedHabit(
@@ -580,10 +584,12 @@ export async function shareHabit({
   }
 
   // habitType is only set when the caller made an explicit build/quit choice
-  // (the structured New Habit flow); every other route to this pipeline —
-  // most notably the free-text community donation screen — goes through the
-  // same classifier call above, so its own habit_type read is the right
-  // fallback instead of a hardcoded default.
+  // (the structured New Habit flow, or a structured donation — see
+  // habitsCrudRouter.js, which defaults to 'build' for those since there's
+  // no classifier read to fall back to and donation never asks); every
+  // other route to this pipeline — most notably free-text/voice community
+  // donations — goes through the classifier call above, so its own
+  // habit_type read is the right fallback instead of a hardcoded default.
   const effectiveHabitType =
     habitType === 'build' || habitType === 'quit'
       ? habitType
@@ -674,6 +680,7 @@ export async function enqueueHabitDonation({
   habitType,
   stackedOnUuid = null,
   creationMode = 'standalone',
+  skipClassification = false,
   habitQueue,
 }) {
   // habitType is intentionally left undefined (not defaulted here) when the
@@ -695,6 +702,7 @@ export async function enqueueHabitDonation({
       habitType,
       stackedOnUuid,
       creationMode,
+      skipClassification,
     },
     { jobId: uuid }
   );
@@ -825,7 +833,7 @@ export async function embedAndStoreHabit({
 // BullMQ worker) so it exists regardless of which path handles the
 // donation, and regardless of the eventual accept/reject outcome.
 
-const DONATION_INPUT_MODES = ['text', 'speech'];
+const DONATION_INPUT_MODES = ['freeText', 'structured', 'voice'];
 
 /**
  * Create the correlation record for one donation attempt.
@@ -837,7 +845,7 @@ export async function createDonationRecord({
   userID,
   studyId = null,
   groupId = null,
-  inputMode = 'text',
+  inputMode = 'freeText',
   transcript = null,
   transcriptEdited = null,
   questionnaireSlug = null,
@@ -848,12 +856,14 @@ export async function createDonationRecord({
     userId: userID,
     studyId,
     groupId,
-    inputMode: DONATION_INPUT_MODES.includes(inputMode) ? inputMode : 'text',
+    inputMode: DONATION_INPUT_MODES.includes(inputMode)
+      ? inputMode
+      : 'freeText',
     // Set once shareHabit()'s classifier verdict is known — null until then,
     // since the queued path only learns this after the response is sent.
     isHabit: null,
     audioClip: null,
-    // Raw STT output, only meaningful for inputMode: 'speech' — the
+    // Raw STT output, only meaningful for inputMode: 'voice' — the
     // transcribe endpoint itself is stateless, so the client resends this
     // once alongside the (possibly-edited) final `sentence` at submit time.
     transcript: typeof transcript === 'string' ? transcript : null,

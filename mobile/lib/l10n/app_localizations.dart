@@ -1214,6 +1214,12 @@ abstract class AppLocalizations {
   /// **'Back to Profile'**
   String get backToProfile;
 
+  /// Button label on the post-donation questionnaire confirmation screen, returning to the share/donate screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share Another Habit'**
+  String get backToShare;
+
   /// AppBar title for confirmation screens
   ///
   /// In en, this message translates to:
@@ -2881,6 +2887,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hold the button below and describe your habit'**
   String get donateVoiceTranscriptPlaceholder;
+
+  /// Section header above the activity picker on the donation form, shown when the study restricts donation to a fixed catalog of activities
+  ///
+  /// In en, this message translates to:
+  /// **'What did you do?'**
+  String get donateStructuredPickerLabel;
+
+  /// Hint text below the activity picker header on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the activity that best matches what you did'**
+  String get donateStructuredPickerHint;
+
+  /// Empty-state message shown when the structured activity catalog has no entries configured
+  ///
+  /// In en, this message translates to:
+  /// **'No activities are available yet — please check back later.'**
+  String get donateStructuredEmptyState;
 
   /// Button to proceed from the cue-setting step to the next step
   ///

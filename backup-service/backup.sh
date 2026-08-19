@@ -36,6 +36,7 @@ BACKUP_TRIGGER=${BACKUP_TRIGGER:-scheduled}
 # get all four — only a manual trigger can narrow the scope.
 INCLUDE_MONGO=${BACKUP_INCLUDE_MONGO:-true}
 INCLUDE_LIGHTRAG=${BACKUP_INCLUDE_LIGHTRAG:-true}
+INCLUDE_AUDIO=${BACKUP_INCLUDE_AUDIO:-true}
 INCLUDE_NEO4J=${BACKUP_INCLUDE_NEO4J:-true}
 INCLUDE_KEYCLOAK=${BACKUP_INCLUDE_KEYCLOAK:-true}
 
@@ -48,6 +49,7 @@ BACKUP_ERRORS=0
 ERROR_LOG=""
 MONGO_OK=true
 LIGHTRAG_OK=true
+AUDIO_OK=true
 NEO4J_OK=true
 KEYCLOAK_OK=true
 KEYCLOAK_DB_OK=true
@@ -111,7 +113,7 @@ mkdir -p "$BACKUP_DIR/$DATE"
 # 1. Backup MongoDB
 # NOTE: The --out directory name ("mongo") must stay in sync with the restore path in restore.sh.
 # If you rename this directory, update restore.sh to match.
-log "1/5 Backing up MongoDB..."
+log "1/6 Backing up MongoDB..."
 if [ "$INCLUDE_MONGO" = "true" ]; then
   # Credentials go in a 0600 temp config file (--config), read via the
   # documented `uri` field, rather than --username/--password on the command
@@ -138,7 +140,7 @@ else
 fi
 
 # 2. Backup LightRAG index
-log "2/5 Backing up LightRAG index..."
+log "2/6 Backing up LightRAG index..."
 if [ "$INCLUDE_LIGHTRAG" = "true" ]; then
   if [ -d "/lightrag" ] && [ "$(ls -A /lightrag 2>/dev/null)" ]; then
     if tar -czf "$BACKUP_DIR/$DATE/lightrag-data.tar.gz" -C /lightrag . 2>/dev/null; then
@@ -155,8 +157,26 @@ else
   log "⊘ LightRAG excluded from this backup (per trigger options)"
 fi
 
-# 3. Backup Neo4j using native dump
-log "3/5 Backing up Neo4j (using neo4j-admin dump)..."
+# 3. Backup audio recordings (habit-donation voice clips)
+log "3/6 Backing up audio recordings..."
+if [ "$INCLUDE_AUDIO" = "true" ]; then
+  if [ -d "/audio" ] && [ "$(ls -A /audio 2>/dev/null)" ]; then
+    if tar -czf "$BACKUP_DIR/$DATE/audio-recordings.tar.gz" -C /audio . 2>/dev/null; then
+      log "✓ Audio recordings backup completed"
+    else
+      AUDIO_OK=false
+      log_error "Audio" "tar archive failed"
+    fi
+  else
+    log "⚠ Warning: Audio recordings volume is empty or not mounted"
+    touch "$BACKUP_DIR/$DATE/audio-recordings.tar.gz"
+  fi
+else
+  log "⊘ Audio recordings excluded from this backup (per trigger options)"
+fi
+
+# 4. Backup Neo4j using native dump
+log "4/6 Backing up Neo4j (using neo4j-admin dump)..."
 if [ "$INCLUDE_NEO4J" = "true" ]; then
   log "  Stopping Neo4j for consistent backup..."
   mkdir -p "$BACKUP_DIR/$DATE/neo4j"
@@ -209,12 +229,12 @@ else
   log "⊘ Neo4j excluded from this backup (per trigger options)"
 fi
 
-# 4. Backup Keycloak: realm config (via admin API) + the actual Postgres
+# 5. Backup Keycloak: realm config (via admin API) + the actual Postgres
 # database (via pg_dump). The realm export alone captures clients/roles/groups
 # but NOT user accounts or credentials — those only live in keycloak-db, so
 # losing that volume with only a realm export backed up would mean every
 # admin/researcher account is unrecoverable.
-log "4/5 Backing up Keycloak (realm config + database)..."
+log "5/6 Backing up Keycloak (realm config + database)..."
 mkdir -p "$BACKUP_DIR/$DATE/keycloak"
 
 if [ "$INCLUDE_KEYCLOAK" = "true" ]; then
@@ -268,8 +288,8 @@ else
   log "⊘ Keycloak excluded from this backup (per trigger options)"
 fi
 
-# 5. Create unified backup archive
-log "5/5 Creating unified backup archive..."
+# 6. Create unified backup archive
+log "6/6 Creating unified backup archive..."
 if tar -czf "$BACKUP_DIR/full_backup_$DATE.tar.gz" -C "$BACKUP_DIR/$DATE" . 2>/dev/null; then
   log "✓ Unified archive created"
 else
@@ -306,6 +326,7 @@ Backup Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 Trigger: $BACKUP_TRIGGER
 MongoDB: $(component_status "$INCLUDE_MONGO" "$MONGO_OK")
 LightRAG: $(component_status "$INCLUDE_LIGHTRAG" "$LIGHTRAG_OK")
+Audio: $(component_status "$INCLUDE_AUDIO" "$AUDIO_OK")
 Neo4j: $(component_status "$INCLUDE_NEO4J" "$NEO4J_OK")
 Keycloak realm: $([ "$INCLUDE_KEYCLOAK" != "true" ] && echo "Excluded" || ([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_OK" = true ] && echo "✓" || echo "✗ Check logs")))
 Keycloak database: $([ "$INCLUDE_KEYCLOAK" != "true" ] && echo "Excluded" || ([ -z "$KC_DB_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_DB_OK" = true ] && echo "✓" || echo "✗ Check logs")))
@@ -333,6 +354,8 @@ jq -n \
   --argjson mongoIncluded "$([ "$INCLUDE_MONGO" = true ] && echo true || echo false)" \
   --argjson lightragOk "$([ "$LIGHTRAG_OK" = true ] && echo true || echo false)" \
   --argjson lightragIncluded "$([ "$INCLUDE_LIGHTRAG" = true ] && echo true || echo false)" \
+  --argjson audioOk "$([ "$AUDIO_OK" = true ] && echo true || echo false)" \
+  --argjson audioIncluded "$([ "$INCLUDE_AUDIO" = true ] && echo true || echo false)" \
   --argjson neo4jOk "$([ "$NEO4J_OK" = true ] && echo true || echo false)" \
   --argjson neo4jIncluded "$([ "$INCLUDE_NEO4J" = true ] && echo true || echo false)" \
   --argjson keycloakOk "$([ "$KEYCLOAK_OK" = true ] && echo true || echo false)" \
@@ -344,7 +367,7 @@ jq -n \
   --argjson errors "$BACKUP_ERRORS" \
   --arg errorLog "$ERROR_LOG" \
   --argjson durationSeconds "$DURATION_SECONDS" \
-  '{date:$date, file:$file, trigger:$trigger, sizeBytes:$sizeBytes, mongoOk:$mongoOk, mongoIncluded:$mongoIncluded, lightragOk:$lightragOk, lightragIncluded:$lightragIncluded, neo4jOk:$neo4jOk, neo4jIncluded:$neo4jIncluded, keycloakOk:$keycloakOk, keycloakSkipped:$keycloakSkipped, keycloakDbOk:$keycloakDbOk, keycloakDbSkipped:$keycloakDbSkipped, keycloakIncluded:$keycloakIncluded, retentionDays:$retentionDays, errors:$errors, errorLog:$errorLog, durationSeconds:$durationSeconds}' \
+  '{date:$date, file:$file, trigger:$trigger, sizeBytes:$sizeBytes, mongoOk:$mongoOk, mongoIncluded:$mongoIncluded, lightragOk:$lightragOk, lightragIncluded:$lightragIncluded, audioOk:$audioOk, audioIncluded:$audioIncluded, neo4jOk:$neo4jOk, neo4jIncluded:$neo4jIncluded, keycloakOk:$keycloakOk, keycloakSkipped:$keycloakSkipped, keycloakDbOk:$keycloakDbOk, keycloakDbSkipped:$keycloakDbSkipped, keycloakIncluded:$keycloakIncluded, retentionDays:$retentionDays, errors:$errors, errorLog:$errorLog, durationSeconds:$durationSeconds}' \
   > "$BACKUP_DIR/backup_$DATE.manifest.json"
 
 # Report results

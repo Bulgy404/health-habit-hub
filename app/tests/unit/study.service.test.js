@@ -206,6 +206,39 @@ test('listStudies includes onboardingEnabled and selfHabitCreationEnabled', asyn
   assert.equal(result.studies[0].selfHabitCreationEnabled, false);
 });
 
+test('listStudies includes donationAskFrequency, donationAskHealthBenefit, and donationAskWellbeing', async () => {
+  // Regression test: same failure mode as above. When these were missing
+  // from the list response, the admin's donation-questions toggles read as
+  // undefined/off no matter what was saved, and saving without touching them
+  // sent `undefined` for each field — which JSON.stringify drops from the
+  // request body, so a study that was actually still asking these questions
+  // never got flipped off, and the mobile app kept showing them.
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'Study A',
+        description: null,
+        isDefault: true,
+        isActive: true,
+        donationAskFrequency: false,
+        donationAskHealthBenefit: false,
+        donationAskWellbeing: false,
+        groups: [],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const result = await listStudies({ db });
+  assert.equal(result.studies[0].donationAskFrequency, false);
+  assert.equal(result.studies[0].donationAskHealthBenefit, false);
+  assert.equal(result.studies[0].donationAskWellbeing, false);
+});
+
 // ── createStudy ───────────────────────────────────────────────────────────────
 
 test('createStudy inserts a study with correct defaults', async () => {

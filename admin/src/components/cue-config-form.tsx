@@ -17,10 +17,10 @@ export interface ActivityTypeEntry {
 }
 
 /**
- * The cue configuration fields for a study group's cueConfig. Habit-entry
- * mode (free text vs. structured activities) is a study-wide setting, not a
- * per-group one — see HabitEntryModeForm, configured once on the study's
- * Details tab.
+ * The cue configuration fields for a study group's cueConfig. Entry mode
+ * (free text / structured / voice) is configured separately — see the
+ * "Entry Mode" card in the Habit Creation tab (donationInputMode +
+ * structuredActivityKeys, study- or group-scoped).
  */
 export interface CueConfigValue {
   cueCount: "single" | "multi";

@@ -101,6 +101,7 @@ flowchart TB
     backup -- "mongodump" --> mongo
     backup -- "neo4j-admin dump" --> neo4j
     backup -- "tar lightrag-data" --> lightrag
+    backup -- "tar audio-recordings" --> backend
     backup -- "partial-export API" --> keycloak
     backup -- "docker exec (Keycloak DB dump)" --> dockerproxy
     mongoexpress --> mongo

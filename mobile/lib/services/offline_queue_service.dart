@@ -48,7 +48,11 @@ class OfflineQueueService {
     await _append(
       QueuedSubmission(
         payload: {
-          'sentence': values.sentence,
+          // Structured donations resolve their sentence server-side from
+          // behaviorKey — mirrors the live (non-queued) submit in
+          // donate_screen.dart.
+          if (values.behaviorKey == null) 'sentence': values.sentence,
+          if (values.behaviorKey != null) 'behaviorKey': values.behaviorKey,
           'language': language,
           'frequency': values.frequency,
           'health_benefit': values.healthBenefit,
@@ -94,22 +98,20 @@ class OfflineQueueService {
     final raw = await _secureStorage.read(key: _key);
     if (raw == null || raw.isEmpty) return [];
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((e) {
-          final m = e as Map<String, dynamic>;
-          return QueuedSubmission(
-            payload: m['payload'] as Map<String, dynamic>,
-            attempts: m['attempts'] as int? ?? 0,
-            queuedAt:
-                DateTime.tryParse(m['queuedAt'] as String? ?? '') ??
-                DateTime.now(),
-          );
-        })
-        .toList();
+    return decoded.map((e) {
+      final m = e as Map<String, dynamic>;
+      return QueuedSubmission(
+        payload: m['payload'] as Map<String, dynamic>,
+        attempts: m['attempts'] as int? ?? 0,
+        queuedAt:
+            DateTime.tryParse(m['queuedAt'] as String? ?? '') ?? DateTime.now(),
+      );
+    }).toList();
   }
 
   Future<void> _append(QueuedSubmission submission) async {
-    final entries = await _readAll()..add(submission);
+    final entries = await _readAll()
+      ..add(submission);
     final encoded = jsonEncode(
       entries
           .map(

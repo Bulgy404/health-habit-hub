@@ -175,6 +175,10 @@
   background: var(--color-bg, var(--color-surface-alt));
 }
 
+.clickableRow {
+  cursor: pointer;
+}
+
 .loadingState {
   text-align: center;
   padding: 3rem 2rem;
@@ -334,6 +338,25 @@
   font-size: 1.2rem;
   font-weight: 700;
   margin-bottom: 1rem;
+}
+
+.detailSection {
+  margin-bottom: 1.25rem;
+}
+
+.detailLabel {
+  display: block;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.detailText {
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 
 .formRow {

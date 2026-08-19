@@ -40,7 +40,18 @@ const EXPECTED_ENTRIES = [
   { prefix: 'mongo/', key: 'mongo' },
   { prefix: 'neo4j/neo4j.dump', key: 'neo4j' },
   { prefix: 'lightrag-data.tar.gz', key: 'lightrag' },
+  { prefix: 'audio-recordings.tar.gz', key: 'audio' },
   { prefix: 'keycloak/hhh-realm.json', key: 'keycloak' },
+];
+
+// Components whose backup entry is itself a nested tar (restore.sh extracts
+// each independently into its own volume) — their inner entries need the
+// same path-traversal safety check as the outer archive, since a malicious
+// nested tar could hide a traversal payload the outer-archive check alone
+// wouldn't see.
+const NESTED_TAR_COMPONENTS = [
+  { key: 'lightrag', archiveName: 'lightrag-data.tar.gz' },
+  { key: 'audio', archiveName: 'audio-recordings.tar.gz' },
 ];
 
 function listTarEntries(tarPath, { errorMessage } = {}) {
@@ -91,28 +102,29 @@ export function inspectUploadedArchive(absPath) {
   const presence = {
     mongo: false,
     lightrag: false,
+    audio: false,
     neo4j: false,
     keycloak: false,
   };
-  let lightragEntryName = null;
+  // Actual entry name in the archive for each nested-tar component (e.g.
+  // "./lightrag-data.tar.gz"), keyed the same as NESTED_TAR_COMPONENTS —
+  // populated below, used for member extraction further down.
+  const nestedEntryNames = {};
   for (const { prefix, key } of EXPECTED_ENTRIES) {
     const match = normalized.find((e) => e === prefix || e.startsWith(prefix));
     if (match !== undefined) {
       presence[key] = true;
-      if (key === 'lightrag') {
-        // Extract by the archive's actual entry name (e.g. "./lightrag-data.tar.gz"),
-        // not an assumed bare name, so member extraction below always finds it.
-        lightragEntryName = entries[normalized.indexOf(match)];
-      }
+      nestedEntryNames[key] = entries[normalized.indexOf(match)];
     }
   }
   if (!Object.values(presence).some(Boolean)) {
     throw new Error(
-      'Archive does not contain any recognizable backup component (mongo/, neo4j/neo4j.dump, lightrag-data.tar.gz, keycloak/hhh-realm.json).'
+      'Archive does not contain any recognizable backup component (mongo/, neo4j/neo4j.dump, lightrag-data.tar.gz, audio-recordings.tar.gz, keycloak/hhh-realm.json).'
     );
   }
 
-  if (presence.lightrag) {
+  for (const { key, archiveName } of NESTED_TAR_COMPONENTS) {
+    if (!presence[key]) continue;
     const scratchDir = mkdtempSync(join(tmpdir(), 'hhh-backup-inspect-'));
     try {
       // Separate short flags (not the bundled "-xzOf") for portability across
@@ -121,16 +133,15 @@ export function inspectUploadedArchive(absPath) {
       // consistent across all three.
       const nested = execFileSync(
         'tar',
-        ['-x', '-z', '-O', '-f', absPath, lightragEntryName],
+        ['-x', '-z', '-O', '-f', absPath, nestedEntryNames[key]],
         { timeout: 30_000, maxBuffer: 1024 * 1024 * 1024 }
       );
-      const nestedPath = join(scratchDir, 'lightrag-data.tar.gz');
+      const nestedPath = join(scratchDir, archiveName);
       writeFileSync(nestedPath, nested);
       const nestedEntries = listTarEntries(nestedPath, {
-        errorMessage:
-          'lightrag-data.tar.gz inside the archive is not a valid tar file.',
+        errorMessage: `${archiveName} inside the archive is not a valid tar file.`,
       });
-      assertSafeEntries(nestedEntries, 'lightrag-data.tar.gz');
+      assertSafeEntries(nestedEntries, archiveName);
     } finally {
       rmSync(scratchDir, { recursive: true, force: true });
     }

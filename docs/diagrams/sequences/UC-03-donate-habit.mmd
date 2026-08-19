@@ -33,7 +33,15 @@ sequenceDiagram
     B->>Q: enqueueHabitDonation({uuid, sentence, language, studyId, ...})
     Q-->>B: jobId
     B-->>F: 202 {jobId, uuid, status: "pending", postDonationQuestionnaireSlug}
-    F->>F: Poll GET /api/v1/habits/jobs/:jobId
+
+    alt postDonationQuestionnaireSlug present
+        F-->>P: Skip the "share another habit" success screen —<br/>navigate straight to /questionnaire/:slug?habitUuid=:uuid
+        Note over F,B: Decided immediately from the 202 response, before<br/>classification (below) has even run — the questionnaire is<br/>offered regardless of the eventual accept/reject outcome.<br/>Reuses UC-06 unmodified. POST /questionnaire-responses<br/>with habitUuid bypasses the scheduled-window gate and<br/>links the response back to this habit_donations record.
+    else no post-donation questionnaire configured
+        F-->>P: Show "share another habit" success screen
+    end
+
+    F->>F: Poll GET /api/v1/habits/jobs/:jobId (independent of the branch above)
 
     Note over Q,W: Runs off-request in the worker, not on the HTTP thread
     Q->>W: dequeue job
@@ -68,9 +76,4 @@ sequenceDiagram
     opt inputMode was "speech"
         F->>B: POST /api/v1/habits/donations/:uuid/audio (multipart audio)
         B->>Mongo: set habit_donations.audioClip [best-effort — never blocks the donation]
-    end
-
-    opt postDonationQuestionnaireSlug was returned
-        F-->>P: Navigate to /questionnaire/:slug?habitUuid=:uuid
-        Note over F,B: Reuses UC-06 unmodified — POST /questionnaire-responses<br/>with habitUuid bypasses the normal scheduled-window gate<br/>and links the response back to this habit_donations record.
     end

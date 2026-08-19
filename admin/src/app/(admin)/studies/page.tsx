@@ -9,7 +9,7 @@ import { useStudiesData } from "./useStudiesData";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { useActivityTypes } from "@/lib/useActivityTypes";
 import { CueConfigForm } from "@/components/cue-config-form";
-import { HabitEntryModeForm } from "@/components/habit-entry-mode-form";
+import { StructuredActivityKeysForm } from "@/components/structured-activity-keys-form";
 import { ActivityTypesManager } from "@/components/activity-types-manager";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
@@ -59,7 +59,7 @@ interface StudyGroup {
   gamificationEnabled?: boolean | null;
   // Habit-donation input mode + optional post-donation questionnaire
   // (null = inherit study-level).
-  donationInputMode?: "text" | "speech" | "both" | null;
+  donationInputMode?: "freeText" | "structured" | "voice" | null;
   donationQuestionnaireSlug?: string | null;
   // Which optional donation questions show (null = inherit study-level).
   donationAskFrequency?: boolean | null;
@@ -98,7 +98,7 @@ interface StudySummary {
   reminderContentMode: "generic" | "implementation_intention";
   informationOverloadGuard: InformationOverloadGuard | null;
   gamificationEnabled: boolean;
-  donationInputMode: "text" | "speech" | "both";
+  donationInputMode: "freeText" | "structured" | "voice";
   donationQuestionnaireSlug: string | null;
   donationAskFrequency: boolean;
   donationAskHealthBenefit: boolean;
@@ -1818,9 +1818,13 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
 
 // ── Habit creation tab ──────────────────────────────────────────────────────────
 
-type HabitCreationValue = {
-  enabled: boolean;
-  entryMode: "freeText" | "structured";
+/**
+ * The unified entry mode — reused by both the New Habit wizard (free text vs.
+ * structured) and the community donation flow (free text vs. structured vs.
+ * voice). One setting, three mutually exclusive options.
+ */
+type EntryModeValue = {
+  mode: "freeText" | "structured" | "voice";
   structuredActivityKeys: string[];
 };
 
@@ -1828,8 +1832,9 @@ type HabitCreationSection =
   | "recommender"
   | "onboarding"
   | "habitCreation"
-  | "donationInput"
-  | "donationQuestions";
+  | "entryMode"
+  | "donationQuestions"
+  | "donationQuestionnaire";
 
 type DonationQuestionsValue = {
   frequency: boolean;
@@ -1859,79 +1864,46 @@ function summarizeBool(
   return t("habitCreationTab.summaryPerGroup", { on, total: groups.length });
 }
 
-function isHabitCreationActive(
-  scope: "study" | "group",
-  studyValue: HabitCreationValue,
-  groupValues: Record<string, HabitCreationValue>,
-  groups: StudySummary["groups"]
-): boolean {
-  return scope === "study" ? studyValue.enabled : groups.some((g) => groupValues[g.id]?.enabled);
-}
-
-function summarizeHabitCreationEnabled(
-  t: ReturnType<typeof useTranslations>,
-  scope: "study" | "group",
-  studyValue: HabitCreationValue,
-  groupValues: Record<string, HabitCreationValue>,
-  groups: StudySummary["groups"]
-): string {
-  if (scope === "study")
-    return studyValue.enabled ? t("habitCreationTab.summaryOn") : t("habitCreationTab.summaryOff");
-  const on = groups.filter((g) => groupValues[g.id]?.enabled).length;
-  return t("habitCreationTab.summaryPerGroup", { on, total: groups.length });
-}
-
-/**
- * The entry-mode overview card only reflects instances where habit creation
- * is actually enabled — a group/study with creation off has no meaningful
- * entry mode, regardless of what's stored.
- */
 function isEntryModeStructuredActive(
   scope: "study" | "group",
-  studyValue: HabitCreationValue,
-  groupValues: Record<string, HabitCreationValue>,
+  studyValue: EntryModeValue,
+  groupValues: Record<string, EntryModeValue>,
   groups: StudySummary["groups"]
 ): boolean {
   return scope === "study"
-    ? studyValue.enabled && studyValue.entryMode === "structured"
-    : groups.some(
-        (g) => groupValues[g.id]?.enabled && groupValues[g.id]?.entryMode === "structured"
-      );
+    ? studyValue.mode === "structured"
+    : groups.some((g) => groupValues[g.id]?.mode === "structured");
 }
 
 function summarizeEntryMode(
   t: ReturnType<typeof useTranslations>,
   scope: "study" | "group",
-  studyValue: HabitCreationValue,
-  groupValues: Record<string, HabitCreationValue>,
+  studyValue: EntryModeValue,
+  groupValues: Record<string, EntryModeValue>,
   groups: StudySummary["groups"]
 ): string {
-  if (scope === "study") {
-    if (!studyValue.enabled) return t("habitCreationTab.entryModeNaLabel");
-    return studyValue.entryMode === "structured"
-      ? t("habitCreationTab.entryModeStructuredLabel", {
-          count: studyValue.structuredActivityKeys.length,
-        })
-      : t("habitCreationTab.entryModeFreeTextLabel");
-  }
-  const enabledGroups = groups.filter((g) => groupValues[g.id]?.enabled);
-  if (enabledGroups.length === 0) return t("habitCreationTab.entryModeNaLabel");
-  const structured = enabledGroups.filter(
-    (g) => groupValues[g.id]?.entryMode === "structured"
-  ).length;
-  return t("habitCreationTab.entryModeSummaryPerGroup", {
-    on: structured,
-    total: enabledGroups.length,
-  });
+  const labelFor = (v: EntryModeValue) =>
+    v.mode === "structured"
+      ? t("habitCreationTab.entryModeStructuredLabel", { count: v.structuredActivityKeys.length })
+      : v.mode === "voice"
+        ? t("habitCreationTab.entryModeVoiceLabel")
+        : t("habitCreationTab.entryModeFreeTextLabel");
+  if (scope === "study") return labelFor(studyValue);
+  if (groups.length === 0) return labelFor(studyValue);
+  const structured = groups.filter((g) => groupValues[g.id]?.mode === "structured").length;
+  return t("habitCreationTab.entryModeSummaryPerGroup", { on: structured, total: groups.length });
 }
 
 /**
- * Recommender, onboarding, and habit-creation (+ nested entry mode) — each
- * independently switchable between study-wide and per-group, same shape as
- * RemindersTab below. Entry mode is nested inside the habit-creation section
- * (rather than being its own scoped section) so a group/study instance can
- * never show "structured" while creation is off for that same instance; it
- * still gets its own overview card for at-a-glance visibility.
+ * Recommender, onboarding, habit creation, entry mode, donation questions,
+ * and the post-donation questionnaire — each independently switchable
+ * between study-wide and per-group, same shape as RemindersTab below.
+ *
+ * Entry mode is its own top-level section rather than nested inside habit
+ * creation: it now governs both the New Habit wizard AND the community
+ * donation flow (free text / structured / voice — one unified setting), so
+ * it applies even when self-serve habit creation is off for a study that
+ * still accepts donations.
  */
 function HabitCreationTab({ study, token }: { study: StudySummary; token: string }) {
   const t = useTranslations("studies");
@@ -1945,18 +1917,14 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     study.groups.some((g) => g.onboardingEnabled != null) ? "group" : "study"
   );
   const [habitCreationScope, setHabitCreationScope] = useState<"study" | "group">(() =>
-    study.groups.some((g) => g.selfHabitCreationEnabled != null || g.habitEntryMode != null)
-      ? "group"
-      : "study"
+    study.groups.some((g) => g.selfHabitCreationEnabled != null) ? "group" : "study"
   );
 
   const [studyRecommenderEnabled, setStudyRecommenderEnabled] = useState(study.recommenderEnabled);
   const [studyOnboardingEnabled, setStudyOnboardingEnabled] = useState(study.onboardingEnabled);
-  const [studyHabitCreation, setStudyHabitCreation] = useState<HabitCreationValue>({
-    enabled: study.selfHabitCreationEnabled,
-    entryMode: study.habitEntryMode,
-    structuredActivityKeys: study.structuredActivityKeys,
-  });
+  const [studyHabitCreationEnabled, setStudyHabitCreationEnabled] = useState(
+    study.selfHabitCreationEnabled
+  );
 
   const [groupRecommenderEnabled, setGroupRecommenderEnabled] = useState<Record<string, boolean>>(
     () =>
@@ -1970,30 +1938,39 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         study.groups.map((g) => [g.id, g.onboardingEnabled ?? study.onboardingEnabled])
       )
   );
-  const [groupHabitCreation, setGroupHabitCreation] = useState<Record<string, HabitCreationValue>>(
-    () =>
-      Object.fromEntries(
-        study.groups.map((g) => [
-          g.id,
-          {
-            enabled: g.selfHabitCreationEnabled ?? study.selfHabitCreationEnabled,
-            entryMode: g.habitEntryMode ?? study.habitEntryMode,
-            structuredActivityKeys: g.structuredActivityKeys ?? study.structuredActivityKeys,
-          },
-        ])
-      )
-  );
-
-  // ── Habit-donation input mode ("text" | "speech" | "both") ───────────────
-  const [donationInputScope, setDonationInputScope] = useState<"study" | "group">(() =>
-    study.groups.some((g) => g.donationInputMode != null) ? "group" : "study"
-  );
-  const [studyDonationInput, setStudyDonationInput] = useState(study.donationInputMode);
-  const [groupDonationInput, setGroupDonationInput] = useState<
-    Record<string, "text" | "speech" | "both">
+  const [groupHabitCreationEnabled, setGroupHabitCreationEnabled] = useState<
+    Record<string, boolean>
   >(() =>
     Object.fromEntries(
-      study.groups.map((g) => [g.id, g.donationInputMode ?? study.donationInputMode])
+      study.groups.map((g) => [
+        g.id,
+        g.selfHabitCreationEnabled ?? study.selfHabitCreationEnabled,
+      ])
+    )
+  );
+
+  // ── Unified entry mode ("freeText" | "structured" | "voice") — shared by
+  // the New Habit wizard and the community donation flow. ───────────────────
+  const [entryModeScope, setEntryModeScope] = useState<"study" | "group">(() =>
+    study.groups.some(
+      (g) => g.donationInputMode != null || g.structuredActivityKeys != null
+    )
+      ? "group"
+      : "study"
+  );
+  const [studyEntryMode, setStudyEntryMode] = useState<EntryModeValue>({
+    mode: study.donationInputMode,
+    structuredActivityKeys: study.structuredActivityKeys,
+  });
+  const [groupEntryMode, setGroupEntryMode] = useState<Record<string, EntryModeValue>>(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        {
+          mode: g.donationInputMode ?? study.donationInputMode,
+          structuredActivityKeys: g.structuredActivityKeys ?? study.structuredActivityKeys,
+        },
+      ])
     )
   );
 
@@ -2032,26 +2009,57 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     )
   );
 
+  // ── Post-donation questionnaire (a pool slug, or none) ────────────────────
+  const [donationQuestionnaires, setDonationQuestionnaires] = useState<QuestionnaireSummary[]>([]);
+  useEffect(() => {
+    apiFetch(QUESTIONNAIRES_API, token)
+      .then((qs) => setDonationQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []))
+      .catch(() => setDonationQuestionnaires([]));
+  }, [token]);
+  // null/absent = inherit the study value; '' = this group explicitly has no
+  // questionnaire; a non-empty string = a slug override (see
+  // habitConfigService.js's resolveHabitConfig for the matching backend logic).
+  const [donationQSlugScope, setDonationQSlugScope] = useState<"study" | "group">(() =>
+    study.groups.some((g) => g.donationQuestionnaireSlug != null) ? "group" : "study"
+  );
+  const [studyDonationQSlug, setStudyDonationQSlug] = useState<string | null>(
+    study.donationQuestionnaireSlug
+  );
+  // Per-group live values are always concrete once in "group" scope — '' for
+  // explicitly none, never null (null only ever means "inherit", represented
+  // by falling out of "group" scope entirely, matching every other toggle).
+  const [groupDonationQSlug, setGroupDonationQSlug] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        g.donationQuestionnaireSlug ?? study.donationQuestionnaireSlug ?? "",
+      ])
+    )
+  );
+
   const [saving, setSaving] = useState<Record<HabitCreationSection, boolean>>({
     recommender: false,
     onboarding: false,
     habitCreation: false,
-    donationInput: false,
+    entryMode: false,
     donationQuestions: false,
+    donationQuestionnaire: false,
   });
   const [saved, setSaved] = useState<Record<HabitCreationSection, boolean>>({
     recommender: false,
     onboarding: false,
     habitCreation: false,
-    donationInput: false,
+    entryMode: false,
     donationQuestions: false,
+    donationQuestionnaire: false,
   });
   const [errors, setErrors] = useState<Record<HabitCreationSection, string>>({
     recommender: "",
     onboarding: "",
     habitCreation: "",
-    donationInput: "",
+    entryMode: "",
     donationQuestions: "",
+    donationQuestionnaire: "",
   });
 
   async function handleSaveRecommender() {
@@ -2137,21 +2145,13 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
       if (habitCreationScope === "study") {
         await apiFetch(`${API_BASE}/${study.id}`, token, {
           method: "PUT",
-          body: JSON.stringify({
-            selfHabitCreationEnabled: studyHabitCreation.enabled,
-            habitEntryMode: studyHabitCreation.entryMode,
-            structuredActivityKeys: studyHabitCreation.structuredActivityKeys,
-          }),
+          body: JSON.stringify({ selfHabitCreationEnabled: studyHabitCreationEnabled }),
         });
         await Promise.all(
           study.groups.map((g) =>
             apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
               method: "PATCH",
-              body: JSON.stringify({
-                selfHabitCreationEnabled: null,
-                habitEntryMode: null,
-                structuredActivityKeys: null,
-              }),
+              body: JSON.stringify({ selfHabitCreationEnabled: null }),
             }).catch(() => {})
           )
         );
@@ -2161,9 +2161,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
               method: "PATCH",
               body: JSON.stringify({
-                selfHabitCreationEnabled: groupHabitCreation[g.id].enabled,
-                habitEntryMode: groupHabitCreation[g.id].entryMode,
-                structuredActivityKeys: groupHabitCreation[g.id].structuredActivityKeys,
+                selfHabitCreationEnabled: groupHabitCreationEnabled[g.id],
               }),
             })
           )
@@ -2180,20 +2178,23 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     }
   }
 
-  async function handleSaveDonationInput() {
-    setSaving((p) => ({ ...p, donationInput: true }));
-    setErrors((p) => ({ ...p, donationInput: "" }));
+  async function handleSaveEntryMode() {
+    setSaving((p) => ({ ...p, entryMode: true }));
+    setErrors((p) => ({ ...p, entryMode: "" }));
     try {
-      if (donationInputScope === "study") {
+      if (entryModeScope === "study") {
         await apiFetch(`${API_BASE}/${study.id}`, token, {
           method: "PUT",
-          body: JSON.stringify({ donationInputMode: studyDonationInput }),
+          body: JSON.stringify({
+            donationInputMode: studyEntryMode.mode,
+            structuredActivityKeys: studyEntryMode.structuredActivityKeys,
+          }),
         });
         await Promise.all(
           study.groups.map((g) =>
             apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
               method: "PATCH",
-              body: JSON.stringify({ donationInputMode: null }),
+              body: JSON.stringify({ donationInputMode: null, structuredActivityKeys: null }),
             }).catch(() => {})
           )
         );
@@ -2202,19 +2203,22 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           study.groups.map((g) =>
             apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
               method: "PATCH",
-              body: JSON.stringify({ donationInputMode: groupDonationInput[g.id] }),
+              body: JSON.stringify({
+                donationInputMode: groupEntryMode[g.id].mode,
+                structuredActivityKeys: groupEntryMode[g.id].structuredActivityKeys,
+              }),
             })
           )
         );
       }
-      setSaved((p) => ({ ...p, donationInput: true }));
+      setSaved((p) => ({ ...p, entryMode: true }));
     } catch (err) {
       setErrors((p) => ({
         ...p,
-        donationInput: err instanceof Error ? err.message : t("saveFailedGeneric"),
+        entryMode: err instanceof Error ? err.message : t("saveFailedGeneric"),
       }));
     } finally {
-      setSaving((p) => ({ ...p, donationInput: false }));
+      setSaving((p) => ({ ...p, entryMode: false }));
     }
   }
 
@@ -2266,14 +2270,48 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     }
   }
 
-  const showActivityTypesManager =
-    habitCreationScope === "study"
-      ? studyHabitCreation.enabled && studyHabitCreation.entryMode === "structured"
-      : study.groups.some(
-          (g) =>
-            groupHabitCreation[g.id]?.enabled &&
-            groupHabitCreation[g.id]?.entryMode === "structured"
+  async function handleSaveDonationQuestionnaire() {
+    setSaving((p) => ({ ...p, donationQuestionnaire: true }));
+    setErrors((p) => ({ ...p, donationQuestionnaire: "" }));
+    try {
+      if (donationQSlugScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({ donationQuestionnaireSlug: studyDonationQSlug }),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ donationQuestionnaireSlug: null }),
+            }).catch(() => {})
+          )
         );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ donationQuestionnaireSlug: groupDonationQSlug[g.id] }),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, donationQuestionnaire: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        donationQuestionnaire: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, donationQuestionnaire: false }));
+    }
+  }
+
+  const showActivityTypesManager =
+    entryModeScope === "study"
+      ? studyEntryMode.mode === "structured"
+      : study.groups.some((g) => groupEntryMode[g.id]?.mode === "structured");
 
   const overviewCards = [
     {
@@ -2313,17 +2351,17 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     {
       key: "habitCreation",
       title: t("habitCreationTab.habitCreationLabel"),
-      enabled: isHabitCreationActive(
+      enabled: isBoolEnabled(
         habitCreationScope,
-        studyHabitCreation,
-        groupHabitCreation,
+        studyHabitCreationEnabled,
+        groupHabitCreationEnabled,
         study.groups
       ),
-      status: summarizeHabitCreationEnabled(
+      status: summarizeBool(
         t,
         habitCreationScope,
-        studyHabitCreation,
-        groupHabitCreation,
+        studyHabitCreationEnabled,
+        groupHabitCreationEnabled,
         study.groups
       ),
     },
@@ -2331,34 +2369,12 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
       key: "entryMode",
       title: t("habitCreationTab.entryModeLabel"),
       enabled: isEntryModeStructuredActive(
-        habitCreationScope,
-        studyHabitCreation,
-        groupHabitCreation,
+        entryModeScope,
+        studyEntryMode,
+        groupEntryMode,
         study.groups
       ),
-      status: summarizeEntryMode(
-        t,
-        habitCreationScope,
-        studyHabitCreation,
-        groupHabitCreation,
-        study.groups
-      ),
-    },
-    {
-      key: "donationInput",
-      title: t("behaviorChangeTab.donationInputLabel"),
-      enabled: true,
-      status:
-        donationInputScope === "study"
-          ? {
-              text: t("behaviorChangeTab.donationInputTextOption"),
-              speech: t("behaviorChangeTab.donationInputSpeechOption"),
-              both: t("behaviorChangeTab.donationInputBothOption"),
-            }[studyDonationInput]
-          : t("habitCreationTab.summaryPerGroup", {
-              on: study.groups.length,
-              total: study.groups.length,
-            }),
+      status: summarizeEntryMode(t, entryModeScope, studyEntryMode, groupEntryMode, study.groups),
     },
     {
       key: "donationQuestions",
@@ -2386,6 +2402,21 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             })
           : t("habitCreationTab.summaryPerGroup", {
               on: study.groups.length,
+              total: study.groups.length,
+            }),
+    },
+    {
+      key: "donationQuestionnaire",
+      title: t("habitCreationTab.donationQuestionnaireLabel"),
+      enabled:
+        donationQSlugScope === "study"
+          ? !!studyDonationQSlug
+          : study.groups.some((g) => !!groupDonationQSlug[g.id]),
+      status:
+        donationQSlugScope === "study"
+          ? studyDonationQSlug || t("habitCreationTab.summaryOff")
+          : t("habitCreationTab.summaryPerGroup", {
+              on: study.groups.filter((g) => !!groupDonationQSlug[g.id]).length,
               total: study.groups.length,
             }),
     },
@@ -2522,77 +2553,29 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         {errors.habitCreation && <div className={styles.errorMsg}>{errors.habitCreation}</div>}
 
         {habitCreationScope === "study" ? (
-          <div className={styles.reminderSwitchGroup}>
-            <ToggleSwitch
-              className={styles.checkboxLabel}
-              checked={studyHabitCreation.enabled}
-              onChange={(e) => setStudyHabitCreation((v) => ({ ...v, enabled: e.target.checked }))}
-              label={t("habitCreationTab.habitCreationEnabledLabel")}
-            />
-            {studyHabitCreation.enabled && (
-              <HabitEntryModeForm
-                value={{
-                  habitEntryMode: studyHabitCreation.entryMode,
-                  structuredActivityKeys: studyHabitCreation.structuredActivityKeys,
-                }}
-                onChange={(patch) =>
-                  setStudyHabitCreation((v) => ({
-                    ...v,
-                    entryMode: patch.habitEntryMode ?? v.entryMode,
-                    structuredActivityKeys:
-                      patch.structuredActivityKeys ?? v.structuredActivityKeys,
-                  }))
-                }
-                activityTypes={activityTypes}
-              />
-            )}
-          </div>
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyHabitCreationEnabled}
+            onChange={(e) => setStudyHabitCreationEnabled(e.target.checked)}
+            label={t("habitCreationTab.habitCreationEnabledLabel")}
+          />
         ) : (
           <div className={styles.reminderGroupList}>
-            {study.groups.map((g) => {
-              const v = groupHabitCreation[g.id];
-              if (!v) return null;
-              return (
-                <div key={g.id} className={styles.reminderGroupRow}>
-                  <p className={styles.cueConfigGroupLabel}>
-                    {g.label || t("groupFallbackLabel", { index: g.index })}
-                  </p>
-                  <div className={styles.reminderSwitchGroup}>
-                    <ToggleSwitch
-                      className={styles.checkboxLabel}
-                      checked={v.enabled}
-                      onChange={(e) =>
-                        setGroupHabitCreation((p) => ({
-                          ...p,
-                          [g.id]: { ...p[g.id], enabled: e.target.checked },
-                        }))
-                      }
-                      label={t("habitCreationTab.habitCreationEnabledLabel")}
-                    />
-                    {v.enabled && (
-                      <HabitEntryModeForm
-                        value={{
-                          habitEntryMode: v.entryMode,
-                          structuredActivityKeys: v.structuredActivityKeys,
-                        }}
-                        onChange={(patch) =>
-                          setGroupHabitCreation((p) => ({
-                            ...p,
-                            [g.id]: {
-                              ...p[g.id],
-                              entryMode: patch.habitEntryMode ?? p[g.id].entryMode,
-                              structuredActivityKeys:
-                                patch.structuredActivityKeys ?? p[g.id].structuredActivityKeys,
-                            },
-                          }))
-                        }
-                        activityTypes={activityTypes}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {study.groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupHabitCreationEnabled[g.id]}
+                  onChange={(e) =>
+                    setGroupHabitCreationEnabled((p) => ({ ...p, [g.id]: e.target.checked }))
+                  }
+                  label={t("habitCreationTab.habitCreationEnabledLabel")}
+                />
+              </div>
+            ))}
           </div>
         )}
         <ToggleSwitch
@@ -2606,8 +2589,6 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
         )}
 
-        {showActivityTypesManager && <ActivityTypesManager token={token} />}
-
         <div className={styles.cueConfigFooter}>
           {saved.habitCreation && <span className={styles.savedMsg}>{t("saved")}</span>}
           <button
@@ -2620,70 +2601,102 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         </div>
       </div>
 
-      {/* Habit-donation input mode */}
-      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-donationInput">
-        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.donationInputLabel")}</p>
-        <span className={styles.hint}>{t("behaviorChangeTab.donationInputHint")}</span>
-        {errors.donationInput && <div className={styles.errorMsg}>{errors.donationInput}</div>}
+      {/* Unified entry mode — shared by the New Habit wizard and community donation */}
+      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-entryMode">
+        <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.entryModeLabel")}</p>
+        <span className={styles.hint}>{t("habitCreationTab.entryModeHint")}</span>
+        {errors.entryMode && <div className={styles.errorMsg}>{errors.entryMode}</div>}
 
-        {donationInputScope === "study" ? (
+        {entryModeScope === "study" ? (
           <div className={styles.formGroup}>
             <select
               className={styles.select}
-              value={studyDonationInput}
+              value={studyEntryMode.mode}
               onChange={(e) =>
-                setStudyDonationInput(e.target.value as "text" | "speech" | "both")
+                setStudyEntryMode((v) => ({
+                  ...v,
+                  mode: e.target.value as EntryModeValue["mode"],
+                }))
               }
             >
-              <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
-              <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
-              <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
+              <option value="freeText">{t("habitCreationTab.entryModeFreeTextOption")}</option>
+              <option value="structured">{t("habitCreationTab.entryModeStructuredOption")}</option>
+              <option value="voice">{t("habitCreationTab.entryModeVoiceOption")}</option>
             </select>
+            {studyEntryMode.mode === "structured" && (
+              <StructuredActivityKeysForm
+                selectedKeys={studyEntryMode.structuredActivityKeys}
+                onChange={(keys) =>
+                  setStudyEntryMode((v) => ({ ...v, structuredActivityKeys: keys }))
+                }
+                activityTypes={activityTypes}
+              />
+            )}
           </div>
         ) : (
           <div className={styles.reminderGroupList}>
-            {study.groups.map((g) => (
-              <div key={g.id} className={styles.reminderGroupRow}>
-                <p className={styles.cueConfigGroupLabel}>
-                  {g.label || t("groupFallbackLabel", { index: g.index })}
-                </p>
-                <select
-                  className={styles.select}
-                  value={groupDonationInput[g.id] ?? "text"}
-                  onChange={(e) =>
-                    setGroupDonationInput((p) => ({
-                      ...p,
-                      [g.id]: e.target.value as "text" | "speech" | "both",
-                    }))
-                  }
-                >
-                  <option value="text">{t("behaviorChangeTab.donationInputTextOption")}</option>
-                  <option value="speech">{t("behaviorChangeTab.donationInputSpeechOption")}</option>
-                  <option value="both">{t("behaviorChangeTab.donationInputBothOption")}</option>
-                </select>
-              </div>
-            ))}
+            {study.groups.map((g) => {
+              const v = groupEntryMode[g.id];
+              if (!v) return null;
+              return (
+                <div key={g.id} className={styles.reminderGroupRow}>
+                  <p className={styles.cueConfigGroupLabel}>
+                    {g.label || t("groupFallbackLabel", { index: g.index })}
+                  </p>
+                  <select
+                    className={styles.select}
+                    value={v.mode}
+                    onChange={(e) =>
+                      setGroupEntryMode((p) => ({
+                        ...p,
+                        [g.id]: { ...p[g.id], mode: e.target.value as EntryModeValue["mode"] },
+                      }))
+                    }
+                  >
+                    <option value="freeText">{t("habitCreationTab.entryModeFreeTextOption")}</option>
+                    <option value="structured">
+                      {t("habitCreationTab.entryModeStructuredOption")}
+                    </option>
+                    <option value="voice">{t("habitCreationTab.entryModeVoiceOption")}</option>
+                  </select>
+                  {v.mode === "structured" && (
+                    <StructuredActivityKeysForm
+                      selectedKeys={v.structuredActivityKeys}
+                      onChange={(keys) =>
+                        setGroupEntryMode((p) => ({
+                          ...p,
+                          [g.id]: { ...p[g.id], structuredActivityKeys: keys },
+                        }))
+                      }
+                      activityTypes={activityTypes}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         <ToggleSwitch
           className={styles.checkboxLabel}
-          checked={donationInputScope === "group"}
+          checked={entryModeScope === "group"}
           disabled={study.groups.length === 0}
-          onChange={(e) => setDonationInputScope(e.target.checked ? "group" : "study")}
+          onChange={(e) => setEntryModeScope(e.target.checked ? "group" : "study")}
           label={t("habitCreationTab.perGroupLabel")}
         />
         {study.groups.length === 0 && (
           <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
         )}
 
+        {showActivityTypesManager && <ActivityTypesManager token={token} />}
+
         <div className={styles.cueConfigFooter}>
-          {saved.donationInput && <span className={styles.savedMsg}>{t("saved")}</span>}
+          {saved.entryMode && <span className={styles.savedMsg}>{t("saved")}</span>}
           <button
             className={styles.saveBtn}
-            onClick={handleSaveDonationInput}
-            disabled={saving.donationInput}
+            onClick={handleSaveEntryMode}
+            disabled={saving.entryMode}
           >
-            <SpinnerLabel loading={saving.donationInput} label={tc("save")} />
+            <SpinnerLabel loading={saving.entryMode} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -2757,6 +2770,87 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             disabled={saving.donationQuestions}
           >
             <SpinnerLabel loading={saving.donationQuestions} label={tc("save")} />
+          </button>
+        </div>
+      </div>
+
+      {/* Post-donation questionnaire — participants land here on a new screen
+          right after donating, once the success confirmation has shown. */}
+      <div
+        className={styles.reminderTypeSection}
+        data-testid="habit-creation-section-donationQuestionnaire"
+      >
+        <p className={styles.cueConfigGroupLabel}>
+          {t("habitCreationTab.donationQuestionnaireLabel")}
+        </p>
+        <span className={styles.hint}>{t("habitCreationTab.donationQuestionnaireHint")}</span>
+        {errors.donationQuestionnaire && (
+          <div className={styles.errorMsg}>{errors.donationQuestionnaire}</div>
+        )}
+
+        {donationQSlugScope === "study" ? (
+          <div className={styles.formGroup}>
+            <select
+              className={styles.select}
+              value={studyDonationQSlug ?? ""}
+              onChange={(e) => setStudyDonationQSlug(e.target.value || null)}
+            >
+              <option value="">{t("habitCreationTab.donationQuestionnaireNoneOption")}</option>
+              {donationQuestionnaires
+                .filter((q) => q.active)
+                .map((q) => (
+                  <option key={q.slug} value={q.slug}>
+                    {q.title.en || q.slug}
+                  </option>
+                ))}
+            </select>
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <select
+                  className={styles.select}
+                  value={groupDonationQSlug[g.id] ?? ""}
+                  onChange={(e) =>
+                    setGroupDonationQSlug((p) => ({ ...p, [g.id]: e.target.value }))
+                  }
+                >
+                  <option value="">{t("habitCreationTab.donationQuestionnaireNoneOption")}</option>
+                  {donationQuestionnaires
+                    .filter((q) => q.active)
+                    .map((q) => (
+                      <option key={q.slug} value={q.slug}>
+                        {q.title.en || q.slug}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={donationQSlugScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) => setDonationQSlugScope(e.target.checked ? "group" : "study")}
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.donationQuestionnaire && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveDonationQuestionnaire}
+            disabled={saving.donationQuestionnaire}
+          >
+            <SpinnerLabel loading={saving.donationQuestionnaire} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -3748,11 +3842,7 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 
 // ── Behavior-change tab ───────────────────────────────────────────────────────
 
-type BehaviorSection =
-  | "habitStacking"
-  | "reminderContent"
-  | "infoOverload"
-  | "donationQuestionnaire";
+type BehaviorSection = "habitStacking" | "reminderContent" | "infoOverload";
 type Scope = "study" | "group";
 
 const EMPTY_GUARD: InformationOverloadGuard = {
@@ -3810,51 +3900,20 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     Object.fromEntries(groups.map((g) => [g.id, g.informationOverloadGuard ?? studyGuard]))
   );
 
-  // ── Post-donation questionnaire (a pool slug, or none) ────────────────────
-  const [donationQuestionnaires, setDonationQuestionnaires] = useState<QuestionnaireSummary[]>([]);
-  useEffect(() => {
-    apiFetch(QUESTIONNAIRES_API, token)
-      .then((qs) => setDonationQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []))
-      .catch(() => setDonationQuestionnaires([]));
-  }, [token]);
-  // null/absent = inherit the study value; '' = this group explicitly has no
-  // questionnaire; a non-empty string = a slug override (see
-  // habitConfigService.js's resolveHabitConfig for the matching backend logic).
-  const [donationQSlugScope, setDonationQSlugScope] = useState<Scope>(() =>
-    groups.some((g) => g.donationQuestionnaireSlug != null) ? "group" : "study"
-  );
-  const [studyDonationQSlug, setStudyDonationQSlug] = useState<string | null>(
-    study.donationQuestionnaireSlug
-  );
-  // Per-group live values are always concrete once in "group" scope — '' for
-  // explicitly none, never null (null only ever means "inherit", represented
-  // by falling out of "group" scope entirely, matching every other toggle).
-  const [groupDonationQSlug, setGroupDonationQSlug] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      groups.map((g) => [
-        g.id,
-        g.donationQuestionnaireSlug ?? study.donationQuestionnaireSlug ?? "",
-      ])
-    )
-  );
-
   const [saving, setSaving] = useState<Record<BehaviorSection, boolean>>({
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
-    donationQuestionnaire: false,
   });
   const [saved, setSaved] = useState<Record<BehaviorSection, boolean>>({
     habitStacking: false,
     reminderContent: false,
     infoOverload: false,
-    donationQuestionnaire: false,
   });
   const [errors, setErrors] = useState<Record<BehaviorSection, string>>({
     habitStacking: "",
     reminderContent: "",
     infoOverload: "",
-    donationQuestionnaire: "",
   });
 
   function putStudy(body: object) {
@@ -3929,22 +3988,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
       }
     });
 
-  const saveDonationQuestionnaire = () =>
-    runSave("donationQuestionnaire", async () => {
-      if (donationQSlugScope === "study") {
-        await putStudy({ donationQuestionnaireSlug: studyDonationQSlug });
-        await Promise.all(
-          groups.map((g) => patchGroup(g.id, { donationQuestionnaireSlug: null }).catch(() => {}))
-        );
-      } else {
-        await Promise.all(
-          groups.map((g) =>
-            patchGroup(g.id, { donationQuestionnaireSlug: groupDonationQSlug[g.id] })
-          )
-        );
-      }
-    });
-
   // ── Overview strip ───────────────────────────────────────────────────────
   const summarizeBoolScope = (scope: Scope, sv: boolean, gv: Record<string, boolean>) => {
     if (scope === "study")
@@ -3982,21 +4025,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
             : t("behaviorChangeTab.summaryOff")
           : t("behaviorChangeTab.summaryPerGroup", {
               on: groups.filter((g) => groupOverload[g.id]?.enabled).length,
-              total: groups.length,
-            }),
-    },
-    {
-      key: "donationQuestionnaire",
-      title: t("behaviorChangeTab.donationQuestionnaireLabel"),
-      enabled:
-        donationQSlugScope === "study"
-          ? !!studyDonationQSlug
-          : groups.some((g) => !!groupDonationQSlug[g.id]),
-      status:
-        donationQSlugScope === "study"
-          ? studyDonationQSlug || t("behaviorChangeTab.summaryOff")
-          : t("behaviorChangeTab.summaryPerGroup", {
-              on: groups.filter((g) => !!groupDonationQSlug[g.id]).length,
               total: groups.length,
             }),
     },
@@ -4173,67 +4201,6 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
         )}
         {perGroupToggle(guardScope, setGuardScope)}
         {sectionFooter("infoOverload", saveInfoOverload)}
-      </div>
-
-      {/* Post-donation questionnaire */}
-      <div
-        className={styles.reminderTypeSection}
-        data-testid="behavior-section-donationQuestionnaire"
-      >
-        <p className={styles.cueConfigGroupLabel}>
-          {t("behaviorChangeTab.donationQuestionnaireLabel")}
-        </p>
-        <span className={styles.hint}>{t("behaviorChangeTab.donationQuestionnaireHint")}</span>
-        {errors.donationQuestionnaire && (
-          <div className={styles.errorMsg}>{errors.donationQuestionnaire}</div>
-        )}
-
-        {donationQSlugScope === "study" ? (
-          <div className={styles.formGroup}>
-            <select
-              className={styles.select}
-              value={studyDonationQSlug ?? ""}
-              onChange={(e) => setStudyDonationQSlug(e.target.value || null)}
-            >
-              <option value="">{t("behaviorChangeTab.donationQuestionnaireNoneOption")}</option>
-              {donationQuestionnaires
-                .filter((q) => q.active)
-                .map((q) => (
-                  <option key={q.slug} value={q.slug}>
-                    {q.title.en || q.slug}
-                  </option>
-                ))}
-            </select>
-          </div>
-        ) : (
-          <div className={styles.reminderGroupList}>
-            {groups.map((g) => (
-              <div key={g.id} className={styles.reminderGroupRow}>
-                <p className={styles.cueConfigGroupLabel}>
-                  {g.label || t("groupFallbackLabel", { index: g.index })}
-                </p>
-                <select
-                  className={styles.select}
-                  value={groupDonationQSlug[g.id] ?? ""}
-                  onChange={(e) =>
-                    setGroupDonationQSlug((p) => ({ ...p, [g.id]: e.target.value }))
-                  }
-                >
-                  <option value="">{t("behaviorChangeTab.donationQuestionnaireNoneOption")}</option>
-                  {donationQuestionnaires
-                    .filter((q) => q.active)
-                    .map((q) => (
-                      <option key={q.slug} value={q.slug}>
-                        {q.title.en || q.slug}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
-        {perGroupToggle(donationQSlugScope, setDonationQSlugScope)}
-        {sectionFooter("donationQuestionnaire", saveDonationQuestionnaire)}
       </div>
     </div>
   );

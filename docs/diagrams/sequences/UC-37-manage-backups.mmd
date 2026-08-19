@@ -1,6 +1,10 @@
 %% UC-37 — View, trigger, and restore backups from the admin panel
 %% Source: admin/src/app/(admin)/backups/page.tsx, app/routes/admin/backupsRouter.js,
-%% app/services/backupService.js, backup-service/api/*.js
+%% app/services/backupService.js, backup-service/api/*.js, backup-service/backup.sh,
+%% backup-service/restore.sh
+%% Per-component breakdown (mongo, neo4j, lightrag, audio-recordings, keycloak) is
+%% intentionally abstracted below as "per-component ✓/✗" — see backup.sh/restore.sh
+%% for the individual steps, including the audio-recordings tar step.
 sequenceDiagram
     autonumber
     actor A as Admin
@@ -43,7 +47,7 @@ sequenceDiagram
     BA->>BA: reject with 409 + warnings if the target's manifest shows a failed component and acknowledgeWarnings isn't set
     BA-->>B: 202 {jobId}
     B->>B: set admin_settings.maintenanceMode = true (rest of the API returns 503 until this clears)
-    Note over BA: One background job: (1) pre_restore_safety backup — abort if it fails; (2) pipe "YES" into restore.sh; parse ✓/ERROR per component, never trust exit code alone
+    Note over BA: One background job — (1) pre_restore_safety backup, abort if it fails, (2) pipe "YES" into restore.sh, (3) parse ✓/ERROR per component, never trust exit code alone
     B->>BA: poll GET /jobs/current until terminal
     B->>M: insert backup_audit_log {action: restore, result: succeeded|failed, detail}
     B->>B: clear admin_settings.maintenanceMode (also force-cleared after a 30min safety deadline)

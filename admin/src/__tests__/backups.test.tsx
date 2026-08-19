@@ -26,6 +26,8 @@ const manifestA = {
   mongoIncluded: true,
   lightragOk: true,
   lightragIncluded: true,
+  audioOk: true,
+  audioIncluded: true,
   neo4jOk: true,
   neo4jIncluded: true,
   keycloakOk: true,
@@ -47,6 +49,8 @@ const manifestB = {
   mongoIncluded: true,
   lightragOk: true,
   lightragIncluded: true,
+  audioOk: true,
+  audioIncluded: true,
   neo4jOk: true,
   neo4jIncluded: true,
   keycloakOk: true,
@@ -172,6 +176,7 @@ describe("BackupsPage", () => {
     // highlighted "last backup" row and its history-table row.
     expect(screen.getAllByTitle("Mongo: OK").length).toBeGreaterThan(0);
     expect(screen.getAllByTitle("LightRAG: OK").length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle("Audio: OK").length).toBeGreaterThan(0);
     expect(screen.getAllByTitle("Neo4j: OK").length).toBeGreaterThan(0);
     expect(screen.getAllByTitle("Keycloak: OK").length).toBeGreaterThan(0);
 
@@ -201,6 +206,7 @@ describe("BackupsPage", () => {
         mongo: false,
         neo4j: false,
         lightrag: true,
+        audio: true,
         keycloak: true,
       });
     });

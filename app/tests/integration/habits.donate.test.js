@@ -381,7 +381,7 @@ test('POST /api/v1/habits/donate returns 201 with uuid for valid habit', async (
   assert.ok(body.message);
 });
 
-test('POST /api/v1/habits/donate creates a habit_donations record keyed by the same uuid, defaulting to text input mode', async () => {
+test('POST /api/v1/habits/donate creates a habit_donations record keyed by the same uuid, defaulting to freeText input mode', async () => {
   const res = await post(
     '/api/v1/habits/donate',
     { sentence: 'I go for a walk every evening', language: 'en' },
@@ -395,17 +395,17 @@ test('POST /api/v1/habits/donate creates a habit_donations record keyed by the s
   const record = donations.find((d) => d.uuid === body.uuid);
   assert.ok(record, 'a habit_donations record should exist for this uuid');
   assert.strictEqual(record.userId, 'user-donation-1');
-  assert.strictEqual(record.inputMode, 'text');
+  assert.strictEqual(record.inputMode, 'freeText');
   assert.strictEqual(record.audioClip, null);
 });
 
-test('POST /api/v1/habits/donate rejects inputMode "speech" when the resolved config only permits text (default for an unenrolled user)', async () => {
+test('POST /api/v1/habits/donate rejects inputMode "voice" when the resolved config only permits freeText (default for an unenrolled user)', async () => {
   const res = await post(
     '/api/v1/habits/donate',
     {
       sentence: 'I stretch for five minutes after waking up',
       language: 'en',
-      inputMode: 'speech',
+      inputMode: 'voice',
     },
     makeToken('user-donation-2')
   );

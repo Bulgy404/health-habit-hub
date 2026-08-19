@@ -101,11 +101,15 @@ export async function resolveHabitConfig({
   let habitStackingEnabled = true;
   let reminderContentMode = 'generic';
   let informationOverloadGuard = { enabled: false, userOptOutAllowed: false };
-  // Donation input mode + optional post-donation questionnaire — same
-  // nullable study→group override pattern as the three flags above. Defaults
-  // preserve today's behaviour: typed-only donation, no follow-up
-  // questionnaire.
-  let donationInputMode = 'text';
+  // Habit entry mode — one unified setting for BOTH the New Habit wizard and
+  // the donation screen: 'freeText' (type it), 'structured' (pick from the
+  // activity_types catalog — see behaviorKeys below), or 'voice' (donation
+  // only; the New Habit wizard has no voice UI and just renders free-text
+  // for this value, same as it always has for anything that isn't
+  // 'structured'). Same nullable study→group override pattern as the flags
+  // above. Plus an optional post-donation questionnaire. Defaults preserve
+  // today's behaviour: typed-only, no follow-up questionnaire.
+  let donationInputMode = 'freeText';
   let donationQuestionnaireSlug = null;
   // Which optional self-report questions the donation form shows. Same
   // nullable study→group override pattern as the flags above. Defaults
@@ -161,11 +165,17 @@ export async function resolveHabitConfig({
           };
         }
         if (
-          study.donationInputMode === 'speech' ||
-          study.donationInputMode === 'both' ||
-          study.donationInputMode === 'text'
+          study.donationInputMode === 'structured' ||
+          study.donationInputMode === 'voice' ||
+          study.donationInputMode === 'freeText'
         ) {
           donationInputMode = study.donationInputMode;
+        } else if (study.habitEntryMode === 'structured') {
+          // Backward-compat, no migration: a study written before this field
+          // existed still has the old habitEntryMode/'structured' — honour
+          // it as the new unified value's baseline rather than silently
+          // reverting a study's structured-entry choice to free text.
+          donationInputMode = 'structured';
         }
         if (typeof study.donationQuestionnaireSlug === 'string') {
           donationQuestionnaireSlug = study.donationQuestionnaireSlug;
@@ -213,11 +223,15 @@ export async function resolveHabitConfig({
             };
           }
           if (
-            group?.donationInputMode === 'speech' ||
-            group?.donationInputMode === 'both' ||
-            group?.donationInputMode === 'text'
+            group?.donationInputMode === 'structured' ||
+            group?.donationInputMode === 'voice' ||
+            group?.donationInputMode === 'freeText'
           ) {
             donationInputMode = group.donationInputMode;
+          } else if (group?.habitEntryMode === 'structured') {
+            // Same backward-compat fallback as the study-level baseline
+            // above, applied at group level too.
+            donationInputMode = 'structured';
           }
           // null/absent = inherit the study-level value untouched (same
           // convention as every other override in this function). Since
@@ -242,13 +256,17 @@ export async function resolveHabitConfig({
           }
         }
 
-        // A non-null group override wins over the study-level entry mode,
-        // same as the flags above.
-        const effectiveHabitEntryMode =
-          group?.habitEntryMode ?? study.habitEntryMode;
+        // Driven by the unified donationInputMode resolved above (which
+        // itself already falls back to the legacy habitEntryMode when
+        // neither the new field nor group override is set) — 'structured'
+        // means the New Habit wizard shows the activity-catalog picker
+        // (its own logic already just checks whether behaviorOptions is
+        // non-empty, so this is the only place that needs to know about
+        // the rename). structuredActivityKeys stays a plain study→group
+        // override, now shared by both flows rather than New-Habit-only.
         const effectiveStructuredActivityKeys =
           group?.structuredActivityKeys ?? study.structuredActivityKeys;
-        if (effectiveHabitEntryMode === 'structured') {
+        if (donationInputMode === 'structured') {
           behaviorKeys = effectiveStructuredActivityKeys ?? [];
         }
       }

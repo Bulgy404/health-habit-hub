@@ -47,7 +47,7 @@ interface StudyGroup {
   gamificationEnabled?: boolean | null;
   // Habit-donation input mode + optional post-donation questionnaire
   // (null = inherit study-level).
-  donationInputMode?: "text" | "speech" | "both" | null;
+  donationInputMode?: "freeText" | "structured" | "voice" | null;
   donationQuestionnaireSlug?: string | null;
   // Which optional donation questions show (null = inherit study-level).
   donationAskFrequency?: boolean | null;
@@ -79,7 +79,7 @@ export interface StudySummary {
   reminderContentMode: "generic" | "implementation_intention";
   informationOverloadGuard: InformationOverloadGuard | null;
   gamificationEnabled: boolean;
-  donationInputMode: "text" | "speech" | "both";
+  donationInputMode: "freeText" | "structured" | "voice";
   donationQuestionnaireSlug: string | null;
   donationAskFrequency: boolean;
   donationAskHealthBenefit: boolean;

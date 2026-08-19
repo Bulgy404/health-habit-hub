@@ -39,4 +39,10 @@ sequenceDiagram
         B->>N4: Link response metadata to participant graph (where applicable)
         B-->>F: 201 response recorded
         F->>F: Invalidate participantQuestionnairesProvider +<br/>dueQuestionnairesProvider — this item greys out immediately,<br/>without waiting for a restart. Answers can't be changed after this —<br/>the tile turns green again once the next occurrence's window is due.
+        F-->>P: Navigate to confirmation screen (carries habitUuid, if any,<br/>as a query param on the confirmation route)
+        alt habitUuid present (post-donation entry from UC-03)
+            F-->>P: CTA reads "Share Another Habit" — taps go to /share
+        else no habitUuid (general/scheduled questionnaire)
+            F-->>P: CTA reads "Back to Profile" — taps go to /settings/profile
+        end
     end

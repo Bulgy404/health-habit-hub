@@ -1,9 +1,11 @@
 import express from 'express';
 import multer from 'multer';
+import crypto from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { logger } from '../../utils/logger.js';
 import { isValidUuid } from '../../utils/constants.js';
+import { getTranscribeJobStatus } from '../../lib/transcribeQueue.js';
 
 const log = logger.child({ module: 'voiceTranscribeRouter' });
 
@@ -11,10 +13,9 @@ const log = logger.child({ module: 'voiceTranscribeRouter' });
 // against buffering an oversized body into memory before forwarding/storing.
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 
-// Only /donations/:uuid/audio needs this — it writes the file part's bytes
-// straight to disk, so it must actually parse the multipart envelope rather
-// than store it verbatim (unlike /share/transcribe below, which forwards
-// the whole raw body to a downstream multipart-aware endpoint untouched).
+// Shared by both routes below — each needs the decoded file part (bytes +
+// mimetype), either to re-encode into a fresh multipart/BullMQ payload
+// (/share/transcribe) or to write straight to disk (/donations/:uuid/audio).
 const uploadAudio = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_AUDIO_BYTES },
@@ -26,15 +27,17 @@ const uploadAudio = multer({
  * habit_donations record created in habitsCrudRouter's handleShareHabit.
  *
  * Routes (mounted under /api/v1/habits by habitsRouter):
- *   POST /share/transcribe       — transcribe a recorded clip, nothing persisted
- *   POST /donations/:uuid/audio  — attach the clip to an already-submitted donation
+ *   POST /share/transcribe            — enqueue transcription of a recorded clip
+ *   GET  /share/transcribe/:jobId     — poll transcription job status/result
+ *   POST /donations/:uuid/audio       — attach the clip to an already-submitted donation
  *
- * @param {{ getDb: Function, apiServiceUrl?: string, audioStorageDir?: string }} opts
+ * @param {{ getDb: Function, apiServiceUrl?: string, audioStorageDir?: string, transcribeQueue?: import('bullmq').Queue | null }} opts
  */
 export function createVoiceRouter({
   getDb,
   apiServiceUrl,
   audioStorageDir,
+  transcribeQueue = null,
 } = {}) {
   const router = express.Router();
   const serviceUrl =
@@ -51,49 +54,84 @@ export function createVoiceRouter({
     };
   }
 
-  async function readBody(req) {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > MAX_AUDIO_BYTES) {
-        throw Object.assign(new Error('Audio file too large'), {
-          status: 413,
-        });
-      }
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
-  }
-
-  // POST /share/transcribe — stateless proxy to the API-service STT
-  // endpoint. A participant can record/re-record/abandon freely; nothing is
-  // written to disk or Mongo until an actual donation is submitted (see
-  // /donations/:uuid/audio below) — no orphan-cleanup bookkeeping needed.
-  router.post('/share/transcribe', async (req, res) => {
-    try {
-      const body = await readBody(req);
-      if (body.length === 0) {
+  // POST /share/transcribe — enqueue transcription of a recorded clip via
+  // the audio-transcriptions BullMQ queue (see lib/transcribeQueue.js), so
+  // the request returns immediately instead of blocking on the SCADS.AI STT
+  // call. A participant can record/re-record/abandon freely; nothing is
+  // written to disk or Mongo here — only the classifier-facing habit text
+  // itself gets persisted, and only once an actual donation is submitted
+  // (see /donations/:uuid/audio below) — no orphan-cleanup bookkeeping needed.
+  router.post(
+    '/share/transcribe',
+    uploadAudio.single('file'),
+    async (req, res) => {
+      const userID = req.user?.sub;
+      const file = req.file;
+      if (!file || file.buffer.length === 0) {
         return res.status(400).json({ error: 'Empty audio upload' });
       }
-      const upstream = await fetch(
-        `${serviceUrl}/api/v1/llm/transcribe-audio`,
-        {
-          method: 'POST',
-          headers: serviceHeaders({
-            'content-type': req.headers['content-type'],
-          }),
-          body,
+      const mimeType = file.mimetype || 'audio/m4a';
+      const filename = file.originalname || 'recording.m4a';
+
+      // No queue (synchronous/test mode, or Redis not configured) — fall
+      // back to the original blocking proxy so the route keeps working.
+      if (!transcribeQueue) {
+        try {
+          const form = new FormData();
+          form.append(
+            'file',
+            new Blob([file.buffer], { type: mimeType }),
+            filename
+          );
+          const upstream = await fetch(
+            `${serviceUrl}/api/v1/llm/transcribe-audio`,
+            { method: 'POST', headers: serviceHeaders(), body: form }
+          );
+          const data = await upstream.json();
+          return res.status(upstream.status).json(data);
+        } catch (err) {
+          log.error({ err }, 'transcribe proxy failed');
+          return res
+            .status(502)
+            .json({ error: 'Transcription service unavailable' });
         }
-      );
-      const data = await upstream.json();
-      res.status(upstream.status).json(data);
-    } catch (err) {
-      if (err.status === 413) {
-        return res.status(413).json({ error: err.message });
       }
-      log.error({ err }, 'transcribe proxy failed');
-      res.status(502).json({ error: 'Transcription service unavailable' });
+
+      const jobId = crypto.randomUUID();
+      await transcribeQueue.add(
+        'transcribe',
+        {
+          userID,
+          mimeType,
+          filename,
+          audioBase64: file.buffer.toString('base64'),
+        },
+        { jobId }
+      );
+      res.status(202).json({ jobId, status: 'pending' });
+    }
+  );
+
+  // GET /share/transcribe/:jobId — poll transcription job status/result.
+  // The transcript itself (once done) is also visible via Bull Board
+  // (/queues, SSO-gated) or RedisInsight for as long as the job's
+  // removeOnComplete TTL hasn't expired — useful for debugging what a
+  // recording actually transcribed to without needing this endpoint.
+  router.get('/share/transcribe/:jobId', async (req, res) => {
+    const userId = req.user?.sub;
+    const { jobId } = req.params;
+    if (!transcribeQueue)
+      return res.status(404).json({ error: 'Job not found' });
+    try {
+      const job = await getTranscribeJobStatus(jobId, transcribeQueue);
+      if (!job) return res.status(404).json({ error: 'Job not found' });
+      if (job.userID !== userId)
+        return res.status(403).json({ error: 'Forbidden' });
+      const { userID: _drop, ...safe } = job;
+      res.json(safe);
+    } catch (err) {
+      log.error({ err, jobId }, 'failed to get transcription job status');
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

@@ -61,8 +61,11 @@ class QuestionnaireScreen extends ConsumerWidget {
         data: (definition) => QuestionnaireFormWidget(
           definition: definition,
           habitUuid: habitUuid,
-          onSubmitted: () =>
-              context.pushReplacement('/questionnaire/$slug/confirmation'),
+          onSubmitted: () => context.pushReplacement(
+            habitUuid != null
+                ? '/questionnaire/$slug/confirmation?habitUuid=$habitUuid'
+                : '/questionnaire/$slug/confirmation',
+          ),
         ),
       ),
     );
@@ -74,12 +77,22 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
   /// The questionnaire slug, used to personalise the confirmation message.
   final String slug;
 
+  /// When set, this was a post-donation questionnaire — the CTA below
+  /// returns to the share screen instead of the profile screen, since that's
+  /// the flow the participant was already in.
+  final String? habitUuid;
+
   /// Creates a [QuestionnaireConfirmationScreen] for [slug].
-  const QuestionnaireConfirmationScreen({super.key, required this.slug});
+  const QuestionnaireConfirmationScreen({
+    super.key,
+    required this.slug,
+    this.habitUuid,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isPostDonation = habitUuid != null;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.thankYou)),
       body: Center(
@@ -107,8 +120,11 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton(
-                onPressed: () => context.go('/settings/profile'),
-                child: Text(l10n.backToProfile),
+                onPressed: () =>
+                    context.go(isPostDonation ? '/share' : '/settings/profile'),
+                child: Text(
+                  isPostDonation ? l10n.backToShare : l10n.backToProfile,
+                ),
               ),
             ],
           ),

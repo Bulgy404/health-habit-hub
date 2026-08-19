@@ -620,6 +620,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get backToProfile => 'Terug naar profiel';
 
   @override
+  String get backToShare => 'Nog een gewoonte delen';
+
+  @override
   String get thankYou => 'Bedankt';
 
   @override
@@ -1582,6 +1585,17 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get donateVoiceTranscriptPlaceholder =>
       'Houd de onderstaande knop ingedrukt en beschrijf je gewoonte';
+
+  @override
+  String get donateStructuredPickerLabel => 'Wat heb je gedaan?';
+
+  @override
+  String get donateStructuredPickerHint =>
+      'Kies de activiteit die het beste past';
+
+  @override
+  String get donateStructuredEmptyState =>
+      'Nog geen activiteiten beschikbaar — probeer het later opnieuw.';
 
   @override
   String get setCueNextButton => 'Volgende';

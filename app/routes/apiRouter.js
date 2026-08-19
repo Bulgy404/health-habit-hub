@@ -241,7 +241,13 @@ export function createApiRouter({
   router.use(
     '/admin',
     requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
-    createAdminRouter({ db, neo4jRun: runNeo4j, keycloak, tokenCardService })
+    createAdminRouter({
+      db,
+      neo4jRun: runNeo4j,
+      keycloak,
+      tokenCardService,
+      audioStorageDir,
+    })
   );
 
   // Surveys routes: require user, admin, or researcher role

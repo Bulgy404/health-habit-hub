@@ -8,6 +8,10 @@ import { createHabitsStatsRouter } from './habits/habitsStatsRouter.js';
 import { createHabitsGraphRouter } from './habits/habitsGraphRouter.js';
 import { createVoiceRouter } from './habits/voiceTranscribeRouter.js';
 import { getHabitQueue, startHabitWorker } from '../lib/habitQueue.js';
+import {
+  getTranscribeQueue,
+  startTranscribeWorker,
+} from '../lib/transcribeQueue.js';
 
 /**
  * Top-level habits router. Composes CRUD, stats, and graph sub-routers.
@@ -75,9 +79,17 @@ export function createHabitsRouter({
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
   router.use('/', createHabitsGraphRouter({ queryNeo4j, getDb }));
-  router.use('/', createVoiceRouter({ getDb, apiServiceUrl, audioStorageDir }));
+  router.use(
+    '/',
+    createVoiceRouter({
+      getDb,
+      apiServiceUrl,
+      audioStorageDir,
+      transcribeQueue: queueEnabled ? getTranscribeQueue() : null,
+    })
+  );
 
-  // Start the BullMQ worker only for a real running app (see queueEnabled above).
+  // Start the BullMQ worker(s) only for a real running app (see queueEnabled above).
   if (queueEnabled) {
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
@@ -86,6 +98,7 @@ export function createHabitsRouter({
       process.env.LIBRE_TRANSLATE_URL ||
       `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
     startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl });
+    startTranscribeWorker({ apiServiceUrl: apiBase });
   }
 
   return router;

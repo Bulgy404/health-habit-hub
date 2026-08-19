@@ -53,14 +53,14 @@ test('createDonationRecord: writes a habit_donations doc keyed by uuid, defaulti
   const [doc] = db._habitDonations;
   assert.equal(doc.uuid, 'u-1');
   assert.equal(doc.userId, 'user-1');
-  assert.equal(doc.inputMode, 'text');
+  assert.equal(doc.inputMode, 'freeText');
   assert.equal(doc.isHabit, null);
   assert.equal(doc.audioClip, null);
   assert.equal(doc.questionnaireSlug, null);
   assert.equal(doc.questionnaireResponseId, null);
 });
 
-test('createDonationRecord: an unrecognised inputMode falls back to text', async () => {
+test('createDonationRecord: an unrecognised inputMode falls back to freeText', async () => {
   const db = makeDb();
   await createDonationRecord({
     db,
@@ -68,10 +68,10 @@ test('createDonationRecord: an unrecognised inputMode falls back to text', async
     userID: 'user-1',
     inputMode: 'nonsense',
   });
-  assert.equal(db._habitDonations[0].inputMode, 'text');
+  assert.equal(db._habitDonations[0].inputMode, 'freeText');
 });
 
-test('createDonationRecord: speech mode + questionnaire slug are persisted', async () => {
+test('createDonationRecord: voice mode + questionnaire slug are persisted', async () => {
   const db = makeDb();
   await createDonationRecord({
     db,
@@ -79,11 +79,11 @@ test('createDonationRecord: speech mode + questionnaire slug are persisted', asy
     userID: 'user-1',
     studyId: 'study-1',
     groupId: 'group-1',
-    inputMode: 'speech',
+    inputMode: 'voice',
     questionnaireSlug: 'who5',
   });
   const doc = db._habitDonations[0];
-  assert.equal(doc.inputMode, 'speech');
+  assert.equal(doc.inputMode, 'voice');
   assert.equal(doc.studyId, 'study-1');
   assert.equal(doc.groupId, 'group-1');
   assert.equal(doc.questionnaireSlug, 'who5');

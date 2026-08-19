@@ -615,6 +615,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backToProfile => 'Back to Profile';
 
   @override
+  String get backToShare => 'Share Another Habit';
+
+  @override
   String get thankYou => 'Thank You';
 
   @override
@@ -1570,6 +1573,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get donateVoiceTranscriptPlaceholder =>
       'Hold the button below and describe your habit';
+
+  @override
+  String get donateStructuredPickerLabel => 'What did you do?';
+
+  @override
+  String get donateStructuredPickerHint =>
+      'Choose the activity that best matches what you did';
+
+  @override
+  String get donateStructuredEmptyState =>
+      'No activities are available yet — please check back later.';
 
   @override
   String get setCueNextButton => 'Next';

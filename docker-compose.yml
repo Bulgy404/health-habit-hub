@@ -1354,6 +1354,7 @@ services:
       # by "other" on the host, e.g. `chmod -R o+r /opt/hhh/data/rclone`.
       - ${HHH_DATA_DIR:-/opt/hhh/data}/rclone:/config/rclone:ro
       - lightrag-data:/lightrag:ro
+      - audio-recordings-data:/audio:ro
     networks:
       - hhh-proxy
       - hhh-backup-internal

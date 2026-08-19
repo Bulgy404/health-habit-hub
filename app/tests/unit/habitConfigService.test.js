@@ -435,7 +435,7 @@ test('resolveHabitConfig: group-level §7 override wins over study-level', async
 test('resolveHabitConfig: donation input mode + questionnaire default for a public/unenrolled user', async () => {
   const db = makeDb({ enrollment: null });
   const config = await resolveHabitConfig({ db, userId: 'pub' });
-  assert.equal(config.donationInputMode, 'text');
+  assert.equal(config.donationInputMode, 'freeText');
   assert.equal(config.donationQuestionnaireSlug, null);
 });
 
@@ -447,7 +447,7 @@ test('resolveHabitConfig: study-level donation config applies without a group ov
     study: {
       _id: studyId,
       recommenderEnabled: true,
-      donationInputMode: 'both',
+      donationInputMode: 'structured',
       donationQuestionnaireSlug: 'who5',
       groups: [{ id: groupId, label: 'G1', index: 1 }],
     },
@@ -456,7 +456,7 @@ test('resolveHabitConfig: study-level donation config applies without a group ov
     { studyId: studyId.toString(), groupId: groupId.toString() },
   ];
   const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
-  assert.equal(config.donationInputMode, 'both');
+  assert.equal(config.donationInputMode, 'structured');
   assert.equal(config.donationQuestionnaireSlug, 'who5');
 });
 
@@ -468,14 +468,14 @@ test('resolveHabitConfig: group-level donation config overrides study-level', as
     study: {
       _id: studyId,
       recommenderEnabled: true,
-      donationInputMode: 'text',
+      donationInputMode: 'freeText',
       donationQuestionnaireSlug: 'who5',
       groups: [
         {
           id: groupId,
           label: 'G1',
           index: 1,
-          donationInputMode: 'speech',
+          donationInputMode: 'voice',
           // '' is the group-level sentinel for "explicitly no questionnaire"
           // — null is reserved for "inherit" (see below).
           donationQuestionnaireSlug: '',
@@ -487,8 +487,79 @@ test('resolveHabitConfig: group-level donation config overrides study-level', as
     { studyId: studyId.toString(), groupId: groupId.toString() },
   ];
   const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
-  assert.equal(config.donationInputMode, 'speech');
+  assert.equal(config.donationInputMode, 'voice');
   assert.equal(config.donationQuestionnaireSlug, null);
+});
+
+test('resolveHabitConfig: legacy habitEntryMode:"structured" with no donationInputMode set is honoured as the unified structured value', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      habitEntryMode: 'structured',
+      structuredActivityKeys: ['walking'],
+      groups: [{ id: groupId, label: 'G1', index: 1 }],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationInputMode, 'structured');
+  assert.deepEqual(
+    config.behaviorOptions.map((o) => o.key),
+    ['walking']
+  );
+});
+
+test('resolveHabitConfig: a group-level legacy habitEntryMode:"structured" is honoured even when the study-level unified field is freeText', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationInputMode: 'freeText',
+      structuredActivityKeys: ['walking', 'yoga'],
+      groups: [
+        { id: groupId, label: 'G1', index: 1, habitEntryMode: 'structured' },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationInputMode, 'structured');
+  assert.deepEqual(config.behaviorOptions.map((o) => o.key).sort(), [
+    'walking',
+    'yoga',
+  ]);
+});
+
+test('resolveHabitConfig: behaviorKeys stay empty when donationInputMode is "voice" (not structured)', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      donationInputMode: 'voice',
+      structuredActivityKeys: ['walking'],
+      groups: [{ id: groupId, label: 'G1', index: 1 }],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.donationInputMode, 'voice');
+  assert.deepEqual(config.behaviorOptions, []);
 });
 
 test('resolveHabitConfig: an explicit group-level null inherits the study value (null means inherit, not "none")', async () => {

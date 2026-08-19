@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
+import { DonationDetailModal } from "./DonationDetailModal";
 import styles from "@/components/admin-page.module.css";
 
 interface Donation {
@@ -65,6 +66,7 @@ export default function DonationsPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
 
   // The category filter is a dropdown of the actual BCIO labels in use
   // (localised to the admin's own language), not free text — a substring/
@@ -266,7 +268,11 @@ export default function DonationsPage() {
               </thead>
               <tbody>
                 {feed.results.map((d) => (
-                  <tr key={d.id}>
+                  <tr
+                    key={d.id}
+                    className={styles.clickableRow}
+                    onClick={() => setSelectedUuid(d.id)}
+                  >
                     <td>{d.habitName || "—"}</td>
                     <td>{d.category ? <span className={styles.badge}>{d.category}</span> : "—"}</td>
                     <td>{d.group ?? "—"}</td>
@@ -311,6 +317,14 @@ export default function DonationsPage() {
             </button>
           </div>
         </>
+      )}
+
+      {selectedUuid && token && (
+        <DonationDetailModal
+          uuid={selectedUuid}
+          token={token}
+          onClose={() => setSelectedUuid(null)}
+        />
       )}
     </div>
   );

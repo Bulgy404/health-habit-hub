@@ -122,8 +122,14 @@ export const informationOverloadGuardSchema = z.object({
   userOptOutAllowed: z.boolean().optional(),
 });
 
-/** Donation input mode — text-only, speech-only, or participant's choice. */
-const donationInputModeSchema = z.enum(['text', 'speech', 'both']);
+/**
+ * Habit entry mode — one unified setting reused by both the New Habit
+ * wizard and the donation screen: type it (freeText), pick from the
+ * activity_types catalog (structured — see structuredActivityKeys), or
+ * speak it and review the transcript (voice — donation only; the New Habit
+ * wizard has no voice UI and just renders free-text for this value).
+ */
+const donationInputModeSchema = z.enum(['freeText', 'structured', 'voice']);
 /**
  * Which optional self-report questions are shown after a habit donation.
  * Each defaults to `true` (shown) when absent; a group-level `null` inherits

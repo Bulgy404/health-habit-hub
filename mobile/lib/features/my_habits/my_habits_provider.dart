@@ -31,14 +31,15 @@ final habitCreationEnabledProvider = Provider<bool>((ref) {
       .maybeWhen(data: (c) => c.selfHabitCreationEnabled, orElse: () => true);
 });
 
-/// Resolved habit-donation input mode (`'text'`, `'speech'`, or `'both'`)
-/// for the current participant's study/group. Defaults to `'text'` while
-/// loading or on error — a participant never sees a mic button they can't
-/// actually use.
+/// Resolved unified entry mode (`'freeText'`, `'structured'`, or `'voice'`)
+/// for the current participant's study/group — shared by the New Habit
+/// wizard and the donation flow. Defaults to `'freeText'` while loading or
+/// on error — a participant never sees a mic button or catalog picker they
+/// can't actually use.
 final donationInputModeProvider = Provider<String>((ref) {
   return ref
       .watch(habitConfigProvider)
-      .maybeWhen(data: (c) => c.donationInputMode, orElse: () => 'text');
+      .maybeWhen(data: (c) => c.donationInputMode, orElse: () => 'freeText');
 });
 
 /// Slug of the post-donation questionnaire configured for this study/group,
@@ -82,8 +83,7 @@ final dueSrhiProvider = FutureProvider<List<SrhiWindow>>((ref) {
 
 /// Per-habit reminder-frequency tier (intentionId → 'daily'…'off'), used for
 /// the §7.5 traffic-light indicator on each habit card.
-final reminderFrequenciesProvider =
-    FutureProvider<Map<String, String>>((ref) {
+final reminderFrequenciesProvider = FutureProvider<Map<String, String>>((ref) {
   return ref.watch(myHabitsServiceProvider).fetchReminderFrequencies();
 });
 
@@ -91,8 +91,8 @@ final reminderFrequenciesProvider =
 /// show and drive the opt-out toggle in settings.
 final informationOverloadPrefsProvider =
     FutureProvider<InformationOverloadPrefs>((ref) {
-  return ref.watch(myHabitsServiceProvider).fetchInformationOverloadPrefs();
-});
+      return ref.watch(myHabitsServiceProvider).fetchInformationOverloadPrefs();
+    });
 
 /// The §7.5 gamification summary (XP, level, badges) for the current user.
 ///
@@ -109,19 +109,21 @@ final gamificationProvider = FutureProvider.autoDispose<Gamification>((ref) {
 });
 
 /// Daily logs for a specific intention. Keyed by intentionId.
-final intentionLogsProvider =
-    FutureProvider.family<List<DailyLog>, String>((ref, intentionId) {
+final intentionLogsProvider = FutureProvider.family<List<DailyLog>, String>((
+  ref,
+  intentionId,
+) {
   return ref.watch(myHabitsServiceProvider).fetchLogs(intentionId);
 });
 
 /// SRHI trajectory (submitted weeks) for a specific intention. Keyed by intentionId.
 final srhiTrajectoryProvider =
-    FutureProvider.family<List<SrhiTrajectoryPoint>, String>(
-        (ref, intentionId) {
-  return ref
-      .watch(myHabitsServiceProvider)
-      .fetchTrajectory(intentionId);
-});
+    FutureProvider.family<List<SrhiTrajectoryPoint>, String>((
+      ref,
+      intentionId,
+    ) {
+      return ref.watch(myHabitsServiceProvider).fetchTrajectory(intentionId);
+    });
 
 /// Daily enactment counts across every active intention, keyed by
 /// midnight-normalised date — feeds the GitHub-style contribution graph at

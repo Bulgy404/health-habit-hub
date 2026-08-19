@@ -161,6 +161,7 @@ import {
   ensureIndexes,
 } from './models/survey.js';
 import { closeHabitQueue } from './lib/habitQueue.js';
+import { closeTranscribeQueue } from './lib/transcribeQueue.js';
 import { closeAllNeo4jDrivers, runNeo4j } from './utils/neo4jDrivers.js';
 import { runSeedDefaultProfileFields } from './db/seedProfileFields.js';
 import { runSyncAllQuestionnaireDefinitions } from './services/questionnaireGraphSync.js';
@@ -169,6 +170,7 @@ import {
   initErrorReporting,
   errorReportingMiddleware,
 } from './utils/errorReporting.js';
+import { checkAudioStorage } from './utils/healthCheck.js';
 // enableQueue: true — this is the real app boot, so the BullMQ donation queue
 // and worker should run (they connect to Redis). Tests never set this.
 app.use('/api/v1', express.json(), createApiRouter({ enableQueue: true }));
@@ -190,11 +192,15 @@ if (queueBoardEnabled) {
   const { BullMQAdapter } = await import('@bull-board/api/bullMQAdapter');
   const { ExpressAdapter } = await import('@bull-board/express');
   const { getHabitQueue } = await import('./lib/habitQueue.js');
+  const { getTranscribeQueue } = await import('./lib/transcribeQueue.js');
 
   const boardAdapter = new ExpressAdapter();
   boardAdapter.setBasePath('/queues');
   createBullBoard({
-    queues: [new BullMQAdapter(getHabitQueue())],
+    queues: [
+      new BullMQAdapter(getHabitQueue()),
+      new BullMQAdapter(getTranscribeQueue()),
+    ],
     serverAdapter: boardAdapter,
   });
   app.use('/queues', boardAdapter.getRouter());
@@ -261,6 +267,23 @@ if (!process.env.API_SERVICE_SECRET) {
   );
 }
 
+// Verify the audio-recordings volume is actually writable by this process at
+// boot — a UID/permission mismatch against a freshly-mounted volume
+// (EACCES) otherwise stays completely silent until a participant tries to
+// donate a voice habit. Logged, not fatal: also re-checked continuously via
+// GET /health's non-critical audioStorage entry (utils/healthCheck.js), so a
+// clean boot log here plus that endpoint both confirm a fix actually landed.
+checkAudioStorage().then(({ status, error }) => {
+  if (status === 'ok') {
+    log.info('Audio recordings storage is writable');
+  } else {
+    log.warn(
+      { error },
+      'Audio recordings storage is NOT writable — voice-donation audio uploads will fail (EACCES on a fresh volume mount is the usual cause; see app/Dockerfile)'
+    );
+  }
+});
+
 httpServer.listen(port, () => {
   log.info('Server is running on http://app.localhost');
 });
@@ -300,6 +323,7 @@ async function shutdown(signal) {
       new Promise((resolve) => httpServer.close(resolve)),
       new Promise((resolve) => metricsServer.close(resolve)),
       closeHabitQueue(),
+      closeTranscribeQueue(),
       closeAllNeo4jDrivers(),
       disconnectMongo(),
     ]);

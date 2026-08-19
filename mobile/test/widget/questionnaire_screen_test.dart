@@ -64,20 +64,24 @@ const _definitionJson = {
   ],
 };
 
-Widget _buildSubject(Dio dio) {
+Widget _buildSubject(Dio dio, {String? habitUuid}) {
   final router = GoRouter(
-    initialLocation: '/questionnaire/$_slug',
+    initialLocation: habitUuid == null
+        ? '/questionnaire/$_slug'
+        : '/questionnaire/$_slug?habitUuid=$habitUuid',
     routes: [
       GoRoute(
         path: '/questionnaire/:slug',
         builder: (context, state) => QuestionnaireScreen(
           slug: state.pathParameters['slug'] ?? '',
+          habitUuid: state.uri.queryParameters['habitUuid'],
         ),
         routes: [
           GoRoute(
             path: 'confirmation',
             builder: (context, state) => QuestionnaireConfirmationScreen(
               slug: state.pathParameters['slug'] ?? '',
+              habitUuid: state.uri.queryParameters['habitUuid'],
             ),
           ),
         ],
@@ -85,6 +89,10 @@ Widget _buildSubject(Dio dio) {
       GoRoute(
         path: '/settings/profile',
         builder: (context, state) => const Scaffold(body: Text('Profile')),
+      ),
+      GoRoute(
+        path: '/share',
+        builder: (context, state) => const Scaffold(body: Text('Share')),
       ),
     ],
   );
@@ -300,6 +308,49 @@ void main() {
 
     expect(find.text('Response submitted!'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Back to Profile'), findsOneWidget);
+  });
+
+  testWidgets(
+      'post-donation questionnaire (habitUuid set) offers "Share Another Habit" and returns to /share, not profile',
+      (tester) async {
+    adapter.onGet(
+      '$_base/questionnaires/$_slug',
+      (server) => server.reply(200, _definitionJson),
+      queryParameters: {'lang': 'en'},
+    );
+    adapter.onPost(
+      '$_base/questionnaire-responses',
+      (server) => server.reply(200, {}),
+    );
+
+    await tester.pumpWidget(_buildSubject(dio, habitUuid: 'habit-1'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Option A'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save & Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save & Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save & Continue'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'My answer');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Response submitted!'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Back to Profile'), findsNothing);
+    expect(
+      find.widgetWithText(FilledButton, 'Share Another Habit'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Share Another Habit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share'), findsOneWidget);
   });
 
   testWidgets('submission failure shows a retryable error banner, keeps the form',

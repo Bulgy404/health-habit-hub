@@ -424,17 +424,29 @@ export function createHabitsCrudRouter({
       stackedOnUuid,
       creationMode,
       inputMode,
+      behaviorKey,
       transcript,
       transcriptEdited,
     } = req.body || {};
-    const requestedInputMode = inputMode === 'speech' ? 'speech' : 'text';
+    const requestedInputMode =
+      inputMode === 'structured' || inputMode === 'voice'
+        ? inputMode
+        : 'freeText';
+    const isStructured = requestedInputMode === 'structured';
     // §7.4/§7.1 — optional on the donation path: the structured New Habit
-    // flow sends an explicit choice, but free-text community donations
+    // flow sends an explicit choice, but free-text/voice community donations
     // (donate_screen.dart) never do. Pass through only a recognised explicit
     // value; leave it undefined otherwise so shareHabit() falls back to the
     // classifier's own build/quit read of the sentence instead of guessing.
+    // A structured *donation* also has no classifier read to fall back to
+    // (classification is skipped for it, see below) and donation never asks
+    // build/quit — default to 'build', the far more common case.
     const explicitHabitType =
-      habitType === 'build' || habitType === 'quit' ? habitType : undefined;
+      habitType === 'build' || habitType === 'quit'
+        ? habitType
+        : isStructured
+          ? 'build'
+          : undefined;
     const safeCreationMode =
       creationMode === 'stacked' ? 'stacked' : 'standalone';
     const safeStackedOnUuid =
@@ -443,15 +455,8 @@ export function createHabitsCrudRouter({
     if (!userId || typeof userId !== 'string') {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    if (!sentence || !language) {
-      return res
-        .status(400)
-        .json({ error: 'sentence and language are required' });
-    }
-    if (typeof sentence !== 'string' || sentence.length > 1000) {
-      return res.status(400).json({
-        error: 'sentence must be a string of at most 1000 characters',
-      });
+    if (!language) {
+      return res.status(400).json({ error: 'language is required' });
     }
     if (
       typeof language !== 'string' ||
@@ -459,6 +464,24 @@ export function createHabitsCrudRouter({
     ) {
       return res.status(400).json({
         error: `language must be a supported ISO 639-1 code (${SUPPORTED_LANGUAGES.join(', ')})`,
+      });
+    }
+    // Structured donations don't type/speak a sentence at all — the server
+    // resolves it from the picked catalog entry below (see behaviorKey
+    // validation), never from client-supplied text. Every other mode still
+    // requires one.
+    if (!isStructured) {
+      if (!sentence) {
+        return res.status(400).json({ error: 'sentence is required' });
+      }
+      if (typeof sentence !== 'string' || sentence.length > 1000) {
+        return res.status(400).json({
+          error: 'sentence must be a string of at most 1000 characters',
+        });
+      }
+    } else if (typeof behaviorKey !== 'string' || !behaviorKey) {
+      return res.status(400).json({
+        error: 'behaviorKey is required when inputMode is structured',
       });
     }
     const isValidRating = (v, max) =>
@@ -498,8 +521,9 @@ export function createHabitsCrudRouter({
 
       // Resolve the admin-configured donation input mode + optional
       // post-donation questionnaire for this participant's study/group.
-      // Reject a speech submission the config doesn't actually permit
-      // server-side, rather than trusting the client-declared mode.
+      // donationInputMode is now a single resolved value per study/group
+      // (no more "participant's choice") — reject outright rather than
+      // trusting the client-declared mode.
       const database = await getDb();
       const resolvedConfig = await resolveHabitConfig({
         db: database,
@@ -507,13 +531,28 @@ export function createHabitsCrudRouter({
         neo4jRun: queryNeo4j,
         lang: language.slice(0, 2).toLowerCase(),
       });
-      if (
-        requestedInputMode === 'speech' &&
-        resolvedConfig.donationInputMode === 'text'
-      ) {
+      if (requestedInputMode !== resolvedConfig.donationInputMode) {
         return res.status(403).json({
-          error: 'Speech input is not enabled for this study/group.',
+          error: `This study/group only accepts ${resolvedConfig.donationInputMode} donations.`,
         });
+      }
+
+      // Structured: resolve (and validate) the picked catalog entry from
+      // the SAME behaviorOptions resolveHabitConfig() just computed for
+      // this participant — already locale-resolved and already scoped to
+      // this study/group's structuredActivityKeys, so a behaviorKey that
+      // isn't in that list (stale client cache, tampering) is rejected
+      // here rather than trusted. The resulting label becomes `sentence`;
+      // any client-supplied sentence for this mode is ignored.
+      let resolvedSentence = sentence;
+      if (isStructured) {
+        const picked = resolvedConfig.behaviorOptions.find(
+          (o) => o.key === behaviorKey
+        );
+        if (!picked) {
+          return res.status(400).json({ error: 'Unknown behaviorKey' });
+        }
+        resolvedSentence = picked.label;
       }
 
       const postDonationQuestionnaireSlug = await getPostDonationQuestionnaire({
@@ -528,11 +567,11 @@ export function createHabitsCrudRouter({
         groupId,
         inputMode: requestedInputMode,
         transcript:
-          requestedInputMode === 'speech' && typeof transcript === 'string'
+          requestedInputMode === 'voice' && typeof transcript === 'string'
             ? transcript
             : null,
         transcriptEdited:
-          requestedInputMode === 'speech' ? transcriptEdited === true : null,
+          requestedInputMode === 'voice' ? transcriptEdited === true : null,
         questionnaireSlug: postDonationQuestionnaireSlug,
       });
 
@@ -541,7 +580,7 @@ export function createHabitsCrudRouter({
       if (!habitQueue) {
         const result = await shareHabit({
           uuid,
-          sentence,
+          sentence: resolvedSentence,
           language,
           userID: userId,
           studyId,
@@ -552,6 +591,7 @@ export function createHabitsCrudRouter({
           habitType: explicitHabitType,
           stackedOnUuid: safeStackedOnUuid,
           creationMode: safeCreationMode,
+          skipClassification: isStructured,
           queryNeo4j,
           getDb,
           apiBase,
@@ -579,7 +619,7 @@ export function createHabitsCrudRouter({
       // via GET /habits/jobs/:jobId.
       const { jobId } = await enqueueHabitDonation({
         uuid,
-        sentence,
+        sentence: resolvedSentence,
         language,
         userID: userId,
         studyId,
@@ -590,6 +630,7 @@ export function createHabitsCrudRouter({
         habitType: explicitHabitType,
         stackedOnUuid: safeStackedOnUuid,
         creationMode: safeCreationMode,
+        skipClassification: isStructured,
         habitQueue,
       });
 
@@ -612,7 +653,7 @@ export function createHabitsCrudRouter({
               message: err.message || String(err),
               userId,
               language,
-              sentenceLength: sentence.length,
+              sentenceLength: sentence?.length ?? 0,
             })
           );
         }
@@ -628,7 +669,7 @@ export function createHabitsCrudRouter({
           stack: err?.stack || null,
           userId,
           language,
-          sentenceLength: sentence.length,
+          sentenceLength: sentence?.length ?? 0,
         })
       );
       const detail =

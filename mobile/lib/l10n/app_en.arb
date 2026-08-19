@@ -800,6 +800,10 @@
   "@backToProfile": {
     "description": "Button label to navigate back to the profile screen"
   },
+  "backToShare": "Share Another Habit",
+  "@backToShare": {
+    "description": "Button label on the post-donation questionnaire confirmation screen, returning to the share/donate screen"
+  },
   "thankYou": "Thank You",
   "@thankYou": {
     "description": "AppBar title for confirmation screens"
@@ -2011,6 +2015,18 @@
   "donateVoiceTranscriptPlaceholder": "Hold the button below and describe your habit",
   "@donateVoiceTranscriptPlaceholder": {
     "description": "Placeholder shown in the greyed transcript field before any speech has been transcribed"
+  },
+  "donateStructuredPickerLabel": "What did you do?",
+  "@donateStructuredPickerLabel": {
+    "description": "Section header above the activity picker on the donation form, shown when the study restricts donation to a fixed catalog of activities"
+  },
+  "donateStructuredPickerHint": "Choose the activity that best matches what you did",
+  "@donateStructuredPickerHint": {
+    "description": "Hint text below the activity picker header on the donation form"
+  },
+  "donateStructuredEmptyState": "No activities are available yet — please check back later.",
+  "@donateStructuredEmptyState": {
+    "description": "Empty-state message shown when the structured activity catalog has no entries configured"
   },
   "setCueNextButton": "Next",
   "@setCueNextButton": {

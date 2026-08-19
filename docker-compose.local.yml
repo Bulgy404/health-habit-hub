@@ -578,6 +578,7 @@ services:
       - ./backups:/backups
       - ./backup-service/rclone:/config/rclone:ro
       - lightrag-data:/lightrag:ro
+      - audio-recordings-local-data:/audio:ro
     networks:
       - hhh-proxy
       - hhh-app

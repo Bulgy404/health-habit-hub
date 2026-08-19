@@ -33,6 +33,7 @@ import {
   retireLegacySrhiLibraryEntry,
 } from '../services/defaultStudySeedService.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
+import { createHabitDonationsRouter } from './admin/habitDonationsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
 import { createAuditLogRouter } from './admin/auditLogRouter.js';
 import { createRestoreAttemptsRouter } from './admin/restoreAttemptsRouter.js';
@@ -62,6 +63,7 @@ export function createAdminRouter({
   neo4jRun,
   keycloak,
   tokenCardService,
+  audioStorageDir,
 } = {}) {
   // Lazy Neo4j fallback for production (tests inject neo4jRun).
   let _neo4jDriver = null;
@@ -974,6 +976,11 @@ export function createAdminRouter({
   // /admin/cue-pools), wrongly 403ing non-admin roles for paths this
   // sub-router doesn't even own.
   router.use('/', createBackupsRouter({ db }));
+
+  router.use(
+    '/',
+    createHabitDonationsRouter({ db, neo4jRun: queryNeo4j, audioStorageDir })
+  );
 
   router.use('/', createSystemRouter());
 
