@@ -277,12 +277,29 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
       // §7.5 — a new habit earns the First Step badge; refresh so Settings/
       // Profile don't show stale XP/badges until some other screen refetches.
       ref.invalidate(gamificationProvider);
+      ref.invalidate(dueSrhiProvider);
 
       // The habit is now created — navigate immediately. Community sharing and
       // reminder scheduling are best-effort and can be slow (a network call
       // plus many native notification writes), so run them in the background
       // rather than blocking the "Create habit" button on them.
-      if (mounted) context.go('/habits');
+      if (mounted) {
+        // The first SRHI window is anchored ~5s after creation (see
+        // srhiService.js's HABIT_ANCHOR_DELAY_MS) — the invalidate above can
+        // still race that anchor and land just before it's actually due, so
+        // My Habits shows no check-in card yet even though this exact habit
+        // just qualified for one. Re-invalidate once the anchor is
+        // guaranteed to have elapsed so the card appears on its own,
+        // without the participant needing to leave and return to the tab.
+        // Captured via the container (not `ref`, which throws once this
+        // screen is disposed by the navigate below) so the delayed refresh
+        // survives navigating away.
+        final container = ProviderScope.containerOf(context, listen: false);
+        Timer(const Duration(seconds: 6), () {
+          container.invalidate(dueSrhiProvider);
+        });
+        context.go('/habits');
+      }
       _runPostCreateTasks(
         dio: dio,
         shouldShare: shouldShare,

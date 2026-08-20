@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -46,6 +47,28 @@ const _recoveryChannelDescription =
 const _recoveryNotifBase = 700000;
 const _recoveryNotifMax = 20;
 
+// Immediate "ready now" pushes for a questionnaire window that's already due
+// by the time syncQuestionnaireReminders() runs — e.g. every SRHI week-1
+// baseline, which is anchored ~5s after habit creation (see
+// HABIT_ANCHOR_DELAY_MS server-side) and so is essentially always in the
+// past by the time this syncs, or any window whose due date's reminder hour
+// has already passed today. Its own id range/channel, disjoint from the
+// scheduled-future range above.
+const _qDueNowChannelId = 'hhh_questionnaire_due_now';
+const _qDueNowChannelName = 'Questionnaire ready';
+const _qDueNowChannelDescription =
+    'Notice the moment a study questionnaire becomes ready to complete';
+const _qDueNowNotifBase = 800000;
+const _qDueNowNotifRange = 100000;
+
+// Persists which due-now questionnaire windows have already fired an
+// immediate notification, so re-running syncQuestionnaireReminders() (every
+// app start, after every habit creation, ...) never re-notifies the same
+// window twice. Keyed by the backend's stable per-window `windowId`, not the
+// derived notification id, since ids are only unique within their hashed
+// range.
+const _notifiedDueNowWindowIdsKey = 'srhi_due_now_notified_window_ids';
+
 final _plugin = FlutterLocalNotificationsPlugin();
 bool _tzReady = false;
 
@@ -89,7 +112,11 @@ class ReminderSchedulerService {
             ),
             iOS: DarwinNotificationDetails(),
           ),
-          payload: '/profile',
+          // '/profile' was never a registered route (badges live under
+          // Settings → Achievements, i.e. '/settings/achievements') — a tap
+          // silently went nowhere since go_router has nothing to match it
+          // against.
+          payload: '/settings/achievements',
         );
       } catch (_) {
         // Non-fatal: a praise notification is a nicety, never a blocker.
@@ -348,10 +375,13 @@ class ReminderSchedulerService {
   /// Schedules a local notification at each upcoming scheduled questionnaire
   /// due date (`GET /questionnaires/due`), including weekly per-habit SRHI
   /// check-ins (`questionnaireSlug == 'srhi'`), which the backend keeps
-  /// generating for as long as the habit stays active. Due-now questionnaires
-  /// are shown as "today's task" cards instead, so only future occurrences
-  /// are notified. Uses a dedicated id range that it clears first, so it
-  /// never disturbs the habit reminders.
+  /// generating for as long as the habit stays active. A window whose due
+  /// date's reminder hour has already passed today (e.g. every SRHI week-1
+  /// baseline — anchored ~5s after habit creation, so it's essentially
+  /// always "already due" by the time this runs) fires an immediate,
+  /// once-only notification instead of a scheduled one — see
+  /// [_notifyDueNowOnce]. Uses dedicated id ranges that it clears first, so
+  /// it never disturbs the habit reminders.
   Future<void> syncQuestionnaireReminders() async {
     await _ensureTimezone();
 
@@ -382,7 +412,6 @@ class ReminderSchedulerService {
     final now = tz.TZDateTime.now(tz.local);
     var idx = 0;
     for (final it in items) {
-      if (idx >= _qNotifMax) break;
       final scheduledStr = it['scheduledFor']?.toString();
       if (scheduledStr == null) continue;
       final parsed = DateTime.tryParse(scheduledStr);
@@ -397,9 +426,30 @@ class ReminderSchedulerService {
         hour,
         minute,
       );
-      if (!fireAt.isAfter(now)) continue; // already passed → shown as a card
       final title = it['questionnaireTitle']?.toString() ?? 'Questionnaire';
       final isSrhi = it['questionnaireSlug']?.toString() == 'srhi';
+      final payload = isSrhi
+          ? '/habits/${it['intentionId']}/srhi/${it['occurrence']}'
+          : '/settings/profile';
+
+      if (!fireAt.isAfter(now)) {
+        // Already due — shown as a card too, but that only helps a
+        // participant who happens to open the app; notify once so it isn't
+        // missed entirely otherwise.
+        final windowId = it['windowId']?.toString();
+        if (windowId != null) {
+          await _notifyDueNowOnce(
+            windowId: windowId,
+            title: isSrhi ? 'Weekly check-in ready' : 'Questionnaire ready',
+            body: isSrhi
+                ? '$title — a quick check-in is ready.'
+                : '$title is ready to complete.',
+            payload: payload,
+          );
+        }
+        continue;
+      }
+      if (idx >= _qNotifMax) continue;
 
       await _plugin.zonedSchedule(
         id: _qNotifBase + idx++,
@@ -428,11 +478,48 @@ class ReminderSchedulerService {
         // Profile → Health Questionnaires) — route there rather than
         // deep-linking into a specific questionnaire, since the form itself
         // needs question data that a bare route string can't carry.
-        payload: isSrhi
-            ? '/habits/${it['intentionId']}/srhi/${it['occurrence']}'
-            : '/settings/profile',
+        payload: payload,
       );
     }
+  }
+
+  /// Shows an immediate local notification for a questionnaire window that's
+  /// already due, unless one was already shown for this [windowId] (the
+  /// backend's stable per-window id) on a previous sync — so re-running
+  /// [syncQuestionnaireReminders] on every app start doesn't re-notify the
+  /// same due-now window every time.
+  Future<void> _notifyDueNowOnce({
+    required String windowId,
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final notified =
+        (prefs.getStringList(_notifiedDueNowWindowIdsKey) ?? const [])
+            .toSet();
+    if (notified.contains(windowId)) return;
+
+    await _plugin.show(
+      id: _qDueNowNotifBase + (stableHash(windowId) % _qDueNowNotifRange),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _qDueNowChannelId,
+          _qDueNowChannelName,
+          channelDescription: _qDueNowChannelDescription,
+          importance: Importance.defaultImportance,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: payload,
+    );
+
+    await prefs.setStringList(_notifiedDueNowWindowIdsKey, [
+      ...notified,
+      windowId,
+    ]);
   }
 
   /// Schedules a single local notification for the participant's study end

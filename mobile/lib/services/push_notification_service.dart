@@ -153,23 +153,20 @@ class PushNotificationService {
   Future<void> initialize({
     void Function(String route)? onLocalNotificationTap,
   }) async {
-    final messaging = FirebaseMessaging.instance;
-
-    await messaging.requestPermission();
-
-    // iOS: firebase_messaging registers its own UNUserNotificationCenter
-    // delegate, which by default suppresses the system alert/sound/badge
-    // presentation for *any* notification — including the local ones this
-    // service and ReminderSchedulerService show via flutter_local_notifications
-    // — while the app is in the foreground. Without this call, both FCM pushes
-    // and local habit/SRHI reminders silently produce no visible banner
-    // whenever the app happens to be open. No-op on Android.
-    await messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
+    // Registered first and unconditionally, before any Firebase call below.
+    // Local notifications (habit reminders, SRHI, praise/recovery — all
+    // scheduled/shown by ReminderSchedulerService, a completely separate
+    // on-device mechanism that needs no Firebase/network access at all) rely
+    // solely on this callback to route a tap. Previously this ran *after*
+    // the Firebase permission/presentation-options calls below — on a
+    // simulator, a device with no APNs entitlement, or just a flaky network,
+    // either of those can throw, and ShellScreen's caller swallows that
+    // exception (`catch (_) { return; }`), which used to abort this whole
+    // method before the callback was ever registered. Notifications still
+    // *displayed* fine either way (show()/zonedSchedule() talk to the
+    // platform channel directly, independent of initialize()), so the
+    // failure mode was silent: notifications arrive, but tapping any of them
+    // — including a plain habit reminder — does nothing.
     await initLocalNotifications(
       onNotificationTap: (payload) {
         if (payload != null && payload.isNotEmpty) {
@@ -178,26 +175,55 @@ class PushNotificationService {
       },
     );
 
-    final token = await messaging.getToken();
-    if (token != null) {
-      try {
-        await _registerToken(token);
-      } catch (e) {
-        debugPrint('[PushNotificationService] Initial token registration failed: $e');
+    final messaging = FirebaseMessaging.instance;
+
+    // Everything below is FCM (remote push) specific — best-effort. A
+    // failure here (no APNs entitlement, simulator limitations, no network)
+    // must never take the local-notification tap wiring above down with it.
+    try {
+      await messaging.requestPermission();
+
+      // iOS: firebase_messaging registers its own UNUserNotificationCenter
+      // delegate, which by default suppresses the system alert/sound/badge
+      // presentation for *any* notification — including the local ones this
+      // service and ReminderSchedulerService show via
+      // flutter_local_notifications — while the app is in the foreground.
+      // Without this call, both FCM pushes and local habit/SRHI reminders
+      // silently produce no visible banner whenever the app happens to be
+      // open. No-op on Android.
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      final token = await messaging.getToken();
+      if (token != null) {
+        try {
+          await _registerToken(token);
+        } catch (e) {
+          debugPrint(
+            '[PushNotificationService] Initial token registration failed: $e',
+          );
+        }
       }
+
+      messaging.onTokenRefresh.listen((newToken) async {
+        try {
+          await _registerToken(newToken);
+        } catch (e) {
+          debugPrint(
+            '[PushNotificationService] Token refresh registration failed: $e',
+          );
+        }
+      });
+
+      FirebaseMessaging.onMessage.listen(showForegroundNotification);
+
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint('[PushNotificationService] FCM setup failed: $e');
     }
-
-    messaging.onTokenRefresh.listen((newToken) async {
-      try {
-        await _registerToken(newToken);
-      } catch (e) {
-        debugPrint('[PushNotificationService] Token refresh registration failed: $e');
-      }
-    });
-
-    FirebaseMessaging.onMessage.listen(showForegroundNotification);
-
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
   /// POSTs the [token] to `POST /api/v1/participant/register-token`, along

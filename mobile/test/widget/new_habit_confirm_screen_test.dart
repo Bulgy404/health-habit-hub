@@ -441,6 +441,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(service.lastCall!['reminderTime'], isNull);
   });
@@ -464,6 +468,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(service.lastCall!['reminderTime'], '06:15');
   });
@@ -530,6 +538,10 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Edited sentence.');
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(find.text('MyHabitsScreen'), findsOneWidget);
     expect(service.lastCall, isNotNull);
@@ -552,6 +564,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(service.lastCall!['reminderTime'], isNull);
   });
@@ -709,6 +725,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(service.calls, hasLength(1));
     expect(service.lastCall!['stackedOn'], 'existing-anchor-id');
@@ -731,6 +751,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     // Two calls: the anchor habit first (standalone, no stackedOn), then the
     // habit the user actually came here to create, linked to the anchor's
@@ -762,6 +786,10 @@ void main() {
 
     await tester.tap(find.text('Create habit'));
     await tester.pumpAndSettle();
+    // Drains the delayed dueSrhiProvider re-invalidation Timer (see
+    // new_habit_screen_3_confirm.dart's _submit), so it isn't still pending
+    // when the test ends.
+    await tester.pump(const Duration(seconds: 6));
 
     expect(service.calls, hasLength(1));
     expect(service.lastCall!['stackedOn'], isNull);

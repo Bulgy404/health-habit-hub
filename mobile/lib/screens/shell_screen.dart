@@ -266,11 +266,28 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
       final service = ref.read(pushNotificationServiceProvider);
       await service.initialize(
         onLocalNotificationTap: (route) {
-          if (mounted) context.go(route);
+          if (!mounted) return;
+          try {
+            context.go(route);
+          } catch (e) {
+            // A payload pointing at an unregistered route (e.g. a stray
+            // typo) would otherwise fail completely silently — the
+            // notification arrives and displays fine (that's a separate,
+            // native-side path), but tapping it does nothing with no trace
+            // of why. Logged so that failure mode is diagnosable instead of
+            // looking identical to the tap callback never having fired.
+            debugPrint(
+              '[ShellScreen] onLocalNotificationTap: go("$route") failed: $e',
+            );
+          }
         },
       );
-    } catch (_) {
-      // Firebase not configured or unavailable — silently skip.
+    } catch (e) {
+      // initLocalNotifications() itself failing (not just the FCM-specific
+      // setup PushNotificationService.initialize() already isolates) is rare
+      // but would otherwise leave every local notification tap silently
+      // inert with no trace of why.
+      debugPrint('[ShellScreen] _initNotifications failed: $e');
       return;
     }
 
