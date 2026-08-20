@@ -1,7 +1,7 @@
 name: hhh
 description: 'Health Habit Hub - Flutter app for habit donation research'
 publish_to: 'none'
-version: 1.1.2+1
+version: 1.1.2+2
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
