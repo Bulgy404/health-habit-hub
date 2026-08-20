@@ -22,16 +22,21 @@ const int kBackfillWindowDays = 7;
 /// Opens the backfill sheet for [intentionId]. [logsMap] is the caller's
 /// already-fetched log data (from `intentionLogsProvider`) keyed by
 /// `YYYY-MM-DD` — reused here so opening the sheet needs no extra network
-/// round trip. [onChanged] is called after every successful toggle so the
-/// caller can invalidate its own providers (log list, activity graph,
-/// gamification) the same way the on-card checkbox already does.
+/// round trip. [onChanged] is called with the toggled day (`YYYY-MM-DD`) and
+/// whether it was just logged (vs. un-logged) after every successful toggle,
+/// so the caller can invalidate its own providers (log list, activity graph,
+/// gamification) the same way the on-card checkbox already does — and, when
+/// the toggled day is today, resync today's local habit-reminder
+/// notification the same way too (#12: this sheet's window includes today,
+/// so it's a second place a habit's same-day completion status can change,
+/// not just the on-card checkbox).
 Future<void> showBackfillLogSheet({
   required BuildContext context,
   required MyHabitsService service,
   required String intentionId,
   required Map<String, bool> logsMap,
   required Color typeColor,
-  required VoidCallback onChanged,
+  required void Function(String date, bool justLogged) onChanged,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -66,7 +71,7 @@ class _BackfillLogSheet extends StatefulWidget {
   final String intentionId;
   final Map<String, bool> logsMap;
   final Color typeColor;
-  final VoidCallback onChanged;
+  final void Function(String date, bool justLogged) onChanged;
 
   @override
   State<_BackfillLogSheet> createState() => _BackfillLogSheetState();
@@ -165,7 +170,7 @@ class _BackfillLogSheetState extends State<_BackfillLogSheet> {
         _pendingDate = null;
       });
       unawaited(HapticFeedback.lightImpact());
-      widget.onChanged();
+      widget.onChanged(dateStr, !wasLogged);
     } catch (e) {
       if (!mounted) return;
       setState(() => _pendingDate = null);

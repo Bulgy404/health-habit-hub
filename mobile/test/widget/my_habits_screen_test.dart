@@ -1,13 +1,26 @@
 // mobile/test/widget/my_habits_screen_test.dart
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_screen.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
 import 'package:hhh/l10n/app_localizations.dart';
+import 'package:hhh/services/reminder_scheduler_service.dart';
 import 'package:hhh/widgets/contribution_graph_widget.dart';
+// The umbrella `flutter_local_notifications` package deliberately hides
+// MethodChannelFlutterLocalNotificationsPlugin from its public export — see
+// new_habit_confirm_screen_test.dart for the same import and rationale.
+// ignore: implementation_imports
+import 'package:flutter_local_notifications/src/platform_flutter_local_notifications.dart';
+
+const _notificationsChannel =
+    MethodChannel('dexterous.com/flutter/local_notifications');
+const _timezoneChannel = MethodChannel('flutter_timezone');
 
 final _fakeDio = Dio();
 
@@ -237,6 +250,103 @@ void main() {
       ).counts,
       isNotEmpty,
     );
+  });
+
+  testWidgets(
+      '#12: marking a habit complete for today cancels only today\'s '
+      'reminder; un-marking runs a full resync', (tester) async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    // FlutterLocalNotificationsPlugin.cancel()/.show()/.zonedSchedule() branch
+    // on defaultTargetPlatform (unlike pendingNotificationRequests(), which
+    // always goes straight to FlutterLocalNotificationsPlatform.instance) —
+    // the bare test VM defaults to TargetPlatform.android, which would route
+    // through AndroidFlutterLocalNotificationsPlugin (never registered here)
+    // instead of the generic mocked instance below, silently no-op-ing every
+    // cancel call. Forcing iOS (this app's primary platform anyway) takes the
+    // branch that actually reaches the mock.
+    FlutterLocalNotificationsPlatform.instance =
+        MethodChannelFlutterLocalNotificationsPlugin();
+    final calls = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(_notificationsChannel, (call) async {
+      calls.add(call);
+      if (call.method == 'pendingNotificationRequests') return <dynamic>[];
+      return null;
+    });
+    messenger.setMockMethodCallHandler(_timezoneChannel, (call) async {
+      if (call.method == 'getLocalTimezone') return 'UTC';
+      return null;
+    });
+    addTearDown(() {
+      messenger.setMockMethodCallHandler(_notificationsChannel, null);
+      messenger.setMockMethodCallHandler(_timezoneChannel, null);
+    });
+
+    // debugDefaultTargetPlatformOverride must be back to null before this
+    // test function returns — testWidgets's post-test invariant check
+    // (debugAssertAllFoundationVarsUnset) runs synchronously right after the
+    // test body, ahead of any addTearDown callback (those only fire once the
+    // whole test()-body Future resolves), so resetting via addTearDown here
+    // is too late and trips "value of a foundation debug variable was
+    // changed by the test." try/finally guarantees the reset runs even if an
+    // expect() below throws.
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      final fakeService = _FakeMyHabitsService(
+        config: const HabitConfig(
+          cueCount: 'multi',
+          cueSource: 'high_quality',
+          behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+          maxHabits: null,
+          srhiItems: [],
+        ),
+        intentions: [_activeIntention],
+      );
+      await tester.pumpWidget(_buildSubject(
+        config: fakeService.config,
+        intentions: fakeService.intentions,
+        service: fakeService,
+      ));
+      await tester.pumpAndSettle();
+
+      // Mark today complete — should cancel just today's reminder id (day-
+      // offset 1), a cheap local call, not a full pendingNotificationRequests
+      // sweep.
+      await tester.tap(find.byTooltip('Log today'));
+      await tester.pumpAndSettle();
+
+      final todayId =
+          ReminderSchedulerService.reminderNotificationId('intent-1', 1);
+      expect(
+        calls.any((c) => c.method == 'cancel' && c.arguments == todayId),
+        isTrue,
+        reason:
+            "marking complete should cancel today's reminder notification",
+      );
+      expect(
+        calls.any((c) => c.method == 'pendingNotificationRequests'),
+        isFalse,
+        reason: 'marking complete must stay a cheap single-id cancel, not a '
+            'full resync sweep',
+      );
+
+      calls.clear();
+
+      // Un-mark — should run the full sync (which queries pending requests
+      // as part of cancel-and-reschedule) so today's reminder is restored.
+      await tester.tap(find.byTooltip('Logged ✓').first);
+      await tester.pumpAndSettle();
+
+      expect(
+        calls.any((c) => c.method == 'pendingNotificationRequests'),
+        isTrue,
+        reason: 'un-marking should re-run the full sync to restore the '
+            "reminder if today's time hasn't passed yet",
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   group('§7.1 habit stacking connector', () {

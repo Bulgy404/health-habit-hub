@@ -5,8 +5,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/reminder_scheduler_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
 import '../../widgets/automaticity_chart_widget.dart';
@@ -76,10 +78,20 @@ class HabitDetailScreen extends ConsumerWidget {
                     intentionId: intentionId,
                     logsMap: logsMap,
                     typeColor: Theme.of(context).colorScheme.primary,
-                    onChanged: () {
+                    onChanged: (date, justLogged) {
                       ref.invalidate(intentionLogsProvider);
                       ref.invalidate(allHabitsActivityProvider);
                       ref.invalidate(gamificationProvider);
+                      // #12 — the backfill window includes today, so
+                      // toggling today's row here needs the same reminder
+                      // resync as my_habits_screen.dart's on-card checkbox.
+                      if (date == formatDateYmd(DateTime.now())) {
+                        resyncReminderAfterLogChange(
+                          ref.read(dioProvider),
+                          intentionId: intentionId,
+                          justLogged: justLogged,
+                        );
+                      }
                     },
                   );
                   return;

@@ -9,8 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/reminder_scheduler_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/motion.dart';
 import '../../utils/date_format.dart';
@@ -578,6 +580,11 @@ class _HabitCard extends ConsumerWidget {
                       // on this screen was just noise.
                       unawaited(HapticFeedback.lightImpact());
                       _refreshAfterLogChange(ref);
+                      _resyncReminderAfterLogChange(
+                        ref,
+                        intentionId: intention.id,
+                        justLogged: !wasLogged,
+                      );
                     } catch (e) {
                       // A dead session already gets ShellScreen's global
                       // "session expired, sign in again" prompt (triggered
@@ -608,7 +615,19 @@ class _HabitCard extends ConsumerWidget {
                       intentionId: intention.id,
                       logsMap: logsMap,
                       typeColor: typeColor,
-                      onChanged: () => _refreshAfterLogChange(ref),
+                      onChanged: (date, justLogged) {
+                        _refreshAfterLogChange(ref);
+                        // #12 — the backfill window includes today, so
+                        // toggling today's row here needs the same reminder
+                        // resync as the on-card checkbox.
+                        if (date == todayStr) {
+                          _resyncReminderAfterLogChange(
+                            ref,
+                            intentionId: intention.id,
+                            justLogged: justLogged,
+                          );
+                        }
+                      },
                     );
                   },
                 ),
@@ -701,6 +720,21 @@ void _refreshAfterLogChange(WidgetRef ref) {
   ref.invalidate(intentionLogsProvider);
   ref.invalidate(allHabitsActivityProvider);
   ref.invalidate(gamificationProvider);
+}
+
+/// Keeps today's local habit-reminder notification in sync with a log
+/// change (#12) — see [resyncReminderAfterLogChange] for the policy. Thin
+/// wrapper that just supplies the app's shared [dioProvider] Dio instance.
+void _resyncReminderAfterLogChange(
+  WidgetRef ref, {
+  required String intentionId,
+  required bool justLogged,
+}) {
+  resyncReminderAfterLogChange(
+    ref.read(dioProvider),
+    intentionId: intentionId,
+    justLogged: justLogged,
+  );
 }
 
 /// Big, tappable on/off checkbox for "did you do this today", shown on each

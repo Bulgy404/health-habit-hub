@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -80,8 +82,11 @@ bool _tzReady = false;
 /// habit strength (SRHI) and adherence rise — see
 /// `app/services/reminderPlanService.js` for the autonomy-score algorithm.
 ///
-/// Re-run [syncReminders] after intention creation, daily logging, SRHI
-/// submission, and on app start so the schedule tracks the latest plan.
+/// Re-run [syncReminders] after intention creation, SRHI submission, and on
+/// app start so the schedule tracks the latest plan. Daily logging is
+/// handled separately and more cheaply — see [cancelTodayFor] for marking a
+/// habit complete, and re-run [syncReminders] when un-marking one so today's
+/// reminder is restored if its time hasn't passed yet.
 class ReminderSchedulerService {
   ReminderSchedulerService({required Dio dio}) : _dio = dio;
 
@@ -258,6 +263,27 @@ class ReminderSchedulerService {
         await _plugin.cancel(id: request.id);
       }
     }
+  }
+
+  /// Cancels today's pending habit-reminder notification for [intentionId],
+  /// if one is scheduled — call this right after marking a habit complete
+  /// for today, so its own reminder doesn't still nag later that day (#12:
+  /// previously nothing ever reacted to same-day completion, so a habit
+  /// logged in the morning still fired its evening reminder).
+  ///
+  /// Cheap and local-only, unlike [syncReminders]: today's occurrence is
+  /// always day-offset 1 in the deterministic id scheme (see
+  /// [reminderNotificationId]), so this is a single id cancel, not a full
+  /// re-fetch-and-reschedule sweep of every active intention.
+  ///
+  /// A safe no-op when the intention isn't currently on the `daily`
+  /// reminder tier (no notification was ever scheduled for offset 1) or
+  /// when today's reminder hour has already passed by the time this is
+  /// called (offset 1 was rolled forward to hold *tomorrow's* occurrence
+  /// instead in that case — rare to hit right at that boundary, and
+  /// self-heals at the next full [syncReminders]).
+  Future<void> cancelTodayFor(String intentionId) {
+    return _plugin.cancel(id: reminderNotificationId(intentionId, 1));
   }
 
   // ReminderSchedulerService is constructed fresh at every call site
@@ -589,4 +615,33 @@ class ReminderSchedulerService {
 
   /// Cancels every pending habit reminder (e.g. on sign-out / deletion).
   Future<void> cancelAll() => _plugin.cancelAll();
+}
+
+/// Fire-and-forget reminder resync after a habit's *today* log status
+/// changes (#12) — shared by every call site that can toggle today's log
+/// (the on-card checkbox and the backfill sheet, in both
+/// `my_habits_screen.dart` and `habit_detail_screen.dart`), so the policy
+/// lives in one place rather than being copy-pasted per screen.
+///
+/// Pass [justLogged]: true right after marking today complete (cancels just
+/// today's reminder — cheap, local-only, see
+/// [ReminderSchedulerService.cancelTodayFor]); false right after un-marking
+/// it (re-runs the full sync so today's reminder is restored if its time
+/// hasn't passed yet, since restoring needs the backend's current plan, not
+/// just a local id).
+///
+/// Best-effort: failures are swallowed, since a resync failure must never
+/// surface as a log-toggle error — the log itself has already succeeded by
+/// the time a caller reaches this.
+void resyncReminderAfterLogChange(
+  Dio dio, {
+  required String intentionId,
+  required bool justLogged,
+}) {
+  final service = ReminderSchedulerService(dio: dio);
+  if (justLogged) {
+    unawaited(service.cancelTodayFor(intentionId).catchError((_) {}));
+  } else {
+    unawaited(service.syncReminders().catchError((_) {}));
+  }
 }
