@@ -943,7 +943,7 @@ scoring-algorithm reference for §7.3 and §7.5.
 
 | # | Design principle | Stage | Status | Where |
 |---|---|---|---|---|
-| 1 | **Information Provision** — educational content on a habit's benefits, to support the initial decision | Decision | ✅ Fulfilled | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline) |
+| 1 | **Information Provision** — educational content on a habit's benefits, to support the initial decision | Decision | ✅ Fulfilled | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline); the Share screen's always-visible "Why share?" card explains the research rationale for donating a habit, linking to the full project-info page (`project_info_screen.dart`) |
 | 2 | **Implementation Intention** — the if-then plan binding a behavior to a context | Decision | ✅ Fulfilled | The core habit-creation flow (`intentionStatement`) — the app's organizing concept, not a bolt-on |
 | 3 | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision | ✅ Fulfilled | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`) |
 | 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §13.4 |

@@ -11,7 +11,7 @@
 
 import { DIMENSIONS } from '../utils/constants.js';
 
-function serviceHeaders() {
+export function serviceHeaders() {
   const headers = { 'Content-Type': 'application/json' };
   if (process.env.API_SERVICE_SECRET) {
     headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
