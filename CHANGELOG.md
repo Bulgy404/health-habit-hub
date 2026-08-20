@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.5] - 2026-08-20
+
 ### Fixed
 
 - **The Android app crashed immediately on every launch** with `ClassNotFoundException: ...MainActivity`. `MainActivity.kt` was still sitting in its old package directory (`de.tu_dresden.hhh`) from before the app was renamed to `de.felixreinsch.healthhabithub` — `build.gradle.kts`'s `namespace`/`applicationId` were updated at the time, but the Kotlin source file was never moved to match, so the manifest pointed at a class Android could never find in the compiled dex. Moved the file to the correct package directory and updated its `package` declaration.
