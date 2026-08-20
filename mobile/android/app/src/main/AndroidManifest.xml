@@ -2,6 +2,13 @@
     <!-- Habit-donation voice input: recording a spoken habit sentence, sent
          off-device for speech-to-text transcription. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- flutter_local_notifications: required so scheduled notifications
+         (habit reminders, SRHI/questionnaire check-ins, end-of-study) survive
+         a device reboot — the plugin's own manifest only auto-merges
+         POST_NOTIFICATIONS/VIBRATE as of v16+; this and the two receivers
+         below are opt-in additions the app must declare itself. See the
+         plugin's README "To schedule notifications" section. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="Health Habit Hub"
         android:name="${applicationName}"
@@ -34,6 +41,22 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- flutter_local_notifications: fires the actual scheduled
+             notification (zonedSchedule — used for every habit reminder,
+             SRHI/questionnaire check-in, and end-of-study notice) and
+             reschedules all pending ones after a reboot/app-update, paired
+             with RECEIVE_BOOT_COMPLETED above. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

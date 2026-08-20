@@ -65,7 +65,11 @@ final _localNotifications = FlutterLocalNotificationsPlugin();
 Future<void> initLocalNotifications({
   void Function(String? payload)? onNotificationTap,
 }) async {
-  const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+  // '@mipmap/launcher_icon', not the stock '@mipmap/ic_launcher' Flutter's
+  // template leaves behind — the app's own AndroidManifest.xml android:icon
+  // already points at launcher_icon (the actual current branding); ic_launcher
+  // is a stale leftover from before the app icon was redesigned.
+  const android = AndroidInitializationSettings('@mipmap/launcher_icon');
   const darwin = DarwinInitializationSettings();
   await _localNotifications.initialize(
     settings: const InitializationSettings(android: android, iOS: darwin),

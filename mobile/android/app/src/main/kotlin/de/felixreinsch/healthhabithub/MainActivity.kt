@@ -1,4 +1,4 @@
-package de.tu_dresden.hhh
+package de.felixreinsch.healthhabithub
 
 import io.flutter.embedding.android.FlutterActivity
 

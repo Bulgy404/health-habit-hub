@@ -27,12 +27,23 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "de.felixreinsch.healthhabithub"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned instead of flutter.compileSdkVersion (currently resolves to 37):
+    // Android SDK 37 introduced a new minor-version naming scheme
+    // (android-37.0, android-37.1, ... — no plain "android-37" package
+    // exists), which this Flutter version's bundled default doesn't yet
+    // account for, so Gradle fails to resolve the compile target at all.
+    // Revisit once a newer Flutter release's compileSdkVersion default
+    // matches the new naming scheme.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications (uses java.time APIs not
+        // natively available below Android 8/API 26) — see its own example
+        // app's build.gradle for the same two lines.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -48,6 +59,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Required by flutter_appauth for the Keycloak PKCE login redirect
+        // (AuthService._redirectUrl = 'de.tu-dresden.hhh://callback') to be
+        // caught and routed back into the app.
+        manifestPlaceholders["appAuthRedirectScheme"] = "de.tu-dresden.hhh"
     }
 
     signingConfigs {
@@ -75,4 +90,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Pairs with isCoreLibraryDesugaringEnabled above.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
