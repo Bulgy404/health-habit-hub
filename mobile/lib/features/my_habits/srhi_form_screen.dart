@@ -15,13 +15,20 @@ import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
 /// Screen for completing the weekly SRHI habit strength questionnaire.
+///
+/// [behaviorLabel] and [srhiItems] are normally passed via router `extra`
+/// when navigated to from in-app (see my_habits_screen.dart's
+/// `_SrhiPromptCard`). They're left `null`-able so a bare deep link — e.g. a
+/// tapped SRHI local notification, which can only carry a path string — still
+/// works: the screen fetches both itself from [habitConfigProvider] and
+/// [intentionsProvider] in that case.
 class SrhiFormScreen extends ConsumerStatefulWidget {
   /// Creates a [SrhiFormScreen] for [intentionId] at [weekNumber].
   const SrhiFormScreen({
     required this.intentionId,
     required this.weekNumber,
-    required this.behaviorLabel,
-    required this.srhiItems,
+    this.behaviorLabel,
+    this.srhiItems,
     super.key,
   });
 
@@ -31,35 +38,39 @@ class SrhiFormScreen extends ConsumerStatefulWidget {
   /// Study week number for this check-in.
   final int weekNumber;
 
-  /// Human-readable behaviour label shown in the form header.
-  final String behaviorLabel;
+  /// Human-readable behaviour label shown in the form header, when supplied
+  /// by the caller — otherwise resolved from [intentionsProvider].
+  final String? behaviorLabel;
 
-  /// SRHI question items to present.
-  final List<SrhiItem> srhiItems;
+  /// SRHI question items to present, when supplied by the caller —
+  /// otherwise resolved from [habitConfigProvider].
+  final List<SrhiItem>? srhiItems;
 
   @override
   ConsumerState<SrhiFormScreen> createState() => _SrhiFormScreenState();
 }
 
 class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
-  // Stores 1–7 rating for each item; initially all 1 (slider minimum).
-  late final Map<String, int> _answers;
+  // Stores 1–7 rating for each item; missing entries default to 1 (slider
+  // minimum) at read time, so this never needs eager population.
+  final Map<String, int> _answers = {};
   // Tracks which items have been explicitly touched by the user.
   final Set<String> _touched = {};
   bool _submitting = false;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    _answers = {for (final item in widget.srhiItems) item.id: 1};
-  }
+  // Cached once resolved in build() so `_submit` (and its graduation dialog
+  // copy) can use them without re-deriving from providers mid-callback.
+  List<SrhiItem>? _resolvedItems;
+  String _resolvedLabel = '';
 
-  bool get _allAnswered => _touched.length == widget.srhiItems.length;
+  bool _allAnswered(List<SrhiItem> items) =>
+      _touched.length == items.length;
 
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
-    if (!_allAnswered) {
+    final items = _resolvedItems ?? const <SrhiItem>[];
+    if (!_allAnswered(items)) {
       setState(() => _error = l10n.srhiSubmitIncomplete);
       return;
     }
@@ -101,7 +112,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
             builder: (dialogContext) => AlertDialog(
               title: const Text('🎓 Habit graduated!'),
               content: Text(
-                '${widget.behaviorLabel} is now fully self-sustained — you '
+                '$_resolvedLabel is now fully self-sustained — you '
                 "don't need to track it in the app anymore. It's moved to "
                 'Graduated habits, and you can always reactivate it later.',
               ),
@@ -127,6 +138,50 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+
+    // The normal in-app path: my_habits_screen.dart's `_SrhiPromptCard`
+    // already has both values on hand and passes them via router `extra`.
+    if (widget.srhiItems != null) {
+      _resolvedItems = widget.srhiItems;
+      _resolvedLabel = widget.behaviorLabel ?? '';
+      return _buildForm(context, widget.srhiItems!, _resolvedLabel);
+    }
+
+    // Deep-link path (a tapped SRHI notification carries only a route
+    // string) — resolve the same data from providers instead.
+    final configAsync = ref.watch(habitConfigProvider);
+    final intentionsAsync = ref.watch(intentionsProvider);
+    if (configAsync.isLoading || intentionsAsync.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.srhiFormTitle)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (configAsync.hasError || intentionsAsync.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.srhiFormTitle)),
+        body: Center(
+          child: Text((configAsync.error ?? intentionsAsync.error).toString()),
+        ),
+      );
+    }
+    final items = configAsync.value!.srhiItems;
+    final label = intentionsAsync.value!
+            .where((i) => i.id == widget.intentionId)
+            .firstOrNull
+            ?.behaviorLabel ??
+        '';
+    _resolvedItems = items;
+    _resolvedLabel = label;
+    return _buildForm(context, items, label);
+  }
+
+  Widget _buildForm(
+    BuildContext context,
+    List<SrhiItem> items,
+    String behaviorLabel,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -142,16 +197,16 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.srhiStem(widget.behaviorLabel),
+                    l10n.srhiStem(behaviorLabel),
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  for (int i = 0; i < widget.srhiItems.length; i++)
+                  for (int i = 0; i < items.length; i++)
                     Builder(builder: (context) {
-                      final item = widget.srhiItems[i];
+                      final item = items[i];
                       final text = locale == 'de' ? item.de : item.en;
                       final value = _answers[item.id] ?? 1;
                       final touched = _touched.contains(item.id);
@@ -223,7 +278,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                                 ),
                               ],
                             ),
-                            if (i < widget.srhiItems.length - 1)
+                            if (i < items.length - 1)
                               const Padding(
                                 padding: EdgeInsets.only(top: 12),
                                 child: Divider(height: 1),
@@ -251,7 +306,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: FilledButton(
-              onPressed: (_allAnswered && !_submitting) ? _submit : null,
+              onPressed: (_allAnswered(items) && !_submitting) ? _submit : null,
               child: _submitting
                   ? const SizedBox(
                       width: 20,

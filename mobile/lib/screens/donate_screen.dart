@@ -91,6 +91,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   Widget _taskCard() {
     final l10n = AppLocalizations.of(context)!;
     return Container(
+      key: const ValueKey('taskCard'),
       decoration: BoxDecoration(
         // primaryDark, not primary: matches every other solid-fill CTA in the
         // app (white content needs the darker shade for contrast) — see
@@ -223,6 +224,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final green = context.appColors.primary;
     return Container(
+      key: const ValueKey('sharedTodayCard'),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
@@ -612,10 +614,21 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 ),
               ),
             ),
-            // Share-a-habit task (or a thank-you once shared today).
+            // Share-a-habit task (or a thank-you once shared today). Cross-
+            // faded (matching intention_stitch_screen.dart's convention for
+            // an implicit, ownerless switch) rather than swapped outright —
+            // myStatsProvider resolving mid-visit (or right after a donation)
+            // flips `sharedToday` from false to true, and without this the
+            // green task card was replaced by the white "shared today" card
+            // in a single frame, reading as a jarring flash to white.
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-              child: sharedToday ? _sharedTodayCard() : _taskCard(),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeOut,
+                child: sharedToday ? _sharedTodayCard() : _taskCard(),
+              ),
             ),
             // A card per questionnaire that is currently due.
             for (final q in dueList)

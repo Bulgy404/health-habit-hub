@@ -211,17 +211,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'srhi/:weekNumber',
                         builder: (context, state) {
                           final extra = state.extra as Map<String, dynamic>?;
+                          // Left null (not defaulted to '' / const []) when
+                          // extra is absent — e.g. a tapped SRHI notification
+                          // deep link, which can only carry a path string —
+                          // so SrhiFormScreen knows to resolve both itself
+                          // from providers instead of rendering with zero
+                          // questions.
                           return SrhiFormScreen(
                             intentionId:
                                 state.pathParameters['intentionId']!,
                             weekNumber: int.parse(
                                 state.pathParameters['weekNumber']!),
-                            behaviorLabel:
-                                extra?['behaviorLabel'] as String? ?? '',
-                            srhiItems: (extra?['srhiItems']
-                                        as List<dynamic>?)
-                                    ?.cast<SrhiItem>() ??
-                                const [],
+                            behaviorLabel: extra?['behaviorLabel'] as String?,
+                            srhiItems: (extra?['srhiItems'] as List<dynamic>?)
+                                ?.cast<SrhiItem>(),
                           );
                         },
                       ),

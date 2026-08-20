@@ -400,6 +400,17 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
             selectedIndex: currentVisibleIndex,
             onDestinationSelected: (visibleIndex) {
               final branchIndex = visibleTabs[visibleIndex].branch;
+              // The My Habits branch (StatefulShellBranch keeps its Navigator
+              // and provider state alive across tab switches, so a weekly
+              // SRHI check-in that became due while another tab was open —
+              // or during this same session — otherwise only ever appears
+              // after a manual pull-to-refresh). Cheap to refetch and safe to
+              // invalidate even when nothing changed.
+              if (visibleTabs[visibleIndex].path == '/habits') {
+                ref.invalidate(dueSrhiProvider);
+                ref.invalidate(intentionsProvider);
+                ref.invalidate(allHabitsActivityProvider);
+              }
               widget.navigationShell.goBranch(
                 branchIndex,
                 initialLocation:

@@ -385,7 +385,16 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
+    // This form sits inside the pick-behaviour screen's Expanded slot, below
+    // the (optional) "what's a habit?" and information-overload explainer
+    // cards — when both are showing, they can leave too little height for a
+    // plain fixed Column to fit its TextField + button. SingleChildScrollView
+    // instead of a bare Column so the button is always reachable by
+    // scrolling rather than getting clipped off-screen with no way back.
+    // Spacer() only worked in the old fixed-height Column and doesn't apply
+    // inside a scrollable's unbounded height, so it's replaced with a fixed
+    // gap.
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +416,7 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-          const Spacer(),
+          const SizedBox(height: 24),
           FilledButton(
             onPressed: () => _onNext(l10n),
             child: Text(l10n.nextButton),

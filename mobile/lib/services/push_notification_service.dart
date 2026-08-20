@@ -157,6 +157,19 @@ class PushNotificationService {
 
     await messaging.requestPermission();
 
+    // iOS: firebase_messaging registers its own UNUserNotificationCenter
+    // delegate, which by default suppresses the system alert/sound/badge
+    // presentation for *any* notification — including the local ones this
+    // service and ReminderSchedulerService show via flutter_local_notifications
+    // — while the app is in the foreground. Without this call, both FCM pushes
+    // and local habit/SRHI reminders silently produce no visible banner
+    // whenever the app happens to be open. No-op on Android.
+    await messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     await initLocalNotifications(
       onNotificationTap: (payload) {
         if (payload != null && payload.isNotEmpty) {

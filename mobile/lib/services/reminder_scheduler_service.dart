@@ -418,14 +418,18 @@ class ReminderSchedulerService {
           iOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        // SRHI is habit-scoped — route to that habit's detail screen (shows
-        // the check-in prompt), where a plain path-only deep link is enough.
-        // Non-SRHI questionnaires live in the Profile tab (My Profile →
-        // Health Questionnaires) — route there rather than deep-linking into
-        // a specific questionnaire, since the form itself needs question data
-        // that a bare route string can't carry.
+        // SRHI is habit-scoped — route straight to that week's check-in form
+        // rather than the habit detail screen, so tapping the notification
+        // takes the participant directly into the questionnaire instead of
+        // requiring an extra tap once there. SrhiFormScreen fetches its own
+        // behaviorLabel/srhiItems when opened without router `extra` (a
+        // bare payload string can't carry those), so this deep link works
+        // standalone. Non-SRHI questionnaires live in the Profile tab (My
+        // Profile → Health Questionnaires) — route there rather than
+        // deep-linking into a specific questionnaire, since the form itself
+        // needs question data that a bare route string can't carry.
         payload: isSrhi
-            ? '/habits/${it['intentionId']}'
+            ? '/habits/${it['intentionId']}/srhi/${it['occurrence']}'
             : '/settings/profile',
       );
     }
