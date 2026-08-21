@@ -7,7 +7,9 @@
  *
  *   health → legal docs → onboard (account) → consent → enroll (skip)
  *   → habit-config → create intention → log today → reminder plans
- *   → data export → account deletion (incl. verification of erasure)
+ *   → data export → account deletion (identity removed, contributed study
+ *     data retained/pseudonymized — see the DELETE /me comment in
+ *     usersRouter.js for why this isn't full erasure)
  *
  * Usage:
  *   BASE_URL=http://localhost:3000 node scripts/smoke-e2e.mjs
@@ -116,13 +118,13 @@ await step('3. Record informed consent', async () => {
 });
 
 await step('4. Enroll (skip code) & habit config', async () => {
-  const enroll = await jsonFetch(`${API}/enroll/skip-code`, {
+  const enroll = await jsonFetch(`${API}/onboarding/skip-code`, {
     token: accessToken,
     method: 'POST',
     body: {},
   });
   ok(
-    'POST /enroll/skip-code enrolls into default study',
+    'POST /onboarding/skip-code enrolls into default study',
     enroll.status === 200 || enroll.status === 201,
     `(${enroll.status})`
   );
@@ -208,31 +210,41 @@ await step('6. Data export (GDPR Art. 20)', async () => {
   );
 });
 
-await step('7. Account deletion & erasure verification', async () => {
-  const del = await jsonFetch(`${API}/users/me`, {
-    token: accessToken,
-    method: 'DELETE',
-  });
-  ok('DELETE /users/me succeeds', del.status === 200, `(${del.status})`);
-  ok(
-    'deletion removed the intention',
-    (del.data?.deleted?.implementation_intentions ?? 0) >= 1
-  );
+await step(
+  '7. Account deletion & data retention (App Store Guideline 5.1.1(v))',
+  async () => {
+    const del = await jsonFetch(`${API}/users/me`, {
+      token: accessToken,
+      method: 'DELETE',
+    });
+    ok('DELETE /users/me succeeds', del.status === 200, `(${del.status})`);
+    ok(
+      'response confirms identity removal',
+      del.data?.identityRemoved === true
+    );
 
-  // Token should now be rejected (Keycloak user gone → introspection fails on
-  // refresh; the still-valid JWT may pass sig check, so verify data is gone).
-  const exportAfter = await jsonFetch(`${API}/users/me/export`, {
-    token: accessToken,
-  });
-  const remaining = exportAfter.data?.data
-    ? Object.values(exportAfter.data.data).flat().length
-    : 0;
-  ok(
-    'no participant data remains after deletion',
-    exportAfter.status !== 200 || remaining === 0,
-    `(${remaining} docs left)`
-  );
-});
+    // By design (see the DELETE /me comment in usersRouter.js), this removes
+    // only the participant's *identity* — the Keycloak account and recovery
+    // credentials. All contributed study data (intentions, logs,
+    // questionnaire answers, donated habits, ...) is deliberately retained:
+    // it's keyed only by a random UUID whose identity record no longer
+    // exists, so it can't be traced back to a person. This is the retention
+    // model the in-app deletion dialog itself states. The still-valid JWT
+    // can keep reading that retained data until it expires — asserting the
+    // data is gone would contradict the documented design, so this checks
+    // retention actually happened instead.
+    const exportAfter = await jsonFetch(`${API}/users/me/export`, {
+      token: accessToken,
+    });
+    ok(
+      'contributed study data is retained (pseudonymized), not erased',
+      exportAfter.status === 200 &&
+        exportAfter.data?.data?.implementation_intentions?.some(
+          (i) => i.behaviorKey === 'walking'
+        )
+    );
+  }
+);
 
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`Smoke test: ${passed} passed, ${failed} failed`);
