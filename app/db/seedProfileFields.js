@@ -77,16 +77,6 @@ const DEFAULT_PROFILE_FIELDS = [
     languages: ['en', 'de', 'fr', 'ja', 'nl'],
     options: [
       {
-        value: 'under_18',
-        label: {
-          en: 'Under 18',
-          de: 'Unter 18',
-          fr: 'Moins de 18 ans',
-          ja: '18歳未満',
-          nl: 'Onder de 18',
-        },
-      },
-      {
         value: '18_24',
         label: {
           en: '18–24',
@@ -147,7 +137,11 @@ const DEFAULT_PROFILE_FIELDS = [
         },
       },
     ],
-    required: false,
+    // Study eligibility requires participants to be 18+ (see
+    // app/language/en/consent.md), so this field is mandatory and has no
+    // under-18 option — enforced only at profile-setup time, not retroactively
+    // for any participant who already answered before this change.
+    required: true,
     order: 1,
   },
 ];

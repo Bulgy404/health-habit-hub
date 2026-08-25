@@ -66,6 +66,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         .every((d) => _values.containsKey(d.fieldId));
   }
 
+  // Required fields (e.g. the 18+ age-group eligibility question) must be
+  // answered before leaving this screen, so Skip is unavailable whenever one
+  // exists — it can no longer be used to bypass them.
+  bool get _hasRequiredField => _definitions.any((d) => d.required);
+
   Future<void> _showDatePicker(ProfileFieldDefinition def) async {
     if (_submitting) return;
     DateTime temp = _values[def.fieldId] is DateTime
@@ -312,14 +317,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: TextButton(
-                        onPressed: _skip,
-                        child: const Text('Skip'),
+                    if (!_hasRequiredField) ...[
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: TextButton(
+                          onPressed: _skip,
+                          child: const Text('Skip'),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
+                    ],
                     Center(
                       child: Container(
                         width: 72,

@@ -99,12 +99,23 @@ const _fieldDefinitions = [
   },
 ];
 
-void _mockDefinitions(DioAdapter adapter, {int statusCode = 200}) {
+/// Same shape as [_fieldDefinitions] but with no required field, for tests
+/// that exercise the Skip button (which is hidden whenever a required field
+/// exists — see the mandatory age-group eligibility question).
+final _fieldDefinitionsNoRequired = [
+  for (final def in _fieldDefinitions) {...def, 'required': false},
+];
+
+void _mockDefinitions(
+  DioAdapter adapter, {
+  int statusCode = 200,
+  List<Map<String, Object>> definitions = _fieldDefinitions,
+}) {
   adapter.onGet(
     '$_base/profile-field-definitions',
     (server) => server.reply(
       statusCode,
-      statusCode == 200 ? _fieldDefinitions : <dynamic>[],
+      statusCode == 200 ? definitions : <dynamic>[],
     ),
     queryParameters: {'lang': 'en'},
   );
@@ -230,9 +241,20 @@ void main() {
     expect(find.text('Select option'), findsNothing);
   });
 
-  testWidgets('Skip navigates to study-code without requiring any field',
-      (tester) async {
+  testWidgets(
+      'Skip is hidden when a required field exists, so it cannot be used to '
+      'bypass it', (tester) async {
     _mockDefinitions(adapter);
+
+    await tester.pumpWidget(_buildSubject(dio));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Skip'), findsNothing);
+  });
+
+  testWidgets('Skip navigates to study-code when no field is required',
+      (tester) async {
+    _mockDefinitions(adapter, definitions: _fieldDefinitionsNoRequired);
 
     await tester.pumpWidget(_buildSubject(dio));
     await tester.pumpAndSettle();
