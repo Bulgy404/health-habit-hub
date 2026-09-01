@@ -1,0 +1,44 @@
+---
+import { useT, links, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+
+// Apple's own badge-generator artwork + tracked link (itscg/itsct/mttnsubad
+// are Apple's attribution params for this specific badge placement) — use
+// verbatim rather than swapping in the plain links.appStore short link, so
+// App Store Connect can attribute installs back to this badge.
+const appleBadge = {
+  de: { locale: 'de-de', alt: 'Laden im App Store' },
+  en: { locale: 'en-us', alt: 'Download on the App Store' },
+}[lang];
+const appleHref =
+  'https://apps.apple.com/us/app/health-habit-hub/id6793165538?itscg=30200&itsct=apps_box_badge&mttnsubad=6793165538';
+---
+<div class="badges">
+  <a class="badge ios" href={appleHref} target="_blank" rel="noopener">
+    <img
+      src={`https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/${appleBadge.locale}?releaseDate=1785974400`}
+      alt={appleBadge.alt}
+      width="246"
+      height="82"
+    />
+  </a>
+  <span class="badge android soon" aria-disabled="true">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 20.5v-17c0-.4.2-.8.6-1L14 9l-3 3-8 8.5zM14.5 12.5l2.5 2.5-11.4 6.6L14.5 12.5zm4.9-3.4l2.4 1.4c.7.4.7 1.4 0 1.8l-2.4 1.4L16.5 12l2.9-2.9zM5.6 2.5L17 9l-2.5 2.5L5.6 2.5z"/></svg>
+    <span><small>{t('soon')}</small><strong>Google Play</strong></span>
+  </span>
+</div>
+<style>
+  .badges{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .badge{display:inline-flex;align-items:center;transition:transform .14s,box-shadow .2s}
+  .badge.ios{height:54px}
+  .badge.ios img{height:100%;width:auto}
+  .badge.ios:active{transform:scale(.97)}
+  .badge.android{gap:11px;padding:10px 18px;border-radius:13px;border:1px solid transparent}
+  .badge svg{width:22px;height:22px;flex:0 0 auto}
+  .badge span{display:flex;flex-direction:column;line-height:1.15}
+  .badge small{font-size:10.5px;opacity:.8}
+  .badge strong{font-size:15px;font-weight:600}
+  .badge.soon{background:var(--surface);border-color:var(--line);color:var(--muted);cursor:default}
+  .badge.soon strong{color:var(--ink)}
+</style>

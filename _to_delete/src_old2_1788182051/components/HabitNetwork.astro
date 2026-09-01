@@ -1,0 +1,161 @@
+---
+import { useT, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+---
+<div class="net reveal" data-net>
+  <canvas data-net-canvas></canvas>
+  <div class="net-legend">
+    <span><i style="background:#256f00"></i>{t('graph_c1')}</span>
+    <span><i style="background:#45b700"></i>{t('graph_c2')}</span>
+    <span><i style="background:#0ea5a0"></i>{t('graph_c3')}</span>
+    <span><i style="background:#7c9c2f"></i>{t('graph_c4')}</span>
+  </div>
+  <div class="net-hint">{t('graph_hint')}</div>
+</div>
+
+<style>
+  .net{position:relative;border:1px solid var(--line);border-radius:22px;background:
+    radial-gradient(120% 120% at 50% 0,#ffffff, #f6faf3);
+    box-shadow:0 30px 70px -40px rgba(15,23,42,.3);overflow:hidden;aspect-ratio:16/10}
+  .net canvas{display:block;width:100%;height:100%;cursor:grab}
+  .net-legend{position:absolute;left:20px;top:18px;display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);font-weight:500}
+  .net-legend span{display:inline-flex;align-items:center;gap:7px}
+  .net-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .net-hint{position:absolute;right:20px;bottom:16px;font-size:12px;color:#94a3b8}
+  @media(max-width:640px){.net{aspect-ratio:4/5}.net-hint{display:none}}
+</style>
+
+<script>
+  type N = { x:number;y:number;vx:number;vy:number;c:number;r:number;label:string;born:number;on:number };
+  const CATC = ['#256f00','#45b700','#0ea5a0','#7c9c2f'];
+  const LABELS: Record<string,string[][]> = {
+    de: [
+      ['Spazieren','Joggen','Treppe statt Aufzug','Dehnen','Radfahren','Yoga','Krafttraining'],
+      ['Wasser trinken','Obst zum Snack','Weniger Zucker','Selbst kochen','Gemüse zuerst','Kein Fast Food'],
+      ['Feste Schlafenszeit','Kein Handy im Bett','Früh aufstehen','8 Stunden Schlaf','Kurzes Nickerchen'],
+      ['Meditation','Atemübung','Dankbarkeit','Tagebuch','Bildschirmpause','Achtsam essen'],
+    ],
+    en: [
+      ['Walking','Jogging','Take the stairs','Stretching','Cycling','Yoga','Strength'],
+      ['Drink water','Fruit snack','Less sugar','Cook at home','Veg first','No fast food'],
+      ['Set bedtime','No phone in bed','Wake early','8 hours sleep','Short nap'],
+      ['Meditation','Breathing','Gratitude','Journalling','Screen break','Mindful eating'],
+    ],
+  };
+  const lang = (document.documentElement.lang === 'en') ? 'en' : 'de';
+  const groups = LABELS[lang];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const wrap = document.querySelector('[data-net]') as HTMLElement;
+  const canvas = document.querySelector('[data-net-canvas]') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  let W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 2);
+  const nodes: N[] = [], edges: [number,number][] = [];
+
+  // build nodes + edges (hub-and-spoke per cluster, a few cross links)
+  const hubs:number[] = [];
+  groups.forEach((g, ci) => {
+    const hub = nodes.length; hubs.push(hub);
+    g.forEach((label, i) => {
+      nodes.push({ x:0,y:0,vx:0,vy:0,c:ci, r:i===0?11:6.5, label, born:0, on:0 });
+    });
+    for (let i=1;i<g.length;i++) edges.push([hub, hub+i]);
+    // a couple of intra-cluster cross links for texture
+    if (g.length>3){ edges.push([hub+1,hub+2]); edges.push([hub+ (g.length-1), hub+2]); }
+  });
+  // cross-cluster links between hubs (the graph is one connected web)
+  for (let i=0;i<hubs.length;i++) edges.push([hubs[i], hubs[(i+1)%hubs.length]]);
+  edges.push([hubs[0], hubs[2]]);
+  const adj: number[][] = nodes.map(()=>[]);
+  edges.forEach(([a,b])=>{ adj[a].push(b); adj[b].push(a); });
+
+  function resize(){
+    const rect = wrap.getBoundingClientRect(); W = rect.width; H = rect.height;
+    canvas.width = W*dpr; canvas.height = H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function seed(){
+    const cx=W/2, cy=H/2; const R=Math.min(W,H)*0.32;
+    groups.forEach((g,ci)=>{
+      const a = (ci/groups.length)*Math.PI*2 - Math.PI/2;
+      const gx = cx + Math.cos(a)*R, gy = cy + Math.sin(a)*R;
+      for (let i=0;i<g.length;i++){ const n=nodes[hubs[ci]+i];
+        n.x = gx + (Math.random()-.5)*90; n.y = gy + (Math.random()-.5)*90; n.vx=n.vy=0; }
+    });
+  }
+
+  let hover = -1, startT = 0;
+  function step(){
+    const cx=W/2, cy=H/2;
+    // repulsion
+    for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++){
+      const a=nodes[i], b=nodes[j]; let dx=a.x-b.x, dy=a.y-b.y; let d2=dx*dx+dy*dy||1;
+      const f = 900/d2; const d=Math.sqrt(d2); const ux=dx/d, uy=dy/d;
+      a.vx+=ux*f; a.vy+=uy*f; b.vx-=ux*f; b.vy-=uy*f;
+    }
+    // springs
+    for (const [ia,ib] of edges){ const a=nodes[ia], b=nodes[ib];
+      let dx=b.x-a.x, dy=b.y-a.y; const d=Math.hypot(dx,dy)||1; const rest = (a.c===b.c?58:150);
+      const f=(d-rest)*0.012; const ux=dx/d, uy=dy/d;
+      a.vx+=ux*f; a.vy+=uy*f; b.vx-=ux*f; b.vy-=uy*f;
+    }
+    // gravity to center + cluster cohesion
+    for (const n of nodes){ n.vx += (cx-n.x)*0.0016; n.vy += (cy-n.y)*0.0016;
+      n.vx*=0.86; n.vy*=0.86; n.x+=n.vx; n.y+=n.vy; }
+  }
+  function draw(now:number){
+    ctx.clearRect(0,0,W,H);
+    // edges
+    ctx.lineWidth=1;
+    for (const [ia,ib] of edges){ const a=nodes[ia], b=nodes[ib];
+      const lit = hover>=0 && (ia===hover||ib===hover|| adj[hover].includes(ia)||adj[hover].includes(ib));
+      const app = Math.min(a.on,b.on);
+      ctx.strokeStyle = lit ? 'rgba(37,111,0,0.55)' : `rgba(148,163,184,${0.22*app})`;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+    // nodes
+    for (let i=0;i<nodes.length;i++){ const n=nodes[i];
+      const dim = hover>=0 && !(i===hover||adj[hover].includes(i));
+      const scale = n.on * (i===hover?1.25:1);
+      if (scale<=0.01) continue;
+      ctx.globalAlpha = dim?0.28:1;
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r*scale,0,Math.PI*2);
+      ctx.fillStyle = CATC[n.c]; ctx.fill();
+      if (i===hover){ ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke(); }
+      ctx.globalAlpha=1;
+    }
+    // label for hub nodes (always) + hovered node
+    ctx.font='600 12px Figtree Variable, system-ui, sans-serif'; ctx.textAlign='center';
+    for (let i=0;i<nodes.length;i++){ const n=nodes[i];
+      const isHub = hubs.includes(i);
+      if ((isHub || i===hover) && n.on>0.6){
+        ctx.globalAlpha = (hover>=0 && !(i===hover||adj[hover].includes(i))) ? 0.3 : 1;
+        ctx.fillStyle = i===hover ? '#0f172a' : '#475569';
+        ctx.fillText(n.label, n.x, n.y - n.r - 7);
+        ctx.globalAlpha=1;
+      }
+    }
+  }
+  function grow(now:number){
+    if (reduce){ nodes.forEach(n=>n.on=1); return; }
+    if (!startT) startT = now;
+    const el = now-startT;
+    nodes.forEach((n,i)=>{ const delay = i*90; const p = Math.max(0, Math.min((el-delay)/520,1));
+      n.on = 1-Math.pow(1-p,3); });
+  }
+  let raf=0;
+  function loop(now:number){ grow(now); step(); draw(now); raf=requestAnimationFrame(loop); }
+
+  canvas.addEventListener('pointermove', (e)=>{
+    const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    let best=-1, bd=1e9; for (let i=0;i<nodes.length;i++){ const n=nodes[i]; const d=Math.hypot(mx-n.x,my-n.y);
+      if (d< Math.max(14,n.r+8) && d<bd){ bd=d; best=i; } } hover=best;
+    canvas.style.cursor = best>=0?'pointer':'grab';
+  });
+  canvas.addEventListener('pointerleave', ()=>{ hover=-1; });
+
+  function start(){ resize(); seed(); startT=0; cancelAnimationFrame(raf); raf=requestAnimationFrame(loop); }
+  addEventListener('resize', ()=>{ resize(); });
+  const io = new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ start(); io.disconnect(); }}),{threshold:.25});
+  io.observe(wrap);
+</script>

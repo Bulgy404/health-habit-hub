@@ -1,0 +1,9 @@
+---
+import Base from '../layouts/Base.astro';
+import Home from '../components/Home.astro';
+import { useT } from '../i18n/ui';
+const t = useT('de');
+---
+<Base lang="de" page="home" title="Health Habit Hub · Gesündere Gewohnheiten, wissenschaftlich begleitet" description={t('home_lead')}>
+  <Home lang="de" />
+</Base>

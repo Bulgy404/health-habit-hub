@@ -12,8 +12,8 @@ import { createTheme } from "@mui/material/styles";
 export const muiTheme = createTheme({
   palette: {
     primary: {
-      main: "#2e8c00", // --color-primary-action (light)
-      dark: "#256f00", // --color-primary-action-hover (light)
+      main: "#c2410c", // --color-primary-action (light)
+      dark: "#9a3412", // --color-primary-action-hover (light)
       contrastText: "#ffffff",
     },
     error: { main: "#dc2626" }, // --color-error (light)

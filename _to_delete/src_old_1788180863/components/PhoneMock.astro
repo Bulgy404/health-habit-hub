@@ -1,0 +1,13 @@
+---
+import { Image } from 'astro:assets';
+const { src, alt } = Astro.props as { src: ImageMetadata; alt: string };
+---
+<div class="phone">
+  <div class="notch"></div>
+  <Image src={src} alt={alt} widths={[280, 420, 560]} sizes="(max-width:900px) 60vw, 280px" />
+</div>
+<style>
+  .phone{position:relative;width:min(280px,72vw);margin:0 auto;border:10px solid #0f172a;border-radius:38px;background:#0f172a;box-shadow:0 26px 50px -18px rgba(15,23,42,.4);overflow:hidden}
+  .phone :global(img){width:100%;height:auto;border-radius:28px;display:block}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:38%;height:20px;background:#0f172a;border-bottom-left-radius:12px;border-bottom-right-radius:12px;z-index:2}
+</style>

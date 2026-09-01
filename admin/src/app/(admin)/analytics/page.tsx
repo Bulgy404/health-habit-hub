@@ -24,7 +24,7 @@ import styles from "./page.module.css";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const GROUP_COLORS = ["#45B700", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#EF4444"];
+const GROUP_COLORS = ["#F97316", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#EF4444"];
 
 const NEO4J_BROWSER_URL = process.env.NEXT_PUBLIC_NEO4J_BROWSER_URL ?? "http://localhost:7474";
 const MONGO_EXPRESS_URL = process.env.NEXT_PUBLIC_MONGO_EXPRESS_URL ?? "http://localhost:8081";

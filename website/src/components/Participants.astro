@@ -1,0 +1,125 @@
+---
+import { useT, links, type Lang } from '../i18n/ui';
+import { Image } from 'astro:assets';
+import AppStoreBadges from './AppStoreBadges.astro';
+import Onboarding from '../assets/device-mockups/Onboarding.png';
+import Habits from '../assets/device-mockups/Habits.png';
+import Graph from '../assets/device-mockups/Graph.png';
+import Recommendations from '../assets/device-mockups/Recommendations.png';
+import SRHI from '../assets/device-mockups/SRHI.png';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+
+// real device screenshots (transparent background, phone frame baked in by
+// the designer) - shown at a uniform size so each screen actually reads,
+// with short copy filling the gaps between them like a continuous grid.
+const shots = [
+  { img: Onboarding, t: t('p_s1_t'), p: t('p_s1_p') },
+  { img: Habits, t: t('p_s2_t'), p: t('p_s2_p') },
+  { img: Graph, t: t('p_s3_t'), p: t('p_s3_p') },
+  { img: Recommendations, t: t('p_s4_t'), p: t('p_s4_p') },
+  { img: SRHI, t: t('p_s5_t'), p: t('p_s5_p') },
+];
+// shuffle once per build so the arrangement feels alive rather than fixed
+function shuffled<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const bentoShots = shuffled(shots);
+---
+<header class="p-hero">
+  <div class="hero-bg"></div>
+  <div class="wrap p-hero-in reveal">
+    <span class="eyebrow">{t('nav_participants')}</span>
+    <h1>{t('p_hero_title')}</h1>
+    <p class="lead">{t('p_hero_lead')}</p>
+    <div class="p-cta"><AppStoreBadges lang={lang} /></div>
+  </div>
+</header>
+
+<section class="bento-sec">
+  <div class="wrap">
+    <div class="bento" data-bento>
+      {bentoShots.map((s, i) => (
+        <>
+          <div class="cell shot-cell reveal">
+            <Image src={s.img} alt={s.t} widths={[220,340]} sizes="220px" loading={i === 0 ? 'eager' : 'lazy'} />
+          </div>
+          {i < bentoShots.length - 1 && (
+            <div class="cell cap-cell reveal">
+              <span class="cap-n">{i + 1}</span>
+              <h3>{s.t}</h3>
+              <p>{s.p}</p>
+            </div>
+          )}
+        </>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section id="how" class="how">
+  <div class="wrap">
+    <div class="reveal"><span class="eyebrow">{t('p_how_eyebrow')}</span><h2 class="sec-title">{t('p_how_title')}</h2></div>
+    <div class="steps">
+      <div class="step reveal"><span class="num">1</span><h3>{t('p_how_1_t')}</h3><p>{t('p_how_1_p')}</p></div>
+      <div class="step reveal"><span class="num">2</span><h3>{t('p_how_2_t')}</h3><p>{t('p_how_2_p')}</p></div>
+      <div class="step reveal"><span class="num">3</span><h3>{t('p_how_3_t')}</h3><p>{t('p_how_3_p')}</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="p-trust">
+  <div class="wrap p-trust-in reveal">
+    <div><h2>{t('p_trust_t')}</h2><p>{t('p_trust_p')}</p></div>
+    <div class="p-trust-cta"><AppStoreBadges lang={lang} /></div>
+  </div>
+</section>
+
+<style>
+  .p-hero{position:relative;overflow:hidden;padding:90px 0 72px}
+  .hero-bg{position:absolute;inset:0;background:radial-gradient(760px 420px at 78% -14%,rgba(78,198,0,.14),transparent 60%)}
+  .p-hero-in{position:relative}
+  .p-hero h1{font-size:clamp(38px,6vw,68px);margin:14px 0 0;max-width:20ch}
+  .p-hero .lead{font-size:clamp(17px,1.9vw,21px);color:var(--muted);margin:24px 0 32px;max-width:60ch}
+  .p-cta{margin-bottom:20px}
+  .weblink{display:inline-flex;gap:8px;font-size:14.5px;color:var(--green-dark);font-weight:600}
+  .weblink span{color:var(--muted);font-weight:400}
+
+  .bento-sec{padding:24px 0 76px}
+  .bento{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+  .cell{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;padding:18px}
+  .shot-cell{position:relative}
+  .shot-cell::before{content:"";position:absolute;inset:10%;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(69,183,0,.10),transparent 72%);z-index:0}
+  .shot-cell :global(img){position:relative;z-index:1;max-width:100%;max-height:100%;width:auto;height:auto;
+    object-fit:contain;filter:drop-shadow(0 18px 30px rgba(15,23,42,.14));
+    transition:transform .4s var(--ease-out)}
+  .shot-cell:hover :global(img){transform:translateY(-4px) scale(1.02)}
+  .cap-cell{flex-direction:column;align-items:flex-start;justify-content:center;text-align:left}
+  .cap-n{width:26px;height:26px;border-radius:8px;background:var(--green-tint);color:var(--green-dark);
+    display:grid;place-items:center;font-family:'Fraunces Variable',serif;font-size:13px;font-weight:600;margin-bottom:14px}
+  .cap-cell h3{font-size:19.5px}
+  .cap-cell p{color:var(--muted);font-size:15.5px;margin-top:9px;line-height:1.62}
+  @media(max-width:820px){.bento{grid-template-columns:1fr 1fr}.cell{aspect-ratio:1/1}}
+  @media(max-width:560px){.bento{grid-template-columns:1fr}.cell{aspect-ratio:auto;padding:22px 4px}
+    .shot-cell{aspect-ratio:3/4}}
+
+  .how{background:var(--slate);color:#e2e8f0;padding:84px 0}
+  .how .eyebrow{color:var(--green-soft)} .how .sec-title{color:#fff}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:44px}
+  .step{background:#243044;border:1px solid #334155;border-radius:18px;padding:30px;transition:transform .3s var(--ease-out),border-color .3s}
+  .step:hover{transform:translateY(-3px);border-color:#3d5069}
+  .step .num{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:rgba(69,183,0,.16);color:var(--green-soft);font-family:'Fraunces Variable',serif;font-size:20px;margin-bottom:18px}
+  .step h3{color:#fff;font-size:20px}
+  .step p{color:#94a3b8;font-size:14.5px;margin-top:8px;line-height:1.6}
+  .p-trust{padding:80px 0}
+  .p-trust-in{display:flex;justify-content:space-between;align-items:center;gap:40px;flex-wrap:wrap}
+  .p-trust h2{font-size:clamp(25px,3vw,34px);max-width:16ch}
+  .p-trust p{color:var(--muted);margin-top:14px;max-width:48ch;line-height:1.65}
+  @media(max-width:820px){.steps,.p-trust-in{grid-template-columns:1fr}}
+</style>

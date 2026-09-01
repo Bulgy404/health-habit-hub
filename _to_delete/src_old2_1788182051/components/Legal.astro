@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import type { Lang, PageKey } from '../i18n/ui';
+
+interface Props { lang: Lang; doc: string; pageKey: PageKey; title: string; injectTitle?: boolean; }
+const { lang, doc, pageKey, title, injectTitle = false } = Astro.props;
+
+const mods = import.meta.glob('../content/legal/**/*.md', { eager: true }) as Record<string, any>;
+const Content = mods[`../content/legal/${lang}/${doc}.md`].Content;
+---
+<Base lang={lang} page={pageKey} title={`${title} · Health Habit Hub`}>
+  <article class="legal"><div class="wrap">
+    {injectTitle && <h1>{title}</h1>}
+    <Content />
+  </div></article>
+</Base>
+
+<style is:global>
+  .legal{padding:64px 0}
+  .legal .wrap{max-width:760px}
+  .legal h1{font-size:clamp(26px,3vw,34px);margin:36px 0 14px}
+  .legal h1:first-child{margin-top:0}
+  .legal h2{font-family:'Fraunces Variable',serif;font-weight:500;font-size:26px;margin:36px 0 12px}
+  .legal h3{font-size:18px;margin:26px 0 10px}
+  .legal p,.legal li{color:#334155;font-size:16px;margin:10px 0}
+  .legal ul,.legal ol{padding-left:22px}
+  .legal a{color:var(--green-dark);text-decoration:underline}
+  .legal hr{border:none;border-top:1px solid var(--line);margin:28px 0}
+  .legal strong{color:var(--ink)}
+</style>

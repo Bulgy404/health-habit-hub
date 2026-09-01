@@ -22,7 +22,7 @@
 }
 
 .links a {
-  color: var(--color-primary-action, #256f00);
+  color: var(--color-primary-action, #9a3412);
   text-decoration: underline;
   text-decoration-color: transparent;
 }

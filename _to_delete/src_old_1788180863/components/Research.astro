@@ -1,0 +1,93 @@
+---
+import { useT, links, type Lang } from '../i18n/ui';
+import { Image } from 'astro:assets';
+import adminPortal from '../assets/mockups/adminPortal.png';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+const caps = [
+  ['r_cap_1_t','r_cap_1_p'],['r_cap_2_t','r_cap_2_p'],['r_cap_3_t','r_cap_3_p'],
+  ['r_cap_4_t','r_cap_4_p'],['r_cap_5_t','r_cap_5_p'],['r_cap_6_t','r_cap_6_p'],
+];
+const arch = ['r_arch_app','r_arch_api','r_arch_auth','r_arch_data','r_arch_rec','r_arch_edge'];
+---
+<header class="r-hero">
+  <div class="wrap">
+    <div class="r-hero-in reveal">
+      <span class="eyebrow">{t('nav_research')}</span>
+      <h1>{t('r_hero_title')}</h1>
+      <p class="lead">{t('r_hero_lead')}</p>
+      <div class="r-cta">
+        <a class="btn btn-primary btn-lg" href={links.admin}>{t('r_admin_btn')} →</a>
+        <a class="btn btn-ghost btn-lg" href={links.github}>{t('r_docs_btn')}</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="shot">
+  <div class="wrap reveal">
+    <div class="shot-frame"><Image src={adminPortal} alt={t('r_shot_cap')} widths={[600,900,1160]} sizes="(max-width:1160px) 92vw, 1104px" /></div>
+    <p class="cap">{t('r_shot_cap')}</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="reveal"><span class="eyebrow">{t('r_cap_eyebrow')}</span><h2 class="sec-title">{t('r_cap_title')}</h2></div>
+    <div class="cap-grid">
+      {caps.map(([tt,pp]) => (
+        <div class="cap-card reveal"><h3>{t(tt)}</h3><p>{t(pp)}</p></div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="arch">
+  <div class="wrap">
+    <div class="reveal"><span class="eyebrow">{t('r_arch_eyebrow')}</span><h2 class="sec-title">{t('r_arch_title')}</h2><p class="sec-sub">{t('r_arch_p')}</p></div>
+    <div class="arch-row reveal">
+      {arch.map((k,i) => (
+        <>
+          <div class="node">{t(k)}</div>
+          {i < arch.length-1 && <span class="edge">→</span>}
+        </>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section class="r-get">
+  <div class="wrap r-get-in reveal">
+    <div><h2>{t('r_get_t')}</h2><p>{t('r_get_p')}</p></div>
+    <div class="r-get-cta">
+      <a class="btn btn-primary btn-lg" href={links.github}>{t('r_get_docs')} →</a>
+      <a class="btn btn-ghost btn-lg" href={links.github}>{t('r_get_github')}</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .r-hero{padding:84px 0 40px}
+  .r-hero-in{max-width:40ch}
+  .r-hero h1{font-size:clamp(34px,4.6vw,54px);margin:14px 0 0}
+  .r-hero .lead{font-size:clamp(17px,2vw,20px);color:var(--muted);margin:22px 0 30px;max-width:52ch}
+  .r-cta{display:flex;gap:14px;flex-wrap:wrap}
+  .shot{padding:24px 0 40px}
+  .shot-frame{border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(15,23,42,.3)}
+  .shot .cap{color:var(--muted);font-size:14.5px;margin-top:16px;max-width:70ch}
+  .cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+  .cap-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px;transition:transform .2s var(--ease),box-shadow .2s,border-color .2s}
+  .cap-card:hover{border-color:#cbd5e1;box-shadow:0 12px 30px rgba(15,23,42,.06);transform:translateY(-3px)}
+  .cap-card h3{font-size:18px}
+  .cap-card p{color:var(--muted);font-size:14.5px;margin-top:8px}
+  .arch{background:var(--surface-alt)}
+  .arch-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:40px}
+  .node{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+  .edge{color:var(--green-action);font-weight:700}
+  .r-get{padding:72px 0}
+  .r-get-in{display:flex;justify-content:space-between;align-items:center;gap:36px;flex-wrap:wrap}
+  .r-get h2{font-size:clamp(24px,3vw,34px);max-width:16ch}
+  .r-get p{color:var(--muted);margin-top:12px;max-width:48ch}
+  .r-get-cta{display:flex;gap:12px;flex-wrap:wrap}
+  @media(max-width:900px){.cap-grid{grid-template-columns:1fr}.r-get-in{grid-template-columns:1fr}}
+</style>

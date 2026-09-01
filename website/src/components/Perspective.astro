@@ -1,0 +1,70 @@
+---
+import { useT, routes, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang); const R = routes;
+---
+<section class="persp">
+  <div class="wrap">
+    <div class="persp-head reveal">
+      <span class="eyebrow">{t('what_eyebrow')}</span>
+      <h2 class="sec-title">{t('what_title')}</h2>
+      <p class="sec-sub">{t('what_sub')}</p>
+    </div>
+
+    <div class="signs">
+      <a class="sign sign-p reveal" href={R.participants[lang]}>
+        <span class="sign-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6.5" y="2.5" width="11" height="19" rx="2.3"/>
+            <line x1="10.3" y1="18.2" x2="13.7" y2="18.2"/>
+          </svg>
+        </span>
+        <h3>{t('what_side_p_t')}</h3>
+        <p>{t('what_side_p_p')}</p>
+        <span class="sign-go">&rarr;</span>
+      </a>
+      <a class="sign sign-r reveal" href={R.research[lang]}>
+        <span class="sign-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9.5 12 4l9 5.5"/>
+            <line x1="5" y1="10.7" x2="5" y2="18.3"/>
+            <line x1="9.3" y1="10.7" x2="9.3" y2="18.3"/>
+            <line x1="14.7" y1="10.7" x2="14.7" y2="18.3"/>
+            <line x1="19" y1="10.7" x2="19" y2="18.3"/>
+            <line x1="3" y1="18.6" x2="21" y2="18.6"/>
+            <line x1="2.3" y1="21" x2="21.7" y2="21"/>
+          </svg>
+        </span>
+        <h3>{t('what_side_r_t')}</h3>
+        <p>{t('what_side_r_p')}</p>
+        <span class="sign-go">&rarr;</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .persp{padding:88px 0;background:var(--surface)}
+  .persp-head{max-width:62ch;margin:0 auto 44px;text-align:center}
+  .persp-head .sec-title,.persp-head .sec-sub{margin-inline:auto}
+
+  .signs{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .sign{position:relative;display:block;padding:36px 32px;border:1px solid var(--line);border-radius:20px;background:var(--surface);transition:transform .3s var(--ease-out),border-color .3s,box-shadow .3s}
+  .sign-ic{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:14px;margin-bottom:22px}
+  .sign-ic svg{width:24px;height:24px}
+  .sign h3{font-size:21px}
+  .sign p{color:var(--muted);font-size:14.5px;margin-top:10px;line-height:1.6;max-width:32ch}
+  .sign-go{position:absolute;top:32px;right:30px;font-weight:600;font-size:15px;transition:transform .25s var(--ease-out)}
+
+  .sign-p .sign-ic{background:var(--green-tint);color:var(--green-dark)}
+  .sign-p .sign-go{color:var(--green-dark)}
+  .sign-p:hover{transform:translateY(-4px);border-color:var(--green);box-shadow:0 20px 44px -20px rgba(46,140,0,.4)}
+  .sign-p:hover .sign-go{transform:translateX(4px)}
+
+  .sign-r .sign-ic{background:var(--orange-tint);color:var(--orange-dark)}
+  .sign-r .sign-go{color:var(--orange-dark)}
+  .sign-r:hover{transform:translateY(-4px);border-color:var(--orange);box-shadow:0 20px 44px -20px rgba(234,88,12,.4)}
+  .sign-r:hover .sign-go{transform:translateX(4px)}
+
+  @media(max-width:720px){.signs{grid-template-columns:1fr}}
+</style>

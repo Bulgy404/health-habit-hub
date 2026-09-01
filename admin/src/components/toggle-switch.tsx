@@ -59,7 +59,7 @@ export type ToggleSwitchProps = Omit<SwitchProps, "color" | "className"> & {
 
 /**
  * The one common control for every boolean checkbox in the admin app —
- * a Material UI Switch styled to turn brand green (var(--color-primary-action))
+ * a Material UI Switch styled to turn brand orange (var(--color-primary-action))
  * when on, so light/dark mode tracks automatically via the existing
  * [data-theme] CSS variables instead of a second, MUI-only theme mode.
  */

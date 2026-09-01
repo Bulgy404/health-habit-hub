@@ -1,0 +1,289 @@
+---
+import { useT, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+---
+<div class="gs">
+  <div class="gs-head reveal">
+    <div class="gt">{t('chart_title')}</div>
+    <p class="gs">{t('chart_sub')}</p>
+  </div>
+  <div class="gs-canvas-wrap reveal" data-kg>
+    <canvas data-kg-canvas></canvas>
+    <span class="gs-hint" data-kg-hint>{t('chart_drag_hint')}</span>
+  </div>
+  <p class="chart-note">{t('chart_note')}</p>
+</div>
+
+<style>
+  .gs-head .gt{font-family:'Fraunces Variable',serif;font-weight:500;font-size:19px;letter-spacing:-.01em}
+  .gs-head .gs{font-size:13.5px;color:var(--muted);margin-top:6px;line-height:1.5;max-width:44ch}
+  .gs-canvas-wrap{position:relative;margin:26px auto 0;width:min(420px,92%);aspect-ratio:1/1;border-radius:26px;overflow:hidden;
+    background:radial-gradient(120% 120% at 50% 15%,#eafbe0,#d7f2c8 70%);
+    box-shadow:0 40px 60px -30px rgba(15,23,42,.22)}
+  .gs-canvas-wrap canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  .gs-canvas-wrap canvas.dragging{cursor:grabbing}
+  .gs-hint{position:absolute;left:14px;bottom:12px;font-size:10.5px;color:#3a6b1f;background:rgba(255,255,255,.72);padding:4px 9px;border-radius:100px;opacity:0;transition:opacity .3s var(--ease-out);pointer-events:none}
+  .gs-canvas-wrap:hover .gs-hint{opacity:1}
+  .chart-note{margin-top:16px;font-size:11px;color:#94a3b8;font-style:italic;text-align:center}
+</style>
+
+<script>
+  // A living knowledge graph: nodes arrive slowly and continuously (never a
+  // single burst), settle into loose, differently-coloured clusters that stay
+  // linked to one another, drift in a slow floaty idle motion, and mesh-connect
+  // to nearby nodes regardless of cluster. One node can be grabbed and dragged.
+  const wrap = document.querySelector('[data-kg]') as HTMLElement | null;
+  const canvas = document.querySelector('[data-kg-canvas]') as HTMLCanvasElement | null;
+  if (wrap && canvas) {
+    const ctx = canvas.getContext('2d')!;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const DPR = Math.min(2, devicePixelRatio || 1);
+    let W = 0, H = 0;
+
+    const PALETTE = ['#2e8c00', '#0284c7', '#7c3aed', '#ea580c', '#0891b2'];
+
+    type Hub = { x: number; y: number; color: string };
+    type Node = {
+      x: number; y: number; hx: number; hy: number; // hx/hy = current "home" within the hub
+      hub: number; r: number; phase: number; phase2: number; speed: number;
+      state: 'pending' | 'flying' | 'settled'; t: number; dur: number; startAt: number;
+      fx: number; fy: number; tx: number; ty: number; // flight source/target
+      dragging: boolean;
+    };
+    let hubs: Hub[] = [];
+    let nodes: Node[] = [];
+    let started = false;
+    let nextRecycle = 0;
+    let dragTarget: Node | null = null;
+
+    function hexToRgb(h: string): [number, number, number] {
+      const v = parseInt(h.slice(1), 16);
+      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+    }
+    function rgba(h: string, a: number): string {
+      const [r, g, b] = hexToRgb(h);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    function mixColor(a: string, b: string, t: number): string {
+      const pa = hexToRgb(a), pb = hexToRgb(b);
+      const r = Math.round(pa[0] + (pb[0] - pa[0]) * t);
+      const g = Math.round(pa[1] + (pb[1] - pa[1]) * t);
+      const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t);
+      return `rgb(${r},${g},${bl})`;
+    }
+
+    function buildHubs() {
+      const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.30, NH = 5;
+      hubs = [];
+      for (let i = 0; i < NH; i++) {
+        const a = (i / NH) * Math.PI * 2 - Math.PI / 2;
+        hubs.push({ x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R, color: PALETTE[i % PALETTE.length] });
+      }
+    }
+
+    function spawnPoint(): [number, number] {
+      const edge = Math.random() * Math.PI * 2;
+      const dist = Math.max(W, H) * (0.62 + Math.random() * 0.5);
+      return [W / 2 + Math.cos(edge) * dist, H / 2 + Math.sin(edge) * dist];
+    }
+
+    function homeFor(hubIdx: number): [number, number] {
+      const hub = hubs[hubIdx];
+      const ang = Math.random() * Math.PI * 2;
+      const rad = Math.pow(Math.random(), 0.6) * Math.min(W, H) * 0.135;
+      return [hub.x + Math.cos(ang) * rad, hub.y + Math.sin(ang) * rad];
+    }
+
+    function build(now: number) {
+      const N = 60;
+      nodes = [];
+      for (let j = 0; j < N; j++) {
+        const hubIdx = j % hubs.length;
+        const [hx, hy] = homeFor(hubIdx);
+        const [fx, fy] = spawnPoint();
+        // stagger arrivals: a handful appear right away, the rest trickle in
+        // slowly and continuously over the first ~16s rather than one burst
+        const startAt = j < 7 ? now + Math.random() * 400 : now + 700 + j * 260 + Math.random() * 300;
+        nodes.push({
+          x: fx, y: fy,
+          hx, hy, hub: hubIdx, r: 1.6 + Math.random() * 2,
+          phase: Math.random() * Math.PI * 2, phase2: Math.random() * Math.PI * 2,
+          speed: 0.35 + Math.random() * 0.45,
+          state: 'pending', t: 0, dur: 2200 + Math.random() * 1200, startAt,
+          fx, fy, tx: hx, ty: hy, dragging: false,
+        });
+      }
+    }
+
+    function measure() {
+      W = wrap!.clientWidth; H = wrap!.clientHeight;
+      canvas!.width = W * DPR; canvas!.height = H * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+
+    function onResize() {
+      measure();
+      buildHubs();
+      for (const n of nodes) {
+        const [hx, hy] = homeFor(n.hub);
+        n.hx = hx; n.hy = hy; n.tx = hx; n.ty = hy;
+        if (n.state === 'settled') { n.x = hx; n.y = hy; }
+      }
+    }
+
+    const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3);
+
+    function step(dt: number, now: number) {
+      // wake pending nodes whose turn has come, so arrivals feel continuous
+      for (const n of nodes) {
+        if (n.state === 'pending' && now >= n.startAt) { n.state = 'flying'; n.t = 0; }
+      }
+
+      // periodically recycle one settled node: send it back out, then have
+      // it fly in again toward a fresh spot, so the scene never fully rests
+      if (!reduce && now > nextRecycle) {
+        const candidates = nodes.filter(n => n.state === 'settled' && !n.dragging);
+        if (candidates.length) {
+          const n = candidates[Math.floor(Math.random() * candidates.length)];
+          n.hub = Math.floor(Math.random() * hubs.length);
+          const [hx, hy] = homeFor(n.hub);
+          const [fx, fy] = spawnPoint();
+          n.hx = hx; n.hy = hy; n.fx = fx; n.fy = fy; n.tx = hx; n.ty = hy;
+          n.state = 'flying'; n.t = 0; n.dur = 2000 + Math.random() * 1200;
+        }
+        nextRecycle = now + 650 + Math.random() * 500;
+      }
+
+      for (const n of nodes) {
+        if (n.state === 'pending' || n.dragging) continue;
+        if (n.state === 'flying') {
+          n.t += dt;
+          const p = Math.min(n.t / n.dur, 1);
+          const e = easeOutCubic(p);
+          n.x = n.fx + (n.tx - n.fx) * e;
+          n.y = n.fy + (n.ty - n.fy) * e;
+          if (p >= 1) { n.state = 'settled'; n.x = n.hx; n.y = n.hy; }
+        } else if (!reduce) {
+          // slow, floaty idle drift: two overlapping sine waves per axis
+          n.phase += dt * 0.00032 * n.speed;
+          n.phase2 += dt * 0.00019 * n.speed;
+          n.x = n.hx + Math.sin(n.phase) * 8.5 + Math.sin(n.phase2 * 1.3) * 3;
+          n.y = n.hy + Math.cos(n.phase * 0.8) * 8.5 + Math.cos(n.phase2) * 3;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      // bridge lines linking each cluster to its neighbour, so the clusters
+      // read as one connected network rather than five separate blobs
+      if (hubs.length) {
+        for (let i = 0; i < hubs.length; i++) {
+          const a = hubs[i], b = hubs[(i + 1) % hubs.length];
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+          grad.addColorStop(0, rgba(a.color, 0.22));
+          grad.addColorStop(1, rgba(b.color, 0.22));
+          ctx.strokeStyle = grad as unknown as string;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([1, 5]);
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      // mesh connections between any nearby nodes (not just same hub)
+      const linkR = Math.min(W, H) * 0.26;
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        if (a.state !== 'settled' && !(a.state === 'flying' && a.t > a.dur * 0.4)) continue;
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          if (b.state !== 'settled' && !(b.state === 'flying' && b.t > b.dur * 0.4)) continue;
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < linkR) {
+            const near = 1 - dist / linkR;
+            const sameHub = a.hub === b.hub;
+            const col = sameHub ? hubs[a.hub].color : mixColor(hubs[a.hub].color, hubs[b.hub].color, 0.5);
+            ctx.strokeStyle = rgba(col, sameHub ? near * 0.34 : near * 0.16);
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+      }
+      for (const n of nodes) {
+        if (n.state === 'pending') continue;
+        const fading = n.state === 'flying' ? Math.min(n.t / (n.dur * 0.5), 1) : 1;
+        const color = hubs[n.hub]?.color || PALETTE[0];
+        ctx.fillStyle = n.dragging ? mixColor(color, '#000000', 0.25) : color;
+        ctx.globalAlpha = 0.88 * fading;
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.dragging ? n.r + 1.4 : n.r, 0, Math.PI * 2); ctx.fill();
+        if (n.dragging) {
+          ctx.globalAlpha = 0.16; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 10, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    let lastT = 0;
+    function frame(now: number) {
+      const dt = lastT ? now - lastT : 16; lastT = now;
+      step(dt, now);
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    function pointerPos(e: PointerEvent): [number, number] {
+      const r = canvas!.getBoundingClientRect();
+      return [(e.clientX - r.left), (e.clientY - r.top)];
+    }
+    function nearestNode(x: number, y: number, maxD = 16): Node | null {
+      let best: Node | null = null, bd = maxD * maxD;
+      for (const n of nodes) {
+        if (n.state === 'pending') continue;
+        const dx = n.x - x, dy = n.y - y; const d2 = dx * dx + dy * dy;
+        if (d2 < bd) { bd = d2; best = n; }
+      }
+      return best;
+    }
+    canvas.addEventListener('pointerdown', (e) => {
+      const [x, y] = pointerPos(e);
+      const n = nearestNode(x, y);
+      if (n) { n.dragging = true; n.x = x; n.y = y; dragTarget = n; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId); }
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (dragTarget) { const [x, y] = pointerPos(e); dragTarget.x = x; dragTarget.y = y; }
+    });
+    function release() {
+      if (dragTarget) {
+        dragTarget.dragging = false;
+        dragTarget.hx = dragTarget.x; dragTarget.hy = dragTarget.y;
+        dragTarget.tx = dragTarget.x; dragTarget.ty = dragTarget.y;
+        dragTarget.state = 'settled';
+        dragTarget = null;
+      }
+      canvas!.classList.remove('dragging');
+    }
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
+
+    function start() {
+      if (started) return;
+      started = true;
+      measure(); buildHubs();
+      const now = performance.now();
+      build(reduce ? now - 999999 : now); // reduced motion: everything "already arrived"
+      if (reduce) { for (const n of nodes) { n.state = 'settled'; n.x = n.hx; n.y = n.hy; } }
+      nextRecycle = now + 6000;
+      requestAnimationFrame(frame);
+    }
+
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (started) onResize(); }, 200); });
+
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { start(); io.disconnect(); } }), { threshold: .25 });
+    io.observe(wrap);
+  }
+</script>

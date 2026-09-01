@@ -7,17 +7,20 @@
 }
 
 :root {
-  /* #45b700 is the brand accent (icons, focus rings, charts) — it is only
-     2.62:1 against white and fails WCAG AA, so it must never sit under white
-     button/label text. --color-primary-action is the AA-safe fill for that. */
-  --color-primary: #45b700;
-  --color-primary-action: #2e8c00;
-  --color-primary-action-hover: #256f00;
+  /* #f97316 is the brand accent (icons, focus rings, charts) — it is only
+     2.80:1 against white and fails WCAG AA, so it must never sit under white
+     button/label text. --color-primary-action is the AA-safe fill for that.
+     Orange (not green) is deliberate here: it's the researcher/admin accent,
+     matching the .rtheme scope on the marketing site, kept distinct from the
+     green used on the participant-facing surfaces. */
+  --color-primary: #f97316;
+  --color-primary-action: #c2410c;
+  --color-primary-action-hover: #9a3412;
   /* alias: some modules already reference this for hover states */
-  --color-primary-dark: #256f00;
+  --color-primary-dark: #9a3412;
   --color-sidebar-bg: #1e293b;
   --color-sidebar-text: #cbd5e1;
-  --color-sidebar-active: #2e8c00;
+  --color-sidebar-active: #c2410c;
   --color-sidebar-hover: #334155;
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
@@ -95,9 +98,9 @@
   --color-warning-bg: #78350f;
   --color-error-bg: #7f1d1d;
   --color-info-bg: #1e3a8a;
-  --color-primary-action: #3aa300;
-  --color-primary-action-hover: #4ec600;
-  --color-primary-dark: #4ec600;
+  --color-primary-action: #f97316;
+  --color-primary-action-hover: #fb923c;
+  --color-primary-dark: #fb923c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -116,9 +119,9 @@
     --color-warning-bg: #78350f;
     --color-error-bg: #7f1d1d;
     --color-info-bg: #1e3a8a;
-    --color-primary-action: #3aa300;
-    --color-primary-action-hover: #4ec600;
-    --color-primary-dark: #4ec600;
+    --color-primary-action: #f97316;
+    --color-primary-action-hover: #fb923c;
+    --color-primary-dark: #fb923c;
   }
 }
 

@@ -1,0 +1,9 @@
+---
+import Base from '../layouts/Base.astro';
+import Research from '../components/Research.astro';
+import { useT } from '../i18n/ui';
+const t = useT('de');
+---
+<Base lang="de" page="research" title="Für Forschende · Health Habit Hub" description={t('r_hero_lead')}>
+  <Research lang="de" />
+</Base>

@@ -1,0 +1,153 @@
+---
+import '@fontsource-variable/figtree';
+import '@fontsource-variable/fraunces';
+import { useT, otherLang, routes, links, type Lang, type PageKey } from '../i18n/ui';
+
+interface Props { lang: Lang; page: PageKey; title: string; description?: string; }
+const { lang, page, title, description = '' } = Astro.props;
+const t = useT(lang);
+const ol = otherLang(lang);
+const switchHref = routes[page][ol];
+const R = routes;
+---
+<!DOCTYPE html>
+<html lang={lang}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script is:inline>document.documentElement.classList.add('js')</script>
+  <title>{title}</title>
+  {description && <meta name="description" content={description} />}
+  <link rel="icon" type="image/png" href="/app_icon.png" />
+  <link rel="alternate" hreflang={ol} href={switchHref} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content="/app_icon.png" />
+  <style is:global>
+    :root{
+      --green:#45b700; --green-action:#2e8c00; --green-dark:#256f00; --green-soft:#4ec600;
+      --ink:#0f172a; --slate:#1e293b; --muted:#64748b; --line:#e2e8f0;
+      --bg:#f8fafc; --surface:#fff; --surface-alt:#f1f5f9; --green-tint:#f0fdf4;
+      --orange:#f97316; --orange-action:#ea580c; --orange-dark:#c2410c; --orange-soft:#fb923c; --orange-tint:#fff7ed;
+      --ease:cubic-bezier(.2,0,0,1);
+      --ease-out:cubic-bezier(0.23,1,0.32,1);
+      --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+    }
+    /* researcher design language: remap the accent tokens to orange for a whole subtree */
+    .rtheme{--green:var(--orange);--green-action:var(--orange-action);--green-dark:var(--orange-dark);--green-soft:var(--orange-soft);--green-tint:var(--orange-tint)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Figtree Variable',system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+    h1,h2,h3,.display{font-family:'Fraunces Variable',Georgia,serif;font-weight:500;line-height:1.06;letter-spacing:-.022em}
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+    .eyebrow{font-size:12.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--green-dark)}
+    .btn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:14px;padding:11px 19px;border-radius:11px;transition:transform .14s,background .2s,box-shadow .2s,border-color .2s,color .2s;cursor:pointer;border:none}
+    .btn:active{transform:scale(.97)}
+    .btn-lg{padding:15px 27px;font-size:15px;border-radius:13px}
+    .btn-primary{background:var(--green-action);color:#fff;border:1px solid transparent}
+    .btn-primary:hover{background:var(--green-dark);box-shadow:0 8px 20px rgba(46,140,0,.34)}
+    .btn-ghost{border:1px solid var(--line);color:var(--ink);background:var(--surface)}
+    .btn-ghost:hover{border-color:var(--green);color:var(--green-dark)}
+    /* nav */
+    nav{position:sticky;top:0;z-index:50;background:rgba(248,250,252,.72);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(226,232,240,.7)}
+    .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px;letter-spacing:-.01em}
+    .logo{width:32px;height:32px;border-radius:9px;overflow:hidden;flex:0 0 auto;box-shadow:0 2px 8px rgba(15,23,42,.16)}
+    .logo img{width:100%;height:100%;object-fit:cover;display:block}
+    .nav-links{display:flex;gap:28px;align-items:center;font-size:14px;color:var(--muted);font-weight:500}
+    .nav-links a{transition:color .2s}
+    .nav-links a:hover,.nav-links a.active{color:var(--ink)}
+    .nav-links a.active{color:var(--green-dark)}
+    .nav-right{display:flex;align-items:center;gap:14px}
+    .lang{display:inline-flex;background:var(--surface-alt);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+    .lang a{font-size:12.5px;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:6px;transition:color .2s}
+    .lang a.on{background:var(--surface);color:var(--green-dark);box-shadow:0 1px 3px rgba(15,23,42,.09)}
+    /* footer */
+    footer{background:var(--slate);color:#94a3b8;padding:56px 0 30px;font-size:14px;margin-top:0}
+    .foot-top{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:30px;padding-bottom:34px;border-bottom:1px solid #334155}
+    footer .brand{color:#fff;margin-bottom:14px}
+    footer p{max-width:34ch}
+    .fcol h4{color:#e2e8f0;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;font-weight:600}
+    .fcol a{display:block;padding:5px 0;color:#94a3b8;transition:color .2s}
+    .fcol a:hover{color:var(--green-soft)}
+    .foot-bot{display:flex;justify-content:space-between;padding-top:24px;flex-wrap:wrap;gap:12px;font-size:13px;color:#64748b}
+    /* reveal - only hides when JS is present, so no-JS users see everything */
+    html.js .reveal{opacity:0;transform:translateY(16px) scale(.99);transition:opacity .6s var(--ease-out),transform .6s var(--ease-out)}
+    html.js .reveal.in{opacity:1;transform:none}
+    section{padding:78px 0}
+    .sec-title{font-size:clamp(28px,3.6vw,40px);margin:12px 0 0;max-width:20ch}
+    .sec-sub{color:var(--muted);max-width:60ch;margin-top:14px;font-size:16.5px}
+    @media(max-width:900px){.nav-links{display:none}.foot-top{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.foot-top{grid-template-columns:1fr}}
+    @media(max-width:480px){
+      nav .wrap{padding:0 16px}
+      .nav-in{gap:10px}
+      nav .brand-txt{display:none}
+      .nav-right{gap:8px}
+      .lang{padding:2px}
+      .lang a{padding:4px 8px;font-size:12px}
+      .nav-right .btn-primary{padding:9px 12px;font-size:12.5px;gap:4px}
+    }
+    @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}.reveal{transition:opacity .3s ease;transform:none}}
+    @media (prefers-reduced-transparency: reduce){nav{background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap nav-in">
+      <a class="brand" href={R.home[lang]}>
+        <span class="logo"><img src="/app_icon.png" alt="" width="32" height="32" /></span>
+        <span class="brand-txt">Health&nbsp;Habit&nbsp;Hub</span>
+      </a>
+      <div class="nav-links">
+        <a href={R.participants[lang]} class={page==='participants'?'active':''}>{t('nav_participants')}</a>
+        <a href={R.research[lang]} class={page==='research'?'active':''}>{t('nav_research')}</a>
+        <a href={links.github}>{t('nav_github')}</a>
+      </div>
+      <div class="nav-right">
+        <div class="lang">
+          <a href={R[page].de} class={lang==='de'?'on':''}>DE</a>
+          <a href={R[page].en} class={lang==='en'?'on':''}>EN</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <slot />
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-top">
+        <div>
+          <div class="brand"><span class="logo"><img src="/app_icon.png" alt="" width="32" height="32" /></span>Health Habit Hub</div>
+          <p>{t('foot_tagline')}</p>
+        </div>
+        <div class="fcol"><h4>{t('foot_h_part')}</h4>
+          <a href={R.participants[lang]}>{t('foot_download')}</a>
+          <a href={R.participants[lang] + '#how'}>{t('foot_guide')}</a>
+          <a href={links.appStore}>App Store</a>
+        </div>
+        <div class="fcol"><h4>{t('foot_h_res')}</h4>
+          <a href={links.admin}>{t('foot_admin')}</a>
+          <a href={links.github}>{t('foot_docs')}</a>
+          <a href={R.research[lang]}>{t('nav_research')}</a>
+        </div>
+        <div class="fcol"><h4>{t('foot_h_legal')}</h4>
+          <a href={R.imprint[lang]}>{t('foot_imprint')}</a>
+          <a href={R.privacy[lang]}>{t('foot_privacy')}</a>
+          <a href={R.consent[lang]}>{t('foot_consent')}</a>
+          <a href={R.accessibility[lang]}>{t('foot_accessibility')}</a>
+        </div>
+      </div>
+      <div class="foot-bot"><span>© 2026 Health Habit Hub · healthhabithub.de</span></div>
+    </div>
+  </footer>
+
+  <script>
+    const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+    document.querySelectorAll('.reveal').forEach((el,i)=>{(el as HTMLElement).style.transitionDelay=(i%4*70)+'ms';io.observe(el)});
+  </script>
+</body>
+</html>

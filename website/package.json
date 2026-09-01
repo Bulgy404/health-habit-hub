@@ -1,0 +1,19 @@
+{
+  "name": "health-habit-hub-website",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync:legal": "node scripts/sync-legal.mjs",
+    "dev": "npm run sync:legal && astro dev",
+    "build": "npm run sync:legal && astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/figtree": "^5.1.0",
+    "@fontsource-variable/fraunces": "^5.1.0",
+    "animejs": "^4.5.0",
+    "astro": "^7.2.9",
+    "sharp": "^0.35.4"
+  }
+}

@@ -1,0 +1,39 @@
+---
+import { useT, links, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+---
+<form class="cform" data-cform data-email={links.contactEmail}>
+  <div class="row">
+    <label>{t('cf_name')}<input name="name" type="text" required autocomplete="name" /></label>
+    <label>{t('cf_email')}<input name="email" type="email" required autocomplete="email" /></label>
+  </div>
+  <label>{t('cf_org')}<input name="org" type="text" autocomplete="organization" /></label>
+  <label>{t('cf_msg')}<textarea name="msg" rows="5" required placeholder={t('cf_msg_ph')}></textarea></label>
+  <button class="btn btn-primary btn-lg" type="submit">{t('cf_send')} &rarr;</button>
+  <p class="cf-hint">{t('cf_hint')}</p>
+</form>
+
+<style>
+  .cform{display:flex;flex-direction:column;gap:16px}
+  .cform .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .cform label{display:flex;flex-direction:column;gap:7px;font-size:13.5px;font-weight:600;color:var(--ink)}
+  .cform input,.cform textarea{font-family:inherit;font-size:15px;font-weight:400;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 14px;transition:border-color .16s var(--ease-out),box-shadow .16s var(--ease-out)}
+  .cform input:focus,.cform textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 4px rgba(69,183,0,.12)}
+  .cform textarea{resize:vertical;min-height:120px}
+  .cform button{align-self:flex-start;margin-top:2px}
+  .cf-hint{font-size:12.5px;color:var(--muted)}
+  @media(max-width:560px){.cform .row{grid-template-columns:1fr}}
+</style>
+
+<script>
+  const f = document.querySelector('[data-cform]') as HTMLFormElement | null;
+  if (f) f.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const to = f.dataset.email!;
+    const g = (n:string) => (f.elements.namedItem(n) as HTMLInputElement)?.value || '';
+    const subject = `Health Habit Hub · ${g('name')}${g('org') ? ' (' + g('org') + ')' : ''}`;
+    const body = `${g('msg')}\n\nVon: ${g('name')}\n${g('email')}${g('org') ? '\n' + g('org') : ''}`;
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  });
+</script>
