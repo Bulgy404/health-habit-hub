@@ -148,6 +148,22 @@ const arch = [
   .contact-form :global(.cform input:focus),.contact-form :global(.cform textarea:focus){border-color:var(--orange);box-shadow:0 0 0 4px rgba(249,115,22,.14)}
   .contact-form :global(.cf-hint){color:#94a3b8}
   @media(max-width:900px){.arch-cards,.cap-grid{grid-template-columns:1fr}.contact-in{grid-template-columns:1fr;gap:32px}}
+
+  /* pipeline stacks vertically on narrow screens instead of squeezing sideways */
+  @media(max-width:680px){
+    .tu-base{padding:36px 18px 24px}
+    .arch-base{display:none}
+    .arch-line{display:none}
+    .arch-track{flex-direction:column;align-items:stretch;gap:0;padding-left:10px}
+    .node{position:relative;flex:none;flex-direction:row;align-items:flex-start;text-align:left;gap:14px;padding:0 0 26px}
+    .node::before{content:"";position:absolute;left:9px;top:24px;bottom:-2px;width:2px;
+      background:linear-gradient(180deg,var(--green-soft),var(--green-dark));border-radius:2px}
+    .node:last-child::before{display:none}
+    .node:last-child{padding-bottom:0}
+    .node .dot{flex:0 0 auto;margin-top:1px}
+    .node strong{margin-top:0}
+    .node strong,.node small{display:block}
+  }
 </style>
 
 <script>
