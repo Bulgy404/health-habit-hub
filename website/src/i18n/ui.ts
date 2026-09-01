@@ -158,7 +158,9 @@ const de: Dict = {
   r_contact_p: 'Ob eigene Studie, Kooperation oder einfach eine Frage: Schreib uns ein paar Zeilen, und wir melden uns.',
   cf_name: 'Name', cf_email: 'E-Mail', cf_org: 'Einrichtung (optional)', cf_msg: 'Deine Nachricht',
   cf_msg_ph: 'Worum geht es? Erzähl kurz von deinem Vorhaben.',
-  cf_send: 'Nachricht senden', cf_hint: 'Öffnet dein E-Mail-Programm mit einer vorbereiteten Nachricht an unser Team.',
+  cf_send: 'Nachricht senden', cf_sending: 'Wird gesendet …',
+  cf_success: 'Danke! Deine Nachricht ist angekommen, wir melden uns bald.',
+  cf_error: 'Das hat leider nicht geklappt. Schreib uns direkt an felix.reinsch@tu-dresden.de.',
 
   soon: 'Bald',
 };
@@ -266,7 +268,9 @@ const en: Dict = {
   r_contact_p: 'Whether it is your own study, a collaboration, or just a question, send us a few lines and we will get back to you.',
   cf_name: 'Name', cf_email: 'Email', cf_org: 'Institution (optional)', cf_msg: 'Your message',
   cf_msg_ph: 'What is it about? Tell us briefly what you have in mind.',
-  cf_send: 'Send message', cf_hint: 'Opens your email app with a message prepared for our team.',
+  cf_send: 'Send message', cf_sending: 'Sending …',
+  cf_success: 'Thanks! Your message is in, we will get back to you soon.',
+  cf_error: 'That did not work. Please email us directly at felix.reinsch@tu-dresden.de.',
 
   soon: 'Soon',
 };

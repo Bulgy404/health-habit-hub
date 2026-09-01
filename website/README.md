@@ -1,12 +1,18 @@
 # Health Habit Hub — Website (`healthhabithub.de`)
 
-Public front door and single source of truth for the project. Static
+Public front door and single source of truth for the project.
 [Astro](https://astro.build) site, self-hosted on the same TU Dresden server
 as the rest of the stack (via `website/Dockerfile` + the `website` service in
 the repo-root `docker-compose.yml`, behind the same Traefik reverse proxy) —
 see [`docs/architecture.md`](../docs/architecture.md#public-domains--tls) for
 why. Content is decoupled from the app/admin code (own domain, own Docker
 image), but the deploy target is the same server.
+
+Most pages are still prerendered like a static site, but the site runs as a
+standalone **Node server** (Astro's `@astrojs/node` adapter, `output:
+'server'`) rather than pure static output, because the contact form
+(`/forschung/`) needs a real server-side endpoint — `src/pages/api/contact.ts`
+— to send email. See "Deploy" below for what that changes.
 
 ## Structure
 
@@ -44,7 +50,7 @@ source files are missing, a clearly-marked placeholder is written instead.
 | `/forschung/` | `/en/research/` | Researchers — admin portal, capabilities, architecture |
 | `/impressum/` `/datenschutz/` `/einwilligung/` | `/en/legal/{imprint,privacy,consent}/` | Legal (from `app/language/`) |
 
-## Deploy — Docker + Traefik (self-hosted)
+## Deploy — Docker + Traefik (self-hosted Node server)
 
 Built and served from the repo root, not from inside `website/` — see
 `website/Dockerfile`'s multi-stage build (context is the monorepo root,
@@ -54,6 +60,36 @@ because `sync:legal` needs `../app/language/` alongside `website/`) and the
 ```bash
 docker compose up -d --build website
 ```
+
+**Runtime, since the Cloudflare→Astro-native contact-form migration:** the
+`runner` stage of `website/Dockerfile` is a `node:22-bookworm-slim` image,
+not `nginx`. `astro build` (via the `node` adapter, `mode: 'standalone'`)
+produces a `dist/server/entry.mjs` that IS the web server — it renders every
+page itself (most of them still prerendered/static under the hood) and
+additionally serves the live `/api/contact` endpoint. The container's `CMD`
+is `node ./dist/server/entry.mjs`, listening on `0.0.0.0:4321` (`HOST`/`PORT`
+env vars baked into the image). `docker-compose.yml`'s `website` service maps
+its Traefik label and healthcheck to port `4321` accordingly (it used to be
+nginx on port `80`).
+
+**Required env vars** (set in the server's `.env`, read by `docker-compose.yml`
+and passed into the container) — reusing the same `SMTP_*` convention as the
+api-service and Grafana elsewhere in this compose file:
+
+| Var | Purpose |
+| --- | --- |
+| `SMTP_HOST` | SMTP server hostname |
+| `SMTP_PORT` | defaults to `587` |
+| `SMTP_USER` | SMTP auth username |
+| `SMTP_PASS` | SMTP auth password |
+| `SMTP_FROM` | the `From:` address contact-form mail is sent as |
+| `SMTP_STARTTLS` | defaults to `true`; set `false` to disable STARTTLS |
+
+Without these, `/api/contact` responds `500 server_not_configured` instead of
+sending mail — the rest of the site is unaffected. Messages are sent to
+`felix.reinsch@tu-dresden.de` (hardcoded in `src/pages/api/contact.ts`), with
+the submitter's address set as `replyTo`, and a hidden honeypot field is
+checked server-side to filter bots.
 
 Traefik routes `WEBSITE_DOMAIN` (and `www.$WEBSITE_DOMAIN`) to it and requests
 its own Let's Encrypt certificate automatically (TLS-ALPN-01 — needs port 443
@@ -66,9 +102,14 @@ An earlier plan hosted this on Cloudflare Pages/Workers under
 `healthhabithub.de` — abandoned because that domain's DNS provider won't
 allow its nameservers to be delegated to Cloudflare while they remain zone
 administrator (a provider policy, not a `.de`-wide restriction), and
-Cloudflare Registrar doesn't support `.de` domains at all. Self-hosting here
-sidesteps that entirely: it only needs an ordinary `A`/`CNAME` record, which
-that provider does allow editing.
+Cloudflare Registrar doesn't support `.de` domains at all. A later, brief
+iteration used a Cloudflare Pages *Function* (`website/functions/api/`) just
+for the contact form while the rest of the site stayed self-hosted — that's
+now deprecated too (superseded by the Astro-native endpoint described above)
+and `website/functions/` is unused dead code kept only because it couldn't be
+deleted from this checkout at the time. Self-hosting the whole site, contact
+form included, sidesteps the DNS problem entirely: it only needs an ordinary
+`A`/`CNAME` record, which that provider does allow editing.
 
 ## DNS for `healthhabithub.de`
 
