@@ -1120,6 +1120,42 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # Static marketing site (Astro, see website/), self-hosted here instead of
+  # on Cloudflare Pages — its domain's registrar won't let its nameservers
+  # move off its current DNS provider, so this sidesteps that entirely: it's
+  # a second, independent hostname ($WEBSITE_DOMAIN) on the SAME Traefik
+  # instance as everything else, needing only an ordinary A/CNAME record
+  # (not an NS change) to point at this server. No app code, no env-derived
+  # build args — just the static `astro build` output behind nginx.
+  website:
+    image: hhh/website
+    container_name: hhh-website
+    pull_policy: build
+    build:
+      context: .
+      dockerfile: website/Dockerfile
+    restart: always
+    networks:
+      - hhh-proxy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.website.rule=Host(`${WEBSITE_DOMAIN}`) || Host(`www.${WEBSITE_DOMAIN}`)
+      - traefik.http.routers.website.entrypoints=websecure
+      - traefik.http.routers.website.tls.certresolver=letsencrypt
+      - traefik.http.routers.website.service=website
+      - traefik.http.services.website.loadbalancer.server.port=80
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   # Internal-only reachability prober for services with no native Prometheus
   # metrics — no host mounts, no elevated privileges (unlike e.g. cAdvisor),
   # just outbound TCP-connect/HTTP-GET probes against the same internal
