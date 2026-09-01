@@ -198,6 +198,17 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 
 - [ ] Domain `habit.wiwi.tu-dresden.de` resolves to `141.76.16.16`
 - [ ] DNS propagation complete (verified with `dig habit.wiwi.tu-dresden.de`)
+- [ ] Marketing site domain (`WEBSITE_DOMAIN`, e.g. `healthhabithub.de`) has
+      **ordinary** `A`/`CNAME` records — apex and `www` — pointing at
+      `141.76.16.16`, at whatever DNS provider currently hosts that domain's
+      zone. This does **not** require moving the domain's nameservers or its
+      registrar: Traefik requests its own Let's Encrypt certificate per
+      hostname via TLS-ALPN-01 (needs port 443 reachable, nothing else), so
+      any DNS provider that lets you edit A/CNAME records works, even one that
+      won't let you delegate NS to a third party. Verify with
+      `dig +short A healthhabithub.de` and `dig +short A www.healthhabithub.de`
+      — both should return `141.76.16.16` (`www` may show as a `CNAME` chain
+      ending in that IP, which is fine).
 
 ### 3. External Services
 
@@ -444,12 +455,19 @@ All containers should be running:
 | `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents                                     |
 | `hhh-admin`         | Next.js admin panel — study management UI                                               |
 | `hhh-backup`        | Backup service                                                                          |
+| `hhh-website`       | Astro marketing site (static build) behind nginx — served on `WEBSITE_DOMAIN`, not `DOMAIN` |
 
 ### 2. Verify SSL Certificate
 
 - Check Traefik logs: look for "certificate obtained"
 - Visit `https://habit.wiwi.tu-dresden.de`
 - Verify valid SSL certificate (green padlock)
+- Separately, visit `https://<WEBSITE_DOMAIN>` and `https://www.<WEBSITE_DOMAIN>`
+  (e.g. `https://healthhabithub.de`) and verify each has its own valid
+  certificate too — this is a second, independent hostname/cert on the same
+  Traefik instance, not covered by checking `DOMAIN` above. From the command
+  line: `curl -v https://healthhabithub.de/ 2>&1 | grep -i "subject\|issuer"`
+  should show `Let's Encrypt`, not `TRAEFIK DEFAULT CERT`.
 
 ### 3. Test Services
 
@@ -710,6 +728,32 @@ its non-`/auth` values are correct there.
    docker logs hhh-proxy | grep -i certificate
    ```
 
+**Problem:** `website` (`WEBSITE_DOMAIN`) specifically shows Traefik's
+self-signed `TRAEFIK DEFAULT CERT` instead of a real one, and/or Traefik logs
+show an ACME error like `Cannot issue for "www": Domain name needs at least
+one dot`.
+
+**Cause:** `WEBSITE_DOMAIN` is unset or empty in whatever env source Portainer
+(or `docker compose`) is actually reading on **this** server — `.env` is
+gitignored and per-environment, so setting it in a local checkout does
+nothing here. Traefik's Docker-provider label templating doesn't fail loudly
+on a missing variable: `Host(\`${WEBSITE_DOMAIN}\`)` silently renders as
+`Host(\`\`)`, which is syntactically valid but matches nothing, and produces
+exactly the "www: needs at least one dot" ACME rejection above.
+
+**Fix:**
+```bash
+# Confirm the actual rendered rule first — don't assume the env var is right:
+docker logs hhh-proxy --tail 200 | grep website
+
+# If it shows Host(``) instead of Host(`healthhabithub.de`), set
+# WEBSITE_DOMAIN in this server's real .env (or Portainer's environment
+# variables), then:
+docker compose up -d --force-recreate website
+```
+Traefik retries ACME on its own once the rule is valid — no further action
+needed once the rendered rule shows the real domain.
+
 ### Services Can't Communicate
 
 **Problem:** App can't connect to MongoDB / Neo4j / Redis / recommender
@@ -953,6 +997,7 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 
 | Service                 | Production URL                                | Local (`docker-compose.local.yml`)                                      | Direct Local Port                                                   |
 | ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Marketing Site          | `https://healthhabithub.de` (`WEBSITE_DOMAIN`, separate domain from `DOMAIN` below) | `npm run dev` in `website/` (not part of `docker-compose.local.yml`) | —                                                                   |
 | Backend API             | `https://habit.wiwi.tu-dresden.de/api/v1/`    | `http://app.localhost/api/v1/`                                          | `http://localhost:3000/api/v1/`                                     |
 | Flutter Web App         | `https://habit.wiwi.tu-dresden.de`            | local mobile/web build pointing to local backend                        | —                                                                   |
 | Admin Panel             | `https://habit.wiwi.tu-dresden.de/admin`      | `http://admin.localhost`                                                | `http://localhost:3001`                                             |

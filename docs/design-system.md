@@ -88,6 +88,35 @@ The admin portal (`admin/src/lib/motion.ts`) mirrors the same damping/response
 values via the `motion` package's spring API (`defaultSpring`, `drawerSpring`,
 `momentumSpring`) — reach for those there instead of a bare CSS `transition`.
 
+## Admin portal accent (orange, not green)
+
+The admin/researcher portal (`admin/`, Next.js + MUI) deliberately does
+**not** share the mobile app's green above — it uses orange, matching the
+same participant/green vs. researcher/orange split already established on
+the marketing site's `.rtheme` CSS scope
+([`website/src/layouts/Base.astro`](../website/src/layouts/Base.astro)).
+Defined as CSS custom properties in
+[`admin/src/app/globals.css`](../admin/src/app/globals.css) (and mirrored into
+the MUI theme's `palette.primary` in
+[`admin/src/lib/mui-theme.ts`](../admin/src/lib/mui-theme.ts)), with light and
+dark-mode variants:
+
+| Token | Light | Dark | Use for |
+| --- | --- | --- | --- |
+| `--color-primary` | `#f97316` | `#f97316` | Accent-only: icons, focus rings, charts. **Never** as a solid fill behind white text — only 2.80:1 against white, below WCAG AA. |
+| `--color-primary-action` / `--color-sidebar-active` | `#c2410c` | `#f97316` | Solid fills with white content on top: buttons, the active sidebar-nav pill. |
+| `--color-primary-action-hover` / `--color-primary-dark` | `#9a3412` | `#fb923c` | Hover/pressed state — one step darker (light) or lighter (dark, to hold contrast against the darker surface) than the token above. |
+
+Same rule as the mobile app's `primary`/`primaryDark` split above:
+accent-only tokens are for content sitting on a light/white surface,
+action/fill tokens are for solid fills that need AA-safe contrast under white
+text. These specific hex values were chosen by computing WCAG contrast ratios
+to match or exceed what each equivalent green token cleared (e.g.
+`--color-primary-action` went from `#2e8c00` at 4.31:1-vs-white to `#c2410c`
+at 5.18:1) — not a like-for-like visual swap, so reusing one token for the
+other's role reintroduces the same contrast failure this split prevents for
+the mobile app's palette.
+
 ## Background
 
 Found 2026-08-04: the Share screen's "Shared today" badge and "Share another

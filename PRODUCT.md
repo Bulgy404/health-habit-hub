@@ -25,7 +25,7 @@ Combines mobile habit donation, questionnaire-based profiling, ontology-based se
 
 - Institutional home: TU Dresden, Digital Health Research Group. The "HabConnect – from Habit to Health" study protocol was submitted to the TU Dresden ethics committee (13 May 2025, no objections) and its data-protection concept was assessed by the TU Dresden Data Protection Officer (28 March 2025, ref. 0543-025/001, no objections).
 - Three live design surfaces: the mobile app (Flutter, iOS/Android/Web) for participants; the admin/researcher portal (Next.js) for study and knowledge-base management; the public marketing site (Astro, healthhabithub.de) as the front door, which forks into a participant path and a researcher path.
-- Self-hosted infrastructure behind Traefik on TU Dresden servers (MongoDB, Neo4j, Keycloak, LightRAG, Redis, PostgreSQL for Keycloak). No third-party analytics or ad SDKs.
+- Self-hosted infrastructure behind Traefik on TU Dresden servers (MongoDB, Neo4j, Keycloak, LightRAG, Redis, PostgreSQL for Keycloak). No third-party analytics or ad SDKs. The marketing site (`website/`) is self-hosted here too (as of 2026-09-01), not on a third-party edge platform — its DNS provider won't permit delegating nameservers elsewhere while it remains zone administrator, so it rides the same Traefik instance as a second public hostname instead.
 - Bilingual (DE/EN) throughout the public site; the app and portal are DE/EN-facing too.
 - The operational app/portal lives at habit.wiwi.tu-dresden.de; the public marketing/info site is the separate healthhabithub.de.
 
@@ -44,6 +44,7 @@ Combines mobile habit donation, questionnaire-based profiling, ontology-based se
 - Name: Health Habit Hub. Public domain healthhabithub.de is deliberately distinct from the operational app/portal at habit.wiwi.tu-dresden.de.
 - Logo mark: a simple heart glyph inside a rounded gradient tile.
 - The marketing site (`website/`) has an established, already-approved visual identity as of 2026-08-31: Figtree (body) + Fraunces (headings), green as the participant accent and orange as the researcher accent (swapped per-subtree via a `.rtheme` scope), soft editorial cards, generous whitespace, no em dashes in copy. Treat this as incumbent, not greenfield, for any future work on that surface.
+- The admin portal itself (`admin/`) now carries the same orange researcher accent as of 2026-09-01 (not just the marketing site's `.rtheme` subtree) — its design tokens in `admin/src/app/globals.css` were swapped from the mobile app's green to WCAG-contrast-matched orange values. See `docs/design-system.md` for the token table and reasoning.
 
 ## Evidence on Hand
 

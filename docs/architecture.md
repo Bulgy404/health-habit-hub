@@ -4,7 +4,7 @@
 
 ## Overview
 
-Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of nineteen Docker services orchestrated via `docker-compose` (including monitoring — Prometheus/Grafana/blackbox-exporter — and a scoped Docker socket proxy for the backup service), a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
+Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of twenty Docker services orchestrated via `docker-compose` (including monitoring — Prometheus/Grafana/blackbox-exporter — and a scoped Docker socket proxy for the backup service), a Flutter mobile/web app, a Next.js admin panel, a Python-based recommender/enrichment microservice, and a static Astro marketing site. All HTTP traffic is routed through a Traefik reverse proxy, which terminates TLS for **two independent public domains** — see [Public Domains & TLS](#public-domains--tls) below.
 
 ---
 
@@ -14,9 +14,12 @@ Health Habit Hub (HHH) is a research platform for collecting, annotating, and re
 graph TD
     Flutter["Flutter App\n(Android / iOS / Web)"]
     AdminPanel["Admin Panel\n(Next.js)\n:3001"]
+    Browser["Browser\nhealthhabithub.de"]
 
     subgraph Docker["Docker stack (hhh-proxy network)"]
         Proxy["Traefik v3\n:80 (HTTP)\n:443 (HTTPS prod)\n:8080 dashboard"]
+
+        Website["website\n(Astro static build + nginx)\n:80\nHost: $WEBSITE_DOMAIN"]
 
         App["Node.js Backend\n(Express)\n:3000\n/api/v1/*"]
 
@@ -51,6 +54,8 @@ graph TD
 
     Flutter -->|"HTTPS :443 / HTTP :80"| Proxy
     AdminPanel -->|"HTTPS :443 / HTTP :80"| Proxy
+    Browser -->|"HTTPS :443\nHost: $WEBSITE_DOMAIN"| Proxy
+    Proxy -->|"Host: $WEBSITE_DOMAIN / www.$WEBSITE_DOMAIN"| Website
     Proxy -->|"Host: app.*"| App
     Proxy -->|"Host: admin.*"| AdminPanel
     Proxy -->|"Host: keycloak.* / PathPrefix:/auth"| Keycloak
@@ -115,10 +120,24 @@ graph TD
 | **grafana**             | Grafana OSS 12.0.1                                                                       | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping; unified alerting (BullMQ failures, service reachability, 5xx spikes) emails `ALERT_EMAIL` via SMTP                                                                                                                                                                                                                                                                        | 3000                                  | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik)                                                                                               | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link), `GF_SMTP_*`/`HHH_ALERT_EMAIL` (from `SMTP_*`/`ALERT_EMAIL`)                                                         |
 | **backup**              | Custom Alpine + sleep-loop                                                               | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to; success/failure alerts sent directly via SMTP (`lib.sh`'s `send_smtp_mail()`), independent of Grafana | — (backup-api on 4100, internal only) | Internal only                                                                                                                                                             | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `ALERT_EMAIL`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `MONGO_USER`, `MONGO_PASSWORD` |
 | **docker-socket-proxy** | tecnativa/docker-socket-proxy                                                            | Scoped Docker API in front of the real `docker.sock`, reachable only by `backup` over the internal `hhh-backup-internal` network; exposes only the container/volume/image calls `backup.sh`/`restore.sh` need (no EXEC, NETWORKS, SECRETS, etc.) instead of a raw socket mount                                                                                                                                                                                     | 2375 (internal only)                  | Internal only                                                                                                                                                             | —                                                                                                                                                                                                                                          |
+| **website**             | Astro (static build) + nginx:alpine                                                     | Public marketing/info site (bilingual DE/EN) — self-hosted here rather than on a third-party edge platform, see [Public Domains & TLS](#public-domains--tls). Fully static: no app server, no runtime env vars, no database access.                                                                                                                                                                                                                             | 80                                     | `https://<WEBSITE_DOMAIN>` and `https://www.<WEBSITE_DOMAIN>` (prod only — not in docker-compose.local.yml, use `npm run dev` in `website/` locally instead)              | `WEBSITE_DOMAIN`                                                                                                                                                                                                                            |
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.
 >
 > **Admin panel**: Runs as a separate Docker container (`hhh-admin`) on port 3001. Uses NextAuth v4 + Keycloak for authentication and enforces `admin` or `researcher` realm roles at the middleware layer.
+
+---
+
+## Public Domains & TLS
+
+Traefik terminates TLS for **two independent public hostnames** on the same instance, each with its own Let's Encrypt certificate obtained automatically via the `letsencrypt` cert resolver (`acme.tlschallenge=true` — TLS-ALPN-01, which needs no DNS-provider API integration, just port 443 reachable for the domain in question):
+
+- **`$DOMAIN`** (e.g. `habit.wiwi.tu-dresden.de`) — the operational app/admin/research-infrastructure host. Every backend service in this document rides on this one hostname, split by path prefix (`/admin`, `/auth`, `/mongo`, `/grafana`, ...) — see the Per-Service Reference Table above.
+- **`$WEBSITE_DOMAIN`** (e.g. `healthhabithub.de`, matched with and without `www.`) — the **public marketing site only** (`website` service). It is deliberately a separate hostname on a separate domain, not a path under `$DOMAIN`, because it's the public-facing front door and is meant to be memorable/brandable independent of the institutional app URL.
+
+`website` is self-hosted on this same Traefik instance rather than on a third-party static-hosting edge (e.g. Cloudflare Pages) because `$WEBSITE_DOMAIN`'s DNS is hosted at a provider that will not permit its nameservers to be delegated elsewhere while it remains the zone administrator for that domain (a documented policy on their end, not a technical DNS limitation) — so an ordinary `A`/`CNAME` record pointing at this server's IP was the low-friction path, needing no registrar change and no DNS-provider API access on Traefik's side. `$WEBSITE_DOMAIN`'s MX/SPF/DKIM records remain with that same DNS provider unchanged — only the web-traffic `A`/`CNAME` records point at this server.
+
+**Operational note:** an unset or empty `$WEBSITE_DOMAIN` does not fail loudly — Traefik's Docker-provider label templating renders it as an empty string, producing a syntactically valid but wrong router rule (`Host(\`\`) || Host(\`www.\`)`), which Let's Encrypt then rejects as an invalid identifier while browsers fall back to Traefik's self-signed default cert. If a domain's cert won't issue or a browser reports `TRAEFIK DEFAULT CERT`, check the *actual rendered* rule first — `docker logs hhh-proxy | grep <router-name>` — rather than assuming the env var is correct.
 
 ---
 

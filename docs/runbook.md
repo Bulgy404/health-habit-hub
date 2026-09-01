@@ -28,6 +28,7 @@ and is annotated with the expected output.
     - [Flutter web blank page — CORS issue](#flutter-web-blank-page--cors-issue)
     - [Recommender service unreachable](#recommender-service-unreachable--container-name-resolution)
     - [LibreTranslate down or returning empty translations](#libretranslate-down-or-returning-empty-translations)
+    - [`website` gets Traefik's default cert instead of a real one](#website-gets-traefiks-default-cert-instead-of-a-real-one--empty-env-var-not-an-acme-failure)
 
 ---
 
@@ -1316,6 +1317,56 @@ Update `.env` with a valid key and redeploy the recommender:
 
 ```bash
 bash scripts/deploy-recommender.sh
+```
+
+---
+
+### `website` gets Traefik's default cert instead of a real one — empty env var, not an ACME failure
+
+**Symptom:** Browsers show `net::ERR_CERT_AUTHORITY_INVALID` / "connection not
+private" for `WEBSITE_DOMAIN` (e.g. `healthhabithub.de`), and inspecting the
+certificate shows `CN=TRAEFIK DEFAULT CERT` rather than a Let's Encrypt one.
+Often paired with a 404 from Traefik itself, since no router actually matches
+the real incoming `Host` header.
+
+**Root cause:** `WEBSITE_DOMAIN` is unset or empty in whatever env source is
+actually live on the server — commonly because it was only set in a local
+`.env` (gitignored, per-environment — never deployed) or never added to
+Portainer's stack environment variables. Traefik's Docker-provider label
+templating does **not** fail loudly on a missing variable: a rule written as
+`` Host(`${WEBSITE_DOMAIN}`) || Host(`www.${WEBSITE_DOMAIN}`) `` silently
+renders as `` Host(``) || Host(`www.`) `` — syntactically valid, so nothing
+crashes — which then makes Let's Encrypt reject the request outright:
+
+```
+Cannot issue for "www": Domain name needs at least one dot
+```
+
+The general lesson: a missing Traefik-templated env var is a silent
+misconfiguration, not a startup failure. Don't assume the env var is correct
+just because the stack came up healthy — check what Traefik actually rendered:
+
+```bash
+# What did Traefik actually see, not what you think you set:
+docker logs hhh-proxy --tail 200 | grep -i "website\|acme"
+# Look at the `rule=` in the output — if it shows empty backticks instead of
+# the real domain, the env var isn't reaching this container.
+```
+
+**Fix:**
+
+```bash
+# Set WEBSITE_DOMAIN in THIS server's real .env (or Portainer env vars) —
+# not just a local checkout — then:
+docker compose up -d --force-recreate website
+```
+
+Traefik retries ACME automatically once the rule is valid — no manual
+certificate request needed. Verify from outside:
+
+```bash
+curl -v https://healthhabithub.de/ 2>&1 | grep -i "subject\|issuer"
+# Expected: Let's Encrypt, not TRAEFIK DEFAULT CERT
 ```
 
 ---
