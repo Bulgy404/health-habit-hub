@@ -1,0 +1,9 @@
+{
+  // Static Astro site — no adapter, no Worker code. Wrangler just uploads
+  // ./dist (the astro build output) as static assets served from the edge.
+  "name": "health-habit-hub-website",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
