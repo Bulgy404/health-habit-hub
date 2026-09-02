@@ -20,6 +20,8 @@
   <p>
     <a href="https://habit.wiwi.tu-dresden.de"><strong>habit.wiwi.tu-dresden.de</strong></a>
     &nbsp;·&nbsp;
+    <a href="https://healthhabithub.de"><strong>healthhabithub.de</strong></a>
+    &nbsp;·&nbsp;
     <a href="DOCUMENTATION.md">Docs</a>
     &nbsp;·&nbsp;
     <a href="docs/diagrams/README.md">Diagrams</a>
@@ -206,6 +208,7 @@ Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-h
 | `backup-service/`  | Daily cron backups of all stores                                           |
 | `monitoring/`      | Monitoring stack configuration                                             |
 | `scripts/`         | Seeding, migration, and ops scripts                                        |
+| `website/`         | Astro marketing site ([healthhabithub.de](https://healthhabithub.de)) — own domain, own Docker image, see [website/README.md](website/README.md) |
 | `docs/`            | All documentation — see [Documentation](#documentation)                    |
 
 ---
@@ -280,6 +283,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | Translation    | LibreTranslate                                                                                                  |
 | Proxy / SSL    | Traefik v3, Let's Encrypt                                                                                       |
 | Infrastructure | Docker Compose, Portainer                                                                                       |
+| Marketing site | Astro 7, self-hosted Node server ([website/](website/), see [website/README.md](website/README.md))            |
 
 ---
 
@@ -316,6 +320,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | OpenAPI 3.1 spec ([Postman collection](docs/api/hhh-postman-collection.json))                                  |
 | [docs/migration.md](docs/migration.md)         | Neo4j schema migration plan                                                                                    |
 | [docs/runbook.md](docs/runbook.md)             | Operations runbook                                                                                             |
+| [website/README.md](website/README.md)         | Marketing site (healthhabithub.de) — structure, local dev, self-hosted Node/Docker/Traefik deploy               |
 
 **Guides & manuals**
 

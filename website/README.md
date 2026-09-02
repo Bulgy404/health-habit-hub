@@ -72,9 +72,9 @@ env vars baked into the image). `docker-compose.yml`'s `website` service maps
 its Traefik label and healthcheck to port `4321` accordingly (it used to be
 nginx on port `80`).
 
-**Required env vars** (set in the server's `.env`, read by `docker-compose.yml`
-and passed into the container) — reusing the same `SMTP_*` convention as the
-api-service and Grafana elsewhere in this compose file:
+**Required env vars**, passed into the `website` container by
+`docker-compose.yml`'s `environment:` block — reusing the same `SMTP_*`
+convention as the api-service and Grafana elsewhere in this compose file:
 
 | Var | Purpose |
 | --- | --- |
@@ -90,6 +90,33 @@ sending mail — the rest of the site is unaffected. Messages are sent to
 `felix.reinsch@tu-dresden.de` (hardcoded in `src/pages/api/contact.ts`), with
 the submitter's address set as `replyTo`, and a hidden honeypot field is
 checked server-side to filter bots.
+
+**Where these vars actually live depends on how you're running the stack:**
+
+- **Local dev** (`npm run dev` inside `website/`): Astro/Vite auto-loads a
+  `website/.env` file — since the repo's real secrets live in a single `.env`
+  at the monorepo root (used by `docker compose` there), the simplest setup
+  is a symlink: `cd website && ln -s ../.env .env`. Note that Vite injects
+  `.env` values into `import.meta.env`, not `process.env` — that's why
+  `src/pages/api/contact.ts` reads `{ ...import.meta.env, ...process.env }`
+  rather than `process.env` alone; that also keeps it working unchanged
+  under the production path below, since `import.meta.env.SMTP_*` is always
+  `undefined` in a Docker-built bundle (no `.env` file exists in the build
+  context there) and `process.env` wins.
+- **Production (TU Dresden server, via Portainer):** this stack is deployed
+  as a Portainer stack, not a bare `docker compose up` against a `.env` file
+  on disk — Portainer keeps its own environment-variable store per stack
+  (Stack → Editor → **Environment variables**), separate from any `.env`
+  file that might exist in the repo checkout on the server. Running
+  `docker compose` directly from an SSH session on that server (e.g. to
+  check logs) will show every variable as unset, even though the live
+  containers have them — that's expected, not a bug. To add or change an
+  env var for production (SMTP creds, `WEBSITE_DOMAIN`, anything else),
+  edit it in Portainer's stack environment variables and **redeploy the
+  stack** — a plain container restart does not re-read them. After a
+  redeploy, `docker exec hhh-website printenv | grep SMTP` (or `docker
+  logs hhh-website`) from the server confirms what the running container
+  actually has.
 
 Traefik routes `WEBSITE_DOMAIN` (and `www.$WEBSITE_DOMAIN`) to it and requests
 its own Let's Encrypt certificate automatically (TLS-ALPN-01 — needs port 443
