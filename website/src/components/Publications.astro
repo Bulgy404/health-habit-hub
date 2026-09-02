@@ -1,0 +1,414 @@
+---
+import { useT, type Lang } from '../i18n/ui';
+const { lang } = Astro.props as { lang: Lang };
+const t = useT(lang);
+
+// Publication catalogue. Titles are English (the papers are English);
+// summaries are provided per language. `pdf` points to /public/publications;
+// `url` is the canonical online source (DOI or repository). Each card shows a
+// clean venue wordmark on a light surface so it identifies where the paper ran
+// and blends with the page rather than shouting a colour block.
+// Each paper gets an SF-Symbols-style icon that fits its subject, and an
+// accent whose meaning matches: trust-green for the privacy review, orange for
+// behaviour change, and so on. The pairing is the point — nothing is generic.
+type Glyph = 'privacy' | 'change' | 'timer' | 'tailor' | 'cue' | 'habit';
+type Pub = {
+  year: string; venueShort: string; venueFull: string; accent: string; glyph: Glyph;
+  authors: string; title: string; short: string;
+  doi?: string; url: string; pdf?: string;
+  sum: Record<Lang, string>;
+};
+const pubs: Pub[] = [
+  {
+    year: '2026', venueShort: 'HEALTHINF', venueFull: 'BIOSTEC · SciTePress', accent: '#2e8c00', glyph: 'privacy',
+    authors: 'Reinsch, F., Hitzke, F., & Schlieter, H.',
+    title: 'Factors Influencing Personal Health Information Sharing for Digital Health Interventions Supporting Habit Formation: A Systematic Review',
+    short: 'Personal Health Information Sharing',
+    doi: '10.5220/0014408300004070', url: 'https://doi.org/10.5220/0014408300004070',
+    pdf: '/publications/factors-influencing-phi-sharing-2026.pdf',
+    sum: {
+      de: 'Dieser systematische Review untersucht, was Menschen bereit oder zögerlich macht, persönliche Gesundheitsdaten mit habit-unterstützenden Anwendungen zu teilen. Er verdichtet die Literatur zu individuellen, technischen und kontextuellen Faktoren, die Offenlegungsentscheidungen prägen. Die Ergebnisse helfen, Vertrauen aufzubauen und Datenpraktiken so zu gestalten, dass Apps die nötigen Daten erhalten, ohne ihre Nutzenden zu verlieren.',
+      en: 'This systematic review examines what makes people willing or reluctant to share personal health information with digital interventions that support habit formation. It synthesises the literature into the individual, technological and contextual factors that shape disclosure decisions. The findings help designers build trust and tailor data practices so habit-support apps gather the data they need without losing their users.',
+    },
+  },
+  {
+    year: '2025', venueShort: 'WI', venueFull: 'Wirtschaftsinformatik', accent: '#c2410c', glyph: 'change',
+    authors: 'Reinsch, F., Kählig, M., Neubauer, M., Stark, J., & Schlieter, H.',
+    title: 'The App, the Habit, and the Change: Digital Tools for Multi-Domain Behavior Change',
+    short: 'The App, the Habit, and the Change',
+    url: 'https://www.researchgate.net/publication/401539722_The_App_the_Habit_and_the_Change_Digital_Tools_for_Multidomain_Behavior_Change_Research_Paper',
+    pdf: '/publications/app-habit-change-2025.pdf',
+    sum: {
+      de: 'Dieser Beitrag erforscht, wie ein einzelnes digitales Werkzeug Verhaltensänderung über mehrere Lebensbereiche zugleich unterstützen kann statt einer isolierten Gewohnheit. Er beleuchtet die Designprinzipien, mit denen eine App Bewegung, Ernährung, Schlaf und Achtsamkeit gemeinsam fördert. Die Arbeit argumentiert, dass Multi-Domain-Unterstützung besser abbildet, wie gesunde Routinen im Alltag tatsächlich zusammenspielen.',
+      en: 'This paper explores how a single digital tool can support behaviour change across several life domains at once, rather than one habit in isolation. It looks at the design principles that let an app help users build movement, nutrition, sleep and mindfulness habits together. The work argues that multi-domain support better reflects how healthy routines actually interact in everyday life.',
+    },
+  },
+  {
+    year: '2026', venueShort: 'ECIS', venueFull: 'European Conference on Information Systems', accent: '#0369a1', glyph: 'timer',
+    authors: 'Reinsch, F., Sitzberger, M. L., Kählig, M., & Stark, J.',
+    title: 'Built For Sprints, Needed For Marathons: Mapping The Gap Between Science, Users, and Implementation In Digital Habit Formation Apps',
+    short: 'Built For Sprints, Needed For Marathons',
+    url: 'https://aisel.aisnet.org/ecis2026/hit/hit/14',
+    pdf: '/publications/built-for-sprints-marathons-2026.pdf',
+    sum: {
+      de: 'Diese Studie kartiert die Lücke zwischen der Wissenschaft der Gewohnheitsbildung, dem, was Nutzende brauchen, und der praktischen Umsetzung digitaler Habit-Apps. Sie zeigt, dass viele Apps für kurze Motivationsschübe gebaut sind, während dauerhafte Veränderung langfristige, marathonartige Unterstützung erfordert. Die Autor:innen benennen, wo Forschung, Nutzererwartungen und Produktdesign auseinanderdriften, und was es bräuchte, sie zusammenzuführen.',
+      en: 'This study maps the gap between the science of habit formation, what users actually need, and how digital habit apps are implemented in practice. It shows that many apps are built for short bursts of motivation, while lasting change requires long-term, marathon-style support. The authors highlight where research, user expectations and product design pull apart, and what it would take to align them.',
+    },
+  },
+  {
+    year: '2024', venueShort: 'RecSys', venueFull: 'HealthRecSys · ACM RecSys', accent: '#6d28d9', glyph: 'tailor',
+    authors: 'Reinsch, F., Weimann, T. G., & Stark, J.',
+    title: 'Tailoring Health: Contextual Variables In Health Recommender Systems',
+    short: 'Tailoring Health',
+    url: 'https://ceur-ws.org/Vol-3823/1_Reinsch_tailoring_159.pdf',
+    pdf: '/publications/tailoring-health-2024.pdf',
+    sum: {
+      de: 'Dieser Beitrag untersucht, wie kontextuelle Variablen wie Zeit, Ort und Situation Gesundheitsempfehlungen für jede Person relevanter machen. Er sichtet, welche Kontextfaktoren für die Empfehlung gesunder Verhaltensweisen zählen und wie sie sich in Recommender-Systeme einbauen lassen. Das Ziel ist es, von Einheitsratschlägen wegzukommen, hin zu Empfehlungen, die zum jeweiligen Moment passen.',
+      en: 'This paper investigates how contextual variables such as time, location and situation can make health recommendations more relevant to each person. It reviews which context factors matter for recommending healthy behaviours and how they can be built into recommender systems. The goal is to move beyond one-size-fits-all advice toward recommendations that fit the moment.',
+    },
+  },
+  {
+    year: '2025', venueShort: 'AMCIS', venueFull: 'Americas Conference on Information Systems', accent: '#9f1239', glyph: 'cue',
+    authors: 'Reinsch, F., Weimann, T., & Stark, J.',
+    title: 'From Instant Cues to Fading Views: Piloting Just-in-Time and Fading Strategies in Digital Habit Formation',
+    short: 'From Instant Cues to Fading Views',
+    url: 'https://aisel.aisnet.org/amcis2025/health_it/sig_health/5',
+    pdf: '/publications/instant-cues-fading-views-2025.pdf',
+    sum: {
+      de: 'Diese Pilotstudie testet zwei Verhaltensstrategien in einer digitalen Habit-App: Just-in-Time-Impulse im richtigen Moment und Fading, bei dem Unterstützung schrittweise zurückgenommen wird. Sie untersucht, wie diese Mechanismen das Entstehen dauerhafter Routinen beeinflussen. Erste Ergebnisse geben praktische Hinweise, wann man Nutzende anstoßen und wann man sich zurückziehen sollte.',
+      en: 'This pilot study tests two behavioural strategies in a digital habit app: just-in-time cues at the right moment, and fading, where support is gradually withdrawn. It examines how these mechanisms affect the process of forming durable routines. Early results give practical guidance on when to nudge users and when to step back.',
+    },
+  },
+  {
+    year: '2023', venueShort: 'WI', venueFull: 'Wirtschaftsinformatik', accent: '#0f766e', glyph: 'habit',
+    authors: 'Stark, J., Weimann, T., Reinsch, F., Hickmann, E., Kählig, M., Gißke, C., & Richter, P.',
+    title: 'Building Habits in the Digital Age: Incorporating Psychological Needs and Knowledge from Practitioners to Inform the Design of Digital Therapeutics',
+    short: 'Building Habits in the Digital Age',
+    doi: '10.1007/978-3-031-80125-9_32', url: 'https://doi.org/10.1007/978-3-031-80125-9_32',
+    pdf: '/publications/building-habits-digital-age-2023.pdf',
+    sum: {
+      de: 'Dieser Beitrag informiert das Design digitaler Therapeutika, indem er psychologische Bedürfnistheorie mit dem Wissen von Praktiker:innen verbindet. Er fragt, wie Apps echte, selbsttragende Gewohnheitsänderung statt kurzlebiger Compliance unterstützen können. Das Ergebnis ist eine Reihe von Designüberlegungen, die digitale Habit-Werkzeuge in Theorie und klinischer Praxis verankern.',
+      en: 'This paper informs the design of digital therapeutics by combining psychological-needs theory with knowledge gathered from practitioners. It asks how apps can support genuine, self-sustaining habit change rather than short-lived compliance. The result is a set of design considerations that ground digital habit tools in both theory and clinical practice.',
+    },
+  },
+];
+const count = pubs.length;
+
+// Topic icons in the SF Symbols visual idiom (rounded, even stroke), each
+// drawn to fit the paper: a shield for data-sharing, a repeat loop for
+// behaviour change, a stopwatch for sprints-vs-marathons, sliders for
+// tailoring/context, a bell for just-in-time cues, a checked calendar for
+// habit-building. Custom SVGs — not Apple's proprietary SF Symbols font.
+const glyphs: Record<Glyph, string> = {
+  // lock.shield — personal health information sharing
+  privacy: '<path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/><rect x="9.2" y="10.4" width="5.6" height="4.4" rx="1"/><path d="M10.4 10.4V9.2a1.6 1.6 0 0 1 3.2 0v1.2"/>',
+  // arrow.triangle.2.circlepath — multi-domain behaviour change
+  change: '<path d="M4.5 9a7.5 7.5 0 0 1 12.4-2.8L20 9"/><path d="M20 4v5h-5"/><path d="M19.5 15a7.5 7.5 0 0 1-12.4 2.8L4 15"/><path d="M4 20v-5h5"/>',
+  // stopwatch — built for sprints, needed for marathons
+  timer: '<path d="M12 7v0a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/><path d="M12 14V10.5"/><path d="M9.5 3h5"/><path d="M12 3v1.8"/><path d="M18.4 6.4l1.3-1.3"/>',
+  // slider.horizontal.3 — contextual tailoring
+  tailor: '<path d="M4 7h8"/><path d="M16 7h4"/><circle cx="14" cy="7" r="2"/><path d="M4 12h4"/><path d="M12 12h8"/><circle cx="10" cy="12" r="2"/><path d="M4 17h10"/><path d="M18 17h2"/><circle cx="16" cy="17" r="2"/>',
+  // bell — just-in-time cues, fading
+  cue: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2.2 6.5 2.2 6.5H3.8S6 14 6 9z"/><path d="M10.2 19a2 2 0 0 0 3.6 0"/>',
+  // calendar.badge.checkmark — building habits, day by day
+  habit: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v3.5M16 3v3.5M3.5 10h17"/><path d="M8.8 15l2.2 2.2L15.4 13"/>',
+};
+---
+<div class="ptheme">
+<header class="p-hero">
+  <div class="wrap p-hero-in reveal">
+    <span class="eyebrow">{t('pubs_eyebrow')}</span>
+    <h1>{t('pubs_hero_title')}</h1>
+    <p class="lead">{t('pubs_hero_lead')}</p>
+  </div>
+</header>
+
+<section class="p-flow">
+  <div class="wrap">
+    <!-- native coverflow: ring-based 3D carousel, pointer-drag + keyboard -->
+    <div class="cf" data-cf role="region" aria-roledescription="carousel" aria-label={t('pubs_title')}>
+      <div class="cf-stage">
+        <button type="button" class="cf-nav cf-prev" data-cf-prev aria-label="Previous">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+
+        <div class="cf-frame" data-cf-frame tabindex="0" aria-label={t('pubs_title')}>
+          <div class="cf-track" data-cf-track>
+            {pubs.map((p, i) => (
+              <div class="cf-card" data-cf-card role="group" aria-roledescription="slide" aria-label={`${i+1} / ${count}`}
+                   style={`--accent:${p.accent};`}>
+                <div class="cf-card-top">
+                  <span class="cf-year">{p.year}</span>
+                </div>
+                <div class="cf-logo">
+                  <span class="cf-emblem" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" set:html={glyphs[p.glyph]} />
+                  </span>
+                  <h3 class="cf-word">{p.short}</h3>
+                </div>
+                <p class="cf-cardttl">{p.venueFull}</p>
+                <span class="cf-sheen" aria-hidden="true"></span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button type="button" class="cf-nav cf-next" data-cf-next aria-label="Next">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <div class="cf-dots" data-cf-dots role="tablist" aria-label="Choose a publication">
+        {pubs.map((p, i) => (
+          <button type="button" class={`cf-dot${i===0?' on':''}`} data-cf-dot={i} aria-label={p.short}></button>
+        ))}
+      </div>
+
+      <!-- caption: the active paper's details + downloads -->
+      <div class="cf-caps" data-cf-caps>
+        {pubs.map((p, i) => (
+          <article class={`cf-cap${i===0?' on':''}`} data-cf-cap={i} aria-hidden={i!==0 ? 'true' : 'false'}>
+            <h2 class="cf-cap-ttl">{p.title}</h2>
+            <p class="cf-cap-auth">{p.authors} ({p.year}). <span>{p.venueFull}.</span></p>
+            <p class="cf-cap-sum">{p.sum[lang]}</p>
+            <div class="cf-cap-act">
+              {p.pdf
+                ? <a class="btn btn-primary" href={p.pdf} download>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                    {t('pub_download')}
+                  </a>
+                : <span class="cf-pending">{t('pub_soon')}</span>}
+              <a class="btn btn-ghost" href={p.url} target="_blank" rel="noopener">
+                {t('pub_online')}
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+              </a>
+              {p.doi && <span class="cf-doi">DOI: {p.doi}</span>}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<style>
+  .p-hero{padding:88px 0 24px}
+  .p-hero h1{font-size:clamp(34px,5vw,58px);margin:14px 0 0}
+  .p-hero .lead{font-size:clamp(17px,1.9vw,20px);color:var(--muted);margin:22px 0 0;max-width:70ch;line-height:1.65}
+
+  .p-flow{padding:8px 0 120px}
+  .cf{--cf-card:clamp(190px,26vw,268px)}
+  .cf-stage{position:relative;display:flex;align-items:center;justify-content:center}
+
+  .cf-frame{cursor:grab;overflow:hidden;padding:44px 0;outline:none;width:100%;
+    perspective:calc(var(--cf-card) * 3.2);touch-action:pan-y;
+    /* dissolve the receding cards into the page background at both edges */
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+  .cf-frame:active{cursor:grabbing}
+  .cf-frame:focus-visible{box-shadow:inset 0 0 0 2px var(--green)}
+  .cf-track{position:relative;height:calc(var(--cf-card) * 1.32);transform-style:preserve-3d;user-select:none}
+
+  /* light surface card that sits in the page, not on top of it */
+  .cf-card{position:absolute;left:50%;top:0;width:var(--cf-card);height:calc(var(--cf-card) * 1.32);
+    border-radius:20px;overflow:hidden;background:var(--surface);border:1px solid var(--line);
+    box-shadow:0 24px 48px -28px rgba(15,23,42,.4);will-change:transform;
+    display:flex;flex-direction:column;padding:22px}
+  .cf-card-top{display:flex;justify-content:flex-end}
+  .cf-year{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;font-weight:600;
+    color:var(--muted);letter-spacing:.04em}
+  .cf-logo{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:0}
+  .cf-emblem{width:66px;height:66px;border-radius:18px;display:grid;place-items:center;color:var(--accent);
+    background:color-mix(in srgb,var(--accent) 11%,transparent);
+    border:1px solid color-mix(in srgb,var(--accent) 24%,transparent);
+    box-shadow:0 10px 22px -12px color-mix(in srgb,var(--accent) 60%,transparent)}
+  .cf-word{font-family:'Fraunces Variable',serif;font-weight:500;font-size:clamp(17px,1.9vw,20px);
+    letter-spacing:-.012em;color:var(--ink);margin-top:18px;line-height:1.18;max-width:15ch}
+  .cf-cardttl{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11px;color:var(--muted);
+    text-align:center;line-height:1.4;padding-top:14px;margin-top:auto;border-top:1px solid var(--line);
+    letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+  .cf-badge{display:inline-block;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);
+    border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);border-radius:100px;
+    padding:3px 10px;font-size:10.5px;letter-spacing:.05em}
+  .cf-sheen{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--accent) 8%,transparent),transparent 60%)}
+
+  .cf-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:200;flex:0 0 auto;
+    width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--line);
+    color:var(--ink);display:grid;place-items:center;cursor:pointer;
+    box-shadow:0 8px 22px -10px rgba(15,23,42,.35);transition:transform .18s,border-color .2s,color .2s}
+  .cf-nav:hover{border-color:var(--green);color:var(--green-dark);transform:translateY(-50%) scale(1.06)}
+  .cf-nav:active{transform:translateY(-50%) scale(.94)}
+  .cf-prev{left:0}.cf-next{right:0}
+
+  .cf-dots{display:flex;justify-content:center;gap:9px;margin-top:6px}
+  .cf-dot{width:9px;height:9px;border-radius:50%;background:var(--ink);opacity:.22;border:none;
+    cursor:pointer;padding:0;transition:opacity .2s,transform .2s,background .2s}
+  .cf-dot:hover{opacity:.5}
+  .cf-dot.on{opacity:1;background:var(--green-action);transform:scale(1.15)}
+
+  .cf-caps{position:relative;margin:30px auto 0;max-width:76ch}
+  .cf-cap{position:absolute;inset:0;text-align:center;opacity:0;transform:translateY(10px);
+    pointer-events:none;transition:opacity .45s var(--ease-out),transform .45s var(--ease-out)}
+  .cf-cap.on{opacity:1;transform:none;pointer-events:auto}
+  .cf-cap-ttl{font-size:clamp(20px,2.5vw,27px);line-height:1.2;max-width:24ch;margin:0 auto}
+  .cf-cap-auth{font-size:13.5px;color:var(--muted);margin-top:12px;font-style:italic}
+  .cf-cap-auth span{font-style:normal;font-weight:600;color:var(--green-dark)}
+  .cf-cap-sum{font-size:15.5px;color:var(--ink);opacity:.86;margin-top:14px;line-height:1.65}
+  .cf-cap-act{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:22px}
+  .cf-cap-act .btn{font-size:13.5px;padding:11px 18px}
+  .cf-pending{font-size:13px;color:var(--muted);font-weight:600;background:var(--surface-alt);
+    border:1px dashed var(--line);padding:10px 16px;border-radius:11px}
+  .cf-doi{font-size:12px;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  @media(max-width:720px){.cf-nav{display:none}}
+  /* no-JS / reduced-motion: cards would stack at 50%; lay them out readably */
+  :global(html:not(.js)) .cf-frame{overflow-x:auto;-webkit-mask-image:none;mask-image:none}
+  :global(html:not(.js)) .cf-track{display:flex;gap:16px;height:auto;transform:none!important}
+  :global(html:not(.js)) .cf-card{position:static;transform:none!important;flex:0 0 auto}
+</style>
+
+<script>
+  // Native coverflow — ring-based 3D carousel ported to vanilla TS.
+  // No cloned nodes: the looping is done by folding each card's offset into
+  // the shorter way round the ring and teleporting it at half a turn out.
+  const root = document.querySelector('[data-cf]') as HTMLElement | null;
+  if (root) {
+    const frame = root.querySelector('[data-cf-frame]') as HTMLElement;
+    const capsBox = root.querySelector('[data-cf-caps]') as HTMLElement;
+    const cards = Array.from(root.querySelectorAll('[data-cf-card]')) as HTMLElement[];
+    const dots = Array.from(root.querySelectorAll('[data-cf-dot]')) as HTMLElement[];
+    const caps = Array.from(root.querySelectorAll('[data-cf-cap]')) as HTMLElement[];
+    const count = cards.length;
+
+    // tuning (mirrors the source component's defaults)
+    const rotate = 44, depth = 0.6, falloff = 0.56, fade = 0.1, gap = 0.05, loop = true;
+
+    let pos = 0;       // fractional card index at centre — the single source of truth
+    let target = 0;    // where the current settle is headed
+    let width = 0;
+    let raf: number | null = null;
+    let selected = 0;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const indexAt = (p: number) => ((Math.round(p) % count) + count) % count;
+
+    function paint() {
+      if (!width) return;
+      const pitch = width * (1 + gap);
+      cards.forEach((card, index) => {
+        let offset = index - pos;
+        if (loop) {
+          offset = ((offset % count) + count) % count;
+          if (offset > count / 2) offset -= count;
+        }
+        const distance = Math.abs(offset);
+        const ramp = Math.pow(distance, falloff);
+        const tilt = Math.min(rotate * ramp, 82) * Math.sign(offset);
+        card.style.transform =
+          `translateX(calc(-50% + ${offset * pitch}px)) ` +
+          `translateZ(${-depth * width * ramp}px) rotateY(${-tilt}deg)`;
+        const edge = loop ? Math.min(1, Math.max(0, count / 2 - distance)) : 1;
+        card.style.opacity = String(Math.max(0, 1 - fade * distance) * edge);
+        card.style.zIndex = String(100 - Math.round(distance));
+      });
+    }
+
+    function select(i: number) {
+      if (i === selected) return;
+      selected = i;
+      dots.forEach((d, k) => d.classList.toggle('on', k === i));
+      caps.forEach((c, k) => {
+        c.classList.toggle('on', k === i);
+        c.setAttribute('aria-hidden', k === i ? 'false' : 'true');
+      });
+    }
+
+    function settle(to: number) {
+      if (raf !== null) cancelAnimationFrame(raf);
+      target = to;
+      select(indexAt(to));
+      if (reduce) { pos = to; paint(); return; }
+      const step = () => {
+        const remaining = target - pos;
+        if (Math.abs(remaining) < 0.0004) { pos = target; paint(); raf = null; return; }
+        pos += remaining * 0.16;  // exponential ease-out
+        paint();
+        raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }
+
+    const clamp = (p: number) => (loop ? p : Math.max(0, Math.min(count - 1, p)));
+    const nudge = (by: number) => settle(clamp(Math.round(target) + by));
+    function goTo(index: number) {
+      const to = loop ? index + Math.round((target - index) / count) * count : index;
+      settle(clamp(to));
+    }
+
+    // pointer drag with flick momentum
+    let drag: { id: number; x: number; pos: number; v: number; t: number } | null = null;
+    frame.addEventListener('pointerdown', (e) => {
+      if (raf !== null) { cancelAnimationFrame(raf); raf = null; }
+      frame.setPointerCapture(e.pointerId);
+      target = pos;
+      drag = { id: e.pointerId, x: e.clientX, pos, v: 0, t: performance.now() };
+    });
+    frame.addEventListener('pointermove', (e) => {
+      if (!drag || drag.id !== e.pointerId) return;
+      const pitch = width * (1 + gap);
+      if (!pitch) return;
+      const now = performance.now();
+      const prev = pos;
+      pos = clamp(drag.pos - (e.clientX - drag.x) / pitch);
+      drag.v = ((pos - prev) / Math.max(now - drag.t, 1)) * 1000;
+      drag.t = now;
+      select(indexAt(pos));
+      paint();
+    });
+    function endDrag(e: PointerEvent) {
+      if (!drag || drag.id !== e.pointerId) return;
+      const carried = Math.max(-2, Math.min(2, drag.v * 0.18));  // flick, capped at two
+      const rest = clamp(Math.round(pos + carried));
+      drag = null;
+      settle(rest);
+    }
+    frame.addEventListener('pointerup', endDrag);
+    frame.addEventListener('pointercancel', endDrag);
+
+    frame.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); nudge(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); nudge(1); }
+    });
+    root.querySelector('[data-cf-prev]')!.addEventListener('click', () => nudge(-1));
+    root.querySelector('[data-cf-next]')!.addEventListener('click', () => nudge(1));
+    dots.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+
+    // Reserve the height of the tallest caption so no slide's text overlaps the
+    // footer, and the block never jumps as you flip through papers.
+    function sizeCaps() {
+      if (!capsBox.offsetWidth) return;  // don't size against a 0-width layout
+      let max = 0;
+      caps.forEach((c) => {
+        const wasOn = c.classList.contains('on');
+        c.style.position = 'static'; c.style.opacity = '0';
+        max = Math.max(max, c.offsetHeight);
+        c.style.position = ''; c.style.opacity = '';
+        if (!wasOn) c.classList.remove('on');
+      });
+      capsBox.style.minHeight = max + 'px';
+    }
+
+    // card width drives pitch/depth/perspective — the only thing worth measuring
+    const measure = () => { width = cards[0].offsetWidth; paint(); sizeCaps(); };
+    measure();
+    new ResizeObserver(measure).observe(frame);
+    // belt and braces: size the caption well once everything is actually laid
+    // out, and whenever the window changes, so no slide's text hits the footer
+    window.addEventListener('load', sizeCaps);
+    window.addEventListener('resize', sizeCaps);
+    // fonts settling can change caption height; re-measure once ready
+    if ((document as any).fonts?.ready) (document as any).fonts.ready.then(sizeCaps);
+  }
+</script>

@@ -9,6 +9,7 @@ export const routes = {
   home:        { de: '/',              en: '/en/' },
   participants:{ de: '/teilnehmen/',   en: '/en/participate/' },
   research:    { de: '/forschung/',    en: '/en/research/' },
+  publications:{ de: '/publikationen/', en: '/en/publications/' },
   imprint:     { de: '/impressum/',    en: '/en/legal/imprint/' },
   privacy:     { de: '/datenschutz/',  en: '/en/legal/privacy/' },
   consent:     { de: '/einwilligung/', en: '/en/legal/consent/' },
@@ -162,6 +163,37 @@ const de: Dict = {
   cf_success: 'Danke! Deine Nachricht ist angekommen, wir melden uns bald.',
   cf_error: 'Das hat leider nicht geklappt. Schreib uns direkt an felix.reinsch@tu-dresden.de.',
 
+  // security & DSGVO
+  r_sec_eyebrow: 'Datenschutz & Sicherheit',
+  r_sec_title: 'Anonyme Konten, abgesichert mit einer Wiederherstellungsphrase wie bei einer Krypto-Wallet.',
+  r_sec_p: 'Das Health Habit Hub erhebt Verhaltensdaten, keine Klarnamen. Konten sind anonym: keine E-Mail, kein Name, keine Telefonnummer, nur eine zufällige Kennung. Der Zugang wird über eine 24-Wort-Wiederherstellungsphrase gesichert, nach dem Vorbild einer Krypto-Wallet. Anmeldung, Rollentrennung und Übertragung sind mit etablierten Standards abgesichert und laufen DSGVO-konform auf Servern der TU Dresden.',
+  r_sec_pp_t: 'Die Wiederherstellungsphrase, wie bei einer Krypto-Wallet',
+  r_sec_pp_p: 'Beim ersten Start erzeugt die App eine 24-Wort-Phrase im BIP39-Format, genau wie die Seed-Phrase einer Krypto-Wallet. Sie kodiert die Zugangsdaten des anonymen Kontos und wird nur ein einziges Mal angezeigt. Auf dem Gerät liegen die Anmelde-Tokens im gesicherten Schlüsselspeicher (Keychain bzw. Keystore). Geht die Phrase verloren, kann niemand das Konto wiederherstellen, auch wir nicht.',
+  r_sec_s1_t: 'Anonymes Konto', r_sec_s1_d: 'Nur eine Kennung',
+  r_sec_s1_x: 'Beim Start entsteht ein Konto ganz ohne Namen, E-Mail oder Telefonnummer, nur mit einer zufälligen Kennung. Verhaltensdaten hängen an dieser Kennung, nicht an einer Person.',
+  r_sec_s2_t: 'Wiederherstellungsphrase', r_sec_s2_d: '24 Wörter, BIP39',
+  r_sec_s2_x: 'Der Zugang wird durch eine 24-Wort-Phrase gesichert, wie die Seed-Phrase einer Krypto-Wallet. Sie wird einmalig angezeigt und ist der einzige Schlüssel zum Konto.',
+  r_sec_s3_t: 'Sicherer Geräte-Speicher', r_sec_s3_d: 'Keychain / Keystore',
+  r_sec_s3_x: 'Die Anmelde-Tokens werden im gesicherten Schlüsselspeicher des Geräts abgelegt, nicht im Klartext auf dem Dateisystem.',
+  r_sec_s4_t: 'Anmeldung', r_sec_s4_d: 'Keycloak SSO',
+  r_sec_s4_x: 'Authentifizierung und Rollentrennung laufen über Keycloak (OIDC). Teilnehmende, Forschende und Admins sind getrennt, und jeder Dienst prüft das Token gegen Keycloak.',
+  r_sec_s5_t: 'Übertragung', r_sec_s5_d: 'TLS',
+  r_sec_s5_x: 'Alle Verbindungen laufen TLS-verschlüsselt über einen Reverse-Proxy mit automatischen Zertifikaten (Let’s Encrypt) zur TU Dresden.',
+  r_sec_s6_t: 'Speicherung', r_sec_s6_d: 'EU · TU Dresden',
+  r_sec_s6_x: 'Die Daten liegen DSGVO-konform auf Servern der TU Dresden in der EU. Zugriff nur über rollenbasierte Rechte, Geheimnisse werden gehasht (bcrypt), Wiederherstellungsversuche sind pro IP begrenzt.',
+  r_sec_note: 'Anonyme Konten · BIP39-Wiederherstellungsphrase · Keycloak-SSO mit Rollentrennung · TLS im Transport · DSGVO-Hosting an der TU Dresden',
+  r_sec_lock_locked: 'Gesperrt', r_sec_lock_open: 'Entsperrt',
+
+  // publications / our work
+  nav_work: 'Publikationen',
+  pubs_hero_title: 'Unsere Arbeit',
+  pubs_hero_lead: 'Das Health Habit Hub steht auf peer-reviewter Forschung. Hier finden Sie unsere Publikationen zu digitaler Gewohnheitsbildung, Empfehlungssystemen und Datenschutz, jeweils mit kurzer Einordnung und als PDF zum Download.',
+  pubs_eyebrow: 'Peer-reviewte Forschung',
+  pubs_title: 'Publikationen',
+  pub_download: 'PDF herunterladen',
+  pub_online: 'Online lesen',
+  pub_soon: 'PDF folgt',
+
   soon: 'Bald',
 };
 
@@ -271,6 +303,37 @@ const en: Dict = {
   cf_send: 'Send message', cf_sending: 'Sending …',
   cf_success: 'Thanks! Your message is in, we will get back to you soon.',
   cf_error: 'That did not work. Please email us directly at felix.reinsch@tu-dresden.de.',
+
+  // security & GDPR
+  r_sec_eyebrow: 'Privacy & security',
+  r_sec_title: 'Anonymous accounts, secured with a recovery phrase like a crypto wallet.',
+  r_sec_p: 'The Health Habit Hub collects behaviour data, not real names. Accounts are anonymous: no email, no name, no phone number, just a random identifier. Access is secured with a 24-word recovery phrase, modelled on a crypto wallet. Sign-in, role separation and transport use established standards, and everything runs GDPR-compliant on TU Dresden servers.',
+  r_sec_pp_t: 'The recovery phrase, just like a crypto wallet',
+  r_sec_pp_p: 'On first launch the app generates a 24-word phrase in BIP39 format, exactly like a crypto wallet’s seed phrase. It encodes the anonymous account’s credentials and is shown only once. On the device, the sign-in tokens live in the secure key store (Keychain or Keystore). If the phrase is lost, no one can recover the account, not even us.',
+  r_sec_s1_t: 'Anonymous account', r_sec_s1_d: 'Just an identifier',
+  r_sec_s1_x: 'A new account is created with no name, email or phone number, just a random identifier. Behaviour data hangs off that identifier, not off a person.',
+  r_sec_s2_t: 'Recovery phrase', r_sec_s2_d: '24 words, BIP39',
+  r_sec_s2_x: 'Access is secured by a 24-word phrase, like a crypto wallet’s seed phrase. It is shown once and is the only key to the account.',
+  r_sec_s3_t: 'On-device secure storage', r_sec_s3_d: 'Keychain / Keystore',
+  r_sec_s3_x: 'The sign-in tokens are kept in the device’s secure key store, not in plaintext on the file system.',
+  r_sec_s4_t: 'Sign-in', r_sec_s4_d: 'Keycloak SSO',
+  r_sec_s4_x: 'Authentication and role separation run through Keycloak (OIDC). Participants, researchers and admins are separated, and every service validates the token against Keycloak.',
+  r_sec_s5_t: 'Transport', r_sec_s5_d: 'TLS',
+  r_sec_s5_x: 'Every connection is TLS-encrypted through a reverse proxy with automatic certificates (Let’s Encrypt) to TU Dresden.',
+  r_sec_s6_t: 'Storage', r_sec_s6_d: 'EU · TU Dresden',
+  r_sec_s6_x: 'Data sits GDPR-compliant on TU Dresden servers in the EU. Access is role-based only, secrets are hashed (bcrypt), and recovery attempts are rate-limited per IP.',
+  r_sec_note: 'Anonymous accounts · BIP39 recovery phrase · Keycloak SSO with role separation · TLS in transit · GDPR hosting at TU Dresden',
+  r_sec_lock_locked: 'Locked', r_sec_lock_open: 'Unlocked',
+
+  // publications / our work
+  nav_work: 'Publications',
+  pubs_hero_title: 'Our work',
+  pubs_hero_lead: 'The Health Habit Hub is built on peer-reviewed research. Here are our publications on digital habit formation, recommender systems and privacy, each with a short summary and a PDF to download.',
+  pubs_eyebrow: 'Peer-reviewed research',
+  pubs_title: 'Publications',
+  pub_download: 'Download PDF',
+  pub_online: 'Read online',
+  pub_soon: 'PDF coming soon',
 
   soon: 'Soon',
 };

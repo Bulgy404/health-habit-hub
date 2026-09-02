@@ -1,0 +1,10 @@
+---
+export const prerender = true;
+import Base from '../../layouts/Base.astro';
+import Publications from '../../components/Publications.astro';
+import { useT } from '../../i18n/ui';
+const t = useT('en');
+---
+<Base lang="en" page="publications" title="Publications · Health Habit Hub" description={t('pubs_hero_lead')}>
+  <Publications lang="en" />
+</Base>

@@ -33,3 +33,37 @@ reasonable disclosure window before sharing details publicly.
   Never commit credentials.
 - Current, open findings are tracked in [BUG_AUDIT.md](BUG_AUDIT.md); past
   audits (resolved) are archived under [docs/archive/](docs/archive/).
+
+## Data Protection Model (rationale)
+
+This records the deliberate design and why it is considered adequate for the
+data we hold. **This is the current model; we are keeping it for now.**
+
+- **Anonymous accounts.** No name, email, or phone number is collected.
+  Identity is a random UUID (Keycloak `sub`). All behaviour/study data is
+  *pseudonymous*, keyed to that UUID — there is no real-world identifier to
+  leak in the first place.
+- **On-device passphrase.** At account creation the app generates a random
+  credential (UUID + 16-byte / 128-bit CSPRNG password) and encodes it as a
+  24-word BIP39 recovery phrase (`app/utils/recoveryPhrase.js`). The phrase is
+  produced **on the device**, shown **once**, and is not retained server-side
+  in any recoverable form — losing it means the account cannot be recovered by
+  anyone, including operators.
+- **Why "no KDF" is acceptable here.** A KDF (Argon2id/bcrypt/PBKDF2) exists to
+  make *low-entropy, human-chosen* secrets expensive to brute-force. Our
+  underlying secret is a 128-bit random password, so brute-forcing the phrase
+  is computationally infeasible regardless of KDF. The per-IP restore rate
+  limit (5/hour, `app/routes/restoreRouter.js`) is defense-in-depth, not the
+  primary control. ⚠️ **If the password is ever shortened or made
+  human-memorable, a KDF becomes mandatory.**
+- **In transit.** All public endpoints are TLS-only (Let's Encrypt via
+  Traefik).
+- **At rest.** Stored secrets (e.g. participant passwords) are bcrypt-hashed.
+  There is **no application-level field encryption**: researchers require
+  plaintext access to export and analyse study data, so participant-only /
+  end-to-end encryption is intentionally out of scope — it would be
+  incompatible with the platform's core research-export function.
+  TODO: confirm and document disk/volume-level encryption-at-rest on the TU
+  Dresden storage backing MongoDB/Neo4j (infra-level; no app change required).
+- **Authorization.** Keycloak OIDC roles (participant/researcher/admin),
+  enforced in `app/middleware/` and `admin/src/middleware.ts`.

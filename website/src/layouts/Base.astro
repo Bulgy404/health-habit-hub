@@ -105,6 +105,7 @@ const R = routes;
       <div class="nav-links">
         <a href={R.participants[lang]} class={page==='participants'?'active':''}>{t('nav_participants')}</a>
         <a href={R.research[lang]} class={page==='research'?'active':''}>{t('nav_research')}</a>
+        <a href={R.publications[lang]} class={page==='publications'?'active':''}>{t('nav_work')}</a>
         <a href={links.github}>{t('nav_github')}</a>
       </div>
       <div class="nav-right">
@@ -134,6 +135,7 @@ const R = routes;
           <a href={links.admin}>{t('foot_admin')}</a>
           <a href={links.github}>{t('foot_docs')}</a>
           <a href={R.research[lang]}>{t('nav_research')}</a>
+          <a href={R.publications[lang]}>{t('nav_work')}</a>
         </div>
         <div class="fcol"><h4>{t('foot_h_legal')}</h4>
           <a href={R.imprint[lang]}>{t('foot_imprint')}</a>

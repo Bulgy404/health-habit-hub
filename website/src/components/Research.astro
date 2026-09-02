@@ -22,6 +22,16 @@ const arch = [
   ['r_arch_data','r_arch_data_d','r_arch_data_x'],
   ['r_arch_rec','r_arch_rec_d','r_arch_rec_x'],
 ];
+// end-to-end encryption pipeline, from a passphrase only the holder knows
+// down to ciphertext on the server - the six steps of the crypto-wallet model
+const sec = [
+  ['r_sec_s1_t','r_sec_s1_d','r_sec_s1_x'],
+  ['r_sec_s2_t','r_sec_s2_d','r_sec_s2_x'],
+  ['r_sec_s3_t','r_sec_s3_d','r_sec_s3_x'],
+  ['r_sec_s4_t','r_sec_s4_d','r_sec_s4_x'],
+  ['r_sec_s5_t','r_sec_s5_d','r_sec_s5_x'],
+  ['r_sec_s6_t','r_sec_s6_d','r_sec_s6_x'],
+];
 ---
 <div class="rtheme">
 <header class="r-hero">
@@ -75,6 +85,80 @@ const arch = [
     <div class="reveal"><span class="eyebrow">{t('r_cap_eyebrow')}</span><h2 class="sec-title">{t('r_cap_title')}</h2></div>
     <div class="cap-grid">
       {caps.map(([tt,pp]) => (<div class="cap-card reveal"><h3>{t(tt)}</h3><p>{t(pp)}</p></div>))}
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="reveal"><span class="eyebrow">{t('r_sec_eyebrow')}</span><h2 class="sec-title">{t('r_sec_title')}</h2><p class="sec-sub">{t('r_sec_p')}</p></div>
+
+    <div class="sec-top">
+      <!-- animated account creation: an anonymous account with no personal data,
+           and a 24-word phrase generated on-device, shown once, then wiped so
+           only the participant holds it. No claim of at-rest data encryption. -->
+      <div class="vault reveal" data-vault
+           data-st-create={lang==='de'?'Konto wird erstellt':'Creating account'}
+           data-st-gen={lang==='de'?'Phrase entsteht auf dem Gerät':'Phrase generated on device'}
+           data-st-show={lang==='de'?'Einmalig angezeigt':'Shown once'}
+           data-st-wipe={lang==='de'?'Nur bei dir · nirgends gespeichert':'Only yours · stored nowhere'}
+           data-st-anon={lang==='de'?'Anonymes Konto':'Anonymous account'}>
+        <div class="vault-head">
+          <span class="vault-lock" data-vault-lock>
+            <svg class="ic-lock" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12h6M12 9v6"/></svg>
+            <svg class="ic-open" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          <span class="vault-state" data-vault-state>{lang==='de'?'Konto wird erstellt':'Creating account'}</span>
+          <span class="vault-id">a1f9…7c</span>
+        </div>
+
+        <!-- only anonymous behaviour data is collected, tied to the random id -->
+        <ul class="vault-pii">
+          <li><span>{lang==='de'?'Gewohnheit':'Habit'}</span><b>{lang==='de'?'Abendspaziergang':'Evening walk'}</b></li>
+          <li><span>{lang==='de'?'Kontext':'Context'}</span><b>{lang==='de'?'nach dem Essen':'after dinner'}</b></li>
+          <li><span>{lang==='de'?'Ort':'Location'}</span><b>{lang==='de'?'zu Hause':'at home'}</b></li>
+          <li><span>{lang==='de'?'Stimmung':'Emotional state'}</span><b>{lang==='de'?'ausgeglichen':'balanced'}</b></li>
+        </ul>
+
+        <!-- 24-word recovery phrase, generated on-device then wiped -->
+        <div class="vault-phrase-head">
+          <span class="vp-key">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 6.2-6.2"/><path d="m17 5 2 2"/><path d="m14 8 1.5 1.5"/></svg>
+          </span>
+          {lang==='de'?'24-Wort-Wiederherstellungsphrase':'24-word recovery phrase'}
+        </div>
+        <div class="vault-phrase" data-vault-phrase>
+          {Array.from({length:12}).map((_, i) => (<span class="pw" data-pw={i}></span>))}
+        </div>
+      </div>
+
+      <div class="pp reveal">
+        <h3>{t('r_sec_pp_t')}</h3>
+        <p>{t('r_sec_pp_p')}</p>
+      </div>
+    </div>
+
+    <!-- click a step to read it; nothing moves on its own -->
+    <div class="sec-steps reveal" data-steps role="tablist" aria-label={t('r_sec_eyebrow')}>
+      {sec.map(([k,d], i) => (
+        <button class={`sstep${i===0?' on':''}`} data-step={i} role="tab" aria-selected={i===0?'true':'false'}>
+          <span class="sstep-dot"><span class="sstep-n">{i+1}</span></span>
+          {i < sec.length-1 && (
+            <span class="sstep-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+          )}
+          <strong>{t(k)}</strong>
+        </button>
+      ))}
+    </div>
+    <div class="sec-desc" data-desc>
+      {sec.map(([k,d,x], i) => (
+        <div class={`sdesc${i===0?' on':''}`} data-desc-panel={i} aria-hidden={i!==0?'true':'false'}>
+          <h3>{t(k)}</h3>
+          <p>{t(x)}</p>
+        </div>
+      ))}
     </div>
   </div>
 </section>
@@ -138,6 +222,79 @@ const arch = [
   .cap-card h3{font-size:18px}
   .cap-card p{color:var(--muted);font-size:14.5px;margin-top:8px;line-height:1.6}
 
+  /* security & DSGVO */
+  .sec .sec-top{display:grid;grid-template-columns:.85fr 1.15fr;gap:40px;align-items:center;margin-top:40px}
+  .vault{background:var(--slate);border-radius:22px;padding:24px;color:#e2e8f0;
+    box-shadow:0 34px 64px -34px rgba(15,23,42,.6);position:relative;overflow:hidden}
+  .vault::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 90% at 100% 0,rgba(249,115,22,.16),transparent 55%)}
+  .vault-head{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  .vault-lock{width:40px;height:40px;border-radius:12px;background:rgba(249,115,22,.14);
+    border:1px solid rgba(249,115,22,.34);display:grid;place-items:center;color:var(--orange-soft);position:relative}
+  .vault-lock svg{grid-area:1/1;transition:opacity .4s var(--ease-out),transform .4s var(--ease-out)}
+  .vault-lock .ic-open{opacity:0;transform:scale(.7) rotate(-12deg)}
+  /* .done = phrase generated & shown, before it is wiped (orange highlight) */
+  .vault.done .vault-lock{background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.5);color:var(--orange-soft)}
+  .vault.done .ic-lock{opacity:0;transform:scale(.7) rotate(12deg)}
+  .vault.done .ic-open{opacity:1;transform:none}
+  .vault-state{font-size:13px;font-weight:600;letter-spacing:.02em;color:#94a3b8;transition:color .3s}
+  .vault.done .vault-state{color:var(--orange-soft)}
+  .vault-id{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#64748b;letter-spacing:.02em}
+
+  .vault-pii{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+  .vault-pii li{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:10px;
+    background:rgba(148,163,184,.07);border:1px solid rgba(148,163,184,.12)}
+  .vault-pii span{font-size:10.5px;color:#94a3b8;letter-spacing:.04em;text-transform:uppercase}
+  .vault-pii b{font-size:13px;font-weight:600;color:#e2e8f0;line-height:1.2}
+
+  .vault-phrase-head{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;
+    letter-spacing:.03em;color:#94a3b8;margin-bottom:10px}
+  .vp-key{width:24px;height:24px;border-radius:7px;background:rgba(148,163,184,.1);display:grid;place-items:center;color:#94a3b8;flex:0 0 auto}
+  .vault-phrase{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .pw{height:26px;border-radius:7px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.14);
+    display:flex;align-items:center;justify-content:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11.5px;color:#cbd5e1;letter-spacing:.02em;transition:background .35s var(--ease-out),border-color .35s,color .35s,transform .35s var(--ease-out)}
+  .pw.filled{background:rgba(249,115,22,.16);border-color:rgba(249,115,22,.42);color:#fff;
+    box-shadow:0 6px 16px -8px rgba(249,115,22,.5)}
+  .pw.wiped{background:rgba(148,163,184,.06);border-color:rgba(148,163,184,.12);color:#475569;letter-spacing:.18em}
+
+  .pp h3{font-size:clamp(19px,2.2vw,24px)}
+  .pp p{color:var(--muted);font-size:15.5px;line-height:1.68;margin-top:14px;max-width:60ch}
+
+  /* clickable step rail: no auto-motion, one description shown at a time */
+  .sec-steps{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:64px}
+  .sec-steps-line{position:absolute;left:8%;right:8%;top:19px;height:2px;background:var(--line);border-radius:2px}
+  .sstep{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;
+    background:none;border:none;cursor:pointer;padding:0 4px;font:inherit;color:inherit}
+  .sstep-dot{width:38px;height:38px;border-radius:50%;background:var(--surface);border:2px solid var(--line);
+    display:grid;place-items:center;position:relative;z-index:2;
+    transition:transform .3s var(--ease-out),border-color .3s,background .3s,box-shadow .3s}
+  .sstep-n{font-family:'Fraunces Variable',serif;font-size:15px;font-weight:600;color:var(--muted);transition:color .3s}
+  .sstep strong{font-size:13.5px;margin-top:12px;font-weight:600;color:var(--ink);transition:color .3s}
+  /* horizontal arrow flowing from each bubble to the next, on the dot's centre line */
+  .sstep-arrow{position:absolute;top:19px;right:-8px;transform:translateY(-50%);z-index:3;
+    color:var(--orange-action);opacity:.9;line-height:0;transition:opacity .3s,transform .3s var(--ease-out)}
+  .sstep.on .sstep-arrow{opacity:1;transform:translate(3px,-50%)}
+  .sstep:hover .sstep-dot{border-color:var(--orange-soft);transform:translateY(-2px)}
+  .sstep.on .sstep-dot{background:var(--orange-action);border-color:var(--orange-action);
+    box-shadow:0 0 0 6px rgba(249,115,22,.14),0 10px 22px -10px rgba(234,88,12,.6)}
+  .sstep.on .sstep-n{color:#fff}
+  .sstep.on strong{color:var(--orange-dark)}
+
+  .sec-desc{position:relative;margin:40px auto 0;max-width:62ch;text-align:center}
+  .sdesc{position:absolute;inset:0;opacity:0;transform:translateY(10px);pointer-events:none;
+    transition:opacity .4s var(--ease-out),transform .4s var(--ease-out)}
+  .sdesc.on{position:relative;opacity:1;transform:none;pointer-events:auto}
+  .sdesc h3{font-size:clamp(22px,2.6vw,30px)}
+  .sdesc p{color:var(--muted);font-size:16px;line-height:1.7;margin-top:14px}
+
+  @media(max-width:900px){.sec .sec-top{grid-template-columns:1fr;gap:28px}}
+  @media(max-width:680px){
+    .sec-steps{grid-template-columns:repeat(3,1fr);gap:18px 6px}
+    .sec-steps-line{display:none}
+    .sstep small{display:none}
+  }
+
   .contact{background:var(--slate);color:#e2e8f0;padding:84px 0}
   .contact-in{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:start}
   .contact .eyebrow{color:var(--orange-soft)}
@@ -188,6 +345,86 @@ const arch = [
         }
         requestAnimationFrame(frame);
       }
+    }
+  }
+
+  // Security steps: click a bullet to reveal only that step's description.
+  // Nothing advances on its own.
+  const steps = Array.from(document.querySelectorAll('[data-step]')) as HTMLElement[];
+  const panels = Array.from(document.querySelectorAll('[data-desc-panel]')) as HTMLElement[];
+  if (steps.length && panels.length){
+    function selectStep(i:number){
+      steps.forEach((s,k)=>{ const on = k===i; s.classList.toggle('on', on); s.setAttribute('aria-selected', on?'true':'false'); });
+      panels.forEach((p,k)=>{ const on = k===i; p.classList.toggle('on', on); p.setAttribute('aria-hidden', on?'false':'true'); });
+    }
+    steps.forEach((s,i)=>{
+      s.addEventListener('click', ()=> selectStep(i));
+      s.addEventListener('keydown', (e)=>{
+        const ev = e as KeyboardEvent;
+        if (ev.key==='ArrowRight'){ ev.preventDefault(); const n=(i+1)%steps.length; selectStep(n); steps[n].focus(); }
+        else if (ev.key==='ArrowLeft'){ ev.preventDefault(); const n=(i-1+steps.length)%steps.length; selectStep(n); steps[n].focus(); }
+      });
+    });
+  }
+
+  // Account vault: an anonymous account (only behaviour data, no identity) whose
+  // 24-word phrase is generated on-device, shown once, then wiped so only the
+  // participant holds it. A self-contained loop; not a claim of at-rest crypto.
+  const vault = document.querySelector('[data-vault]') as HTMLElement | null;
+  if (vault){
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const state = vault.querySelector('[data-vault-state]') as HTMLElement;
+    const chips = Array.from(vault.querySelectorAll('.pw')) as HTMLElement[];
+    // BIP39-style stand-in words (illustrative, not a real wordlist)
+    const WORDS = ['anchor','ribbon','meadow','cobalt','harbor','willow','ember','quartz','lantern','cedar','pebble','marble','otter','maple','signal','velvet','copper','tunnel','orchid','pilot','ferry','walnut','glacier','saddle'];
+    const CH = 'abcdefghijklmnopqrstuvwxyz';
+    const ST = {
+      create: vault.dataset.stCreate || 'Creating account',
+      gen: vault.dataset.stGen || 'Phrase generated on device',
+      show: vault.dataset.stShow || 'Shown once',
+      wipe: vault.dataset.stWipe || 'Only yours · stored nowhere',
+      anon: vault.dataset.stAnon || 'Anonymous account',
+    };
+    const pick = ()=> WORDS[Math.floor(Math.random()*WORDS.length)];
+    const rnd = (n:number)=> Array.from({length:n},()=>CH[Math.floor(Math.random()*CH.length)]).join('');
+    const timers: number[] = [];
+    const clearTimers = ()=>{ while(timers.length) clearTimeout(timers.pop()); };
+
+    function resetChips(){ vault.classList.remove('done'); chips.forEach(c=>{ c.textContent=''; c.className='pw'; }); }
+    // fancy: each chip flickers through random letters, then settles on its word
+    function genChips(done:()=>void){
+      vault.classList.add('done');
+      let settled = 0;
+      chips.forEach((c,i)=>{
+        c.classList.add('filled');
+        const start = i*90;               // staggered materialisation
+        let flick = 0; const word = pick();
+        for (let f=0; f<5; f++){ timers.push(window.setTimeout(()=>{ c.textContent = rnd(word.length); }, start + f*55)); }
+        timers.push(window.setTimeout(()=>{ c.textContent = word; if(++settled===chips.length) done(); }, start + 5*55));
+      });
+    }
+    function wipeChips(){ vault.classList.remove('done'); chips.forEach(c=>{ c.textContent='••••'; c.classList.remove('filled'); c.classList.add('wiped'); }); }
+
+    function cycle(){
+      clearTimers();
+      resetChips(); state.textContent = ST.create;
+      timers.push(window.setTimeout(()=>{
+        state.textContent = ST.gen;
+        genChips(()=>{
+          timers.push(window.setTimeout(()=>{ state.textContent = ST.show; }, 900));
+          timers.push(window.setTimeout(()=>{ state.textContent = ST.wipe; wipeChips(); }, 2600));
+          timers.push(window.setTimeout(()=>{ state.textContent = ST.anon; }, 4200));
+          timers.push(window.setTimeout(cycle, 6400));   // slow, deliberate loop
+        });
+      }, 1100));
+    }
+
+    if (reduce){ genChips(()=>{}); state.textContent = ST.anon; }
+    else {
+      resetChips(); state.textContent = ST.create;
+      let started = false;
+      const io = new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting && !started){ started=true; cycle(); } }),{threshold:.35});
+      io.observe(vault);
     }
   }
 </script>
