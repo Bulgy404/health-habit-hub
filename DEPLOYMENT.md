@@ -1265,7 +1265,13 @@ reporting — a silent no-op unless configured:
   from `.env` into the Portainer stack editor's environment section.
 - Restrict `.env` on the host: `chmod 600 .env`, owned by the deploy user.
 - The rclone offsite-backup credentials live in
-  `backup-service/rclone/rclone.conf` (git-ignored, `chmod 600`).
+  **`${HHH_DATA_DIR}/rclone/rclone.conf`** — `/data/hhh/rclone/rclone.conf` in
+  production (see [§7](#7-server-storage-layout)). The container mounts this
+  read-only at `/config/rclone`. Local dev uses the repo-relative
+  `backup-service/rclone/` instead (`docker-compose.local.yml`); that path is
+  **not** the production one. Keep it outside the git checkout, and readable by
+  the backup container's non-root UID (`chmod -R o+r`) — see
+  [runbook § Offsite sync](docs/runbook.md#offsite-sync).
 
 ### Rotation checklist (do now, then on every team change)
 
