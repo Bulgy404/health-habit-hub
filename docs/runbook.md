@@ -1474,7 +1474,8 @@ Two things this maintenance does **not** cover, both currently unaddressed:
 
 - **No offsite backup replication.** `$HHH_DATA_DIR/rclone` is empty, so no
   remote is configured and every backup lives on the same VM as the data it
-  protects. Losing the VM loses both.
+  protects. Losing the VM loses both. The machinery is already built and only
+  needs configuring — see [Offsite sync](#offsite-sync).
 - **No disk-space alerting.** Grafana's rules
   (`monitoring/grafana/provisioning/alerting/alerting.yaml`) cover service
   reachability, BullMQ job failures and 5xx spikes only. No node-exporter is
@@ -1502,15 +1503,37 @@ from a replica.
 
 ### Offsite sync
 
-Backups land in `./backups` **on the same host as the databases** — by
-themselves they do not survive host loss. Configure offsite sync:
+Backups land in `$HHH_DATA_DIR/backups` (production: `/data/hhh/backups`)
+**on the same host as the databases** — by themselves they do not survive host
+loss. Everything needed is already built (rclone ships in the backup image,
+`OFFSITE_REMOTE` is wired in `docker-compose.yml`); it only needs configuring.
+Until it is, every backup run logs:
 
-1. Create `backup-service/rclone/rclone.conf` on the host (git-ignored) with a
-   remote, e.g. an S3-compatible bucket or TU SFTP target.
-2. Set `OFFSITE_REMOTE=<remote>:<path>` in `.env`.
-3. Recreate the backup container. Every nightly run then mirrors
-   `full_backup_*.tar.gz` + manifests offsite; sync failures trigger the
-   alert webhook/email like any other backup error.
+```
+OFFSITE_REMOTE not set — backups remain on this host only
+```
+
+To configure:
+
+1. Create `rclone.conf` in the directory compose mounts at `/config/rclone` —
+   that is **`$HHH_DATA_DIR/rclone/`**, i.e. `/data/hhh/rclone/rclone.conf` in
+   production. Any rclone remote works (S3-compatible bucket, TU SFTP target).
+2. Make it readable by the container's UID: `sudo chmod -R o+r /data/hhh/rclone`
+   — the backup container runs as a non-root user and the mount is read-only.
+3. Set `OFFSITE_REMOTE=<remote>:<path>` in the Portainer stack environment
+   (e.g. `tu-s3:hhh-backups`).
+4. **Recreate** the backup container — a restart is not enough for a new mount.
+
+Every run then mirrors `full_backup_*.tar.gz` and the manifests offsite, and a
+sync failure raises the alert webhook/email like any other backup error.
+
+> ⚠️ **`rclone sync` mirrors deletions.** The offsite copy inherits local
+> retention — when a 14-day-old archive is pruned here, the next run deletes it
+> there too. That is disaster recovery, **not** an archive. If you need
+> long-term retention (e.g. keeping monthly snapshots for the duration of a
+> study), point `OFFSITE_REMOTE` at a bucket with versioning or object-lock
+> enabled, or change the call to `rclone copy` in
+> `backup-service/backup.sh` (~line 438) so the remote is append-only.
 
 ### Restore drill (run quarterly — an untested backup is not a backup)
 
