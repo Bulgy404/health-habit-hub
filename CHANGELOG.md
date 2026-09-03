@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Resolved five Dependabot advisories** (2 high, 3 moderate) across `app/` and `backup-service/api/`. `fast-uri` (host confusion via skipped IDN canonicalization on scheme-relative references; SSRF via repeated hostname percent-decoding) and `@humanfs/node` (recursive copy following symlinks outside the source tree, dev-only) were resolved by `npm audit fix` — 3.1.5 → 3.1.7 and 0.16.6 → 0.16.8 respectively. `qs` (array-limit bypass via bracket-key comma parsing, plus two related DoS advisories) could not be: it is pinned transitively by `express@4.x` → `body-parser@1.x`, and npm's only registry-side fix is a breaking bump to `express@5`. Pinned it forward with an `overrides` entry (`"qs": "^6.16.0"`) in both packages instead — extending `app/package.json`'s existing overrides block and adding one to `backup-service/api/package.json`. Express itself stays on 4.x. Verified that query parsing is unaffected (simple, nested, array and percent-encoded/UTF-8 params) since `qs` is Express's query parser; `npm audit` reports 0 vulnerabilities in both packages.
+
 ## [1.1.5] - 2026-08-20
 
 ### Fixed
