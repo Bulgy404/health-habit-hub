@@ -130,13 +130,13 @@ An earlier plan hosted this on Cloudflare Pages/Workers under
 allow its nameservers to be delegated to Cloudflare while they remain zone
 administrator (a provider policy, not a `.de`-wide restriction), and
 Cloudflare Registrar doesn't support `.de` domains at all. A later, brief
-iteration used a Cloudflare Pages *Function* (`website/functions/api/`) just
-for the contact form while the rest of the site stayed self-hosted — that's
-now deprecated too (superseded by the Astro-native endpoint described above)
-and `website/functions/` is unused dead code kept only because it couldn't be
-deleted from this checkout at the time. Self-hosting the whole site, contact
-form included, sidesteps the DNS problem entirely: it only needs an ordinary
-`A`/`CNAME` record, which that provider does allow editing.
+iteration used a Cloudflare Pages *Function* for the contact form while the
+rest of the site stayed self-hosted; that was superseded by the Astro-native
+endpoint described above, and the leftover `website/functions/` directory has
+since been **removed**. Nothing in this repo targets Cloudflare any more.
+Self-hosting the whole site, contact form included, sidesteps the DNS problem
+entirely: it only needs an ordinary `A`/`CNAME` record, which that provider
+does allow editing.
 
 ## DNS for `healthhabithub.de`
 
