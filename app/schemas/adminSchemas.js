@@ -506,6 +506,7 @@ export const triggerBackupSchema = z.object({
       mongo: z.boolean().optional(),
       neo4j: z.boolean().optional(),
       lightrag: z.boolean().optional(),
+      audio: z.boolean().optional(),
       keycloak: z.boolean().optional(),
     })
     .strict()

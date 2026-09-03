@@ -89,7 +89,7 @@ export function getCurrentBackupJob() {
 }
 
 /**
- * @param {{ mongo?: boolean, neo4j?: boolean, lightrag?: boolean, keycloak?: boolean }} [services]
+ * @param {{ mongo?: boolean, neo4j?: boolean, lightrag?: boolean, audio?: boolean, keycloak?: boolean }} [services]
  *   Which components to include in this backup — any omitted key defaults to
  *   included (true). Omit entirely for "back up everything" (unchanged
  *   default behavior).

@@ -139,7 +139,7 @@ app.delete('/:filename', writeLimiter, (req, res) => {
 
 app.post('/trigger', writeLimiter, (req, res) => {
   try {
-    // services: optional { mongo?, neo4j?, lightrag?, keycloak? } booleans —
+    // services: optional { mongo?, neo4j?, lightrag?, audio?, keycloak? } booleans —
     // any omitted key defaults to included (true). See jobs.js's
     // includeEnvFromServices() for how this maps to backup.sh's env vars.
     const jobId = triggerBackup({
@@ -171,9 +171,13 @@ app.post('/restore', writeLimiter, (req, res) => {
 
   const manifest = getManifestForFile(filename);
   if (manifest && !acknowledgeWarnings) {
-    const failedComponents = ['mongo', 'lightrag', 'neo4j', 'keycloak'].filter(
-      (c) => manifest[`${c}Ok`] === false
-    );
+    const failedComponents = [
+      'mongo',
+      'lightrag',
+      'audio',
+      'neo4j',
+      'keycloak',
+    ].filter((c) => manifest[`${c}Ok`] === false);
     if (failedComponents.length > 0) {
       return res.status(409).json({
         error: 'This backup has known failed/missing components.',

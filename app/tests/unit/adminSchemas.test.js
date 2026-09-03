@@ -14,6 +14,7 @@ import {
   createCueSchema,
   importCuesSchema,
   createProfileFieldSchema,
+  triggerBackupSchema,
 } from '../../schemas/adminSchemas.js';
 
 function ok(schema, data) {
@@ -459,5 +460,39 @@ describe('createProfileFieldSchema', () => {
         { value: 'female', label: { en: 'Female', de: 'Weiblich' } },
       ],
     });
+  });
+});
+
+describe('triggerBackupSchema', () => {
+  // The set backup.sh actually supports (BACKUP_INCLUDE_* in backup-service/
+  // backup.sh) and that backup-service/api/jobs.js:includeEnvFromServices()
+  // maps. The admin Backups page sends all five at once, so a missing key in
+  // this .strict() object rejects EVERY manual backup with
+  // 'Unrecognized key' — which is exactly what happened with `audio`.
+  const COMPONENTS = ['mongo', 'neo4j', 'lightrag', 'audio', 'keycloak'];
+
+  it('accepts the full component selection the admin UI sends', () => {
+    ok(triggerBackupSchema, {
+      services: Object.fromEntries(COMPONENTS.map((c) => [c, true])),
+    });
+  });
+
+  it('accepts each component on its own, in both states', () => {
+    for (const c of COMPONENTS) {
+      ok(triggerBackupSchema, { services: { [c]: true } });
+      ok(triggerBackupSchema, { services: { [c]: false } });
+    }
+  });
+
+  it('accepts an omitted services object (back up everything)', () => {
+    ok(triggerBackupSchema, {});
+  });
+
+  it('rejects unknown components', () => {
+    fail(triggerBackupSchema, { services: { redis: true } });
+  });
+
+  it('rejects non-boolean values', () => {
+    fail(triggerBackupSchema, { services: { mongo: 'yes' } });
   });
 });

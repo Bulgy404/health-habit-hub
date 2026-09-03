@@ -29,6 +29,7 @@ and is annotated with the expected output.
     - [Recommender service unreachable](#recommender-service-unreachable--container-name-resolution)
     - [LibreTranslate down or returning empty translations](#libretranslate-down-or-returning-empty-translations)
     - [`website` gets Traefik's default cert instead of a real one](#website-gets-traefiks-default-cert-instead-of-a-real-one--empty-env-var-not-an-acme-failure)
+14. [Filesystem Maintenance](#14-filesystem-maintenance)
 
 ---
 
@@ -1368,6 +1369,117 @@ certificate request needed. Verify from outside:
 curl -v https://healthhabithub.de/ 2>&1 | grep -i "subject\|issuer"
 # Expected: Let's Encrypt, not TRAEFIK DEFAULT CERT
 ```
+
+---
+
+## 14. Filesystem Maintenance
+
+The server has two LVM volume groups — a 49.5 GB `main` (btrfs `/` and `/var`)
+and a 1 TB `data` (ext4, mounted at `/data`, holding Docker's `data-root` and
+all HHH runtime data). The layout is documented in
+[DEPLOYMENT.md § 7](../DEPLOYMENT.md#7-server-storage-layout). Databases live on
+`/data`; the 20 GB root holds only the OS and the config clone.
+
+### The btrfs free-space trap on `/`
+
+**`df` is misleading on btrfs, and the number that actually matters is
+`Device unallocated`.** btrfs carves the device into data and metadata chunks up
+front. When unallocated space reaches zero and metadata needs to grow, you get
+`ENOSPC` and a **read-only remount — while `df` still reports gigabytes free**.
+On the root filesystem, with Docker running, that is an outage.
+
+```bash
+sudo btrfs filesystem usage /
+```
+
+Watch `Device unallocated`. Keep it above ~1–2 GB. Observed 2026-09-03: **13 MiB**.
+
+A second symptom of the same problem is a large gap between live files and
+reported usage — `du -xh --max-depth=2 /` showing ~6 GB while btrfs reports
+14.49 GB used. The difference is pinned by snapshots.
+
+### Cause: snapper snapshots
+
+snapper runs an **hourly** timeline plus pre/post pairs around every `apt`
+transaction. 33 snapshots had accumulated, pinning ~9 GB.
+
+These snapshots protect **only the OS**. Mongo, Neo4j, Prometheus, LightRAG and
+the audio recordings are all on `/data`, which is ext4 and not snapshotted at
+all. So an hourly cadence buys an `apt upgrade` rollback and nothing else,
+at the cost of the root partition.
+
+```bash
+sudo snapper list
+```
+
+### Fix — delete first, then balance
+
+Order matters: deleting snapshots frees extents; balancing then returns
+half-empty chunks to unallocated. Both run online, no downtime.
+
+```bash
+# 1. Delete old snapshots, keeping the last few days and the boot snapshot
+sudo snapper delete <id> <id> ...
+
+# 2. Compact half-empty data chunks back into unallocated space
+sudo btrfs balance start -dusage=50 /
+sudo btrfs filesystem usage /
+```
+
+Measured result (2026-09-03): unallocated 13 MiB → **5.01 GiB**, used
+14.49 → 12.20 GiB, 5 of 25 chunks relocated, a few minutes.
+
+### Prevention — cap snapper
+
+Edit `/etc/snapper/configs/root`:
+
+```
+TIMELINE_LIMIT_HOURLY="0"
+TIMELINE_LIMIT_DAILY="7"
+TIMELINE_LIMIT_WEEKLY="4"
+TIMELINE_LIMIT_MONTHLY="0"
+TIMELINE_LIMIT_YEARLY="0"
+NUMBER_LIMIT="10"
+```
+
+```bash
+sudo snapper cleanup timeline && sudo snapper cleanup number
+```
+
+Daily snapshots plus the apt pre/post pairs are the right level here.
+
+### Docker build cache
+
+Usually the largest single consumer of `/data`. Observed at 34 GB, 28.8 GB of it
+reclaimable — roughly two thirds of everything on the volume.
+
+```bash
+sudo docker system df                      # inspect first
+sudo docker builder prune -f               # reclaim build cache
+sudo docker image prune -f                 # dangling images
+```
+
+Safe to run at any time; it only discards cache and untagged layers. Worth doing
+after any run of failed builds.
+
+### Routine check
+
+```bash
+df -h / /var /data && sudo btrfs filesystem usage / | grep -i unallocated
+```
+
+### Known gaps
+
+Two things this maintenance does **not** cover, both currently unaddressed:
+
+- **No offsite backup replication.** `$HHH_DATA_DIR/rclone` is empty, so no
+  remote is configured and every backup lives on the same VM as the data it
+  protects. Losing the VM loses both.
+- **No disk-space alerting.** Grafana's rules
+  (`monitoring/grafana/provisioning/alerting/alerting.yaml`) cover service
+  reachability, BullMQ job failures and 5xx spikes only. No node-exporter is
+  deployed, so no filesystem metrics exist to alert on — the btrfs exhaustion
+  above would have been visible weeks earlier with either.
 
 ---
 

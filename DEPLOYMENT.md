@@ -266,8 +266,14 @@ and rclone credentials that shouldn't live in the git checkout):
 ```bash
 sudo mkdir -p /opt/hhh
 sudo git clone https://github.com/Bulgy404/health-habit-hub.git /opt/hhh/repo
-sudo mkdir -p /opt/hhh/data/backups /opt/hhh/data/rclone
+sudo mkdir -p /data/hhh/backups /data/hhh/rclone
 ```
+
+> **`HHH_DATA_DIR` must be overridden in production.** Its compose default
+> (`/opt/hhh/data`) is on the 20 GB root filesystem, which backups will
+> eventually fill. On `habitvm` it is set to **`/data/hhh`**, on the 1 TB
+> volume — see [§7 Server Storage Layout](#7-server-storage-layout). The repo
+> clone stays on `/opt/hhh/repo`; only the *data* directory moves.
 
 Both directories need to be readable by whatever UID/GID the containers run
 as — usually **not** root and **not** your login user:
@@ -316,6 +322,69 @@ sudo chown -R 1032:1032 /mnt/data/appdata/hhh2/translate
 ```
 
 Failure to do this will cause `hhh-translate` to start but fail to persist language packs, resulting in empty translation responses.
+
+### 7. Server Storage Layout
+
+The production server (`habitvm`) has **two separate LVM volume groups**, and the
+split is not obvious from `df -h /`. Getting this wrong is the single most likely
+way to run the box out of disk.
+
+| Mount | Filesystem | Size | Holds |
+|---|---|---|---|
+| `/` | btrfs (VG `main`) | 20 GB | OS, `/opt/hhh/repo` (config clone) |
+| `/var` | btrfs (VG `main`) | 10 GB | system logs, apt |
+| *(swap)* | VG `main` | 5 GB | — |
+| `/data` | ext4 (VG `data`, `/dev/sdb1`) | **1 TB** | Docker root + all HHH runtime data |
+
+Three things follow from this:
+
+**Docker lives on `/data`, not on `/`.** `data-root` is `/data/docker`, so every
+named volume — `hhh-mongo-data`, `hhh-neo4j-data`, `hhh-prometheus-data`,
+`hhh-lightrag-data`, `hhh-audio-recordings-data` — is on the terabyte.
+**`df -h /` tells you nothing about database headroom**; use `df -h /data`.
+
+**The volume groups cannot borrow from each other.** VG `main` is only 49.5 GB
+(with ~14.5 GB unallocated); the terabyte belongs to VG `data`. You cannot
+`lvextend` the root filesystem using it. When `/` fills, the answer is to move
+data onto `/data`, not to resize.
+
+**`HHH_DATA_DIR` must be set to `/data/hhh`.** Its compose default
+(`/opt/hhh/data`) is on the 20 GB root, and with `BACKUP_RETENTION_DAYS=14` the
+backup directory grows until it fills it. Set it in the Portainer stack
+environment (see [Step 4](#step-4-override-environment-variables)). The config
+clone stays at `/opt/hhh/repo` — only the *data* directory moves.
+
+To migrate an existing server that is still on the default:
+
+```bash
+# 1. Create the target and stop the writer (databases keep running)
+sudo mkdir -p /data/hhh/backups /data/hhh/rclone
+sudo docker stop hhh-backup
+
+# 2. Copy, preserving ownership/permissions (rclone holds credentials).
+#    NOTE the source is /opt/hhh/data/ — NOT /opt/hhh/, which would also
+#    copy the git checkout at /opt/hhh/repo.
+sudo rsync -aH --info=progress2 /opt/hhh/data/ /data/hhh/
+sudo diff -r /opt/hhh/data /data/hhh   # must report no differences
+
+# 3. Set HHH_DATA_DIR=/data/hhh in the Portainer stack env, then Update the
+#    stack. Bind mounts are fixed at container creation, so the container must
+#    be RECREATED — a plain restart keeps the old paths.
+
+# 4. Verify both mounts moved
+sudo docker inspect hhh-backup \
+  --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+```
+
+Then trigger a backup from the admin Backups page and confirm a fresh dated
+directory appears under `/data/hhh/backups/`. Keep `/opt/hhh/data` until a
+scheduled cycle has completed cleanly — it is the only rollback.
+
+Existing backups move with you in step 2, so the retention history is preserved.
+
+For routine filesystem maintenance — the btrfs free-space trap on `/`, snapper
+limits, and reclaiming Docker build cache — see
+[docs/runbook.md § 14 Filesystem Maintenance](docs/runbook.md#14-filesystem-maintenance).
 
 ---
 
@@ -409,6 +478,11 @@ LLM_MODEL=alias-ha                     # a SCADS.AI alias — or alias-huge, ali
 ```env
 # Backup alerts (Slack/Discord/Teams webhook)
 ALERT_WEBHOOK_URL=<your-webhook-url>
+
+# Runtime data directory (backups + rclone credentials). MUST be set — the
+# compose default /opt/hhh/data sits on the 20 GB root filesystem, which
+# 14 days of full backups will fill. See "7. Server Storage Layout" above.
+HHH_DATA_DIR=/data/hhh
 
 # Backup retention
 BACKUP_RETENTION_DAYS=14

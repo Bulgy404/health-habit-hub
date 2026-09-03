@@ -67,3 +67,14 @@ data we hold. **This is the current model; we are keeping it for now.**
   Dresden storage backing MongoDB/Neo4j (infra-level; no app change required).
 - **Authorization.** Keycloak OIDC roles (participant/researcher/admin),
   enforced in `app/middleware/` and `admin/src/middleware.ts`.
+
+> **Planned exception — not yet implemented.** An optional, per-study *verified
+> identity* mode is designed (approved 2026-09-03) for clinical studies that
+> must identify participants. It does **not** change the model above: identity
+> data would live in a **separate service and database** with envelope
+> encryption and its own key, while HHH continues to hold only a study-local
+> subject code. Anonymous studies stay unaffected. The "no application-level
+> field encryption" rationale above remains true for the research databases and
+> is deliberately **inverted** for that register. See
+> [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md). Update this
+> section when the first phase ships.

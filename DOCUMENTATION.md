@@ -36,6 +36,7 @@
 > | [`docs/architecture.md`](docs/architecture.md) | Extended architecture narrative |
 > | [`docs/diagrams/`](docs/diagrams/README.md) | Diagrams-as-code (system, sequences, use cases, class model) |
 > | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
+> | [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md) | Design for optional per-study verified-identity mode (clinical studies) — **approved, not yet implemented** |
 > | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention, and the spring-based motion vocabulary (`AppSpring`, `PressableScale`, reduced-motion handling) |
 
 ## 1. Project Overview
