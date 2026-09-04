@@ -60,16 +60,17 @@
       "auditLog": "Audit-Log",
       "team": "Team & Rollen",
       "help": "Hilfe",
-      "restoreAttempts": "Wiederherstellung"
+      "restoreAttempts": "Wiederherstellung",
+      "identity": "Identitätsregister",
+      "identityRequests": "Re-Identifizierung",
+      "identityAudit": "Identitäts-Protokoll",
+      "consentDocuments": "Einwilligungsdokumente"
     },
     "language": "Sprache",
     "toggleTheme": "Design wechseln",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
-    "signOut": "Abmelden",
-    "identity": "Identitätsregister",
-    "identityRequests": "Re-Identifizierung",
-    "identityAudit": "Identitäts-Protokoll"
+    "signOut": "Abmelden"
   },
   "system": {
     "title": "System & Links",
@@ -1248,5 +1249,56 @@
     "lastAttempt": "Letzter Versuch",
     "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
     "loadFailed": "Wiederherstellungsversuche konnten nicht geladen werden"
+  },
+  "consentDocuments": {
+    "title": "Studien-Einwilligungsdokumente",
+    "subtitle": "Die zusätzliche Einwilligung, die Teilnehmende beim Beitritt zu einer Studie mit Identitätsprüfung annehmen — hier in allen Sprachen der App gepflegt.",
+    "noDocuments": "Noch keine Studien-Einwilligungsdokumente. Eines entsteht, sobald Sie die erste Sprache zu einem Slug speichern.",
+    "slug": "Slug",
+    "usedBy": "Verwendet von",
+    "usedByNone": "Keiner Studie zugeordnet",
+    "ready": "Einsatzbereit",
+    "notReady": "Nicht einsatzbereit",
+    "readyHint": "Ein Dokument kann einer Studie erst zugeordnet werden, wenn es veröffentlicht, in allen Sprachen vorhanden und frei von ⟦…⟧-Platzhaltern ist.",
+    "languages": "Sprachen",
+    "source": "Quelle",
+    "sourceDb": "Hier bearbeitet",
+    "sourceFile": "Mit der App ausgeliefert",
+    "sourceMissing": "Noch nicht verfasst",
+    "version": "Version",
+    "effectiveDate": "Gültig ab",
+    "bindingLanguage": "Verbindliche Sprache",
+    "statusDraft": "Entwurf",
+    "statusPublished": "Veröffentlicht",
+    "placeholders": "Enthält ⟦…⟧-Platzhalter",
+    "edit": "Bearbeiten",
+    "editing": "{lang} bearbeiten",
+    "body": "Markdown",
+    "preview": "Vorschau",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "revert": "Ausgelieferten Text wiederherstellen",
+    "revertConfirm": "Den hier bearbeiteten Text verwerfen und zur mit der App ausgelieferten Fassung zurückkehren?",
+    "reverted": "Ausgelieferter Text wiederhergestellt.",
+    "loadShipped": "Ausgelieferten Text in den Editor laden",
+    "newSlug": "Neues Dokument",
+    "newSlugPrompt": "Slug (Kleinbuchstaben, Ziffern und Bindestriche)",
+    "saveFailed": "Speichern nicht möglich. {problems}",
+    "loadFailed": "Einwilligungsdokumente konnten nicht geladen werden.",
+    "reasons": {
+      "document_not_found": "In keiner Sprache verfasst",
+      "invalid_slug": "Ungültiger Slug",
+      "missing_languages": "Fehlt in: {langs}",
+      "draft_languages": "Noch Entwurf in: {langs}",
+      "placeholders_remain": "Platzhalter verblieben in: {langs}",
+      "version_mismatch": "Sprachen haben unterschiedliche Versionen: {versions}"
+    },
+    "problems": {
+      "body_too_short": "Der Text ist zu kurz.",
+      "invalid_version": "Die Version muss die Form 1.0.0 haben.",
+      "invalid_effective_date": "Gültig ab muss JJJJ-MM-TT sein.",
+      "invalid_status": "Status muss Entwurf oder Veröffentlicht sein.",
+      "placeholders_remain": "Füllen Sie die ⟦…⟧-Platzhalter aus, oder speichern Sie als Entwurf."
+    }
   }
 }

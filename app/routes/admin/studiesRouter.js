@@ -40,6 +40,7 @@ import {
 } from '../../services/questionnaireScheduleService.js';
 import { validate } from '../../middleware/validate.js';
 import { requireStudyAccess } from '../../middleware/requireStudyAccess.js';
+import { consentGateForStudyUpdate } from '../../services/consentDocumentService.js';
 import {
   createStudySchema,
   updateStudySchema,
@@ -52,6 +53,30 @@ import {
 } from '../../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'studiesRouter' });
+
+/**
+ * Wraps {@link consentGateForStudyUpdate} so a failure inside it cannot block
+ * an unrelated study edit.
+ *
+ * Fails OPEN deliberately. This is a helpfulness guard on a configuration
+ * screen, not a security control — an admin must not lose the ability to edit
+ * a study's reminder settings because a readiness lookup threw.
+ *
+ * @returns {Promise<object|null>} A 409 body, or null to proceed.
+ */
+async function consentDocumentBlockingReason({ db, id, updates }) {
+  if (!updates?.identity) return null;
+  try {
+    return await consentGateForStudyUpdate({
+      db,
+      study: await getStudy({ db, id }),
+      identityUpdate: updates.identity,
+    });
+  } catch (err) {
+    log.error({ err, id }, 'consent document readiness check failed');
+    return null;
+  }
+}
 
 export function createStudiesRouter({
   db,
@@ -163,6 +188,24 @@ export function createStudiesRouter({
   router.put('/studies/:id', validate(updateStudySchema), async (req, res) => {
     try {
       const database = await getDb();
+
+      // A consent slug pointing at a document that is missing, still a draft,
+      // or still carrying ⟦…⟧ placeholders 404s the participant AFTER they
+      // have enrolled — the worst possible moment, and invisible until it
+      // happens. Refuse the configuration instead, here, in front of the
+      // person who can fix it.
+      const notReady = await consentDocumentBlockingReason({
+        db: database,
+        id: req.params.id,
+        updates: req.body,
+      });
+      if (notReady) {
+        res.locals.auditAction = 'update_study_rejected';
+        res.locals.auditResourceType = 'study';
+        res.locals.auditResourceId = req.params.id;
+        return res.status(409).json(notReady);
+      }
+
       const result = await updateStudy({
         db: database,
         id: req.params.id,

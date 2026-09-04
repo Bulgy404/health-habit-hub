@@ -2,7 +2,18 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { marked } from 'marked';
 
-const ALLOWED_LANGS = new Set(['en', 'de', 'ja', 'fr', 'nl']);
+/**
+ * Every locale the participant app serves legal documents in.
+ *
+ * Exported because a study consent document has to exist in ALL of them —
+ * `req.lang` decides which file is read, so a document written only in German
+ * 404s a Dutch participant *after* they have already enrolled. The admin
+ * portal and scripts/checkLegalDocs.mjs both check completeness against this
+ * list; neither should keep its own copy of it.
+ */
+export const SUPPORTED_LANGS = Object.freeze(['en', 'de', 'ja', 'fr', 'nl']);
+
+const ALLOWED_LANGS = new Set(SUPPORTED_LANGS);
 const ALLOWED_NAMES = new Set([
   'accessibility',
   'imprint',
@@ -55,7 +66,10 @@ export function parseFrontMatter(raw) {
  * cannot escape the language directory, which is the only thing the allow-list
  * was protecting against here.
  */
-const STUDY_CONSENT_NAME = /^consent-[a-z0-9][a-z0-9-]{0,63}$/;
+export const STUDY_CONSENT_NAME = /^consent-[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** The slug alone, without the `consent-` prefix. Shared with the API layer. */
+export const STUDY_CONSENT_SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export async function loadMarkdown(lang, name) {
   const nameAllowed = ALLOWED_NAMES.has(name) || STUDY_CONSENT_NAME.test(name);

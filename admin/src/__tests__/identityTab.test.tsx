@@ -64,13 +64,18 @@ describe("IdentityTab", () => {
     expect(onChange).toHaveBeenCalledWith({ revealTtlMinutes: 30 });
   });
 
-  it("warns that a consent slug needs a matching document", () => {
+  it("warns that a consent slug needs a document published in every language", () => {
     // A slug with no document 404s the participant after they have already
-    // enrolled — the worst possible moment to discover it.
+    // enrolled — the worst possible moment to discover it. The backend now
+    // refuses the configuration outright; this text is what tells the admin
+    // where to go and fix it.
     setup({ mode: "verified" });
     expect(
-      screen.getByText(/A document must exist at/i),
+      screen.getByText(/published in every language before it can be attached/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /consent documents/i }),
+    ).toHaveAttribute("href", "/consent-documents");
   });
 
   it("explains the operational cost of two approvers", () => {

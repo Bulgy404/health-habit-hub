@@ -32,6 +32,7 @@ import {
   IdCard,
   ShieldCheck,
   ScrollText,
+  FileSignature,
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
 import { signOutOfKeycloak } from "@/lib/keycloakSignOut";
@@ -97,6 +98,12 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/questionnaires", labelKey: "questionnaires", Icon: ClipboardList },
       { href: "/profile-fields", labelKey: "profileFields", Icon: UserCircle, adminOnly: true },
       { href: "/knowledge-base", labelKey: "knowledgeBase", Icon: BookOpen, adminOnly: true },
+      {
+        href: "/consent-documents",
+        labelKey: "consentDocuments",
+        Icon: FileSignature,
+        adminOnly: true,
+      },
     ],
   },
   {

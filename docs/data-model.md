@@ -687,6 +687,8 @@ collections with no direct foreign-key relationships shown here).
 | `backup_audit_log`            | Append-only record of admin backup trigger/restore/upload actions                                                                                                                           | No                           |
 | `restore_confirmation_tokens` | Short-lived, single-use tokens gating an **admin system-backup** restore call (TTL-indexed)                                                                                                 | No                           |
 | `restore_attempts`            | Security log of **participant passphrase-based account-recovery** attempts (unrelated to the collection above despite the similar name — TTL-indexed)                                       | No                           |
+| `study_memberships`           | Per-study researcher access. Required only where a study's `identity.researcherScoping` is `scoped`, which verified studies force on; `scope` separates reading a study from exporting it   | No                           |
+| `study_consent_documents`     | Study-specific consent text authored in the admin portal, one row per (`slug`, `lang`). **Overrides** the shipped `app/language/<lang>/consent-<slug>.md`; deleting the row falls back to it | No                           |
 
 ---
 

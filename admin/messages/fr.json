@@ -60,16 +60,17 @@
       "auditLog": "Journal d'audit",
       "team": "Équipe et rôles",
       "help": "Aide",
-      "restoreAttempts": "Tentatives de restauration"
+      "restoreAttempts": "Tentatives de restauration",
+      "identity": "Registre d'identité",
+      "identityRequests": "Ré-identification",
+      "identityAudit": "Journal d'identité",
+      "consentDocuments": "Documents de consentement"
     },
     "language": "Langue",
     "toggleTheme": "Changer de thème",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
-    "signOut": "Déconnexion",
-    "identity": "Registre d'identité",
-    "identityRequests": "Ré-identification",
-    "identityAudit": "Journal d'identité"
+    "signOut": "Déconnexion"
   },
   "system": {
     "title": "Système et liens",
@@ -1248,5 +1249,56 @@
     "lastAttempt": "Dernière tentative",
     "totalPageInfo": "{total} au total · page {page} sur {totalPages}",
     "loadFailed": "Échec du chargement des tentatives de restauration"
+  },
+  "consentDocuments": {
+    "title": "Documents de consentement d'étude",
+    "subtitle": "Le consentement complémentaire accepté par les participants rejoignant une étude avec vérification d'identité — rédigé ici dans toutes les langues de l'application.",
+    "noDocuments": "Aucun document de consentement d'étude pour l'instant. Un document est créé dès que vous enregistrez une première langue pour un slug.",
+    "slug": "Slug",
+    "usedBy": "Utilisé par",
+    "usedByNone": "Rattaché à aucune étude",
+    "ready": "Prêt à être rattaché",
+    "notReady": "Pas prêt",
+    "readyHint": "Un document ne peut être rattaché à une étude que s'il est publié, complet dans toutes les langues et sans espaces réservés ⟦…⟧.",
+    "languages": "Langues",
+    "source": "Source",
+    "sourceDb": "Modifié ici",
+    "sourceFile": "Livré avec l'application",
+    "sourceMissing": "Pas encore rédigé",
+    "version": "Version",
+    "effectiveDate": "Date d'entrée en vigueur",
+    "bindingLanguage": "Langue faisant foi",
+    "statusDraft": "Brouillon",
+    "statusPublished": "Publié",
+    "placeholders": "Contient des espaces réservés ⟦…⟧",
+    "edit": "Modifier",
+    "editing": "Modification de {lang}",
+    "body": "Markdown",
+    "preview": "Aperçu",
+    "save": "Enregistrer",
+    "saved": "Enregistré.",
+    "revert": "Restaurer le texte livré",
+    "revertConfirm": "Abandonner le texte modifié ici et revenir à la version livrée avec l'application ?",
+    "reverted": "Texte livré restauré.",
+    "loadShipped": "Charger le texte livré dans l'éditeur",
+    "newSlug": "Nouveau document",
+    "newSlugPrompt": "Slug (minuscules, chiffres et tirets)",
+    "saveFailed": "Enregistrement impossible. {problems}",
+    "loadFailed": "Impossible de charger les documents de consentement.",
+    "reasons": {
+      "document_not_found": "Rédigé dans aucune langue",
+      "invalid_slug": "Slug invalide",
+      "missing_languages": "Manquant en : {langs}",
+      "draft_languages": "Encore un brouillon en : {langs}",
+      "placeholders_remain": "Espaces réservés restants en : {langs}",
+      "version_mismatch": "Les langues sont à des versions différentes : {versions}"
+    },
+    "problems": {
+      "body_too_short": "Le texte est trop court.",
+      "invalid_version": "La version doit ressembler à 1.0.0.",
+      "invalid_effective_date": "La date d'entrée en vigueur doit être AAAA-MM-JJ.",
+      "invalid_status": "Le statut doit être brouillon ou publié.",
+      "placeholders_remain": "Remplissez les espaces réservés ⟦…⟧ avant de publier, ou enregistrez comme brouillon."
+    }
   }
 }

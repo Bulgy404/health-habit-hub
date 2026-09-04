@@ -88,8 +88,16 @@ function refreshSessionToken(): Promise<string | null> {
  * access token: on a 401 it refreshes the session once and retries with the
  * fresh token. The `Authorization` header is applied here (not by callers) so
  * the retry can swap in the new bearer.
+ *
+ * Exported for the few callers that need the raw `Response` because the error
+ * body carries structured detail {@link apiFetch} flattens into a message —
+ * the consent-document editor, whose 400 lists which validations failed.
  */
-async function fetchWithRefresh(url: string, token: string, opts: RequestInit): Promise<Response> {
+export async function fetchWithRefresh(
+  url: string,
+  token: string,
+  opts: RequestInit
+): Promise<Response> {
   const send = (bearer: string) =>
     fetch(url, {
       ...opts,

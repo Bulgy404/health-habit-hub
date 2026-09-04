@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Researcher CSV exports emit the study-local subject code for verified studies and withhold the raw Keycloak sub entirely. Anonymous studies are byte-identical to before.
   - `identity-service` shares **no Docker network** with `mongo` or `neo4j`, asserted by a CI test against `docker-compose.yml`.
   - Docs: `docs/identity-register.md` (operator and study-site runbook), `docs/identity-mode-plan.md` (design), plus `SECURITY.md`, `DEPLOYMENT.md` and `.env.example`.
+  - **Study consent documents, authored in the admin portal.** A verified study asks participants for an additional consent after they redeem their code, and until now that text could only be changed by editing a markdown file in the repository and redeploying — not a workable loop for wording an ethics committee revises. A new **Consent Documents** page writes it per language, backed by `study_consent_documents` in Mongo, which **overrides** the file shipped with the image; deleting the row falls back to it, and the portal shows which of the two is live per language.
+  - **A study can no longer be configured with a consent document a participant could not read.** `PUT /admin/studies/:id` returns `409 consent_document_not_ready` unless the named document is present in all five languages, published, free of `⟦…⟧` placeholders, and at one version across every locale. Previously the failure surfaced as a 404 to the participant *after* they had enrolled — the worst possible moment, and invisible to the person who could fix it. `scripts/checkLegalDocs.mjs` enforces the same completeness rules over the shipped files in CI.
+  - **`consent-habconnect-clinical`** — the clinical-arm consent for HabConnect, written in all five languages from the study's real details, shipped as a **draft**. It states explicitly which parts of the platform consent it overrides: that document promises no name and no date of birth are stored, which for a verified arm is not true, and two consent texts must not be left to contradict each other. Three `⟦…⟧` placeholders mark what only the ethics submission can supply — the recruiting institution, the approval reference, and the register's retention period.
+
+### Fixed
+
+- **Three admin-portal sidebar entries rendered as raw message keys.** `identity`, `identityRequests` and `identityAudit` were added under `sidebar.*` in all four locale files, but the sidebar looks labels up as `sidebar.nav.*` — so the Identity register, Re-identification and Identity audit links showed their key paths instead of their names. Moved them into `nav`.
 
 ### Security
 

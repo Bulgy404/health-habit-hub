@@ -26,6 +26,7 @@ behind it, see [`identity-mode-plan.md`](identity-mode-plan.md).
 | **Identity register** | identity roles | The roster: add subjects, issue codes, mark verification, print the code sheet |
 | **Re-identification** | `identity-manager`, `monitor` | Raise, approve/reject and reveal — the queue |
 | **Identity audit** | `identity-manager`, `monitor` | Every recorded action, filterable to reveals, exportable as CSV |
+| **Consent documents** | `admin` | Write and publish the study consent text, per language — see below |
 
 `admin` configures the study but has no standing access to the register
 itself; the identity roles have access to the register but cannot change the
@@ -91,15 +92,78 @@ identity provider the operator does not control; see the plan's §5.
    reason.
 
 > A consent slug with no matching document 404s the participant **after** they
-> have enrolled — the worst possible moment. Copy
-> `app/language/<lang>/consent-verified-template.md` to
-> `consent-<slug>.md` for every language you support, adapt it to your ethics
-> approval, and remove the template notice before going live.
+> have enrolled. Attaching one that is not ready is therefore **refused**
+> (`409 consent_document_not_ready`) — see *The consent document* below.
 
 > `mode` and `subjectCodePrefix` **freeze once the first participant enrols**
 > (HTTP 409 thereafter). Flipping to anonymous would orphan live subject links;
 > changing the prefix would break the correspondence between a stored subject
 > code and the register that issued it.
+
+---
+
+## The consent document
+
+The additional consent a participant accepts after redeeming their code, on top
+of the platform's own. Written and published in the admin portal under
+**Consent Documents**.
+
+A study consent document exists in two places, deliberately:
+
+| Source | What it is |
+| --- | --- |
+| `app/language/<lang>/consent-<slug>.md` | Shipped with the image, in version control, gated by `scripts/checkLegalDocs.mjs` |
+| `study_consent_documents` in Mongo | Edited in the portal — **overrides** the file for that language |
+
+The database wins where a row exists. That ordering is the point: a wording
+change agreed with an ethics committee mid-study must not need a redeploy, but
+a fresh deployment with an empty database must still serve the text that
+shipped with it. The portal shows which of the two is live per language, and
+offers **Restore shipped text** to drop the override.
+
+### Ready, and why a document might not be
+
+A document can be attached to a study only when it is:
+
+- **present in all five languages** (`en`, `de`, `ja`, `fr`, `nl`) — `req.lang`
+  picks the file, so a document written only in German 404s a Dutch
+  participant;
+- **published**, not a draft;
+- **free of `⟦…⟧` placeholders** — these mark the things software cannot know:
+  the recruiting institution, the ethics reference, the retention period;
+- **at one version across every language** — `consents.consentVersion` is a
+  bare semver, so mismatched locales make an acceptance record ambiguous about
+  which text was actually read.
+
+Anything else and `PUT /admin/studies/:id` returns **409
+`consent_document_not_ready`** with the specific reasons. This is the point of
+the check: the error lands on the person configuring the study, not on a
+participant who has already enrolled.
+
+Publishing a text that still contains placeholders is refused; saving it as a
+**draft** is not. Draft is the normal working state.
+
+### What ships today
+
+`consent-habconnect-clinical` — the clinical-arm consent for HabConnect, in all
+five languages, **as a draft**. It is filled in from the study's real details
+(TU Dresden, Digital Health research group, the contacts and supervisory
+authority from the platform consent) and carries three placeholders only the
+ethics submission can resolve:
+
+- ⟦the cooperating clinical institution⟧
+- ⟦the ethics approval reference and date⟧
+- ⟦the retention period for the register entry⟧
+
+`consent-verified-template.md` remains as a pattern for a *different* study;
+`*-template` files are skipped by both CI and the portal and are never served.
+
+> **Read the "What changes compared with the general consent" section against
+> your ethics approval.** The platform consent states that no name or date of
+> birth is stored — for a verified arm that is not true, and the document says
+> so explicitly rather than leaving two documents to contradict each other.
+> That contradiction has to be resolved in the ethics submission, not only in
+> the text.
 
 ---
 
@@ -271,6 +335,8 @@ rotation never triggers the expensive one.
 | Valid `HHV-` code rejected in the app | The mobile build predates the widened format. Ship the app update **before** minting any HHV codes |
 | Service refuses to start: "must not be used in production" | The master key was supplied as an environment variable. Mount it as a file and set `IDENTITY_MASTER_KEY_FILE` |
 | A code is stuck `reserved` | A crash between reserve and confirm. The sweeper reclaims it within `IDENTITY_RESERVATION_TTL_MINUTES` (default 10) |
+| `409 consent_document_not_ready` when saving a study | The named consent document is missing a language, is still a draft, still has `⟦…⟧` placeholders, or its languages sit at different versions. The response names which |
+| Edited the consent text in the portal, participants still see the old one | Only the language you edited is overridden. Check the **Source** column — the others still read the shipped file |
 
 ## See also
 

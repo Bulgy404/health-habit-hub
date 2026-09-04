@@ -60,16 +60,17 @@
       "auditLog": "Auditlogboek",
       "team": "Team & rollen",
       "help": "Hulp",
-      "restoreAttempts": "Herstelpogingen"
+      "restoreAttempts": "Herstelpogingen",
+      "identity": "Identiteitsregister",
+      "identityRequests": "Her-identificatie",
+      "identityAudit": "Identiteitslogboek",
+      "consentDocuments": "Toestemmingsdocumenten"
     },
     "language": "Taal",
     "toggleTheme": "Thema wisselen",
     "openMenu": "Menu openen",
     "closeMenu": "Menu sluiten",
-    "signOut": "Afmelden",
-    "identity": "Identiteitsregister",
-    "identityRequests": "Her-identificatie",
-    "identityAudit": "Identiteitslogboek"
+    "signOut": "Afmelden"
   },
   "system": {
     "title": "Systeem & links",
@@ -1248,5 +1249,56 @@
     "lastAttempt": "Laatste poging",
     "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}",
     "loadFailed": "Laden van herstelpogingen mislukt"
+  },
+  "consentDocuments": {
+    "title": "Toestemmingsdocumenten voor studies",
+    "subtitle": "De aanvullende toestemming die deelnemers accepteren bij deelname aan een studie met identiteitscontrole — hier onderhouden in alle talen van de app.",
+    "noDocuments": "Nog geen toestemmingsdocumenten voor studies. Er ontstaat er een zodra u de eerste taal voor een slug opslaat.",
+    "slug": "Slug",
+    "usedBy": "Gebruikt door",
+    "usedByNone": "Aan geen enkele studie gekoppeld",
+    "ready": "Klaar om te koppelen",
+    "notReady": "Niet klaar",
+    "readyHint": "Een document kan pas aan een studie worden gekoppeld als het gepubliceerd is, in alle talen bestaat en geen ⟦…⟧-tijdelijke aanduidingen meer bevat.",
+    "languages": "Talen",
+    "source": "Bron",
+    "sourceDb": "Hier bewerkt",
+    "sourceFile": "Meegeleverd met de app",
+    "sourceMissing": "Nog niet geschreven",
+    "version": "Versie",
+    "effectiveDate": "Geldig vanaf",
+    "bindingLanguage": "Bindende taal",
+    "statusDraft": "Concept",
+    "statusPublished": "Gepubliceerd",
+    "placeholders": "Bevat ⟦…⟧-tijdelijke aanduidingen",
+    "edit": "Bewerken",
+    "editing": "{lang} bewerken",
+    "body": "Markdown",
+    "preview": "Voorbeeld",
+    "save": "Opslaan",
+    "saved": "Opgeslagen.",
+    "revert": "Meegeleverde tekst herstellen",
+    "revertConfirm": "De hier bewerkte tekst weggooien en terug naar de met de app meegeleverde versie?",
+    "reverted": "Meegeleverde tekst hersteld.",
+    "loadShipped": "Meegeleverde tekst in de editor laden",
+    "newSlug": "Nieuw document",
+    "newSlugPrompt": "Slug (kleine letters, cijfers en streepjes)",
+    "saveFailed": "Opslaan mislukt. {problems}",
+    "loadFailed": "Toestemmingsdocumenten konden niet worden geladen.",
+    "reasons": {
+      "document_not_found": "In geen enkele taal geschreven",
+      "invalid_slug": "Ongeldige slug",
+      "missing_languages": "Ontbreekt in: {langs}",
+      "draft_languages": "Nog concept in: {langs}",
+      "placeholders_remain": "Tijdelijke aanduidingen over in: {langs}",
+      "version_mismatch": "Talen staan op verschillende versies: {versions}"
+    },
+    "problems": {
+      "body_too_short": "De tekst is te kort.",
+      "invalid_version": "De versie moet eruitzien als 1.0.0.",
+      "invalid_effective_date": "Geldig vanaf moet JJJJ-MM-DD zijn.",
+      "invalid_status": "Status moet concept of gepubliceerd zijn.",
+      "placeholders_remain": "Vul de ⟦…⟧-tijdelijke aanduidingen in voordat u publiceert, of sla op als concept."
+    }
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 /**
  * Verified-identity configuration for a study.
@@ -129,10 +130,12 @@ export function IdentityTab({ value, hasEnrolments, onChange }: IdentityTabProps
             />
           </label>
           <p style={{ fontSize: 12, color: "#b26a00", margin: "0 0 12px 0" }}>
-            A document must exist at{" "}
-            <code>app/language/&lt;lang&gt;/consent-&lt;slug&gt;.md</code> for
-            every language you support. If it does not, participants hit an
-            error after enrolling. Leave empty for no extra consent.
+            The document must be published in every language before it can be
+            attached — saving is refused otherwise, because an incomplete one
+            fails the participant <em>after</em> they have enrolled. Write and
+            publish it under{" "}
+            <Link href="/consent-documents">Consent Documents</Link>. Leave
+            empty for no extra consent.
           </p>
 
           <label style={{ display: "block", margin: "8px 0" }}>

@@ -134,6 +134,9 @@ export async function ensureIndexes(database) {
 
   // Per-study researcher membership (scoped access to verified studies).
   await ensureFor(database, './studyMembership.js');
+
+  // Study-specific consent documents authored in the admin portal.
+  await ensureFor(database, './studyConsentDocument.js');
 }
 
 export async function disconnect() {

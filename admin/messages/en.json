@@ -60,16 +60,17 @@
       "auditLog": "Audit Log",
       "team": "Team & Roles",
       "help": "Help",
-      "restoreAttempts": "Restore Attempts"
+      "restoreAttempts": "Restore Attempts",
+      "identity": "Identity register",
+      "identityRequests": "Re-identification",
+      "identityAudit": "Identity audit",
+      "consentDocuments": "Consent Documents"
     },
     "language": "Language",
     "toggleTheme": "Toggle theme",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "signOut": "Sign out",
-    "identity": "Identity register",
-    "identityRequests": "Re-identification",
-    "identityAudit": "Identity audit"
+    "signOut": "Sign out"
   },
   "system": {
     "title": "System & Links",
@@ -1248,5 +1249,56 @@
     "lastAttempt": "Last attempt",
     "totalPageInfo": "{total} total · page {page} of {totalPages}",
     "loadFailed": "Failed to load restore attempts"
+  },
+  "consentDocuments": {
+    "title": "Study consent documents",
+    "subtitle": "The additional consent a participant accepts when they join a verified study — authored here in every language the app serves.",
+    "noDocuments": "No study consent documents yet. One is created the first time you save a language for a slug.",
+    "slug": "Slug",
+    "usedBy": "Used by",
+    "usedByNone": "Not attached to any study",
+    "ready": "Ready to attach",
+    "notReady": "Not ready",
+    "readyHint": "A document can only be attached to a study once it is published, complete in every language, and free of ⟦…⟧ placeholders.",
+    "languages": "Languages",
+    "source": "Source",
+    "sourceDb": "Edited here",
+    "sourceFile": "Shipped with the app",
+    "sourceMissing": "Not written yet",
+    "version": "Version",
+    "effectiveDate": "Effective date",
+    "bindingLanguage": "Binding language",
+    "statusDraft": "Draft",
+    "statusPublished": "Published",
+    "placeholders": "Contains ⟦…⟧ placeholders",
+    "edit": "Edit",
+    "editing": "Editing {lang}",
+    "body": "Markdown",
+    "preview": "Preview",
+    "save": "Save",
+    "saved": "Saved.",
+    "revert": "Restore shipped text",
+    "revertConfirm": "Discard the text edited here and go back to the version shipped with the app?",
+    "reverted": "Restored the shipped text.",
+    "loadShipped": "Load shipped text into the editor",
+    "newSlug": "New document",
+    "newSlugPrompt": "Slug (lowercase letters, digits and dashes)",
+    "saveFailed": "Could not save. {problems}",
+    "loadFailed": "Could not load consent documents.",
+    "reasons": {
+      "document_not_found": "Written in no language at all",
+      "invalid_slug": "Invalid slug",
+      "missing_languages": "Missing in: {langs}",
+      "draft_languages": "Still a draft in: {langs}",
+      "placeholders_remain": "Placeholders left in: {langs}",
+      "version_mismatch": "Languages sit at different versions: {versions}"
+    },
+    "problems": {
+      "body_too_short": "The text is too short.",
+      "invalid_version": "Version must look like 1.0.0.",
+      "invalid_effective_date": "Effective date must be YYYY-MM-DD.",
+      "invalid_status": "Status must be draft or published.",
+      "placeholders_remain": "Fill in the ⟦…⟧ placeholders before publishing, or save as a draft."
+    }
   }
 }
