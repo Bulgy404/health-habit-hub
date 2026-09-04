@@ -46,8 +46,20 @@ export function parseFrontMatter(raw) {
  *   HTML and document metadata (version, effectiveDate, bindingLanguage).
  * @throws {Error} If lang or name is not in the allow-list.
  */
+/**
+ * Study-specific consent documents, e.g. `consent-dfg-verified`.
+ *
+ * These cannot be enumerated in ALLOWED_NAMES because a slug is chosen per
+ * study at configuration time. The pattern is strict — lowercase alphanumerics
+ * and dashes only — so a slug can never contain `/`, `.` or `..` and therefore
+ * cannot escape the language directory, which is the only thing the allow-list
+ * was protecting against here.
+ */
+const STUDY_CONSENT_NAME = /^consent-[a-z0-9][a-z0-9-]{0,63}$/;
+
 export async function loadMarkdown(lang, name) {
-  if (!ALLOWED_LANGS.has(lang) || !ALLOWED_NAMES.has(name)) {
+  const nameAllowed = ALLOWED_NAMES.has(name) || STUDY_CONSENT_NAME.test(name);
+  if (!ALLOWED_LANGS.has(lang) || !nameAllowed) {
     throw new Error(`Invalid markdown request: lang=${lang} name=${name}`);
   }
   const filePath = path.join('language', lang, `${name}.md`);

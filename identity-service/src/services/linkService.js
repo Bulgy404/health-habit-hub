@@ -45,10 +45,10 @@ export class LinkError extends Error {
  * retry, cannot both match. Postgres serialises them and the loser sees zero
  * rows.
  *
- * @param {{ db, keys, code, reservationTtlMinutes }} deps
+ * @param {{ db, keys, code }} deps
  * @returns {Promise<{reservationId, hhhStudyId, subjectCode, expiresAt}>}
  */
-export async function reserveCode({ db, keys, code, reservationTtlMinutes }) {
+export async function reserveCode({ db, keys, code }) {
   const normalized = normalizeEnrollmentCode(code);
   if (!normalized) throw new LinkError('invalid_code', 'Code is required');
 

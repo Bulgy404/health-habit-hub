@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import 'consent_screen.dart' show kPendingStudyConsentSlugKey;
+
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -48,17 +50,20 @@ final RegExp _anonymousCodePattern = RegExp(r'^HHH-[A-Z0-9]{5}$');
 final RegExp _verifiedCodePattern =
     RegExp(r'^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$');
 
-/// Repairs the substitutions people actually make when copying a code.
+/// Normalises a code for submission.
 ///
-/// Safe because no valid code contains I, L, O or U, so this can never corrupt
-/// a legitimate code — it only rescues a mistyped one.
+/// Trim and uppercase always. The I/L -> 1 and O -> 0 repair is applied ONLY
+/// to verified (HHV-) codes, whose Crockford alphabet excludes those
+/// characters so the substitution can only rescue a mistyped code.
+///
+/// It must NEVER be applied to anonymous HHH- codes: those are drawn from the
+/// full A-Z0-9 alphabet, so I, L and O are legitimate characters. Repairing
+/// them there corrupts a valid code — about 35% of existing codes contain at
+/// least one — turning a working enrolment into "invalid code".
 String normalizeStudyCode(String input) {
-  return input
-      .trim()
-      .toUpperCase()
-      .replaceAll(RegExp(r'\s+'), '')
-      .replaceAll(RegExp('[IL]'), '1')
-      .replaceAll('O', '0');
+  final base = input.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
+  if (!base.startsWith('HHV')) return base;
+  return base.replaceAll(RegExp('[IL]'), '1').replaceAll('O', '0');
 }
 
 /// Accepts either code format. The backend routes on the prefix; the client
@@ -149,6 +154,16 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       if (subjectCode != null && subjectCode.isNotEmpty) {
         await storage.write(key: kSubjectCodeKey, value: subjectCode);
         await storage.write(key: kIdentityModeKey, value: 'verified');
+      }
+      // A verified study may require its own consent document. It can only be
+      // known now — the study is unknown until the code is redeemed — so the
+      // slug is stored and the router gates on it from here on.
+      final consentSlug = data['identityConsentSlug'] as String?;
+      if (data['identityConsentRequired'] == true &&
+          consentSlug != null &&
+          consentSlug.isNotEmpty) {
+        await storage.write(
+            key: kPendingStudyConsentSlugKey, value: consentSlug);
       }
 
       if (!mounted) return;

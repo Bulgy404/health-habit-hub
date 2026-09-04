@@ -107,7 +107,7 @@ export function createPublicRouter({ db, keys, config, auditor }) {
   router.use(express.json({ limit: '256kb' }));
 
   /** Resolve the register for an HHH study id, and the caller's scope in it. */
-  async function scopeFor(req, res, hhhStudyId, roles) {
+  async function scopeFor(req, res, hhhStudyId) {
     const { rows } = await db.query(
       `SELECT id, subject_code_prefix, hhh_study_id FROM study_registers
         WHERE hhh_study_id = $1`,

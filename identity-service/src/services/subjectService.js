@@ -280,6 +280,17 @@ export async function searchSubjects({
   const out = [];
 
   for (const r of rows) {
+    // Per-row isolation. A single undecryptable row — corrupted ciphertext, a
+    // row written under a rotated key, a partially-migrated register — must
+    // not take down the whole roster. A nurse who cannot list ANY subject
+    // cannot enrol anyone, which in a clinical setting is a worse failure than
+    // one row showing as unreadable.
+    let givenName;
+    let familyName;
+    let dateOfBirth;
+    let email;
+    let undecryptable = false;
+
     const dec = (col, field) =>
       decryptField({
         key: dek,
@@ -288,8 +299,29 @@ export async function searchSubjects({
         ciphertext: r[col],
       });
 
-    const givenName = dec('given_name_ct', PII_FIELDS.givenName);
-    const familyName = dec('family_name_ct', PII_FIELDS.familyName);
+    try {
+      givenName = dec('given_name_ct', PII_FIELDS.givenName);
+      familyName = dec('family_name_ct', PII_FIELDS.familyName);
+      dateOfBirth = dec('dob_ct', PII_FIELDS.dateOfBirth);
+      email = dec('email_ct', PII_FIELDS.email);
+    } catch {
+      // Deliberately no detail: the error text can echo ciphertext, and the
+      // subject code alone is enough for an operator to investigate.
+      undecryptable = true;
+    }
+
+    if (undecryptable) {
+      out.push({
+        id: r.id,
+        subjectCode: r.subject_code,
+        siteId: r.site_id,
+        status: r.status,
+        verifiedAt: r.verified_at,
+        undecryptable: true,
+      });
+      if (out.length >= limit) break;
+      continue;
+    }
 
     if (needle) {
       const haystack = [givenName, familyName, r.subject_code]
@@ -307,8 +339,8 @@ export async function searchSubjects({
       verifiedAt: r.verified_at,
       givenName,
       familyName,
-      dateOfBirth: dec('dob_ct', PII_FIELDS.dateOfBirth),
-      email: dec('email_ct', PII_FIELDS.email),
+      dateOfBirth,
+      email,
     });
     if (out.length >= limit) break;
   }

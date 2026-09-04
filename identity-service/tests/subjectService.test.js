@@ -645,3 +645,39 @@ describe('lookups and lifecycle', () => {
     );
   });
 });
+
+describe('roster resilience', () => {
+  it('one undecryptable row does not take down the whole roster', async () => {
+    // A nurse who cannot list ANY subject cannot enrol anyone. In a clinical
+    // setting that is a worse failure than one row showing as unreadable.
+    const db = makeDb();
+    await importRoster({
+      db,
+      keys,
+      registerId: REGISTER_ID,
+      actorSub: 'm',
+      people: [anna, { familyName: 'Schmidt' }],
+    });
+
+    // Corrupt one row's ciphertext, as a bad restore or a rotated key would.
+    db.state.subjects[0].family_name_ct = Buffer.concat([
+      Buffer.from([0x01]),
+      randomBytes(40),
+    ]);
+
+    const out = await searchSubjects({
+      db,
+      keys,
+      registerId: REGISTER_ID,
+      includePii: true,
+    });
+
+    assert.equal(out.length, 2, 'both rows are still listed');
+    const broken = out.find((r) => r.subjectCode === 'TUD-DFG01-0001');
+    assert.equal(broken.undecryptable, true, 'the bad row is flagged');
+    assert.equal(broken.familyName, undefined, 'and carries no partial data');
+
+    const ok = out.find((r) => r.subjectCode === 'TUD-DFG01-0002');
+    assert.equal(ok.familyName, 'Schmidt', 'the healthy row is unaffected');
+  });
+});
