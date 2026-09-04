@@ -121,4 +121,26 @@ export async function release(reservationId) {
   }
 }
 
+/**
+ * Art. 17 — the participant deleted their HHH account.
+ *
+ * Severs the register's ability to resolve that account to a person. Never
+ * throws: account deletion must succeed even if the register is unreachable,
+ * and a missed revocation is recoverable (the subject can be erased directly
+ * by an identity-manager) whereas a failed deletion is a compliance breach.
+ * A failure is logged loudly so it can be reconciled.
+ */
+export async function revokeLink(keycloakSub) {
+  if (!identityServiceConfigured()) return { revoked: false, skipped: true };
+  try {
+    return await call('/internal/v1/links/revoke', { keycloakSub });
+  } catch (err) {
+    log.error(
+      { err, keycloakSub },
+      'FAILED to revoke identity link on account deletion — reconcile manually'
+    );
+    return { revoked: false, failed: true };
+  }
+}
+
 export { IdentityServiceError };

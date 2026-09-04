@@ -20,6 +20,11 @@ scrape_configs:
     static_configs:
       - targets:
           - http://app:3000/api/v1/health
+          # Verified-identity studies only. Absent unless the `identity`
+          # compose profile is deployed — in which case the probe reports
+          # down and the existing reachability alert fires, which is the
+          # correct behaviour: an enrolling study needs this service up.
+          - http://identity-service:3002/api/v1/health
           - http://translate:5000/languages
           - http://neo4j:7474
           # Keycloak health lives on the management port (9000), and

@@ -12,7 +12,8 @@
     "start": "node src/server.js",
     "test": "node --test --test-force-exit \"tests/**/*.test.js\"",
     "lint": "npx eslint .",
-    "format:check": "npx prettier --check ."
+    "format:check": "npx prettier --check .",
+    "rotate-kek": "node scripts/rotate-kek.js"
   },
   "dependencies": {
     "express": "^4.21.2",

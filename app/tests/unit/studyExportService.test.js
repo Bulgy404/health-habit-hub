@@ -109,3 +109,119 @@ describe('studyExportService — participant sanitisation', () => {
     );
   });
 });
+
+describe('studyExportService — verified studies', () => {
+  const VERIFIED_ID = new ObjectId();
+
+  function makeVerifiedDb({ enrollments, collections = {} } = {}) {
+    const study = {
+      _id: VERIFIED_ID,
+      name: 'DFG Study',
+      identity: { mode: 'verified', subjectCodePrefix: 'TUD-DFG01' },
+    };
+    return {
+      collection(name) {
+        return {
+          async findOne() {
+            return name === 'studies' ? study : null;
+          },
+          find() {
+            return {
+              async toArray() {
+                if (name === 'studies') return [study];
+                if (name === 'enrollments')
+                  return enrollments.map((e) => ({ ...e }));
+                return (collections[name] ?? []).map((d) => ({ ...d }));
+              },
+            };
+          },
+        };
+      },
+    };
+  }
+
+  const enrollments = [
+    { userId: 'kc-sub-1', studyId: VERIFIED_ID, subjectCode: 'TUD-DFG01-0042' },
+  ];
+
+  it('drops the participants collection entirely', async () => {
+    // It describes accounts, and the account is exactly what the subject code
+    // stands in for — shipping both hands over the correspondence.
+    const db = makeVerifiedDb({
+      enrollments,
+      collections: {
+        participants: [{ userId: 'kc-sub-1', username: 'p-kc-sub-1' }],
+      },
+    });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+    assert.deepEqual(bundle.collections.participants, []);
+  });
+
+  it('rewrites every raw Keycloak sub to the subject code', async () => {
+    const db = makeVerifiedDb({
+      enrollments,
+      collections: {
+        daily_behavior_logs: [
+          { userId: 'kc-sub-1', date: '2026-01-01', enacted: true },
+        ],
+        srhi_responses: [{ userId: 'kc-sub-1', weekNumber: 1, score: 4 }],
+      },
+    });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+
+    assert.equal(
+      bundle.collections.daily_behavior_logs[0].userId,
+      'TUD-DFG01-0042'
+    );
+    assert.equal(bundle.collections.srhi_responses[0].userId, 'TUD-DFG01-0042');
+    assert.ok(
+      !JSON.stringify(bundle).includes('kc-sub-1'),
+      'no raw Keycloak sub may survive anywhere in the bundle'
+    );
+  });
+
+  it('FAILS CLOSED when an enrolment has no subject code', async () => {
+    // A gap in the register must never fall back to leaking the sub.
+    const db = makeVerifiedDb({
+      enrollments: [{ userId: 'kc-sub-9', studyId: VERIFIED_ID }],
+      collections: {
+        daily_behavior_logs: [{ userId: 'kc-sub-9', date: '2026-01-01' }],
+      },
+    });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+    assert.equal(
+      bundle.collections.daily_behavior_logs[0].userId,
+      '[no-subject-code]'
+    );
+    assert.ok(!JSON.stringify(bundle).includes('kc-sub-9'));
+  });
+
+  it('redacts a sub that belongs to no enrolment at all', async () => {
+    const db = makeVerifiedDb({
+      enrollments,
+      collections: { habit_donations: [{ userId: 'orphan-sub', uuid: 'h1' }] },
+    });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+    assert.equal(bundle.collections.habit_donations[0].userId, '[redacted]');
+  });
+
+  it('rewrites nested and array-shaped documents too', async () => {
+    const db = makeVerifiedDb({
+      enrollments,
+      collections: {
+        form_responses: [
+          { userId: 'kc-sub-1', answers: { nested: { userId: 'kc-sub-1' } } },
+        ],
+      },
+    });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+    assert.ok(!JSON.stringify(bundle).includes('kc-sub-1'));
+  });
+
+  it('leaves the study configuration untouched', async () => {
+    const db = makeVerifiedDb({ enrollments });
+    const bundle = await exportStudyData({ db, id: VERIFIED_ID.toString() });
+    assert.equal(bundle.collections.studies[0].name, 'DFG Study');
+    assert.equal(bundle.collections.studies[0].identity.mode, 'verified');
+  });
+});

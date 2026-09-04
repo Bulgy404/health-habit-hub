@@ -112,6 +112,52 @@ export function createInternalRouter({ db, keys, config, auditor }) {
     res.json(out);
   });
 
+  /**
+   * Art. 17 — a participant deleted their HHH account.
+   *
+   * Severs the account link, so the register can no longer resolve that
+   * account to a person. Deliberately does NOT delete the subject: the roster
+   * entry is the study site's own clinical record, and erasing the person
+   * entirely is a separate, deliberate act by an identity-manager. What this
+   * removes is the correspondence.
+   *
+   * Idempotent, and takes no PII — HHH sends only the sub it already holds.
+   */
+  router.post('/v1/links/revoke', async (req, res) => {
+    const { keycloakSub } = req.body ?? {};
+    if (!keycloakSub)
+      return res.status(400).json({ error: 'keycloakSub_required' });
+
+    const { blindIndex } = await import('../crypto/blindIndex.js');
+    const { rows } = await db.query(
+      `UPDATE subject_account_links
+          SET superseded_at = now()
+        WHERE keycloak_sub_bi = $1 AND superseded_at IS NULL
+        RETURNING subject_id`,
+      [blindIndex(keys.peppers.keycloakSub, keycloakSub)]
+    );
+
+    if (rows.length > 0) {
+      const { rows: subj } = await db.query(
+        `UPDATE subjects SET status = 'withdrawn', updated_at = now()
+          WHERE id = $1 RETURNING subject_code, register_id`,
+        [rows[0].subject_id]
+      );
+      void auditor.record({
+        registerId: subj[0]?.register_id ?? null,
+        actorSub: 'hhh-backend',
+        actorRoles: ['service'],
+        action: 'revoke_link_account_deleted',
+        sensitivity: 'write',
+        subjectCode: subj[0]?.subject_code ?? null,
+        route: '/internal/v1/links/revoke',
+        statusCode: 200,
+        detail: { reason: 'participant deleted their HHH account (Art. 17)' },
+      });
+    }
+    res.json({ revoked: rows.length > 0 });
+  });
+
   router.get('/v1/studies/:studyId/linked-count', async (req, res) => {
     const { rows } = await db.query(
       `SELECT count(*)::int AS count

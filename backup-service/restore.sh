@@ -183,6 +183,41 @@ else
   echo "Warning: No Neo4j backup found in archive"
 fi
 
+# ── Identity register ─────────────────────────────────────────────────────────
+# Restores the verified-identity subject register. Only present when the backup
+# was taken with BACKUP_INCLUDE_IDENTITY=true.
+#
+# The dump contains encrypted PII and is inert WITHOUT the master key — so a
+# restore is only useful on a host that has, or will be given, the same
+# IDENTITY_MASTER_KEY. Restoring the database alone recovers nothing readable;
+# restoring it with a DIFFERENT key recovers nothing at all, because every
+# field is bound to a key derived from that master.
+
+echo ""
+echo "Restoring identity register (if backup present)..."
+IDENTITY_DB_HOST="${IDENTITY_DB_HOST:-identity-db}"
+IDENTITY_DB_USERNAME="${IDENTITY_DB_USERNAME:-identity}"
+if [ -f "$RESTORE_DIR/identity/identity-db.dump" ]; then
+  if [ -n "${IDENTITY_DB_PASSWORD:-}" ]; then
+    if PGPASSWORD="$IDENTITY_DB_PASSWORD" pg_restore \
+      -h "$IDENTITY_DB_HOST" \
+      -U "$IDENTITY_DB_USERNAME" \
+      -d identity \
+      --clean --if-exists \
+      "$RESTORE_DIR/identity/identity-db.dump" 2>/dev/null; then
+      echo "✓ Identity register restored"
+      echo "  NOTE: verify the master key matches the one in use when this"
+      echo "  backup was taken, or no field will decrypt."
+    else
+      log_error "Identity" "pg_restore of identity-db failed"
+    fi
+  else
+    echo "Warning: IDENTITY_DB_PASSWORD not set, skipping identity register restore"
+  fi
+else
+  echo "No identity register backup in this archive (skipping)"
+fi
+
 # ── Keycloak ──────────────────────────────────────────────────────────────────
 # Restores both the realm config (via admin API partialImport) and the actual
 # Postgres database (via pg_restore) — the DB holds user accounts/credentials,

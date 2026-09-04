@@ -6,6 +6,7 @@
 
 import { ObjectId } from 'mongodb';
 import { recoveryPhrasesEnabled } from '../utils/recoveryPhrase.js';
+import { resolveIdentityConfig } from './identityConfig.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 
 /** Collections keyed by participant `userId` that hold their generated data. */
@@ -83,9 +84,16 @@ export async function exportStudyData({ db, id }) {
   ];
   const byUser = { userId: { $in: userIds } };
 
-  const participants = userIds.length
-    ? (await safeFind(db, 'participants', byUser)).map(sanitizeParticipant)
-    : [];
+  // For a VERIFIED study the participants collection is dropped entirely
+  // rather than sanitised. It exists to describe accounts, and in a verified
+  // study the account is exactly the thing the subject code is meant to
+  // stand in for — shipping both would hand a researcher the correspondence
+  // the whole design exists to withhold.
+  const verified = resolveIdentityConfig(study).mode === 'verified';
+  const participants =
+    userIds.length && !verified
+      ? (await safeFind(db, 'participants', byUser)).map(sanitizeParticipant)
+      : [];
   const questionnaireAssignments = await safeFind(
     db,
     'questionnaire_assignments',
@@ -105,6 +113,38 @@ export async function exportStudyData({ db, id }) {
 
   for (const coll of USER_SCOPED_COLLECTIONS) {
     collections[coll] = userIds.length ? await safeFind(db, coll, byUser) : [];
+  }
+
+  // Rewrite every raw Keycloak sub to its study-local subject code. The sub is
+  // the join key into every other system, and this bundle is copied, emailed
+  // and archived far more freely than the database it came from.
+  //
+  // Fails CLOSED: a user with no subject code is redacted rather than falling
+  // back to the sub, so a gap in the register can never leak one.
+  if (verified) {
+    const bySub = new Map(
+      enrollments
+        .filter((e) => e.userId)
+        .map((e) => [e.userId, e.subjectCode ?? '[no-subject-code]'])
+    );
+    const pseudonymise = (value) => {
+      if (Array.isArray(value)) return value.map(pseudonymise);
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+          out[k] =
+            k === 'userId' || k === 'participantId'
+              ? (bySub.get(v) ?? '[redacted]')
+              : pseudonymise(v);
+        }
+        return out;
+      }
+      return value;
+    };
+    for (const key of Object.keys(collections)) {
+      if (key === 'studies') continue; // no user ids, and rewriting would corrupt config
+      collections[key] = pseudonymise(collections[key]);
+    }
   }
 
   const counts = Object.fromEntries(
