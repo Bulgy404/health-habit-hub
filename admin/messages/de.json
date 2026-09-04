@@ -67,7 +67,9 @@
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
     "signOut": "Abmelden",
-    "identity": "Identitätsregister"
+    "identity": "Identitätsregister",
+    "identityRequests": "Re-Identifizierung",
+    "identityAudit": "Identitäts-Protokoll"
   },
   "system": {
     "title": "System & Links",

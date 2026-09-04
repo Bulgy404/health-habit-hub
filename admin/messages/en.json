@@ -67,7 +67,9 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "signOut": "Sign out",
-    "identity": "Identity register"
+    "identity": "Identity register",
+    "identityRequests": "Re-identification",
+    "identityAudit": "Identity audit"
   },
   "system": {
     "title": "System & Links",

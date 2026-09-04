@@ -18,6 +18,19 @@ behind it, see [`identity-mode-plan.md`](identity-mode-plan.md).
 
 ---
 
+## Where things are in the admin portal
+
+| Page | Who sees it | What it does |
+| --- | --- | --- |
+| Study → **Identity** tab | `admin` | Turn verified mode on, set the subject-code prefix, consent slug, approver count and reveal window |
+| **Identity register** | identity roles | The roster: add subjects, issue codes, mark verification, print the code sheet |
+| **Re-identification** | `identity-manager`, `monitor` | Raise, approve/reject and reveal — the queue |
+| **Identity audit** | `identity-manager`, `monitor` | Every recorded action, filterable to reveals, exportable as CSV |
+
+`admin` configures the study but has no standing access to the register
+itself; the identity roles have access to the register but cannot change the
+study's configuration. That split is deliberate.
+
 ## Roles
 
 A realm role says **what** someone may do. An assignment in the register says
@@ -71,7 +84,17 @@ identity provider the operator does not control; see the plan's §5.
    asymmetry is deliberate.
 4. In the admin portal, set the study's **Identity** tab to `verified` and
    choose a subject-code prefix (e.g. `TUD-DFG01`).
-5. Create the register, then assign staff to it.
+5. Create the register, then assign staff to it on the **Identity register**
+   page. Until someone is assigned they see nothing, whatever realm role they
+   hold — the creator is assigned automatically so the register is never
+   orphaned, and removing the last `identity-manager` is refused for the same
+   reason.
+
+> A consent slug with no matching document 404s the participant **after** they
+> have enrolled — the worst possible moment. Copy
+> `app/language/<lang>/consent-verified-template.md` to
+> `consent-<slug>.md` for every language you support, adapt it to your ethics
+> approval, and remove the template notice before going live.
 
 > `mode` and `subjectCodePrefix` **freeze once the first participant enrols**
 > (HTTP 409 thereafter). Flipping to anonymous would orphan live subject links;

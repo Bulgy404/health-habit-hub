@@ -67,7 +67,9 @@
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
     "signOut": "Déconnexion",
-    "identity": "Registre d'identité"
+    "identity": "Registre d'identité",
+    "identityRequests": "Ré-identification",
+    "identityAudit": "Journal d'identité"
   },
   "system": {
     "title": "Système et liens",

@@ -188,6 +188,104 @@ export function createPublicRouter({ db, keys, config, auditor }) {
     }
   );
 
+  /* ── Access assignments ────────────────────────────────────────────────── */
+  // A realm role says WHAT someone may do; these rows say WHERE. Without one a
+  // holder of study-nurse sees no roster at all, so this is the difference
+  // between a configured register and a usable one.
+
+  router.get(
+    '/v1/studies/:studyId/assignments',
+    requireIdentityRole(MANAGER, MONITOR),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      const { rows } = await db.query(
+        `SELECT actor_sub AS "actorSub", role, site_id AS "siteId"
+           FROM study_site_assignments WHERE register_id = $1
+          ORDER BY role, actor_sub`,
+        [scope.register.id]
+      );
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'list_assignments',
+        sensitivity: 'list',
+      });
+      res.json({ assignments: rows });
+    }
+  );
+
+  router.post(
+    '/v1/studies/:studyId/assignments',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      const { actorSub, role, siteId = null } = req.body ?? {};
+      if (
+        !actorSub ||
+        !['identity-manager', 'study-nurse', 'monitor'].includes(role)
+      ) {
+        return res.status(400).json({ error: 'invalid_assignment' });
+      }
+      await db.query(
+        `INSERT INTO study_site_assignments (register_id, actor_sub, role, site_id, created_by)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (register_id, actor_sub, role, site_id) DO NOTHING`,
+        [scope.register.id, actorSub, role, siteId, req.user.sub]
+      );
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'grant_assignment',
+        sensitivity: 'write',
+        detail: { actorSub, role, siteId },
+      });
+      res.status(201).json({ ok: true });
+    }
+  );
+
+  router.delete(
+    '/v1/studies/:studyId/assignments',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      const { actorSub, role } = req.body ?? {};
+
+      // Refuse to remove the last identity-manager. A register nobody can
+      // administer needs database surgery to recover, and the person doing
+      // this is usually removing themselves.
+      if (role === 'identity-manager') {
+        const { rows } = await db.query(
+          `SELECT count(*)::int AS n FROM study_site_assignments
+            WHERE register_id = $1 AND role = 'identity-manager'`,
+          [scope.register.id]
+        );
+        if (rows[0].n <= 1) {
+          return res.status(409).json({
+            error: 'last_manager',
+            message:
+              'This is the only identity-manager for the register. Assign ' +
+              'another before removing this one, or nobody will be able to ' +
+              'administer it.',
+          });
+        }
+      }
+
+      await db.query(
+        `DELETE FROM study_site_assignments
+          WHERE register_id = $1 AND actor_sub = $2 AND role = $3`,
+        [scope.register.id, actorSub, role]
+      );
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'revoke_assignment',
+        sensitivity: 'write',
+        detail: { actorSub, role },
+      });
+      res.json({ ok: true });
+    }
+  );
+
   /* ── Subjects ──────────────────────────────────────────────────────────── */
 
   router.get(
@@ -529,6 +627,31 @@ export function createPublicRouter({ db, keys, config, auditor }) {
         }
         throw err;
       }
+    }
+  );
+
+  router.get(
+    '/v1/studies/:studyId/reidentification-requests',
+    requireIdentityRole(MANAGER, MONITOR),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      const { rows } = await db.query(
+        `SELECT id, subject_code, request_type, legal_basis, reason,
+                fields_requested, status, requested_by, requested_at,
+                reveal_expires_at, reveal_count
+           FROM reidentification_requests
+          WHERE register_id = $1
+          ORDER BY requested_at DESC
+          LIMIT 200`,
+        [scope.register.id]
+      );
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'list_reidentification_requests',
+        sensitivity: 'list',
+      });
+      res.json({ requests: rows });
     }
   );
 

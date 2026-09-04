@@ -67,7 +67,9 @@
     "openMenu": "Menu openen",
     "closeMenu": "Menu sluiten",
     "signOut": "Afmelden",
-    "identity": "Identiteitsregister"
+    "identity": "Identiteitsregister",
+    "identityRequests": "Her-identificatie",
+    "identityAudit": "Identiteitslogboek"
   },
   "system": {
     "title": "Systeem & links",

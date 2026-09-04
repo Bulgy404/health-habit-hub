@@ -30,6 +30,8 @@ import {
   X,
   type LucideIcon,
   IdCard,
+  ShieldCheck,
+  ScrollText,
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
 import { signOutOfKeycloak } from "@/lib/keycloakSignOut";
@@ -64,6 +66,18 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/identity",
         labelKey: "identity",
         Icon: IdCard,
+        identityOnly: true,
+      },
+      {
+        href: "/identity/requests",
+        labelKey: "identityRequests",
+        Icon: ShieldCheck,
+        identityOnly: true,
+      },
+      {
+        href: "/identity/audit",
+        labelKey: "identityAudit",
+        Icon: ScrollText,
         identityOnly: true,
       },
     ],
