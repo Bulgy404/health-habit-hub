@@ -64,6 +64,35 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # 2. BACKEND – unit tests + coverage (no services)
   # ─────────────────────────────────────────────────────────────────────────────
+  identity-service-tests:
+    name: Identity service – tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: identity-service/package-lock.json
+
+      - name: Install
+        working-directory: identity-service
+        run: npm ci
+
+      # No service containers: these tests use hand-rolled SQL-shaped fakes,
+      # matching the backend's unit-test style. The crypto tests in particular
+      # need nothing external and are the ones that must never be skipped.
+      - name: Run tests
+        working-directory: identity-service
+        run: npm test
+
+      - name: Dependency audit
+        working-directory: identity-service
+        run: npm audit --audit-level=high
+
   backend-unit:
     name: Backend – unit tests
     runs-on: ubuntu-latest

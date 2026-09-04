@@ -21,7 +21,10 @@
     "csv-parse": "^5.6.0",
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
-    "nodemailer": "^6.9.16",
+    "nodemailer": "^10.0.0",
     "pino": "^9.5.0"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
   }
 }
