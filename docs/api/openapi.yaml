@@ -1951,6 +1951,46 @@ paths:
           description: Paginated audit entries
         '403':
           description: Caller does not have admin role
+  /admin/audit-log/export:
+    get:
+      summary: Export admin action audit entries as CSV
+      description: >
+        Same filters as GET /admin/audit-log, but returns the full matching set as CSV (capped at 50000 rows) rather
+        than a page. Intended for compliance review and archival, where the 200-row list cap is not usable.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: resourceType
+          schema:
+            type: string
+        - in: query
+          name: byUserId
+          schema:
+            type: string
+        - in: query
+          name: action
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv: {}
+        '403':
+          description: Caller does not have admin role
   /surveys:
     get:
       summary: List surveys
