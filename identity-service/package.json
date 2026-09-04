@@ -14,5 +14,14 @@
     "lint": "npx eslint .",
     "format:check": "npx prettier --check ."
   },
-  "dependencies": {}
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "multer": "^2.0.0",
+    "csv-parse": "^5.6.0",
+    "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4",
+    "nodemailer": "^6.9.16",
+    "pino": "^9.5.0"
+  }
 }

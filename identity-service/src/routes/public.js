@@ -1,0 +1,642 @@
+/**
+ * Public API — the surface the admin portal talks to, over Keycloak bearer
+ * tokens.
+ *
+ * "Public" means routed by Traefik, NOT internet-reachable: the service runs
+ * on a private, TU-internal VM. Every route declares its audit classification
+ * via `audit(res, …)`, because only the route knows whether it actually
+ * decrypted anything.
+ */
+
+import express from 'express';
+import multer from 'multer';
+import { parse as parseCsv } from 'csv-parse/sync';
+import { IDENTITY_ROLES, requireIdentityRole } from '../middleware/roles.js';
+import { audit } from '../middleware/audit.js';
+import {
+  createSubject,
+  importRoster,
+  searchSubjects,
+  markVerified,
+  eraseSubject,
+  registerDek,
+  SubjectError,
+  PII_FIELDS,
+} from '../services/subjectService.js';
+import {
+  createRequest,
+  decide,
+  reveal,
+  revoke,
+  ReidError,
+} from '../services/reidentificationService.js';
+import { buildCodeSheet } from '../services/codeSheet.js';
+import { generateEnrollmentCode } from '../services/codes.js';
+import { blindIndex } from '../crypto/blindIndex.js';
+import {
+  encryptField,
+  decryptField,
+  generateDek,
+  wrapDek,
+} from '../crypto/envelope.js';
+
+const { MANAGER, NURSE, MONITOR } = IDENTITY_ROLES;
+
+/**
+ * In-memory only, and size-capped. NEVER disk storage: a CSV of patient names
+ * must not touch a container filesystem, where it would survive the request
+ * and land in any volume snapshot.
+ */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+});
+
+/** Map CSV headers to our field names, tolerating German and English sheets. */
+const CSV_ALIASES = {
+  givenName: ['givenname', 'given_name', 'firstname', 'vorname'],
+  familyName: [
+    'familyname',
+    'family_name',
+    'lastname',
+    'surname',
+    'nachname',
+    'name',
+  ],
+  dateOfBirth: ['dateofbirth', 'date_of_birth', 'dob', 'geburtsdatum', 'geb'],
+  email: ['email', 'e-mail', 'mail'],
+  phone: ['phone', 'telefon', 'tel', 'mobile'],
+  address: ['address', 'adresse'],
+  externalId: [
+    'externalid',
+    'external_id',
+    'patientid',
+    'patient_id',
+    'screeningid',
+  ],
+  siteId: ['siteid', 'site_id', 'site', 'zentrum'],
+  notes: ['notes', 'notiz', 'bemerkung'],
+};
+
+export function parseRosterCsv(buffer) {
+  const records = parseCsv(buffer, {
+    columns: (header) =>
+      header.map((h) => {
+        const norm = String(h).trim().toLowerCase().replace(/\s+/g, '');
+        for (const [field, aliases] of Object.entries(CSV_ALIASES)) {
+          if (aliases.includes(norm)) return field;
+        }
+        return `_ignored_${norm}`;
+      }),
+    skip_empty_lines: true,
+    trim: true,
+    bom: true,
+  });
+  return records.map((r) => {
+    const person = {};
+    for (const key of Object.keys(CSV_ALIASES)) {
+      if (r[key] != null && String(r[key]).trim() !== '')
+        person[key] = String(r[key]).trim();
+    }
+    return person;
+  });
+}
+
+export function createPublicRouter({ db, keys, config, auditor }) {
+  const router = express.Router();
+  router.use(express.json({ limit: '256kb' }));
+
+  /** Resolve the register for an HHH study id, and the caller's scope in it. */
+  async function scopeFor(req, res, hhhStudyId, roles) {
+    const { rows } = await db.query(
+      `SELECT id, subject_code_prefix, hhh_study_id FROM study_registers
+        WHERE hhh_study_id = $1`,
+      [hhhStudyId]
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'register_not_found' });
+      return null;
+    }
+    const register = rows[0];
+
+    // A realm role says WHAT; this says WHERE. A nurse with no assignment row
+    // sees nothing at all.
+    const { rows: assignments } = await db.query(
+      `SELECT role, site_id FROM study_site_assignments
+        WHERE register_id = $1 AND actor_sub = $2`,
+      [register.id, req.user.sub]
+    );
+    if (assignments.length === 0) {
+      res.status(403).json({ error: 'not_assigned_to_register' });
+      return null;
+    }
+    const sites = assignments.map((a) => a.site_id).filter(Boolean);
+    return {
+      register,
+      // null = whole study
+      siteId: sites.length === 1 && assignments.length === 1 ? sites[0] : null,
+      roles: assignments.map((a) => a.role),
+    };
+  }
+
+  /* ── Registers ─────────────────────────────────────────────────────────── */
+
+  router.post(
+    '/v1/studies/:studyId/register',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      const { subjectCodePrefix } = req.body ?? {};
+      if (!/^[A-Z0-9][A-Z0-9-]{1,31}$/.test(subjectCodePrefix ?? '')) {
+        return res.status(400).json({ error: 'invalid_prefix' });
+      }
+      const dek = generateDek();
+      const { rows: idRows } = await db.query('SELECT gen_random_uuid() AS id');
+      const registerId = idRows[0].id;
+
+      await db.query(
+        `INSERT INTO study_registers
+           (id, hhh_study_id, subject_code_prefix, dek_wrapped, kek_version, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [
+          registerId,
+          req.params.studyId,
+          subjectCodePrefix,
+          wrapDek({
+            kek: keys.kek,
+            registerId,
+            kekVersion: keys.kekVersion,
+            dek,
+          }),
+          keys.kekVersion,
+          req.user.sub,
+        ]
+      );
+      // The creator is assigned automatically, or they could not use what they
+      // just made.
+      await db.query(
+        `INSERT INTO study_site_assignments (register_id, actor_sub, role, created_by)
+         VALUES ($1,$2,'identity-manager',$3)`,
+        [registerId, req.user.sub, req.user.sub]
+      );
+
+      audit(res, {
+        registerId,
+        action: 'create_register',
+        sensitivity: 'write',
+      });
+      res.status(201).json({ id: registerId, subjectCodePrefix });
+    }
+  );
+
+  /* ── Subjects ──────────────────────────────────────────────────────────── */
+
+  router.get(
+    '/v1/studies/:studyId/subjects',
+    requireIdentityRole(MANAGER, NURSE, MONITOR),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+
+      // A monitor sees codes and status, never names — and on that path
+      // nothing is decrypted at all.
+      const includePii = scope.roles.some(
+        (r) => r === 'identity-manager' || r === 'study-nurse'
+      );
+
+      const subjects = await searchSubjects({
+        db,
+        keys,
+        registerId: scope.register.id,
+        query: String(req.query.q ?? ''),
+        siteId: scope.siteId,
+        includePii,
+        limit: Math.min(500, Number(req.query.limit) || 200),
+      });
+
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'list_subjects',
+        sensitivity: includePii ? 'pii_read' : 'list',
+        fields: includePii
+          ? ['givenName', 'familyName', 'dateOfBirth', 'email']
+          : null,
+      });
+      res.json({ subjects });
+    }
+  );
+
+  router.post(
+    '/v1/studies/:studyId/subjects',
+    requireIdentityRole(MANAGER, NURSE),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      try {
+        const out = await createSubject({
+          db,
+          keys,
+          registerId: scope.register.id,
+          actorSub: req.user.sub,
+          person: req.body ?? {},
+          siteId: req.body?.siteId ?? scope.siteId,
+        });
+        audit(res, {
+          registerId: scope.register.id,
+          action: 'create_subject',
+          sensitivity: 'write',
+          subjectCode: out.subjectCode,
+        });
+        res.status(201).json(out);
+      } catch (err) {
+        if (err instanceof SubjectError) {
+          return res
+            .status(err.status)
+            .json({ error: err.code, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  router.post(
+    '/v1/studies/:studyId/subjects/import',
+    requireIdentityRole(MANAGER),
+    upload.single('file'),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      if (!req.file) return res.status(400).json({ error: 'file_required' });
+
+      let people;
+      try {
+        people = parseRosterCsv(req.file.buffer);
+      } catch {
+        // Never echo the parser's message: it quotes the offending line.
+        return res.status(400).json({ error: 'csv_unparseable' });
+      }
+      if (people.length === 0)
+        return res.status(400).json({ error: 'csv_empty' });
+      if (people.length > 5000)
+        return res.status(400).json({ error: 'csv_too_large' });
+
+      const report = await importRoster({
+        db,
+        keys,
+        registerId: scope.register.id,
+        actorSub: req.user.sub,
+        people,
+      });
+
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'import_roster',
+        sensitivity: 'write',
+        detail: { imported: report.imported, failed: report.failed },
+      });
+      res.json(report);
+    }
+  );
+
+  router.post(
+    '/v1/subjects/:id/verify',
+    requireIdentityRole(NURSE, MANAGER),
+    async (req, res) => {
+      const method = req.body?.method ?? 'in_person';
+      try {
+        await markVerified({
+          db,
+          subjectId: req.params.id,
+          actorSub: req.user.sub,
+          method,
+        });
+        audit(res, {
+          action: 'verify_subject',
+          sensitivity: 'write',
+          detail: { method },
+        });
+        res.json({ ok: true });
+      } catch (err) {
+        if (err instanceof SubjectError) {
+          return res.status(err.status).json({ error: err.code });
+        }
+        throw err;
+      }
+    }
+  );
+
+  router.delete(
+    '/v1/subjects/:id',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      try {
+        const out = await eraseSubject({
+          db,
+          subjectId: req.params.id,
+          actorSub: req.user.sub,
+          registerId: req.body?.registerId ?? null,
+        });
+        audit(res, {
+          action: 'erase_subject',
+          sensitivity: 'write',
+          subjectCode: out.subjectCode,
+        });
+        res.json(out);
+      } catch (err) {
+        if (err instanceof SubjectError)
+          return res.status(err.status).json({ error: err.code });
+        throw err;
+      }
+    }
+  );
+
+  /* ── Codes ─────────────────────────────────────────────────────────────── */
+
+  router.post(
+    '/v1/subjects/:id/codes',
+    requireIdentityRole(MANAGER, NURSE),
+    async (req, res) => {
+      const { rows } = await db.query(
+        `SELECT s.id, s.subject_code, s.register_id FROM subjects s WHERE s.id = $1`,
+        [req.params.id]
+      );
+      if (rows.length === 0)
+        return res.status(404).json({ error: 'subject_not_found' });
+      const subject = rows[0];
+
+      const dek = await registerDek({
+        db,
+        keys,
+        registerId: subject.register_id,
+      });
+      const code = generateEnrollmentCode();
+      const expiresAt = new Date(
+        Date.now() + (Number(req.body?.expiresInDays) || 90) * 86_400_000
+      );
+
+      await db.query(
+        `INSERT INTO enrollment_codes
+         (subject_id, code_hash, code_ct, expires_at, issued_by)
+       VALUES ($1,$2,$3,$4,$5)`,
+        [
+          subject.id,
+          blindIndex(keys.peppers.code, code),
+          encryptField({
+            key: dek,
+            subjectId: subject.id,
+            fieldName: 'enrolment_code',
+            plaintext: code,
+          }),
+          expiresAt,
+          req.user.sub,
+        ]
+      );
+      await db.query(
+        `UPDATE subjects SET status = 'code_issued', updated_at = now()
+        WHERE id = $1 AND status = 'registered'`,
+        [subject.id]
+      );
+
+      audit(res, {
+        registerId: subject.register_id,
+        action: 'issue_code',
+        sensitivity: 'write',
+        subjectCode: subject.subject_code,
+      });
+      // Returned once, to be printed or sent. Not retrievable in plaintext
+      // afterwards except through the sheet.
+      res
+        .status(201)
+        .json({ code, subjectCode: subject.subject_code, expiresAt });
+    }
+  );
+
+  router.get(
+    '/v1/studies/:studyId/codes/sheet.pdf',
+    requireIdentityRole(MANAGER, NURSE),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+
+      const dek = await registerDek({
+        db,
+        keys,
+        registerId: scope.register.id,
+      });
+      const params = [scope.register.id];
+      let sql = `SELECT s.id, s.subject_code, s.given_name_ct, s.family_name_ct, s.dob_ct,
+                        c.code_ct
+                   FROM subjects s
+                   LEFT JOIN LATERAL (
+                     SELECT code_ct FROM enrollment_codes
+                      WHERE subject_id = s.id AND status IN ('issued','reserved')
+                      ORDER BY issued_at DESC LIMIT 1
+                   ) c ON true
+                  WHERE s.register_id = $1`;
+      if (scope.siteId) {
+        params.push(scope.siteId);
+        sql += ` AND s.site_id = $${params.length}`;
+      }
+      sql += ' ORDER BY s.subject_code';
+
+      const { rows } = await db.query(sql, params);
+      const sheetRows = rows.map((r) => ({
+        subjectCode: r.subject_code,
+        givenName: decryptField({
+          key: dek,
+          subjectId: r.id,
+          fieldName: PII_FIELDS.givenName,
+          ciphertext: r.given_name_ct,
+        }),
+        familyName: decryptField({
+          key: dek,
+          subjectId: r.id,
+          fieldName: PII_FIELDS.familyName,
+          ciphertext: r.family_name_ct,
+        }),
+        dateOfBirth: decryptField({
+          key: dek,
+          subjectId: r.id,
+          fieldName: PII_FIELDS.dateOfBirth,
+          ciphertext: r.dob_ct,
+        }),
+        code: r.code_ct
+          ? decryptField({
+              key: dek,
+              subjectId: r.id,
+              fieldName: 'enrolment_code',
+              ciphertext: r.code_ct,
+            })
+          : null,
+      }));
+
+      const pdf = await buildCodeSheet({
+        studyName: req.query.studyName ?? 'Study',
+        subjectCodePrefix: scope.register.subject_code_prefix,
+        rows: sheetRows,
+      });
+
+      // The most PII-dense artefact the system produces — audited naming every
+      // subject on it.
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'print_code_sheet',
+        sensitivity: 'pii_read',
+        fields: ['givenName', 'familyName', 'dateOfBirth', 'enrolmentCode'],
+        detail: { subjectCount: sheetRows.length },
+      });
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="code-sheet-${scope.register.subject_code_prefix}.pdf"`,
+        // Never cached — this is a roster of patients.
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      });
+      res.send(pdf);
+    }
+  );
+
+  /* ── Re-identification ─────────────────────────────────────────────────── */
+
+  router.post(
+    '/v1/studies/:studyId/reidentification-requests',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      try {
+        const out = await createRequest({
+          db,
+          keys,
+          registerId: scope.register.id,
+          actorSub: req.user.sub,
+          ...req.body,
+        });
+        audit(res, {
+          registerId: scope.register.id,
+          action: 'request_reidentification',
+          sensitivity: 'write',
+          subjectCode: req.body?.subjectCode ?? null,
+          requestId: out.id,
+          fields: req.body?.fieldsRequested ?? null,
+          detail: { legalBasis: req.body?.legalBasis },
+        });
+        res.status(201).json(out);
+      } catch (err) {
+        if (err instanceof ReidError) {
+          return res
+            .status(err.status)
+            .json({ error: err.code, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  router.post(
+    '/v1/reidentification-requests/:id/decide',
+    requireIdentityRole(MONITOR, MANAGER),
+    async (req, res) => {
+      try {
+        const out = await decide({
+          db,
+          requestId: req.params.id,
+          approverSub: req.user.sub,
+          decision: req.body?.decision,
+          note: req.body?.note ?? null,
+          revealTtlMinutes: Number(req.body?.revealTtlMinutes) || 60,
+        });
+        audit(res, {
+          action: `reidentification_${req.body?.decision}`,
+          sensitivity: 'write',
+          requestId: req.params.id,
+        });
+        res.json(out);
+      } catch (err) {
+        if (err instanceof ReidError) {
+          return res
+            .status(err.status)
+            .json({ error: err.code, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  router.get(
+    '/v1/reidentification-requests/:id/reveal',
+    requireIdentityRole(MANAGER),
+    async (req, res) => {
+      try {
+        const out = await reveal({
+          db,
+          keys,
+          requestId: req.params.id,
+          actorSub: req.user.sub,
+        });
+        // NEVER deduplicated. Every reveal is individually visible.
+        audit(res, {
+          action: 'reveal',
+          sensitivity: 'reveal',
+          subjectCode: out.subjectCode,
+          requestId: req.params.id,
+          fields: Object.keys(out.fields),
+        });
+        res.set(
+          'Cache-Control',
+          'no-store, no-cache, must-revalidate, private'
+        );
+        res.json(out);
+      } catch (err) {
+        if (err instanceof ReidError) {
+          return res
+            .status(err.status)
+            .json({ error: err.code, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  router.post(
+    '/v1/reidentification-requests/:id/revoke',
+    requireIdentityRole(MONITOR),
+    async (req, res) => {
+      const out = await revoke({ db, requestId: req.params.id });
+      audit(res, {
+        action: 'revoke_reidentification',
+        sensitivity: 'write',
+        requestId: req.params.id,
+      });
+      res.json(out);
+    }
+  );
+
+  /* ── Audit ─────────────────────────────────────────────────────────────── */
+
+  router.get(
+    '/v1/studies/:studyId/audit',
+    requireIdentityRole(MONITOR, MANAGER),
+    async (req, res) => {
+      const scope = await scopeFor(req, res, req.params.studyId);
+      if (!scope) return;
+      const { rows } = await db.query(
+        `SELECT id, actor_sub, actor_roles, action, sensitivity, subject_code,
+                request_id, fields, method, route, status_code, repeat_count,
+                detail, created_at
+           FROM identity_audit_log
+          WHERE register_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2`,
+        [scope.register.id, Math.min(1000, Number(req.query.limit) || 200)]
+      );
+      audit(res, {
+        registerId: scope.register.id,
+        action: 'read_audit',
+        sensitivity: 'list',
+      });
+      res.json({ entries: rows });
+    }
+  );
+
+  return router;
+}
