@@ -81,6 +81,9 @@ export function loadConfig(env = process.env) {
     // 'issued'. Without this a crash mid-protocol burns a code permanently and
     // the participant cannot enrol.
     reservationTtlMinutes: intEnv('IDENTITY_RESERVATION_TTL_MINUTES', 10),
+    // Every reveal is mailed here. Unset means no alerting, which is a
+    // legitimate choice for a pilot but should not survive into a real study.
+    dpoAlertEmail: env.IDENTITY_DPO_ALERT_EMAIL?.trim() || null,
     smtp: {
       host: env.SMTP_HOST ?? null,
       port: intEnv('SMTP_PORT', 587),

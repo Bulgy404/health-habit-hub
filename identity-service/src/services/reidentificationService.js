@@ -257,7 +257,8 @@ export async function decide({
 export async function reveal({ db, keys, requestId, actorSub }) {
   const { rows } = await db.query(
     `SELECT id, register_id, subject_code, keycloak_sub_bi, request_type,
-            fields_requested, status, requested_by, reveal_expires_at, reveal_count
+            legal_basis, fields_requested, status, requested_by,
+            reveal_expires_at, reveal_count
        FROM reidentification_requests WHERE id = $1`,
     [requestId]
   );
@@ -318,6 +319,9 @@ export async function reveal({ db, keys, requestId, actorSub }) {
   return {
     subjectCode: subject.subject_code,
     fields: revealed,
+    // Returned so the caller can attribute the reveal accurately in the
+    // audit trail and the DPO alert without a second query.
+    legalBasis: req.legal_basis,
     revealCount: counted[0].reveal_count,
     expiresAt: req.reveal_expires_at,
   };

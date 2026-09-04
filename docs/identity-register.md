@@ -191,6 +191,34 @@ in the DPIA**, stated rather than discovered by a reviewer.
 
 ---
 
+## Researcher access to a verified study
+
+Verified studies are **scoped**: the `researcher` role alone is not enough, and
+a researcher must be an explicit member of the study to read it. Membership
+also distinguishes *read* from *export* — downloading a study bundle is
+materially more than viewing a page.
+
+Anonymous studies stay **open**, exactly as before, so nothing existing changed
+the day this shipped. Admins always pass: scoping limits researchers to their
+own studies, it does not lock operators out of the platform they run.
+
+Study existence is deliberately **not** secret — a non-member sees the study in
+the list and a 403 on its detail. Hiding it would make the studies page look
+broken for no security gain; the sensitive thing is the data, not the name.
+
+## Alerting
+
+Every reveal sends a mail to `IDENTITY_DPO_ALERT_EMAIL` — on **every** reveal,
+not on a threshold. A re-identification nobody noticed is the failure mode that
+ends studies.
+
+The alert carries the subject code, who performed it, the legal basis and the
+field **names**. It never carries the revealed values: the point is that
+someone was identified, not who they are.
+
+Leaving it unset disables alerting, which is defensible for a pilot but should
+not survive into a real study.
+
 ## Data subject requests
 
 **Art. 15 (access)** now spans two systems: the register holds the identity,

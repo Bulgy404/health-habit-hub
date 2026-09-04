@@ -1560,6 +1560,7 @@ services:
       - SMTP_USER=${IDENTITY_SMTP_USER:-}
       - SMTP_PASS=${IDENTITY_SMTP_PASS:-}
       - SMTP_FROM=${IDENTITY_SMTP_FROM:-}
+      - IDENTITY_DPO_ALERT_EMAIL=${IDENTITY_DPO_ALERT_EMAIL:-}
     volumes:
       # 0400 on the host. Read-only here.
       - ${HHH_DATA_DIR:-/opt/hhh/data}/identity-master-key:/run/secrets/identity-master-key:ro

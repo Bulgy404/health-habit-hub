@@ -131,6 +131,9 @@ export async function ensureIndexes(database) {
 
   // Enrollments (one per user, per-study listing, dropout filtering).
   await ensureFor(database, './enrollment.js');
+
+  // Per-study researcher membership (scoped access to verified studies).
+  await ensureFor(database, './studyMembership.js');
 }
 
 export async function disconnect() {

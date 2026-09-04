@@ -102,7 +102,7 @@ export function parseRosterCsv(buffer) {
   });
 }
 
-export function createPublicRouter({ db, keys, config, auditor }) {
+export function createPublicRouter({ db, keys, config, auditor, mailer }) {
   const router = express.Router();
   router.use(express.json({ limit: '256kb' }));
 
@@ -508,6 +508,68 @@ export function createPublicRouter({ db, keys, config, auditor }) {
     }
   );
 
+  router.post(
+    '/v1/subjects/:id/codes/:codeId/send',
+    requireIdentityRole(MANAGER, NURSE),
+    async (req, res) => {
+      const { rows } = await db.query(
+        `SELECT s.id, s.subject_code, s.register_id, s.email_ct, c.code_ct, c.expires_at
+           FROM subjects s
+           JOIN enrollment_codes c ON c.id = $2 AND c.subject_id = s.id
+          WHERE s.id = $1 AND c.status = 'issued'`,
+        [req.params.id, req.params.codeId]
+      );
+      if (rows.length === 0)
+        return res.status(404).json({ error: 'code_not_found' });
+      const row = rows[0];
+
+      const dek = await registerDek({ db, keys, registerId: row.register_id });
+      const email = decryptField({
+        key: dek,
+        subjectId: row.id,
+        fieldName: PII_FIELDS.email,
+        ciphertext: row.email_ct,
+      });
+      if (!email) return res.status(400).json({ error: 'no_email_on_file' });
+
+      const code = decryptField({
+        key: dek,
+        subjectId: row.id,
+        fieldName: 'enrolment_code',
+        ciphertext: row.code_ct,
+      });
+
+      // The address is decrypted here, used, and discarded. It is never
+      // returned to the caller, never passed to HHH, and never logged.
+      const result = await mailer.sendInvite({
+        to: email,
+        code,
+        studyName: req.body?.studyName ?? 'the study',
+        expiresAt: row.expires_at,
+      });
+
+      if (result.sent) {
+        await db.query(
+          `UPDATE enrollment_codes
+              SET delivered_at = now(), delivery_method = 'email'
+            WHERE id = $1`,
+          [req.params.codeId]
+        );
+      }
+
+      audit(res, {
+        registerId: row.register_id,
+        action: 'send_invite',
+        sensitivity: 'pii_read',
+        subjectCode: row.subject_code,
+        fields: ['email'],
+        detail: { sent: result.sent, reason: result.reason ?? null },
+      });
+      // Reports only whether it went, never to where.
+      res.json({ sent: result.sent, reason: result.reason ?? null });
+    }
+  );
+
   router.get(
     '/v1/studies/:studyId/codes/sheet.pdf',
     requireIdentityRole(MANAGER, NURSE),
@@ -704,6 +766,21 @@ export function createPublicRouter({ db, keys, config, auditor }) {
           requestId: req.params.id,
           fields: Object.keys(out.fields),
         });
+
+        // A re-identification nobody noticed is the failure mode that ends
+        // studies — so this fires on EVERY reveal, not on a threshold. It
+        // carries the subject code and the fields' NAMES, never their values.
+        // Fire-and-forget: a mail failure must not deny a clinician the
+        // identity they were legitimately approved to see.
+        if (config.dpoAlertEmail) {
+          void mailer.sendRevealAlert({
+            to: config.dpoAlertEmail,
+            subjectCode: out.subjectCode,
+            actorSub: req.user.sub,
+            legalBasis: out.legalBasis ?? 'unknown',
+            fields: Object.keys(out.fields),
+          });
+        }
         res.set(
           'Cache-Control',
           'no-store, no-cache, must-revalidate, private'

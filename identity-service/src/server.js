@@ -15,6 +15,7 @@ import pino from 'pino';
 import { loadConfig } from './config.js';
 import { createAuthMiddleware } from './middleware/auth.js';
 import { createAuditor } from './middleware/audit.js';
+import { createMailer } from './services/mailer.js';
 import { createInternalRouter } from './routes/internal.js';
 import { createPublicRouter } from './routes/public.js';
 import { sweepStaleReservations } from './services/linkService.js';
@@ -57,6 +58,7 @@ export async function start() {
   logger.info('identity schema ensured');
 
   const auditor = createAuditor({ db: pool, keys: config.keys, logger });
+  const mailer = createMailer({ smtp: config.smtp, logger });
 
   /* Public app */
   const publicApp = express();
@@ -67,7 +69,7 @@ export async function start() {
   publicApp.use(auditor.middleware);
   publicApp.use(
     '/api',
-    createPublicRouter({ db: pool, keys: config.keys, config, auditor })
+    createPublicRouter({ db: pool, keys: config.keys, config, auditor, mailer })
   );
 
   /* Internal app */

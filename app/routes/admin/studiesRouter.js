@@ -39,6 +39,7 @@ import {
   getStudyScheduleCalendar,
 } from '../../services/questionnaireScheduleService.js';
 import { validate } from '../../middleware/validate.js';
+import { requireStudyAccess } from '../../middleware/requireStudyAccess.js';
 import {
   createStudySchema,
   updateStudySchema,
@@ -142,17 +143,21 @@ export function createStudiesRouter({
   });
 
   // GET /api/v1/admin/studies/:id — get a single study
-  router.get('/studies/:id', async (req, res) => {
-    try {
-      const database = await getDb();
-      const study = await getStudy({ db: database, id: req.params.id });
-      if (!study) return res.status(404).json({ error: 'Study not found' });
-      res.json(study);
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+  router.get(
+    '/studies/:id',
+    requireStudyAccess({ getDb }),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const study = await getStudy({ db: database, id: req.params.id });
+        if (!study) return res.status(404).json({ error: 'Study not found' });
+        res.json(study);
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // PUT /api/v1/admin/studies/:id — update a study
   router.put('/studies/:id', validate(updateStudySchema), async (req, res) => {
@@ -322,27 +327,35 @@ export function createStudiesRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // GET /api/v1/admin/studies/:id/export — downloadable JSON of all study data
-  router.get('/studies/:id/export', async (req, res) => {
-    try {
-      const database = await getDb();
-      const bundle = await exportStudyData({ db: database, id: req.params.id });
-      if (!bundle) return res.status(404).json({ error: 'Study not found' });
-      const safeName = String(bundle.study.name || 'study')
-        .replace(/[^a-z0-9]+/gi, '-')
-        .replace(/^-+|-+$/g, '')
-        .toLowerCase()
-        .slice(0, 60);
-      const stamp = new Date().toISOString().slice(0, 10);
-      res.set({
-        'Content-Type': 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="study-${safeName || 'export'}-${stamp}.json"`,
-      });
-      res.send(JSON.stringify(bundle, null, 2));
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+  router.get(
+    '/studies/:id/export',
+    // Downloading a study bundle is materially more than viewing a page.
+    requireStudyAccess({ getDb, requireExport: true }),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const bundle = await exportStudyData({
+          db: database,
+          id: req.params.id,
+        });
+        if (!bundle) return res.status(404).json({ error: 'Study not found' });
+        const safeName = String(bundle.study.name || 'study')
+          .replace(/[^a-z0-9]+/gi, '-')
+          .replace(/^-+|-+$/g, '')
+          .toLowerCase()
+          .slice(0, 60);
+        const stamp = new Date().toISOString().slice(0, 10);
+        res.set({
+          'Content-Type': 'application/json; charset=utf-8',
+          'Content-Disposition': `attachment; filename="study-${safeName || 'export'}-${stamp}.json"`,
+        });
+        res.send(JSON.stringify(bundle, null, 2));
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   /**
    * @swagger
