@@ -66,7 +66,8 @@
     "toggleTheme": "Changer de thème",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
-    "signOut": "Déconnexion"
+    "signOut": "Déconnexion",
+    "identity": "Registre d'identité"
   },
   "system": {
     "title": "Système et liens",

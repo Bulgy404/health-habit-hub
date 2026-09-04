@@ -66,7 +66,8 @@
     "toggleTheme": "Toggle theme",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "identity": "Identity register"
   },
   "system": {
     "title": "System & Links",

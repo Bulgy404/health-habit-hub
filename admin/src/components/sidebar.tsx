@@ -29,6 +29,7 @@ import {
   Menu,
   X,
   type LucideIcon,
+  IdCard,
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
 import { signOutOfKeycloak } from "@/lib/keycloakSignOut";
@@ -40,6 +41,12 @@ interface NavItem {
   labelKey: string;
   Icon: LucideIcon;
   adminOnly?: boolean;
+  /**
+   * Visible only to holders of an identity role. Deliberately separate from
+   * `adminOnly`: an `admin` has no standing access to the identity register,
+   * and a `study-nurse` is not an admin.
+   */
+  identityOnly?: boolean;
 }
 
 interface NavSection {
@@ -53,6 +60,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/studies", labelKey: "studies", Icon: FlaskConical },
       { href: "/analytics", labelKey: "analytics", Icon: BarChart2 },
+      {
+        href: "/identity",
+        labelKey: "identity",
+        Icon: IdCard,
+        identityOnly: true,
+      },
     ],
   },
   {
@@ -116,6 +129,10 @@ export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false);
 
   const isAdmin = (session?.roles ?? []).includes("admin");
+  // Identity pages follow the identity roles, not `admin` — see NavItem.
+  const hasIdentityRole = ["identity-manager", "study-nurse", "monitor"].some(
+    (r) => (session?.roles ?? []).includes(r)
+  );
 
   // Close the drawer automatically on navigation (small-screen use case).
   useEffect(() => {
@@ -181,7 +198,11 @@ export function Sidebar() {
 
         <nav className={styles.nav}>
           {NAV_SECTIONS.map((section) => {
-            const visible = section.items.filter((item) => !item.adminOnly || isAdmin);
+            const visible = section.items.filter(
+              (item) =>
+                (!item.adminOnly || isAdmin) &&
+                (!item.identityOnly || hasIdentityRole)
+            );
             if (visible.length === 0) return null;
             return (
               <div key={section.titleKey} className={styles.navSection}>

@@ -1048,6 +1048,9 @@ services:
         NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: https://${DOMAIN}/auth
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
         NEXT_PUBLIC_API_DOCS_URL: https://${DOMAIN}/api-docs
+        # Inlined by `next build`. Without it here the browser bundle carries
+        # `undefined` no matter what the runtime environment says.
+        NEXT_PUBLIC_IDENTITY_API_URL: ${NEXT_PUBLIC_IDENTITY_API_URL:-/identity/api}
         NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
         NEXT_PUBLIC_MONGO_EXPRESS_URL: https://${DOMAIN}/mongo
         NEXT_PUBLIC_LIGHTRAG_WEBUI_URL: https://${DOMAIN}/lightrag/webui
@@ -1075,6 +1078,9 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api/v1
       - NEXT_PUBLIC_API_DOCS_URL=https://${DOMAIN}/api-docs
+      # Inlined at `next build` — a runtime-only value would stay
+      # undefined in the browser. Must be in BOTH build args and env.
+      - NEXT_PUBLIC_IDENTITY_API_URL=${NEXT_PUBLIC_IDENTITY_API_URL:-/identity/api}
       - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
       - NEXT_PUBLIC_MONGO_EXPRESS_URL=https://${DOMAIN}/mongo
       - NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://${DOMAIN}/lightrag/webui

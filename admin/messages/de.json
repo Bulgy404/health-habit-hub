@@ -66,7 +66,8 @@
     "toggleTheme": "Design wechseln",
     "openMenu": "Menü öffnen",
     "closeMenu": "Menü schließen",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "identity": "Identitätsregister"
   },
   "system": {
     "title": "System & Links",
