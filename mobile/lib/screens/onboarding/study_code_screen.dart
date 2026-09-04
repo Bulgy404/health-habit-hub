@@ -22,6 +22,52 @@ const String kStudyIdKey = 'study_id';
 /// Key for the enrolled group ID.
 const String kGroupIdKey = 'group_id';
 
+/// Study-local subject code, for verified-identity studies only.
+///
+/// A pseudonym — safe to store on the device and to show the participant, so
+/// they can quote it to the study site. It is NOT a credential.
+const String kSubjectCodeKey = 'subject_code';
+
+/// 'verified' when this study identifies its participants, else absent.
+const String kIdentityModeKey = 'identity_mode';
+
+// ---------------------------------------------------------------------------
+// Code format
+// ---------------------------------------------------------------------------
+// Kept at file level rather than inside the State class so it is testable
+// without building a widget tree — and because the client-side format MUST
+// agree with the backend's. A release that predates the backend change would
+// reject valid verified codes with a confusing local error, which is why the
+// widened build has to ship before any HHV code is minted.
+
+/// Anonymous study code: HHH-XXXXX.
+final RegExp _anonymousCodePattern = RegExp(r'^HHH-[A-Z0-9]{5}$');
+
+/// Verified-identity enrolment code: HHV-XXXXX-XXXXX over Crockford base32
+/// (no I, L, O or U — the characters misread off a printed sheet).
+final RegExp _verifiedCodePattern =
+    RegExp(r'^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$');
+
+/// Repairs the substitutions people actually make when copying a code.
+///
+/// Safe because no valid code contains I, L, O or U, so this can never corrupt
+/// a legitimate code — it only rescues a mistyped one.
+String normalizeStudyCode(String input) {
+  return input
+      .trim()
+      .toUpperCase()
+      .replaceAll(RegExp(r'\s+'), '')
+      .replaceAll(RegExp('[IL]'), '1')
+      .replaceAll('O', '0');
+}
+
+/// Accepts either code format. The backend routes on the prefix; the client
+/// must not reject a valid verified code before it ever gets there.
+bool isValidStudyCode(String code) {
+  final c = normalizeStudyCode(code);
+  return _anonymousCodePattern.hasMatch(c) || _verifiedCodePattern.hasMatch(c);
+}
+
 // ---------------------------------------------------------------------------
 // StudyCodeScreen
 // ---------------------------------------------------------------------------
@@ -66,15 +112,12 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     }
   }
 
-  /// Validates that the code matches the HHH-XXXXX pattern.
-  bool _isValidCode(String code) {
-    return RegExp(r'^HHH-[A-Z0-9]{5}$').hasMatch(code);
-  }
+  bool _isValidCode(String code) => isValidStudyCode(code);
 
   /// Calls POST /api/v1/onboarding/redeem-code and stores the result.
   Future<void> _onSubmit() async {
     final l10n = AppLocalizations.of(context)!;
-    final code = _codeController.text.trim();
+    final code = normalizeStudyCode(_codeController.text);
     if (!_isValidCode(code)) {
       setState(() => _errorMessage = l10n.studyCodeInvalidFormat);
       return;
@@ -96,11 +139,17 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       final data = response.data ?? {};
       final studyId = data['studyId'] as String? ?? '';
       final groupId = data['groupId'] as String? ?? '';
+      // Present only for verified-identity studies.
+      final subjectCode = data['subjectCode'] as String?;
 
       const storage = FlutterSecureStorage();
       await storage.write(key: kStudyIdKey, value: studyId);
       await storage.write(key: kGroupIdKey, value: groupId);
       await storage.write(key: kStudyEnrolledKey, value: 'true');
+      if (subjectCode != null && subjectCode.isNotEmpty) {
+        await storage.write(key: kSubjectCodeKey, value: subjectCode);
+        await storage.write(key: kIdentityModeKey, value: 'verified');
+      }
 
       if (!mounted) return;
       context.go('/share');
@@ -206,7 +255,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
               enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: l10n.studyCodeLabel,
-                hintText: 'HHH-XXXXX',
+                hintText: 'HHH-XXXXX', // or HHV-XXXXX-XXXXX for verified studies
                 border: const OutlineInputBorder(),
                 errorText: _errorMessage,
                 errorMaxLines: 3,

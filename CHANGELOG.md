@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Verified Identity Mode** — an optional, per-study capability for clinical studies that must identify their participants, without weakening the platform's anonymity for every other study. `identity.mode` is absent on all existing studies and defaults to `anonymous`, so nothing changes for them and the new service need not be deployed at all.
+  - New `identity-service/`: a separate Node/Express service with its own **PostgreSQL** database. A different engine from the research stores is deliberate — it makes it structurally impossible for the register to be swept into `mongodump` or into `studyExportService`'s collection loop; that mistake would need a code change, not a mis-set connection string.
+  - Every identifying field is AES-256-GCM encrypted under a per-register data key, with the AAD bound to **both** the row id and the column name, so ciphertext cannot be moved between rows or between fields by an attacker holding `UPDATE` but not the key. One 32-byte master key, mounted as a `0400` file (never an env var); everything else HKDF-derived, with key-encryption and blind-index versions rotating independently.
+  - Exact-match lookups use keyed blind indexes. There is deliberately **no** searchable name index: at clinical-study scale an n-gram index over German surnames is trivially frequency-analysable. Nurse search decrypts a bounded roster in memory instead.
+  - Enrolment uses a **reserve / confirm / release** protocol, because the enrolment spans two databases with no shared transaction. Reserving first leaves a recoverable state; a single-phase redeem would burn the code if the Neo4j enrolment then failed, which needs a nurse to issue a replacement. A sweeper reclaims reservations abandoned mid-protocol. No personal data crosses the boundary — the internal API has no route that returns a name.
+  - Re-identification requires a stated legal basis, a substantive reason, a **second approver enforced by a database trigger**, and a time-limited grant. Every reveal is recorded and never deduplicated. There is no bulk-reveal endpoint and none accepting a list of subject codes.
+  - New Keycloak roles `identity-manager`, `study-nurse`, `monitor`, with `researcher` refused alongside any of them at runtime — the person analysing the pseudonymous data cannot resolve the pseudonyms.
+  - Researcher CSV exports emit the study-local subject code for verified studies and withhold the raw Keycloak sub entirely. Anonymous studies are byte-identical to before.
+  - `identity-service` shares **no Docker network** with `mongo` or `neo4j`, asserted by a CI test against `docker-compose.yml`.
+  - Docs: `docs/identity-register.md` (operator and study-site runbook), `docs/identity-mode-plan.md` (design), plus `SECURITY.md`, `DEPLOYMENT.md` and `.env.example`.
+
 ### Security
 
 - **Resolved two further high-severity Dependabot advisories in `admin/`** (both development scope). `browserslist` ≤4.28.6 (prototype write via untrusted `browserslist-stats.json` custom stats in `normalizeStats`, GHSA-73wf-gq98-2v4g; unbounded cache growth leading to OOM, GHSA-c83g-rgw3-j3cx) and `brace-expansion` (DoS via unbounded expansion, GHSA-mh99-v99m-4gvg and GHSA-rgw5-rvv9-x895). `npm audit fix` resolved neither — `@babel/*` pins a narrower `browserslist` range, and `brace-expansion` is present in **three mutually incompatible major lines** at once (1.1.16 under eslint 8's `minimatch@3`, 2.1.2 under `glob`'s `minimatch@9`, 5.0.8 under `@typescript-eslint`'s `minimatch@10`). A flat override would have forced `minimatch@3` onto the 5.x API and broken linting, so each line is pinned separately using npm's version-scoped override syntax (`brace-expansion@1`/`@2`/`@5`). Verified with lint (clean), the admin jest suite (165 tests, 28 suites) and a full `next build`; `npm audit` reports 0 vulnerabilities.
