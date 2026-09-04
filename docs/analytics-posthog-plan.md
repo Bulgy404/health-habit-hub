@@ -6,7 +6,7 @@
   See also: docs/identity-mode-plan.md, docs/runbook.md, DEPLOYMENT.md.
 -->
 
-# Product Analytics — self-hosted PostHog on the study VM
+# Product Analytics — self-hosted PostHog on a dedicated TU-internal VM
 
 ## Context
 
@@ -25,39 +25,91 @@ Plus one research-validity concern that is not a product question: **per-arm app
 
 | | |
 |---|---|
-| Tool | **Self-hosted PostHog** on the existing VM |
+| Tool | **Self-hosted PostHog** on a dedicated, TU-internal VM; ingest reverse-proxied through `habitvm` |
 | Identifiability | **Per-user, no opt-out** — telemetry framed as part of study participation; consent already covers app analytics |
 | Recommendation lineage | **Fix end to end** — carry `recommendation_id` into `implementation_intentions` |
 | Retention | Raw **1 year**, rollups indefinitely, rollups exportable on demand |
 | Export | Both the per-study export ZIP **and** an on-demand rollup export |
 
-### Capacity — measured, not estimated
+### Hosting — a dedicated, TU-internal VM
 
-`free -h` / `docker stats` on `habitvm`: **15 GiB total, 3.6 GiB used by 23 containers, ~10 GiB available**, 5 GiB swap untouched, **8 vCPU**, and `/data` (ext4, 1 TB) with **940 GB free**. PostHog's documented recommendation is a dedicated 4 vCPU / 16 GB / >30 GB box; its hobby minimum is ~4 GB. A tuned instance at this scale lands ~5–8 GB. **It fits, with less headroom than ideal.**
+**PostHog runs on its own VM, not on `habitvm`** (decided 2026-09-04, VM requested).
+
+Sizing it separately was measurement-driven. `habitvm` has **15 GiB RAM with 3.6 GiB used by 23 containers** and 8 vCPU — PostHog would fit in the ~10 GiB available, but PostHog's documented recommendation is a *dedicated* 4 vCPU / 16 GB / >30 GB box, and a shared host means ClickHouse competing for page cache with Neo4j's 2560-dimension vector indexes and Mongo's working set. A separate VM removes that contention entirely and, more importantly, means **analytics can never OOM the study platform**.
+
+Requested spec:
+
+| | Value | Rationale |
+|---|---|---|
+| vCPU / RAM | 4 / 16 GB | PostHog's documented recommendation |
+| Systemfestplatte | 50 GiB | Sufficient **provided** Docker's `data-root` is moved to the data disk before the first `docker pull` |
+| Datenfestplatte | 200 GiB | ClickHouse compresses to ~100 MB per million events, so this is generous headroom; session replay (the real disk consumer) is off |
+| Filesystem | **ext4** | Deliberately not btrfs — `habitvm`'s btrfs root produced a near-outage when `Device unallocated` hit 13 MiB (see [runbook § 14](runbook.md#14-filesystem-maintenance)) |
+| IP / reachability | **private, TU-internal** | See below |
+| OS | Match `habitvm`'s Ubuntu LTS | One runbook, one patching routine |
+
+**Set `/etc/docker/daemon.json` to `{"data-root": "/data/docker"}` before installing anything.** This is the single change that keeps the 50 GiB system disk from filling — it is what saved `habitvm`, where the 20 GiB root would otherwise have been overwhelmed by images and volumes.
+
+### Reachability — TU-internal, ingest reverse-proxied through `habitvm`
+
+The VM has a **private IP and is not reachable from the internet**. This is the security-relevant decision in the whole design.
+
+**Why.** Self-hosted PostHog has **no SSO** (§ Risks) — it is local email/password accounts. Publishing that admin panel to the internet would expose per-user behavioural data from a health study, behind a form login, on software that ships continuously from master with no published CVEs, for the multi-year life of the study. Not acceptable.
+
+**How participants' phones reach it anyway.** They don't, directly. `habitvm` is already world-reachable and already on the TU network, so Traefik there reverse-proxies **only the ingest endpoints** inward:
+
+```
+phone (internet)
+   │  POST https://habit.wiwi.tu-dresden.de/ingest/…
+   ▼
+Traefik on habitvm  (public, existing TLS cert)
+   │  private TU network
+   ▼
+posthog-web on the analytics VM  (private IP, TU-internal only)
+```
+
+The Flutter SDK is configured with `host: https://habit.wiwi.tu-dresden.de/ingest` rather than the PostHog hostname — a documented, supported PostHog reverse-proxy pattern (commonly used to avoid ad-blockers; here it buys a much smaller attack surface). **The admin UI is never proxied** and stays reachable only from the TU network or VPN.
+
+Consequences, accepted deliberately:
+
+- **Researchers need TU network or VPN** to open dashboards. Given the data, that is closer to a feature than a cost.
+- **`habitvm` becomes a dependency for event ingest.** If it is down, events are lost — but the app is down in that case anyway, so nothing meaningful is added to the failure surface.
+- **A firewall rule is required**: `141.76.16.16` (`habitvm`) → the analytics VM's HTTP port, added in the Self-Service-Portal after provisioning. **The ingest path silently fails without it** — this is the most likely single cause of "events aren't arriving" on first setup, so check it first.
+- Proxy only the ingest paths (`/i/`, `/e/`, `/decide`, `/batch`, `/array/`). Do **not** blanket-proxy `/`, which would republish the admin UI and undo the entire rationale.
 
 ### Risks accepted (state these in the DPIA and the runbook)
 
 - **Event ceiling.** PostHog advises migrating to Cloud above ~100k–300k events/month. At 200 participants × 100 events/day that is ~600k/month — **2–6× over**. Advisory, not a hard cap, but it is why §3 imposes an event budget rather than instrumenting everything.
 - **No versions.** Self-hosted ships continuously from master; you cannot pin a known-good release for a multi-year study. Mitigate by pinning a specific image **digest** in compose and upgrading deliberately, off-study-critical periods, after a restore drill.
 - **No support, no published CVEs** for self-hosted. Security patching is "track master".
-- **SSO is Cloud-only.** Self-hosted means local PostHog email/password accounts, not Keycloak. Keep the account list short and document offboarding.
+- **SSO is Cloud-only.** Self-hosted means local PostHog email/password accounts, not Keycloak — which is precisely why the admin UI is TU-internal only. Keep the account list short, use strong unique passwords, enable PostHog's own 2FA, and document offboarding: a leaver's PostHog account is *not* revoked by disabling their Keycloak account.
+- **Two hosts to patch, not one.** A dedicated VM removes resource contention but adds a machine to the OS-patching and monitoring routine. Match `habitvm`'s OS so it is one routine rather than two.
 - **Headroom shrinks** as the graph and participant count grow. §7 adds the alerting that currently does not exist.
 
 ---
 
 ## 1. Deployment
 
-**Separate compose stack**, not merged into the 23-service `docker-compose.yml` — so PostHog can be restarted, upgraded or removed without touching the study platform. New file `posthog/docker-compose.posthog.yml` (+ `posthog/README.md`), based on PostHog's `docker-compose.hobby.yml`.
+**On the analytics VM.** Its own compose stack (`posthog/docker-compose.posthog.yml` + `posthog/README.md`), based on PostHog's `docker-compose.hobby.yml`, kept in this repo so the deployment is reviewable and version-controlled even though it runs on a different host.
 
-Services: `posthog-web`, `posthog-worker`, `posthog-plugin-server`, `clickhouse`, `kafka`, `posthog-db` (Postgres), `posthog-redis`. **Drop PostHog's bundled Caddy** — Traefik already terminates TLS. **Drop MinIO** unless session replay is enabled, which it is not (§4).
+Services: `posthog-web`, `posthog-worker`, `posthog-plugin-server`, `clickhouse`, `kafka`, `posthog-db` (Postgres), `posthog-redis`. **Drop PostHog's bundled Caddy** — TLS is terminated by Traefik on `habitvm`, and this host is not internet-facing. **Drop MinIO** unless session replay is enabled, which it is not (§4).
 
-Non-negotiables, each of which addresses a specific risk above:
+Non-negotiables:
 
-- **`mem_limit` on every container.** ClickHouse by design expands into whatever is free; without a cap the kernel OOM-killer picks the largest RSS on the host, which is Neo4j or Mongo — i.e. analytics would take down the study platform. Suggested start: ClickHouse 3g, Kafka 1.5g, plugin-server 1g, web 1g, worker 1g, Postgres 512m, Redis 256m. Tune from `docker stats`, do not remove.
-- **All volumes on `/data`** (Docker's `data-root` is already `/data/docker`), never the 20 GB btrfs root — see [DEPLOYMENT.md § 7](../DEPLOYMENT.md#7-server-storage-layout).
+- **`mem_limit` on every container.** ClickHouse by design expands into whatever is free. On a dedicated 16 GB box an OOM kill no longer threatens Mongo or Neo4j, but it would still take PostHog down mid-study. Suggested start: ClickHouse 6g, Kafka 2g, plugin-server 1.5g, web 1.5g, worker 1.5g, Postgres 1g, Redis 512m. Tune from `docker stats`; do not remove.
+- **All volumes on the data disk** (`/data`), with Docker's `data-root` moved there before the first pull — see the hosting table above.
 - **Pin the image by digest**, not `:latest`, despite PostHog's advice. Record the digest in `posthog/README.md` with the date and who verified it.
-- **Traefik route** on the existing `hhh-proxy` network at `analytics.${DOMAIN}` (or `${DOMAIN}/analytics`), `websecure` + `letsencrypt`, plus a rate-limit middleware. It must **not** be reachable without TLS.
-- **No network path from PostHog to `mongo` or `neo4j`.** Verify by inspecting the `networks:` lists — the cheapest structural control available.
+- **No public exposure.** No Traefik labels on this host, no published ports beyond what `habitvm` needs to reach. Reachability is the private TU network only.
+
+**On `habitvm` — the ingest proxy.** A Traefik router forwarding *only* the ingest paths to the analytics VM:
+
+- Match `PathPrefix('/ingest')` on the existing `Host(${DOMAIN})` router, strip the prefix, forward to the analytics VM's private address.
+- **Only** ingest endpoints (`/i/`, `/e/`, `/decide`, `/batch`, `/array/`). Never `/` — a blanket proxy would republish the admin UI on the public internet and defeat the reason for a private VM.
+- Reuse the existing Let's Encrypt certificate for `${DOMAIN}`; no new cert or DNS record is needed, which is a real simplification over a public `analytics.${DOMAIN}`.
+- Apply a rate-limit middleware — this is a public, unauthenticated write endpoint.
+- Define the backend as a Traefik `file` provider entry (an external host, not a Docker container), so it lives in tracked config like everything else `config-sync` manages.
+
+**Structural control, now stronger than before.** PostHog previously needed only to be kept off the `mongo`/`neo4j` networks. On a separate VM with a private IP it has **no route to them at all** — enforced by the TU firewall rather than by a `networks:` list someone could edit. The only permitted flow is `habitvm` → analytics VM on one HTTP port.
 
 ---
 
@@ -100,6 +152,7 @@ Deliberately an **allowlist**, defined once in a shared registry, not autocaptur
 - **`autocapture: false`** — autocapture hoovers up widget text, which in a health app means habit descriptions and free-text goals
 - **`sessionReplay: false`** — non-negotiable in a health app
 - `personProfiles: 'identified_only'`
+- **`host: https://<WEBSITE/API domain>/ingest`** — the reverse proxy on `habitvm`, **never** the analytics VM's own hostname, which is private and unreachable from participants' devices. Configure it as a `--dart-define` alongside `API_BASE_URL` in `mobile/lib/config/app_config.dart`, so dev, staging and production can differ without a code change.
 
 **Insertion points** (all seams that already exist — no architectural change):
 - **Screen views**: `observers:` on the top-level `GoRouter` in `mobile/lib/router/app_router.dart`, which currently has none. Caveat: `StatefulShellRoute.indexedStack` branch navigators are **not** seen by a top-level observer — tab switches go through `shell_screen.dart` `onDestinationSelected` → `goBranch()`, so capture those there. `stats_screen.dart` and `results_screen.dart` are reached without routes and need explicit calls.
@@ -152,7 +205,13 @@ PostHog is the exploration surface; it is **not** the system of record for resea
 
 ## 7. Backup and monitoring
 
-**Backup — the condition attached to choosing self-hosted.** Extend `backup-service/backup.sh` with `INCLUDE_POSTHOG` as a seventh step, mirroring the existing Keycloak step (lines 232–289) exactly: `PGPASSWORD=… pg_dump -h posthog-db -U … -F c -f …` for Postgres, plus `clickhouse-backup` for ClickHouse. The backup image **already ships `postgresql16-client`**, so only the ClickHouse tool is new. Add `posthogDbOk`/`posthogDbSkipped` to the `jq` manifest (~lines 355–370) and the counterpart to `restore.sh` (which already has the `pg_restore` pattern at lines 188–207). Kafka state is transient and deliberately not backed up.
+**Backup — the condition attached to choosing self-hosted.** A dedicated VM changes *where* this runs, and there is a real choice.
+
+**Recommended: back up on the analytics VM itself.** A small local job runs `pg_dump` and `clickhouse-backup` against localhost and pushes the result to the same offsite remote used for the study data (see [issue #17](https://github.com/Bulgy404/health-habit-hub/issues/17)). Keeps analytics self-contained, requires no extra firewall holes, and avoids making `habitvm`'s backup window depend on a second host being up.
+
+The alternative — extending `backup-service/backup.sh` on `habitvm` with an `INCLUDE_POSTHOG` step — would mirror the existing Keycloak step (lines 232–289) closely, and the backup image **already ships `postgresql16-client`**. But it needs firewall rules opening Postgres and ClickHouse from `habitvm` to the analytics VM, which widens the flow beyond the single ingest port and weakens the isolation that justified a separate VM. Prefer the local job.
+
+Either way: Postgres via `pg_dump -F c`, ClickHouse via `clickhouse-backup`, **Kafka state deliberately not backed up** (transient), and the manifest gains `posthogDbOk`/`posthogDbSkipped` so a silent failure is visible.
 
 **Run a restore drill before the study starts.** An untested ClickHouse backup is not a backup, and this is the one dataset outside the pipeline you already trust.
 
@@ -164,7 +223,7 @@ PostHog is the exploration surface; it is **not** the system of record for resea
 
 **Phase 0 — prerequisites, independently valuable.** Recommendation lineage fix (§5). Disk/memory alerting + node-exporter (§7) — worth doing regardless, and it protects everything that follows.
 
-**Phase 1 — pipeline proven end to end, narrow.** PostHog deployed with memory limits, digest-pinned, Traefik-routed, on `/data`. `INCLUDE_POSTHOG` in `backup.sh` **plus the restore drill**. Shared event registry. Flutter SDK with autocapture/replay off, `identify()`, the Riverpod test seam. **Only the onboarding funnel** instrumented — highest value, smallest surface, and it proves the whole chain before committing to breadth.
+**Phase 1 — pipeline proven end to end, narrow.** VM provisioned (ext4, `data-root` on the data disk **before** the first pull, OS matched to `habitvm`); firewall rule `habitvm → analytics VM` added in the Self-Service-Portal; PostHog deployed with memory limits and digest-pinned; the `/ingest` reverse-proxy router on `habitvm`, ingest paths only. Backup job **plus the restore drill**. Shared event registry. Flutter SDK pointed at the proxy host, autocapture/replay off, `identify()`, the Riverpod test seam. **Only the onboarding funnel** instrumented — highest value, smallest surface, and it proves the whole chain before committing to breadth.
 
 **Phase 2 — the rest of the taxonomy.** Habit-creation funnel, recommendations (now measurable), engagement, notifications, server-side events via `posthog-node`.
 
@@ -176,6 +235,7 @@ PostHog is the exploration surface; it is **not** the system of record for resea
 
 ## Verification
 
+- **Ingest path, before anything else.** From a device **off** the TU network (mobile data, not eduroam), confirm an event posted to `https://<domain>/ingest/…` arrives in PostHog. Then confirm the admin UI is **not** reachable from that same off-network device — a `curl` to the analytics VM's address must fail. Both halves matter: the first proves the proxy works, the second proves the private VM is actually private. If events do not arrive, check the `habitvm → analytics VM` firewall rule first; that is the most likely cause and it fails silently.
 - **Volume before breadth.** After Phase 1, read actual events/participant/day off PostHog's own ingestion graph and extrapolate to full enrolment. If it projects past ~300k/month, cut `screen_viewed` or sample before Phase 2 — this is the check that keeps the ceiling from becoming a mid-study surprise.
 - **Privacy assertion as a test, not a promise.** A CI check asserting every event name and property key in the registry is on the allowlist, and a manual review that no free-text field (goal, habit name, cue, comment) reaches a property. Then verify empirically: run the onboarding + recommendation flows against a local PostHog and grep the captured payloads for the typed goal string — it must be absent.
 - **Funnel correctness.** Drive the five onboarding screens on a simulator, deliberately abandon at the passphrase step, and confirm PostHog shows a 4/5 funnel with the drop at that step — the exact question this feature exists to answer.
