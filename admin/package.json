@@ -24,10 +24,14 @@
     "recharts": "^3.8.1"
   },
   "overrides": {
+    "brace-expansion@1": "^1.1.18",
+    "brace-expansion@2": "^2.1.4",
+    "brace-expansion@5": "^5.0.9",
+    "browserslist": "^4.28.8",
     "js-yaml": "^5.2.1",
     "postcss": ">=8.5.10",
-    "uuid": ">=10.0.0",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.3",
+    "uuid": ">=10.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
