@@ -83,14 +83,28 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
     }
   });
 
-  // GET /api/v1/users/me/consent – latest recorded consent for the caller
+  // GET /api/v1/users/me/consent – latest recorded consent for the caller.
+  //
+  // ?documentSlug=<slug> selects an additional consent document (e.g. a
+  // study-specific one). Omitting it means the platform-wide document —
+  // deliberately NOT "whichever record is newest". Once a second document
+  // exists, "latest overall" would let a study consent satisfy the app's
+  // platform re-consent check, and vice versa.
+  //
+  // Legacy records predate the field entirely; Mongo's `null` equality also
+  // matches missing fields, so they resolve as platform consents unchanged.
   router.get('/me/consent', async (req, res) => {
     try {
       const database = await getDb();
       const userId = String(req.user.sub);
+      const slug = req.query.documentSlug;
+      const filter = {
+        userId,
+        documentSlug: slug ? String(slug) : null,
+      };
       const doc = await database
         .collection('consents')
-        .find({ userId })
+        .find(filter)
         .sort({ consentedAt: -1 })
         .limit(1)
         .toArray();
@@ -108,15 +122,27 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   // document (append-only audit trail; one record per accepted version).
   router.post('/me/consent', async (req, res) => {
     try {
-      const { consentVersion, locale } = req.body || {};
+      const { consentVersion, locale, documentSlug } = req.body || {};
       if (!consentVersion || typeof consentVersion !== 'string') {
         return res.status(400).json({ error: 'consentVersion is required' });
+      }
+      // Matches the collection validator's pattern. Rejected rather than
+      // coerced: a typo'd slug would silently record consent against a
+      // document nothing ever reads back, which is the worst outcome for an
+      // append-only legal audit trail.
+      if (
+        documentSlug != null &&
+        (typeof documentSlug !== 'string' ||
+          !/^[a-z0-9][a-z0-9-]{0,63}$/.test(documentSlug))
+      ) {
+        return res.status(400).json({ error: 'Invalid documentSlug' });
       }
       const database = await getDb();
       const userId = String(req.user.sub);
       const record = {
         userId,
         consentVersion: String(consentVersion),
+        documentSlug: documentSlug ?? null,
         locale: typeof locale === 'string' ? locale : null,
         consentedAt: new Date(),
       };

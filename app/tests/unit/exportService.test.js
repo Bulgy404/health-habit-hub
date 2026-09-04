@@ -153,3 +153,62 @@ test('buildDropoutCsv: marks dropped participants', async () => {
   assert.ok(csv.includes('TRUE'), 'dropped=TRUE missing');
   assert.ok(csv.includes('u1'));
 });
+
+test('buildQuestionnaireResponsesCsv: emits groupId from the real enrollment field', async () => {
+  // Regression: this builder used to read `e.group`, which enrollment
+  // documents never carry (the field is `groupId`, an ObjectId ref into
+  // studies.groups[].id), so the column rendered 'NA' for every row. The
+  // three sibling CSVs derive `groupLabel` from cueConfig; this one now
+  // emits both so all four are joinable.
+  const groupId = new ObjectId();
+  const db = makeDb({
+    enrollments: [
+      {
+        userId: 'u1',
+        studyId: null,
+        groupId,
+        cueConfig: { cueSource: 'high_quality', cueCount: 'single' },
+      },
+    ],
+    formResponses: [
+      {
+        userId: 'u1',
+        questionnaireSlug: 'baseline',
+        submittedAt: new Date('2026-01-01T10:00:00Z'),
+        answers: { q1: 3 },
+      },
+    ],
+  });
+
+  const csv = await buildQuestionnaireResponsesCsv({ db, studyId: null });
+  const [header, row] = csv.trim().split('\n');
+
+  assert.ok(header.includes('groupId'), 'header must include groupId');
+  assert.ok(header.includes('groupLabel'), 'header must include groupLabel');
+  assert.ok(
+    !header.includes(',group,'),
+    'the bogus `group` column must be gone'
+  );
+  assert.ok(row.includes(groupId.toString()), 'groupId value must be present');
+  assert.ok(
+    row.includes('high_quality/single'),
+    'groupLabel must match the sibling CSVs’ derivation'
+  );
+});
+
+test('buildQuestionnaireResponsesCsv: unenrolled user yields NA group columns', async () => {
+  const db = makeDb({
+    enrollments: [],
+    formResponses: [
+      {
+        userId: 'ghost',
+        questionnaireSlug: 'baseline',
+        submittedAt: new Date('2026-01-01T10:00:00Z'),
+        answers: { q1: 1 },
+      },
+    ],
+  });
+  const csv = await buildQuestionnaireResponsesCsv({ db, studyId: null });
+  const row = csv.trim().split('\n')[1];
+  assert.ok(row.includes('NA'), 'missing enrollment must degrade to NA');
+});

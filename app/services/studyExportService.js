@@ -38,11 +38,25 @@ async function safeFind(db, collection, filter) {
  * Remove bulky binaries and (unless explicitly enabled) account secrets from
  * participant records so the export stays a clean, portable JSON document.
  */
+/**
+ * Credential-bearing fields that must never leave the platform in a research
+ * export. Redacted unconditionally — unlike `recoveryPhrase`, there is no
+ * configuration under which a researcher legitimately needs these.
+ *
+ * `passwordHash` in particular was previously exported verbatim: bcrypt is
+ * slow but not unbreakable, and a study bundle is copied, emailed and archived
+ * far more freely than the database it came from.
+ */
+const CREDENTIAL_FIELDS = ['passwordHash', 'password', 'salt', 'email'];
+
 function sanitizeParticipant(p) {
   const clean = { ...p };
   if ('tokenCardPdf' in clean) clean.tokenCardPdf = '[binary omitted]';
   if (!recoveryPhrasesEnabled() && 'recoveryPhrase' in clean) {
     clean.recoveryPhrase = '[redacted]';
+  }
+  for (const field of CREDENTIAL_FIELDS) {
+    if (field in clean) clean[field] = '[redacted]';
   }
   return clean;
 }

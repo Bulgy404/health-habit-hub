@@ -33,9 +33,30 @@ describe('consent model', () => {
       }),
     };
     await ensureIndexes(db);
-    assert.equal(created.length, 1);
+    assert.equal(created.length, 2);
     assert.equal(created[0].name, 'consents');
     assert.deepEqual(created[0].spec, { userId: 1, consentedAt: -1 });
     assert.equal(created[0].opts.name, 'consents_userId_consentedAt');
+  });
+
+  test('ensureIndexes also indexes by documentSlug for per-document lookups', async () => {
+    // The two-field index is kept as well: per-user erasure and the legacy
+    // "latest consent overall" read still use it.
+    const created = [];
+    const db = {
+      collection: () => ({
+        createIndex: async (spec, opts) => created.push({ spec, opts }),
+      }),
+    };
+    await ensureIndexes(db);
+    const bySlug = created.find(
+      (c) => c.opts.name === 'consents_userId_documentSlug_consentedAt'
+    );
+    assert.ok(bySlug, 'documentSlug index must be created');
+    assert.deepEqual(bySlug.spec, {
+      userId: 1,
+      documentSlug: 1,
+      consentedAt: -1,
+    });
   });
 });

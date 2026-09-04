@@ -1,4 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'ensureIndexes' });
 
 const dbConfig = {
   host: process.env.MONGO_HOST || 'localhost',
@@ -52,6 +55,36 @@ export async function connect() {
 }
 
 /**
+ * Run one model's ensureIndexes in isolation.
+ *
+ * These used to be bare sequential awaits under a single catch in app.js, so
+ * the first failure silently skipped every index after it. That matters most
+ * for the unique indexes below (studies.isDefault, studyCodes.code,
+ * enrollments.userId): on a deployment that predates them, pre-existing
+ * duplicate data makes createIndex throw, and there is no reason that should
+ * also cost us the consent or audit-log indexes.
+ *
+ * Failures are logged with the collection name and swallowed — index creation
+ * is best-effort at boot, exactly as before, just no longer all-or-nothing.
+ *
+ * @param {import('mongodb').Db} database
+ * @param {string} module Path to the model module, relative to this file.
+ */
+async function ensureFor(database, module) {
+  try {
+    const { ensureIndexes } = await import(module);
+    await ensureIndexes(database);
+  } catch (err) {
+    log.error(
+      { err, module },
+      'Failed to ensure indexes for a collection — continuing with the rest. ' +
+        'A duplicate-key error here means existing data violates a unique ' +
+        'index and must be de-duplicated before that index can be created.'
+    );
+  }
+}
+
+/**
  * Create indexes that are required for correct behaviour (idempotent — safe to
  * call on every startup).  Must be called after connect().
  * @param {import('mongodb').Db} database
@@ -68,44 +101,36 @@ export async function ensureIndexes(database) {
     );
 
   // Consent audit trail (latest-consent reads + per-user erasure)
-  const { ensureIndexes: ensureConsentIndexes } = await import('./consent.js');
-  await ensureConsentIndexes(database);
+  await ensureFor(database, './consent.js');
 
   // Comment ownership mapping (rate limiting + GDPR erasure)
-  const { ensureIndexes: ensureCommentIndexes } = await import(
-    './habitComment.js'
-  );
-  await ensureCommentIndexes(database);
+  await ensureFor(database, './habitComment.js');
 
   // Questionnaire scheduling (assignments + per-participant windows)
-  const { ensureIndexes: ensureScheduleIndexes } = await import(
-    './questionnaireSchedule.js'
-  );
-  await ensureScheduleIndexes(database);
+  await ensureFor(database, './questionnaireSchedule.js');
 
   // Backup audit trail (admin Backups page)
-  const { ensureIndexes: ensureBackupAuditIndexes } = await import(
-    './backupAuditLog.js'
-  );
-  await ensureBackupAuditIndexes(database);
+  await ensureFor(database, './backupAuditLog.js');
 
   // General admin action audit trail (all other admin mutations)
-  const { ensureIndexes: ensureAdminAuditIndexes } = await import(
-    './adminAuditLog.js'
-  );
-  await ensureAdminAuditIndexes(database);
+  await ensureFor(database, './adminAuditLog.js');
 
   // Passphrase-based account restore attempts (security monitoring, admin panel)
-  const { ensureIndexes: ensureRestoreAttemptIndexes } = await import(
-    './restoreAttempt.js'
-  );
-  await ensureRestoreAttemptIndexes(database);
+  await ensureFor(database, './restoreAttempt.js');
 
   // Short-lived restore confirmation tokens (TTL-expired automatically)
-  const { ensureIndexes: ensureRestoreTokenIndexes } = await import(
-    './restoreConfirmationToken.js'
-  );
-  await ensureRestoreTokenIndexes(database);
+  await ensureFor(database, './restoreConfirmationToken.js');
+
+  // Study configuration — partial-unique index enforcing at most one default
+  // study. Never bootstrapped before this chain existed, so on an existing
+  // deployment it is created for the first time here.
+  await ensureFor(database, './study.js');
+
+  // Study enrollment codes (unique code lookup + per-study listing).
+  await ensureFor(database, './studyCode.js');
+
+  // Enrollments (one per user, per-study listing, dropout filtering).
+  await ensureFor(database, './enrollment.js');
 }
 
 export async function disconnect() {

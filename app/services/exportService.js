@@ -123,7 +123,14 @@ export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
     const base = {
       userId: r.userId,
       studyId: studyId ?? 'NA',
-      group: e.group ?? 'NA',
+      // Enrollment documents carry `groupId` (an ObjectId ref into
+      // studies.groups[].id); there is no `group` field, so the previous
+      // `e.group` always rendered 'NA'. `groupLabel` is derived the same way
+      // as in the three sibling CSVs above so all four join on it.
+      groupId: e.groupId?.toString() ?? 'NA',
+      groupLabel: e.cueConfig
+        ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
+        : 'NA',
       questionnaireSlug: r.questionnaireSlug ?? 'NA',
       submittedAt: r.submittedAt?.toISOString() ?? 'NA',
     };
