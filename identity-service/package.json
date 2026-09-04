@@ -1,0 +1,18 @@
+{
+  "name": "hhh-identity-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Identity register for verified-identity studies. Holds the subject-code <-> person mapping in its own database, encrypted, isolated from the research platform.",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --test-force-exit \"tests/**/*.test.js\"",
+    "lint": "npx eslint .",
+    "format:check": "npx prettier --check ."
+  },
+  "dependencies": {}
+}
