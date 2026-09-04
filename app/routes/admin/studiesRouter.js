@@ -166,6 +166,17 @@ export function createStudiesRouter({
       });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
+      // Frozen identity fields on a study that already has enrolments. 409
+      // rather than 400: the request is well-formed, it conflicts with the
+      // study's current state.
+      if (result.conflict) {
+        res.locals.auditAction = 'update_study_rejected';
+        res.locals.auditResourceType = 'study';
+        res.locals.auditResourceId = req.params.id;
+        return res
+          .status(409)
+          .json({ error: result.error, frozenFields: result.frozenFields });
+      }
       res.locals.auditAction = 'update_study';
       res.locals.auditResourceType = 'study';
       res.locals.auditResourceId = req.params.id;

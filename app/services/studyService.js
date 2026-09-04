@@ -2,6 +2,7 @@ import { ObjectId } from '../models/survey.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDY_CODES } from '../models/studyCode.js';
+import { resolveIdentityConfig, frozenFieldChanges } from './identityConfig.js';
 import { COLLECTION as SRHI_RESPONSES } from '../models/srhiResponse.js';
 import { COLLECTION as IMPLEMENTATION_INTENTIONS } from '../models/implementationIntention.js';
 import { ASSIGNMENTS as QUESTIONNAIRE_ASSIGNMENTS } from '../models/questionnaireSchedule.js';
@@ -179,6 +180,9 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
           : 'generic',
       informationOverloadGuard: s.informationOverloadGuard ?? null,
       gamificationEnabled: s.gamificationEnabled !== false,
+      // Summary only — the list needs to badge verified studies, not
+      // expose the whole config.
+      identityMode: resolveIdentityConfig(s).mode,
       donationInputMode: normalizeDonationInputMode(s),
       donationQuestionnaireSlug:
         typeof s.donationQuestionnaireSlug === 'string'
@@ -219,6 +223,7 @@ export async function createStudy({
   reminderContentMode = 'generic',
   informationOverloadGuard = null,
   gamificationEnabled = true,
+  identity = null,
   donationInputMode = 'freeText',
   donationQuestionnaireSlug = null,
   endDate = null,
@@ -267,6 +272,10 @@ export async function createStudy({
         }
       : null,
     gamificationEnabled: gamificationEnabled !== false,
+    // Stored resolved rather than raw, so a study document always carries
+    // an explicit mode instead of relying on the absent-means-anonymous
+    // fallback at every read site.
+    identity: resolveIdentityConfig({ identity }),
     donationInputMode: normalizeDonationInputMode({
       donationInputMode,
       habitEntryMode,
@@ -345,6 +354,7 @@ export async function getStudy({ db, id }) {
         : 'generic',
     informationOverloadGuard: study.informationOverloadGuard ?? null,
     gamificationEnabled: study.gamificationEnabled !== false,
+    identity: resolveIdentityConfig(study),
     donationInputMode: normalizeDonationInputMode(study),
     donationQuestionnaireSlug:
       typeof study.donationQuestionnaireSlug === 'string'
@@ -426,6 +436,34 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
       : null;
   if (updates.gamificationEnabled !== undefined)
     $set.gamificationEnabled = updates.gamificationEnabled;
+
+  // Verified identity mode. `mode` and `subjectCodePrefix` freeze once anyone
+  // has enrolled: flipping verified -> anonymous would orphan live subject
+  // links in the identity register, anonymous -> verified is meaningless for
+  // participants who already enrolled without an identity, and changing the
+  // prefix would break the 1:1 correspondence between a stored subject code
+  // and the register that issued it. Everything else stays editable.
+  if (updates.identity !== undefined) {
+    const frozen = frozenFieldChanges(existing, updates.identity);
+    if (frozen.length > 0) {
+      const enrolled = await db
+        .collection(ENROLLMENTS)
+        .countDocuments({ studyId: oid }, { limit: 1 });
+      if (enrolled > 0) {
+        return {
+          conflict: true,
+          error:
+            `Cannot change ${frozen.join(', ')} on a study that already has ` +
+            'enrolments. These fields are frozen once the first participant ' +
+            'enrols.',
+          frozenFields: frozen,
+        };
+      }
+    }
+    $set.identity = resolveIdentityConfig({
+      identity: { ...(existing.identity ?? {}), ...updates.identity },
+    });
+  }
   if (updates.donationInputMode !== undefined)
     $set.donationInputMode = updates.donationInputMode;
   if (updates.donationQuestionnaireSlug !== undefined)
