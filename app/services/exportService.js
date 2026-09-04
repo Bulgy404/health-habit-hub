@@ -4,6 +4,8 @@ import { COLLECTION as SRHI } from '../models/srhiResponse.js';
 import { COLLECTION as LOGS } from '../models/dailyBehaviorLog.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as INTENTIONS } from '../models/implementationIntention.js';
+import { COLLECTION as STUDIES } from '../models/study.js';
+import { resolveIdentityConfig } from './identityConfig.js';
 
 const FORM_RESPONSES = 'form_responses';
 
@@ -14,19 +16,54 @@ async function enrollmentMap(db, studyId) {
 }
 
 /**
+ * The participant identifier a researcher sees.
+ *
+ * For a VERIFIED study that is the study-local subject code, and the raw
+ * Keycloak sub is withheld entirely: the sub is the join key into every other
+ * system, and a study export is copied, emailed and archived far more freely
+ * than the database it came from.
+ *
+ * For an anonymous study the output is byte-identical to before this feature
+ * existed — no existing export changes shape.
+ *
+ * NOTE: a subject code is NOT unique per row. A participant who loses their
+ * recovery passphrase gets a new account under the same subject code, so
+ * analyses must group rather than assume one row per subject.
+ */
+function participantColumns(userId, enrollment, verified) {
+  return verified
+    ? { subjectCode: enrollment?.subjectCode ?? 'NA' }
+    : { userId };
+}
+
+/** Is this study in verified-identity mode? */
+async function isVerified(db, studyId) {
+  if (!studyId) return false;
+  try {
+    const study = await db
+      .collection(STUDIES)
+      .findOne({ _id: new ObjectId(studyId) });
+    return resolveIdentityConfig(study).mode === 'verified';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Build a CSV string of all SRHI survey responses for a study.
  * @param {{ db: object, studyId?: string }} deps
  * @returns {Promise<string>} CSV content including header row.
  */
 export async function buildSrhiCsv({ db, studyId }) {
   const eMap = await enrollmentMap(db, studyId);
+  const verified = await isVerified(db, studyId);
   const filter = studyId ? { studyId: new ObjectId(studyId) } : {};
   const rows = await db.collection(SRHI).find(filter).toArray();
 
   const records = rows.map((r) => {
     const e = eMap[r.userId] ?? {};
     return {
-      userId: r.userId,
+      ...participantColumns(r.userId, e, verified),
       studyId: r.studyId?.toString() ?? 'NA',
       groupLabel: e.cueConfig
         ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
@@ -51,6 +88,7 @@ export async function buildSrhiCsv({ db, studyId }) {
  */
 export async function buildDailyLogsCsv({ db, studyId }) {
   const eMap = await enrollmentMap(db, studyId);
+  const verified = await isVerified(db, studyId);
   const intentionFilter = studyId ? { studyId: new ObjectId(studyId) } : {};
   const intentions = await db
     .collection(INTENTIONS)
@@ -72,7 +110,7 @@ export async function buildDailyLogsCsv({ db, studyId }) {
       ? Math.floor((new Date(l.date) - intention.createdAt) / 86400000) + 1
       : 'NA';
     return {
-      userId: l.userId,
+      ...participantColumns(l.userId, e, verified),
       studyId: intention.studyId?.toString() ?? 'NA',
       groupLabel: e.cueConfig
         ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
@@ -100,6 +138,7 @@ export async function buildDailyLogsCsv({ db, studyId }) {
  */
 export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
   const eMap = await enrollmentMap(db, studyId);
+  const verified = await isVerified(db, studyId);
   const userIds = Object.keys(eMap);
 
   const filter = userIds.length ? { userId: { $in: userIds } } : {};
@@ -121,7 +160,7 @@ export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
   const records = rows.map((r) => {
     const e = eMap[r.userId] ?? {};
     const base = {
-      userId: r.userId,
+      ...participantColumns(r.userId, e, verified),
       studyId: studyId ?? 'NA',
       // Enrollment documents carry `groupId` (an ObjectId ref into
       // studies.groups[].id); there is no `group` field, so the previous
@@ -151,9 +190,10 @@ export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
 export async function buildDropoutCsv({ db, studyId }) {
   const filter = studyId ? { studyId: new ObjectId(studyId) } : {};
   const enrollments = await db.collection(ENROLLMENTS).find(filter).toArray();
+  const verified = await isVerified(db, studyId);
 
   const records = enrollments.map((e) => ({
-    userId: e.userId,
+    ...participantColumns(e.userId, e, verified),
     studyId: e.studyId?.toString() ?? 'NA',
     groupLabel: e.cueConfig
       ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
