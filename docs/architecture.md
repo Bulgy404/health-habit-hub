@@ -428,6 +428,104 @@ In local development, the `keycloak-init` container automatically creates a user
 
 ---
 
+## Identity Register (verified-identity studies)
+
+**Optional and per study.** `identity.mode` is absent on every existing study
+and defaults to `anonymous`, so nothing below applies to them and the service
+need not be deployed at all. See [`identity-mode-plan.md`](identity-mode-plan.md)
+for the design and [`identity-register.md`](identity-register.md) for the
+operator runbook.
+
+### The boundary
+
+> The research databases know a **subject code**. The register knows **who
+> that is**. Nothing knows both except a person holding an approved,
+> time-limited re-identification grant — and every such grant is recorded.
+
+```
+participant → app → hhh-app ──internal :3003──▶ identity-service ──▶ identity-db
+                       │      reserve/confirm/release                (PostgreSQL,
+                       │      {reservationId, hhhStudyId,             encrypted PII)
+                       │       subjectCode} — NO PII
+                       ▼
+                  mongo / neo4j  ← subject code only
+```
+
+### Why a separate database, and a different engine
+
+PostgreSQL rather than a second Mongo, deliberately: a different engine makes
+it **structurally impossible** for the register to be swept into `mongodump`
+(`backup-service/backup.sh`) or into `studyExportService`'s collection loop.
+That mistake would require a code change, not a mis-set connection string.
+
+All encryption happens **in Node, never in Postgres** — no `pgcrypto`. The
+database never sees a key, so a stolen dump is inert on its own.
+
+### Network topology
+
+`identity-service` is **not on `hhh-proxy`**. That network is flat — every
+service in the stack joins it — so being on it would give the register a route
+to MongoDB and Neo4j. It sits on:
+
+- `hhh-identity-edge` — Traefik (admin portal), Keycloak (JWKS), and `hhh-app`
+  (the internal enrolment API)
+- `hhh-identity-net` — `internal: true`, carrying only its own database
+
+Because Traefik runs with `--providers.docker.network=hhh-proxy`, the service
+must pin `traefik.docker.network=hhh-identity-edge`; without it Traefik would
+look for an IP on a network the container is not on and `/identity` would fail
+with nothing obviously wrong in the configuration.
+
+Both properties are asserted by `app/tests/unit/identityIsolation.test.js`,
+which parses `docker-compose.yml` — they are the cheapest controls in the
+design and the easiest to undo with one line.
+
+### Enrolment: reserve → confirm → release
+
+Enrolment spans two databases with no shared transaction: HHH must create a
+Neo4j enrolment and a Mongo mirror before a code can count as spent. A
+single-phase redeem would burn the code first and leave a participant unable to
+enrol if enrolment then failed — the worse outcome, because it needs a nurse to
+issue a replacement.
+
+1. **reserve** — atomic `UPDATE … WHERE status='issued'`, so a double tap or a
+   retry cannot both win. Returns routing data only.
+2. **enrol** — HHH does exactly what it does for an anonymous code. Group
+   allocation stays in HHH: the register knows *who* someone is, not which arm
+   they belong in.
+3. **confirm** — the register records the account link and spends the code.
+4. **release** — on any failure the code is handed straight back, so the
+   participant can simply try again.
+
+A sweeper reclaims reservations abandoned mid-protocol, and ships with the
+protocol rather than after it.
+
+### Codes
+
+| | Format | Scope |
+|---|---|---|
+| Anonymous | `HHH-XXXXX` | full `A-Z0-9` alphabet |
+| Verified | `HHV-XXXXX-XXXXX` | Crockford base32 — **no I, L, O, U** |
+| Subject code | `TUD-DFG01-0042` | pseudonym; the only identifier crossing into HHH |
+
+The distinct prefix lets the backend route on sight, which it must: the study
+is unknown until the register resolves the code.
+
+⚠️ Because the anonymous alphabet **includes** I, L and O, the client-side
+"repair" of those characters is applied to `HHV-` codes only. Applying it to an
+`HHH-` code corrupts roughly 35% of them.
+
+### Separation of duties
+
+`researcher` may never hold an identity role — that is what makes the research
+data genuinely pseudonymous rather than pseudonymous in name only. `admin` may
+hold `monitor` (approve) but never `identity-manager`/`study-nurse` (request).
+Both refusals are runtime `403`s, and the four-eyes rule on approval is a
+**database trigger**, so it survives a refactor of the service.
+
+These give **non-repudiation, not prevention**: a Keycloak realm admin can
+always mint a principal. What is guaranteed is that doing so is visible.
+
 ## M3 Recommendation Pipeline
 
 The recommendation pipeline runs entirely inside the **API-service** (Python / FastAPI). It is triggered by `POST /api/v1/recommend/generate` on the Node.js backend, which proxies the request (with a service token) to `POST /api/v1/llm/recommend`.

@@ -682,7 +682,7 @@ collections with no direct foreign-key relationships shown here).
 | `srhi_responses`              | Weekly SRHI habit-strength measurements                                                                                                                                                     | No                           |
 | `cue_pools`                   | Pre-rated contextual cues for study conditions                                                                                                                                              | No                           |
 | `notification_campaigns`      | Researcher-composed push notification campaigns                                                                                                                                             | No                           |
-| `consents`                    | Informed-consent acceptances (append-only audit trail, versioned)                                                                                                                           | No                           |
+| `consents`                    | Informed-consent acceptances (append-only audit trail, versioned; `documentSlug` distinguishes the platform document from a study-specific one — `consentVersion` is a bare semver, so without it a study's `1.0.0` would satisfy a check for the platform's)                                                                                                                           | No                           |
 | `habit_comments`              | Comment-ownership mapping (author of anonymous Neo4j Comment nodes)                                                                                                                         | No                           |
 | `backup_audit_log`            | Append-only record of admin backup trigger/restore/upload actions                                                                                                                           | No                           |
 | `restore_confirmation_tokens` | Short-lived, single-use tokens gating an **admin system-backup** restore call (TTL-indexed)                                                                                                 | No                           |
@@ -1221,6 +1221,7 @@ document in place rather than creating a new one.
 | `studyId`       | ObjectId       | Yes      | Ref to `studies._id` — the participant's _current_ study                                                                                                                                                                                                                            |
 | `groupId`       | ObjectId       | Yes      | Ref to `studies.groups[].id`                                                                                                                                                                                                                                                        |
 | `studyCodeUsed` | String \| null | No       | The code redeemed to join the current study; `null` if enrolled via round-robin (no code)                                                                                                                                                                                           |
+| `subjectCode`   | String \| null | No       | **Verified-identity studies only.** The study-local pseudonym issued by the identity register (e.g. `TUD-DFG01-0042`) — the join key researchers see instead of the raw Keycloak `sub`. **NOT unique:** a participant who loses their recovery passphrase gets a new account under the same subject code, so analyses must group rather than assume one row per subject. For verified enrolments `studyCodeUsed` is deliberately `null`: the `HHV-` code is 1:1 with a subject, so storing it would create a correlator between the research database and the register |
 | `enrolledAt`    | Date           | Yes      | When the _current_ study/group membership began (reset on every switch/leave)                                                                                                                                                                                                       |
 | `lastActiveAt`  | Date \| null   | No       | Updated on each daily log write (`touchEnrollmentActivity`)                                                                                                                                                                                                                         |
 | `droppedOutAt`  | Date \| null   | No       | Reserved for a future "paused within current study" state; switching/leaving always immediately re-enrolls elsewhere rather than leaving this set, so it's rarely non-null in practice — the real per-study dropout history lives on `ENROLLED_IN` relationships in Neo4j, not here |
@@ -1668,3 +1669,31 @@ permanently gone, but contributed data stays server-side as anonymous
 entries. If a participant additionally wants their contributed data erased
 (not just pseudonymised), that still requires the manual operator steps
 above.
+
+---
+
+## Identity Register (PostgreSQL — separate database)
+
+**Not part of the research data model.** Lives in its own PostgreSQL database
+inside `identity-service`, deliberately on a different engine so it cannot be
+swept into `mongodump` or into `studyExportService`'s collection loop. Schema
+source: [`identity-service/src/db/schema.sql`](../identity-service/src/db/schema.sql).
+
+Only populated for studies with `identity.mode = 'verified'`.
+
+| Table | Purpose |
+| --- | --- |
+| `study_registers` | One per verified study. Holds the subject-code prefix, the wrapped per-register data key, and the sequence counter |
+| `subjects` | The people. Every identifying field is a `bytea` of AES-256-GCM ciphertext (`*_ct`); `*_bi` columns are keyed blind indexes for exact match without decryption |
+| `subject_account_links` | **A table, not a column** — a participant who loses their passphrase gets a new Keycloak `sub` and must not appear as two subjects. Superseded links are retained for the audit trail; a partial unique index allows only one live link per subject |
+| `enrollment_codes` | Single-use `HHV-` credentials. Looked up by keyed digest; the plaintext is kept encrypted only so a nurse can reprint a sheet |
+| `study_site_assignments` | A realm role says **what**; this says **where**. A nurse with no row here sees no roster at all |
+| `reidentification_requests` | Legal basis, reason (≥50 chars, DB `CHECK`), requested fields, approver count, reveal window and reveal count |
+| `reidentification_approvals` | Separate table so two-approver mode is expressible, and so the **four-eyes rule is a database trigger** rather than application code a refactor could drop |
+| `identity_audit_log` | In this database, so no HHH admin can alter it. Records field **names**, never values; IPs are HMAC-hashed |
+
+**No plaintext identifier exists in this database.** Even the Keycloak `sub` on
+an account link is encrypted, with a blind index alongside it for reverse
+lookup. See [`identity-register.md`](identity-register.md) for the operational
+view and the equality leak that deterministic blind indexes accept.
+

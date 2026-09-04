@@ -90,6 +90,20 @@ describe('identity register network isolation', () => {
     );
   });
 
+  it('pins the Traefik network, since it is not on the global default', () => {
+    // Traefik runs with --providers.docker.network=hhh-proxy. This service is
+    // deliberately NOT on that network, so without an explicit override
+    // Traefik would look for an IP it cannot find and /identity would return
+    // a 502 with nothing obviously wrong in the config.
+    const from = compose.indexOf('\n  identity-service:');
+    const to = compose.indexOf('\nnetworks:', from);
+    const block = compose.slice(from, to);
+    assert.ok(
+      block.includes('traefik.docker.network=hhh-identity-edge'),
+      'identity-service must pin the network Traefik routes over'
+    );
+  });
+
   it('the internal API is not exposed through Traefik', () => {
     // Only :3002 (admin portal) may be routed; :3003 must stay internal.
     const from = compose.indexOf('\n  identity-service:');

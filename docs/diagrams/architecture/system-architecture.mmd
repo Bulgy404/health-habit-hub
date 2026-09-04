@@ -40,6 +40,11 @@ flowchart TB
     end
 
     %% ------- External -------
+    subgraph identity["Identity register — verified-identity studies only (hhh-identity-edge / hhh-identity-net)"]
+        identitysvc["identity-service<br/>Node + Express<br/>:3002 admin · :3003 internal"]
+        identitydb[("identity-db<br/>PostgreSQL<br/>envelope-encrypted PII")]
+    end
+
     subgraph external["External Services"]
         llm["LLM Provider<br/>(OpenAI-compatible API)"]
         fcm["Firebase Cloud<br/>Messaging (FCM)"]
@@ -118,6 +123,15 @@ flowchart TB
     redisinsight --> redis
     lightragui -. "own AUTH_ACCOUNTS login" .-> lightrag
 
+    %% ------- Edges: identity register (optional; absent unless a study is verified) -------
+    traefik -- "/identity (admin portal)" --> identitysvc
+    backend -- "internal :3003<br/>reserve / confirm / release<br/>NO PII crosses this edge" --> identitysvc
+    identitysvc --> identitydb
+    identitysvc -. "JWKS" .-> keycloak
+    %% Deliberately absent: any edge from identitysvc to mongo or neo4j. The
+    %% register is not on hhh-proxy, so no such route exists — asserted by
+    %% app/tests/unit/identityIsolation.test.js.
+
     %% ------- Edges: monitoring -------
     prometheus -. "scrape /metrics" .-> backend
     prometheus -. "scrape /metrics" .-> apiservice
@@ -135,3 +149,5 @@ flowchart TB
     class llm,fcm ext
     class backup,dockerproxy,prometheus,grafana,blackbox ops
     class oauth2proxy,mongoexpress,redisinsight,bullboard,lightragui tool
+    classDef identity fill:#fde2e2,stroke:#b02a37,stroke-width:2px
+    class identitysvc,identitydb identity

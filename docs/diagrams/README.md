@@ -1,5 +1,9 @@
 # Health Habit Hub — Diagrams
 
+The system-architecture diagram now includes the optional **identity register**
+(verified-identity studies), drawn as its own subgraph because it deliberately
+sits outside the flat `hhh-proxy` network.
+
 All diagrams are **diagrams-as-code**: plain-text sources under version control,
 reviewable in pull requests, and reproducibly exportable to SVG/PNG/PDF.
 

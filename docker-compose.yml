@@ -1593,6 +1593,11 @@ services:
       - 'traefik.http.middlewares.identity-ratelimit.ratelimit.average=60'
       - 'traefik.http.middlewares.identity-ratelimit.ratelimit.burst=30'
       - 'traefik.http.services.identity.loadbalancer.server.port=3002'
+      # REQUIRED. Traefik is started with --providers.docker.network=hhh-proxy,
+      # and this service is deliberately NOT on that network, so without this
+      # override Traefik would look for an IP it cannot find and routing to
+      # /identity would silently fail.
+      - 'traefik.docker.network=hhh-identity-edge'
     logging:
       driver: json-file
       options:
