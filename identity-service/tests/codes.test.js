@@ -50,7 +50,10 @@ describe('enrollment codes', () => {
   it('normalises the substitutions people actually make', () => {
     // There is no valid code containing I, L, O or U, so repairing them can
     // never corrupt a legitimate code.
-    assert.equal(normalizeEnrollmentCode(' hhv-4k7p2-9qx3r '), 'HHV-4K7P2-9QX3R');
+    assert.equal(
+      normalizeEnrollmentCode(' hhv-4k7p2-9qx3r '),
+      'HHV-4K7P2-9QX3R'
+    );
     assert.equal(normalizeEnrollmentCode('HHV-4K7PI-9QX3R'), 'HHV-4K7P1-9QX3R');
     assert.equal(normalizeEnrollmentCode('HHV-4K7PL-9QX3R'), 'HHV-4K7P1-9QX3R');
     assert.equal(normalizeEnrollmentCode('HHV-4K7PO-9QX3R'), 'HHV-4K7P0-9QX3R');
@@ -108,7 +111,10 @@ describe('subject codes', () => {
 
   it('rejects an invalid prefix', () => {
     for (const bad of ['', 'x', 'lower', 'HAS SPACE', '-LEADING']) {
-      assert.throws(() => formatSubjectCode(bad, 1), /invalid subject code prefix/);
+      assert.throws(
+        () => formatSubjectCode(bad, 1),
+        /invalid subject code prefix/
+      );
     }
   });
 

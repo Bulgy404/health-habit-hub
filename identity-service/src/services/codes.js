@@ -32,7 +32,8 @@ export const ENROLLMENT_CODE_PREFIX = 'HHV';
 export const ANONYMOUS_CODE_PREFIX = 'HHH';
 
 /** HHV-XXXXX-XXXXX — 10 symbols over a 32-char alphabet ≈ 50 bits. */
-export const ENROLLMENT_CODE_PATTERN = /^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$/;
+export const ENROLLMENT_CODE_PATTERN =
+  /^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$/;
 
 /** The existing anonymous format, unchanged. */
 export const ANONYMOUS_CODE_PATTERN = /^HHH-[A-Z0-9]{5}$/;
@@ -85,7 +86,11 @@ export function isEnrollmentCode(input) {
 }
 
 export function isAnonymousCode(input) {
-  return ANONYMOUS_CODE_PATTERN.test(String(input ?? '').trim().toUpperCase());
+  return ANONYMOUS_CODE_PATTERN.test(
+    String(input ?? '')
+      .trim()
+      .toUpperCase()
+  );
 }
 
 /**

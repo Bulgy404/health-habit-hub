@@ -82,7 +82,10 @@ export function encryptField({ key, subjectId, fieldName, plaintext }) {
 export function decryptField({ key, subjectId, fieldName, ciphertext }) {
   if (ciphertext == null) return null;
   assertKey(key);
-  if (!Buffer.isBuffer(ciphertext) || ciphertext.length < 1 + IV_LEN + TAG_LEN) {
+  if (
+    !Buffer.isBuffer(ciphertext) ||
+    ciphertext.length < 1 + IV_LEN + TAG_LEN
+  ) {
     throw new Error('ciphertext is too short to be well-formed');
   }
   const version = ciphertext[0];

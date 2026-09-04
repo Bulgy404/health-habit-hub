@@ -95,7 +95,12 @@ describe('field encryption', () => {
       plaintext: 'Müller-Lüdenscheidt',
     });
     assert.equal(
-      decryptField({ key, subjectId, fieldName: 'family_name', ciphertext: ct }),
+      decryptField({
+        key,
+        subjectId,
+        fieldName: 'family_name',
+        ciphertext: ct,
+      }),
       'Müller-Lüdenscheidt'
     );
   });
@@ -113,8 +118,18 @@ describe('field encryption', () => {
   });
 
   it('produces a different ciphertext every time (fresh IV)', () => {
-    const a = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'same' });
-    const b = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'same' });
+    const a = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'same',
+    });
+    const b = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'same',
+    });
     assert.notEqual(a.toString('hex'), b.toString('hex'));
     // ...but both still decrypt.
     assert.equal(
@@ -128,7 +143,12 @@ describe('field encryption', () => {
   });
 
   it('uses the documented layout', () => {
-    const ct = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'ab' });
+    const ct = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'ab',
+    });
     assert.equal(ct[0], SCHEME.SCHEME_VERSION);
     assert.equal(ct.length, 1 + SCHEME.IV_LEN + 2 + SCHEME.TAG_LEN);
   });
@@ -171,7 +191,12 @@ describe('field encryption', () => {
   });
 
   it('REFUSES a modified byte', () => {
-    const ct = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'hi' });
+    const ct = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'hi',
+    });
     ct[ct.length - 1] ^= 0xff; // flip a tag bit
     assert.throws(() =>
       decryptField({ key, subjectId, fieldName: 'x', ciphertext: ct })
@@ -179,7 +204,12 @@ describe('field encryption', () => {
   });
 
   it('refuses the wrong key', () => {
-    const ct = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'hi' });
+    const ct = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'hi',
+    });
     assert.throws(() =>
       decryptField({
         key: generateDek(),
@@ -191,7 +221,12 @@ describe('field encryption', () => {
   });
 
   it('refuses an unknown scheme version', () => {
-    const ct = encryptField({ key, subjectId, fieldName: 'x', plaintext: 'hi' });
+    const ct = encryptField({
+      key,
+      subjectId,
+      fieldName: 'x',
+      plaintext: 'hi',
+    });
     ct[0] = 0x99;
     assert.throws(
       () => decryptField({ key, subjectId, fieldName: 'x', ciphertext: ct }),
@@ -295,7 +330,12 @@ describe('DEK wrapping', () => {
       kekVersion: 1,
       wrapped: v1,
     });
-    const v2 = wrapDek({ kek: kek2, registerId, kekVersion: 2, dek: recovered });
+    const v2 = wrapDek({
+      kek: kek2,
+      registerId,
+      kekVersion: 2,
+      dek: recovered,
+    });
 
     assert.ok(
       safeEqual(
@@ -331,7 +371,9 @@ describe('blind indexes', () => {
     const composed = 'Mäller';
     const decomposed = 'Mäller';
     assert.notEqual(composed, decomposed, 'inputs must genuinely differ');
-    assert.ok(safeEqual(blindIndex(pepper, composed), blindIndex(pepper, decomposed)));
+    assert.ok(
+      safeEqual(blindIndex(pepper, composed), blindIndex(pepper, decomposed))
+    );
     assert.equal(normalize(composed), normalize(decomposed));
   });
 

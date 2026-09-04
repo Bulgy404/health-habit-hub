@@ -2,12 +2,19 @@ import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import {
   redeemCode,
+  redeemIdentityCode,
   skipCode,
   switchStudy,
   leaveStudy,
   getEnrollmentStatus,
 } from '../services/studyCodeService.js';
 import { logger } from '../utils/logger.js';
+import * as identityClient from '../services/identityLinkClient.js';
+import { identityServiceConfigured } from '../services/identityLinkClient.js';
+
+/** HHV-XXXXX-XXXXX over Crockford base32 (no I/L/O/U) — see identity-service. */
+const IDENTITY_CODE_PATTERN =
+  /^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$/;
 
 const log = logger.child({ module: 'studyEnrollRouter' });
 
@@ -77,16 +84,65 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
       if (!code || typeof code !== 'string') {
         return res.status(400).json({ error: 'code is required' });
       }
-      if (!/^HHH-[A-Z0-9]{5}$/i.test(code.trim())) {
+
+      const trimmed = code.trim();
+      const isAnonymous = /^HHH-[A-Z0-9]{5}$/i.test(trimmed);
+      // Verified-identity codes are distinguishable by prefix alone, so the
+      // backend routes on sight without a study lookup — which it could not do
+      // anyway, since the study is only known after the register resolves the
+      // code.
+      const isVerified = IDENTITY_CODE_PATTERN.test(
+        trimmed
+          .toUpperCase()
+          .replace(/\s+/g, '')
+          .replace(/[IL]/g, '1')
+          .replace(/O/g, '0')
+      );
+
+      if (!isAnonymous && !isVerified) {
         return res.status(400).json({
-          error:
-            'Invalid code format. Expected HHH-XXXXX (5 alphanumeric characters).',
+          error: 'Invalid code format. Expected HHH-XXXXX or HHV-XXXXX-XXXXX.',
         });
       }
+
       const userId = req.user?.sub;
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const database = await getDb();
+
+      if (isVerified) {
+        if (!identityServiceConfigured()) {
+          return res.status(503).json({
+            error:
+              'Verified-identity enrolment is not available on this deployment.',
+          });
+        }
+        const vResult = await redeemIdentityCode({
+          db: database,
+          userId,
+          code: trimmed,
+          neo4jRun,
+          identityClient,
+        });
+        if (vResult.notFound)
+          return res.status(404).json({ error: 'Code not found' });
+        if (vResult.alreadyEnrolled)
+          return res.status(409).json({ error: 'Already enrolled in a study' });
+        if (vResult.identityUnavailable)
+          return res.status(503).json({
+            error: 'Identity service unavailable. Please try again shortly.',
+          });
+        return res.json({
+          studyId: vResult.studyId,
+          groupId: vResult.groupId,
+          studyName: vResult.studyName,
+          groupLabel: vResult.groupLabel,
+          subjectCode: vResult.subjectCode,
+          identityConsentRequired: vResult.identityConsentRequired,
+          identityConsentSlug: vResult.identityConsentSlug,
+        });
+      }
+
       const result = await redeemCode({ db: database, userId, code, neo4jRun });
 
       if (result.notFound)

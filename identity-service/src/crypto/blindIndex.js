@@ -56,7 +56,10 @@ export function blindIndex(pepper, value) {
  * @param {Buffer} pepper
  * @param {{ familyName?: string, givenName?: string, dateOfBirth?: string }} p
  */
-export function personBlindIndex(pepper, { familyName, givenName, dateOfBirth }) {
+export function personBlindIndex(
+  pepper,
+  { familyName, givenName, dateOfBirth }
+) {
   if (!familyName && !givenName) return null;
   const composite = [
     normalize(familyName ?? ''),
