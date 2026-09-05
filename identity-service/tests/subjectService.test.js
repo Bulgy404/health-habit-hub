@@ -607,7 +607,7 @@ describe('lookups and lifecycle', () => {
     );
   });
 
-  it('eraseSubject removes the person and leaves a code-only tombstone', async () => {
+  it('eraseSubject deletes the person outright, leaving only an audit entry', async () => {
     // Art. 17: re-identification is severed, the pseudonymous research data in
     // HHH is untouched.
     const db = makeDb();

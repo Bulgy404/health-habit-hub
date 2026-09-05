@@ -177,9 +177,10 @@ export function sendCodeByEmail(
 }
 
 /**
- * Art. 17 erasure. Removes the identity and leaves a tombstone carrying only
- * the subject code: re-identification is severed permanently, while the
- * pseudonymous research data in HHH is retained and stays analysable.
+ * Art. 17 erasure. Deletes the register row outright, taking the account link
+ * and any issued codes with it; only an audit entry naming the subject code
+ * survives. Re-identification is severed permanently, while the pseudonymous
+ * research data in HHH is retained and stays analysable.
  *
  * That asymmetry is deliberate, is stated in the participant consent, and
  * cannot be undone.

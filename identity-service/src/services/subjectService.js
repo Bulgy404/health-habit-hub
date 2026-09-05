@@ -365,8 +365,17 @@ export async function markVerified({ db, subjectId, actorSub, method }) {
 /**
  * Article 17 erasure.
  *
- * Deletes the register row and leaves a tombstone carrying ONLY the subject
- * code. Re-identification is severed; the pseudonymous research data in HHH is
+ * Deletes the register row OUTRIGHT — there is no tombstone in `subjects`,
+ * and `ON DELETE CASCADE` takes the account link and any issued codes with it.
+ * Nothing of the person is kept, not even an empty shell recording that one
+ * existed; that is the stronger answer to Art. 17.
+ *
+ * What survives is one audit-log entry carrying the subject code and no
+ * identity, which is what makes the erasure itself accountable. Subject codes
+ * come from a counter on the register rather than a count of rows, so an
+ * erased code can never be minted again for someone else.
+ *
+ * Re-identification is severed; the pseudonymous research data in HHH is
  * untouched and remains analysable. That asymmetry is the correct and
  * defensible outcome, and it belongs verbatim in the consent document.
  */

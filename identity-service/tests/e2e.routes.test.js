@@ -266,9 +266,12 @@ describe(
       });
       assert.equal(confirmed.status, 200);
 
+      // `superseded_at IS NULL` is the live link. A replacement code adds a
+      // second row and supersedes the first, so a participant who lost their
+      // phone stays one subject rather than becoming two.
       const { rows } = await pool.query(
         `SELECT count(*)::int AS n FROM subject_account_links
-        WHERE subject_id = $1 AND revoked_at IS NULL`,
+        WHERE subject_id = $1 AND superseded_at IS NULL`,
         [subject.id]
       );
       assert.equal(rows[0].n, 1);
@@ -482,7 +485,7 @@ describe(
       assert.equal('familyName' in row, false);
     });
 
-    test('erasure severs re-identification and leaves the subject code behind', async () => {
+    test('erasure deletes the person outright and leaves only an audit entry', async () => {
       await setupRegister();
       const subject = await addSubject();
 
@@ -495,19 +498,36 @@ describe(
       assert.equal(erased.status, 200);
       assert.equal(erased.body.subjectCode, subject.subjectCode);
 
+      // The row is deleted outright — there is no tombstone in `subjects`,
+      // and that is the stronger Art. 17 answer: nothing of the person is
+      // kept, not even an empty shell that says one existed.
       const { rows } = await pool.query(
-        `SELECT given_name_ct, family_name_ct, subject_code
-         FROM subjects WHERE id = $1`,
+        `SELECT count(*)::int AS n FROM subjects WHERE id = $1`,
         [subject.id]
       );
-      assert.equal(
-        rows.length,
-        1,
-        'the tombstone stays, so the code still resolves to nothing'
+      assert.equal(rows[0].n, 0);
+
+      // What survives is the audit entry, carrying the subject code and no
+      // identity. That is what makes the erasure itself accountable.
+      const { rows: audit } = await pool.query(
+        `SELECT subject_code FROM identity_audit_log
+          WHERE action = 'erase_subject'`
       );
-      assert.equal(rows[0].given_name_ct, null);
-      assert.equal(rows[0].family_name_ct, null);
-      assert.equal(rows[0].subject_code, subject.subjectCode);
+      assert.equal(audit.length, 1);
+      assert.equal(audit[0].subject_code, subject.subjectCode);
+
+      // ON DELETE CASCADE takes the account link and any issued codes with
+      // it, so nothing left in the register can resolve that code to a person.
+      const { rows: links } = await pool.query(
+        `SELECT count(*)::int AS n FROM subject_account_links WHERE subject_id = $1`,
+        [subject.id]
+      );
+      assert.equal(links[0].n, 0);
+
+      // The register's sequence is a counter on the register, not a count of
+      // rows, so an erased code can never be minted again for someone else.
+      const next = await addSubject({ familyName: 'Nachher' });
+      assert.notEqual(next.subjectCode, subject.subjectCode);
     });
 
     test('the audit log records the reveal, naming fields but never their values', async () => {

@@ -303,8 +303,13 @@ HHH holds the pseudonymous study data, joined by subject code.
 **Art. 17 (erasure)** is deliberately **not** a single cascade:
 
 - Deleting a subject (**Erase** on the roster, behind a typed confirmation)
-  removes the identity and leaves a tombstone carrying only the subject code.
-  Re-identification is severed permanently.
+  deletes the register row outright, taking the account link and any issued
+  codes with it. Nothing of the person is kept — not even an empty row
+  recording that one existed. The only trace is an audit entry naming the
+  subject code, which is what makes the erasure accountable, and the subject
+  code itself can never be reissued because the register mints codes from a
+  counter rather than from a row count. Re-identification is severed
+  permanently.
 - The pseudonymous research data in HHH is **retained** and stays analysable.
 
 That asymmetry is the correct and defensible outcome for research data, and it
