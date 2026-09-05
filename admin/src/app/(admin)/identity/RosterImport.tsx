@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { importRoster, type ImportReport } from "@/lib/identityApi";
+import styles from "@/components/admin-page.module.css";
+
+/** Error codes the service answers with; anything else passes through. */
+const KNOWN_ERRORS = ["file_required", "csv_unparseable", "csv_empty", "csv_too_large"] as const;
 
 /**
  * Bulk roster import.
@@ -26,6 +31,7 @@ export function RosterImport({
   studyId: string;
   onImported: () => void;
 }) {
+  const t = useTranslations("identity");
   const inputRef = useRef<HTMLInputElement>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +46,14 @@ export function RosterImport({
       setReport(result);
       onImported();
     } catch (e) {
+      const code = e instanceof Error ? e.message : "";
+      // The service returns codes rather than prose here on purpose: its
+      // parser's own message quotes the offending line, which would be a
+      // patient record in an error toast.
       setError(
-        e instanceof Error
-          ? // The service returns codes rather than prose here on purpose: its
-            // parser's own message quotes the offending line, which would be a
-            // patient record in an error toast.
-            ERROR_TEXT[e.message] ?? e.message
-          : "Import failed",
+        (KNOWN_ERRORS as readonly string[]).includes(code)
+          ? t(`import.errors.${code}`)
+          : code || t("import.failed")
       );
     } finally {
       setBusy(false);
@@ -57,89 +64,70 @@ export function RosterImport({
   }
 
   return (
-    <section style={{ marginTop: 24 }}>
-      <h2>Import a roster</h2>
-      <p style={{ color: "#666", fontSize: 13, margin: "0 0 8px" }}>
-        CSV with a header row. German headings are recognised (
-        <code>Vorname</code>, <code>Nachname</code>, <code>Geburtsdatum</code>,{" "}
-        <code>Telefon</code>), as is the byte-order mark Excel writes. Rows are
-        imported independently — one bad row does not fail the batch.
-      </p>
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>{t("import.title")}</h2>
+      <p className={styles.muted}>{t("import.intro")}</p>
 
       <input
         ref={inputRef}
         type="file"
         accept=".csv,text/csv"
-        aria-label="Roster CSV"
+        aria-label={t("import.file")}
         disabled={busy}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void onFile(file);
         }}
       />
-      {busy && <span> Importing…</span>}
+      {busy && <span className={styles.muted}> {t("import.importing")}</span>}
 
       {error && (
-        <p role="alert" style={{ color: "#a00" }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
 
       {report && (
-        <div role="status" style={{ marginTop: 12 }}>
-          <strong>
-            Imported {report.imported}, failed {report.failed}.
-          </strong>
-          {report.rows.length > 0 && (
-            <table
-              style={{
-                borderCollapse: "collapse",
-                marginTop: 8,
-                minWidth: 420,
-              }}
-            >
-              <thead>
-                <tr>
-                  <th align="left">Row</th>
-                  <th align="left">Subject code</th>
-                  <th align="left">Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.rows.map((r) => (
-                  <tr key={r.row} style={{ borderTop: "1px solid #eee" }}>
-                    <td>{r.row}</td>
-                    <td style={{ fontFamily: "monospace" }}>
-                      {r.subjectCode ?? "—"}
-                    </td>
-                    <td>
-                      {r.error
-                        ? `failed: ${r.error}`
-                        : r.duplicateOf
-                          ? `possible duplicate of ${r.duplicateOf} — imported anyway`
-                          : "imported"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <p style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
-            Rows are identified by number and subject code only. Look them up in
-            your own source file — this page deliberately never repeats the data
-            you uploaded.
+        <div role="status">
+          <p>
+            <strong>
+              {t("import.result", {
+                imported: report.imported,
+                failed: report.failed,
+              })}
+            </strong>
           </p>
+          {report.rows.length > 0 && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{t("import.row")}</th>
+                    <th>{t("import.subjectCode")}</th>
+                    <th>{t("import.note")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.rows.map((r) => (
+                    <tr key={r.row}>
+                      <td>{r.row}</td>
+                      <td className={styles.code}>{r.subjectCode ?? "—"}</td>
+                      <td>
+                        {r.error
+                          ? t("import.rowFailed", { reason: r.error })
+                          : r.duplicateOf
+                            ? t("import.duplicate", { other: r.duplicateOf })
+                            : t("import.imported")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className={styles.muted}>{t("import.privacyNote")}</p>
         </div>
       )}
     </section>
   );
 }
-
-/** The service's error codes, which are deliberately terse. */
-const ERROR_TEXT: Record<string, string> = {
-  file_required: "Choose a CSV file first.",
-  csv_unparseable:
-    "That file could not be read as CSV. Check the delimiter and that it has a header row. (The reason is not shown in full because the parser quotes the offending line, which would put a participant's data on screen.)",
-  csv_empty: "The file has a header but no rows.",
-  csv_too_large: "That file has more than 5000 rows. Split it and import in parts.",
-};

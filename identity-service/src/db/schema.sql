@@ -27,11 +27,21 @@ CREATE TABLE IF NOT EXISTS study_registers (
   next_subject_seq    int         NOT NULL DEFAULT 1,
   status              text        NOT NULL DEFAULT 'active'
                         CHECK (status IN ('active', 'closed')),
+  -- Display-only label for the study, shown on printed code sheets and in
+  -- invite emails. NOT authoritative — HHH owns the study's real name — but
+  -- without it a participant's handout and invitation both read "the study",
+  -- which is not something to hand a patient. Nullable so a register created
+  -- before this column existed keeps working.
+  study_name          text,
   created_at          timestamptz NOT NULL DEFAULT now(),
   created_by          text        NOT NULL,
   CONSTRAINT subject_code_prefix_shape
     CHECK (subject_code_prefix ~ '^[A-Z0-9][A-Z0-9-]{1,31}$')
 );
+
+-- Added after the table shipped; `IF NOT EXISTS` keeps schema.sql idempotent
+-- on an existing deployment, which is how this file is applied on every boot.
+ALTER TABLE study_registers ADD COLUMN IF NOT EXISTS study_name text;
 
 -- ── Subjects ────────────────────────────────────────────────────────────────
 -- The people. Every identifying field is envelope-encrypted; the *_bi columns

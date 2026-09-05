@@ -27,12 +27,10 @@ describe("RegisterSetup", () => {
         state={{ exists: false }}
         canManage
         onCreated={jest.fn()}
-      />,
+      />
     );
     expect(screen.getByText(/No register exists/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create register" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create register" })).toBeInTheDocument();
   });
 
   it("does not offer creation to someone who cannot manage, and says who can", () => {
@@ -43,11 +41,9 @@ describe("RegisterSetup", () => {
         state={{ exists: false }}
         canManage={false}
         onCreated={jest.fn()}
-      />,
+      />
     );
-    expect(
-      screen.queryByRole("button", { name: "Create register" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create register" })).not.toBeInTheDocument();
     expect(screen.getByText(/identity-manager has to create it/)).toBeInTheDocument();
   });
 
@@ -59,11 +55,9 @@ describe("RegisterSetup", () => {
         state={{ exists: true, assigned: false }}
         canManage
         onCreated={jest.fn()}
-      />,
+      />
     );
-    expect(
-      screen.getByText(/You are not assigned to this register/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/You are not assigned to this register/)).toBeInTheDocument();
   });
 
   it("rejects a prefix that would be refused by the API, before submitting", async () => {
@@ -74,12 +68,41 @@ describe("RegisterSetup", () => {
         state={{ exists: false }}
         canManage
         onCreated={jest.fn()}
-      />,
+      />
     );
     const input = screen.getByLabelText("Subject-code prefix");
     await userEvent.type(input, "-BAD");
     expect(screen.getByRole("button", { name: "Create register" })).toBeDisabled();
     expect(screen.getByText(/Upper-case letters, digits and dashes/)).toBeInTheDocument();
+  });
+
+  it("collects a study name, because the printed handout and the invitation both use it", async () => {
+    const fetchMock = mockJson({
+      id: "r1",
+      subjectCodePrefix: "TUD-ICU01",
+      studyName: "HabConnect ICU",
+    });
+    global.fetch = fetchMock;
+    render(
+      <RegisterSetup
+        token="t"
+        studyId="s1"
+        state={{ exists: false }}
+        canManage
+        onCreated={jest.fn()}
+      />
+    );
+    await userEvent.type(screen.getByLabelText("Subject-code prefix"), "TUD-ICU01");
+    await userEvent.type(screen.getByLabelText(/Study name/), "HabConnect ICU");
+    await userEvent.click(screen.getByRole("button", { name: "Create register" }));
+
+    await waitFor(() => {
+      const [, init] = fetchMock.mock.calls[0];
+      expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+        subjectCodePrefix: "TUD-ICU01",
+        studyName: "HabConnect ICU",
+      });
+    });
   });
 
   it("creates the register and reports back", async () => {
@@ -92,12 +115,9 @@ describe("RegisterSetup", () => {
         state={{ exists: false }}
         canManage
         onCreated={onCreated}
-      />,
+      />
     );
-    await userEvent.type(
-      screen.getByLabelText("Subject-code prefix"),
-      "TUD-ICU01",
-    );
+    await userEvent.type(screen.getByLabelText("Subject-code prefix"), "TUD-ICU01");
     await userEvent.click(screen.getByRole("button", { name: "Create register" }));
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
   });
@@ -110,7 +130,7 @@ describe("RegisterSetup", () => {
         state={{ exists: true, assigned: true, subjectCodePrefix: "TUD-ICU01" }}
         canManage
         onCreated={jest.fn()}
-      />,
+      />
     );
     expect(screen.getByText(/TUD-ICU01-0001/)).toBeInTheDocument();
   });
@@ -127,9 +147,7 @@ describe("AssignmentsPanel", () => {
     render(<AssignmentsPanel token="t" studyId="s1" canManage />);
     expect(await screen.findByText("sub-1")).toBeInTheDocument();
     // "study-nurse" is also an <option> in the role picker, so scope to the row.
-    expect(
-      screen.getByRole("cell", { name: "study-nurse" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "study-nurse" })).toBeInTheDocument();
   });
 
   it("hides the add form and remove buttons from a viewer who cannot manage", async () => {
@@ -152,9 +170,7 @@ describe("AssignmentsPanel", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          assignments: [
-            { actorSub: "sub-1", role: "identity-manager", siteId: null },
-          ],
+          assignments: [{ actorSub: "sub-1", role: "identity-manager", siteId: null }],
         }),
       } as unknown as Response)
       // the DELETE
@@ -166,9 +182,7 @@ describe("AssignmentsPanel", () => {
 
     render(<AssignmentsPanel token="t" studyId="s1" canManage />);
     await userEvent.click(await screen.findByRole("button", { name: "Remove" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /only identity-manager/,
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(/only identity-manager/);
   });
 
   it("says plainly when nobody is assigned", async () => {
@@ -213,7 +227,7 @@ describe("RosterImport", () => {
     render(<RosterImport token="t" studyId="s1" onImported={jest.fn()} />);
     await userEvent.upload(screen.getByLabelText("Roster CSV"), csv());
     expect(
-      await screen.findByText(/possible duplicate of TUD-0001 — imported anyway/),
+      await screen.findByText(/possible duplicate of TUD-0001 — imported anyway/)
     ).toBeInTheDocument();
   });
 
@@ -221,9 +235,7 @@ describe("RosterImport", () => {
     global.fetch = mockJson({ error: "csv_too_large" }, false, 400);
     render(<RosterImport token="t" studyId="s1" onImported={jest.fn()} />);
     await userEvent.upload(screen.getByLabelText("Roster CSV"), csv());
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      /more than 5000 rows/,
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(/more than 5000 rows/);
   });
 });
 
@@ -231,16 +243,13 @@ describe("StudyMembersPanel", () => {
   it("says membership is enforced on a scoped study", async () => {
     global.fetch = mockJson({ enforced: true, members: [] });
     render(<StudyMembersPanel studyId="s1" token="t" />);
-    expect(await screen.findByText(/the researcher role alone grants nothing/))
-      .toBeInTheDocument();
+    expect(await screen.findByText(/the researcher role alone grants nothing/)).toBeInTheDocument();
   });
 
   it("warns that entries have no effect yet on an open study", async () => {
     global.fetch = mockJson({ enforced: false, members: [] });
     render(<StudyMembersPanel studyId="s1" token="t" />);
-    expect(
-      await screen.findByText(/entries here have no effect yet/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/entries here have no effect yet/)).toBeInTheDocument();
   });
 
   it("spells out the read/export distinction rather than showing a bare enum", async () => {
@@ -274,7 +283,7 @@ describe("StudyMembersPanel", () => {
 
     await waitFor(() => {
       const post = fetchMock.mock.calls.find(
-        ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+        ([, init]) => (init as RequestInit | undefined)?.method === "POST"
       );
       expect(post).toBeDefined();
       expect(post![0]).toContain("/admin/studies/s1/members");

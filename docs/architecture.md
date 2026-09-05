@@ -526,6 +526,78 @@ Both refusals are runtime `403`s, and the four-eyes rule on approval is a
 These give **non-repudiation, not prevention**: a Keycloak realm admin can
 always mint a principal. What is guaranteed is that doing so is visible.
 
+### Scoped researcher access
+
+Verified studies force `identity.researcherScoping` to `scoped`, and
+`app/middleware/requireStudyAccess.js` then requires an explicit
+`study_memberships` row rather than the bare `researcher` role. Membership
+separates **read** from **export**, because downloading a study bundle is
+materially more than opening a page.
+
+Three deliberate properties:
+
+- **Admins always pass.** Scoping limits researchers to their own studies; it
+  is not a way to lock operators out of the platform they run.
+- **Anonymous studies stay `open`**, exactly as before, so nothing that worked
+  the day before this shipped stopped working.
+- **Study existence is not secret.** A non-member sees the study in the list
+  and a 403 on its detail. Hiding it would make the studies page look broken
+  for no security gain — the sensitive thing is the data, not the name.
+
+The guard fails **closed**: an error resolving access is a 500, never access.
+
+### Study consent documents
+
+A verified study can name a consent document that participants accept *after*
+redeeming their code — the study, and therefore the document, is unknown until
+then. Each document resolves from one of two places, in this order:
+
+| Source | What it is |
+|---|---|
+| `study_consent_documents` (Mongo) | Edited in the admin portal — **wins where a row exists** |
+| `app/language/<lang>/consent-<slug>.md` | Shipped with the image, in version control, gated by `scripts/checkLegalDocs.mjs` |
+
+Both exist on purpose. The file keeps the binding text under review and under
+CI; the row means a wording change agreed with an ethics committee does not
+need a redeploy. The portal shows which of the two is live per language,
+because hidden precedence produces "I edited it and nothing changed".
+
+A document may only be **attached to a study** once it is published in every
+supported locale, at one version, with no `⟦…⟧` placeholders left in it.
+`PUT /admin/studies/:id` answers `409 consent_document_not_ready` otherwise.
+That check exists because the alternative failure is a 404 shown to a
+participant *after* they have enrolled — the worst possible moment, and
+invisible to the person who could fix it.
+
+The platform's own legal documents (privacy, imprint, accessibility, the
+general consent) are deliberately **not** in this collection. They are binding
+texts under version control with a CI consistency gate, and moving them into a
+database any admin can edit would remove that gate for no operational gain.
+
+### Erasure
+
+`DELETE /v1/subjects/:id` deletes the register row **outright**, cascading to
+its account link and any issued codes. Nothing of the person is kept — not
+even an empty row recording that one existed, which is the stronger answer to
+Art. 17 than a tombstone would be.
+
+What survives is a single audit entry naming the subject code, which is what
+makes the erasure itself accountable. Subject codes come from a counter on the
+register rather than a count of rows, so an erased code can never be minted
+again for someone else.
+
+The pseudonymous research data in HHH is **retained** and stays analysable.
+That asymmetry is the correct outcome for research data and must appear
+verbatim in the consent document participants sign.
+
+### Alerting
+
+Every reveal is mailed to `IDENTITY_DPO_ALERT_EMAIL` — on *every* reveal, not
+on a threshold. A re-identification nobody noticed is the failure mode that
+ends studies. The alert carries the subject code, the actor, the legal basis
+and the field **names**, never their values: the point is that someone was
+identified, not who they are.
+
 ## M3 Recommendation Pipeline
 
 The recommendation pipeline runs entirely inside the **API-service** (Python / FastAPI). It is triggered by `POST /api/v1/recommend/generate` on the Node.js backend, which proxies the request (with a service token) to `POST /api/v1/llm/recommend`.

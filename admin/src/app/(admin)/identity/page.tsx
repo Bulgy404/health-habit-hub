@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useIdentityGuard } from "@/lib/useIdentityGuard";
 import {
   listSubjects,
@@ -9,19 +10,22 @@ import {
   markVerified,
   downloadCodeSheet,
   getRegister,
+  listMyRegisters,
   sendCodeByEmail,
   eraseSubject,
   type Subject,
   type RegisterState,
+  type RegisterSummary,
 } from "@/lib/identityApi";
 import { RegisterSetup } from "./RegisterSetup";
 import { AssignmentsPanel } from "./AssignmentsPanel";
 import { RosterImport } from "./RosterImport";
+import styles from "@/components/admin-page.module.css";
 
 /**
  * Identity register — roster view.
  *
- * Three things this page does deliberately:
+ * Four things this page does deliberately:
  *
  * 1. It renders whatever the API returns and NOTHING it does not. A monitor's
  *    response carries no name fields at all, so the columns simply do not
@@ -32,10 +36,17 @@ import { RosterImport } from "./RosterImport";
  *    and the email invite, both of which are audited.
  * 3. It distinguishes "no register", "not assigned" and "empty roster", which
  *    all look like an empty table. See {@link RegisterSetup}.
+ * 4. It offers the registers the caller is assigned to rather than asking for
+ *    a 24-hex study id. The study list needs `admin` or `researcher`, and a
+ *    study nurse is neither — so the role that lives on this screen was the
+ *    one that could not discover what to type.
  */
 export default function IdentityPage() {
   const { token, roles, canReadPii, canManage, loading } = useIdentityGuard();
+  const t = useTranslations("identity");
+  const tc = useTranslations("common");
 
+  const [registers, setRegisters] = useState<RegisterSummary[]>([]);
   const [studyId, setStudyId] = useState("");
   const [query, setQuery] = useState("");
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -49,6 +60,21 @@ export default function IdentityPage() {
     subjectId: string;
     subjectCode: string;
   } | null>(null);
+
+  const loadRegisters = useCallback(async () => {
+    if (!token) return;
+    try {
+      const { registers } = await listMyRegisters(token);
+      setRegisters(registers);
+      // Select the only one automatically — a nurse assigned to exactly one
+      // register should not have to choose it every time.
+      setStudyId((current) =>
+        current || registers.length !== 1 ? current : registers[0].hhhStudyId
+      );
+    } catch {
+      // Non-fatal: the roster below still works if a study id is known.
+    }
+  }, [token]);
 
   const loadRegister = useCallback(async () => {
     if (!token || !studyId) return;
@@ -73,14 +99,18 @@ export default function IdentityPage() {
       // "No register" and "not assigned" are explained by RegisterSetup, which
       // has the room to say what to do about them. Repeating them here as a
       // red error would be noise on top of an explanation.
-      const msg = e instanceof Error ? e.message : "Failed to load the roster";
+      const msg = e instanceof Error ? e.message : t("roster.loadFailed");
       if (!/register_not_found|not_assigned_to_register/.test(msg)) {
         setError(msg);
       }
     } finally {
       setBusy(false);
     }
-  }, [token, studyId, query]);
+  }, [token, studyId, query, t]);
+
+  useEffect(() => {
+    void loadRegisters();
+  }, [loadRegisters]);
 
   useEffect(() => {
     void loadRegister();
@@ -101,7 +131,7 @@ export default function IdentityPage() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add the subject");
+      setError(e instanceof Error ? e.message : t("roster.addFailed"));
     }
   }
 
@@ -119,7 +149,7 @@ export default function IdentityPage() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not issue a code");
+      setError(e instanceof Error ? e.message : t("roster.issueFailed"));
     }
   }
 
@@ -128,20 +158,17 @@ export default function IdentityPage() {
     setError(null);
     setNotice(null);
     try {
-      const out = await sendCodeByEmail(
-        token,
-        issuedCode.subjectId,
-        issuedCode.codeId,
-        "the study",
-      );
+      const out = await sendCodeByEmail(token, issuedCode.subjectId, issuedCode.codeId);
       // The service reports whether it went, deliberately never to where.
       setNotice(
         out.sent
-          ? `Invite sent to the address held for ${issuedCode.subjectCode}.`
-          : `Not sent: ${out.reason ?? "unknown reason"}.`,
+          ? t("code.sent", { subjectCode: issuedCode.subjectCode })
+          : t("code.notSent", {
+              reason: out.reason ?? t("code.unknownReason"),
+            })
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not send the invite");
+      setError(e instanceof Error ? e.message : t("code.sendFailed"));
     }
   }
 
@@ -151,7 +178,7 @@ export default function IdentityPage() {
       await markVerified(token, subject.id, "in_person");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not record verification");
+      setError(e instanceof Error ? e.message : t("roster.verifyFailed"));
     }
   }
 
@@ -159,27 +186,22 @@ export default function IdentityPage() {
     // A typed confirmation, not an "are you sure": this is irreversible and
     // the subject code is the one thing the operator can check against the
     // request in front of them.
-    const typed = window.prompt(
-      `Erasing ${subject.subjectCode} removes their identity permanently. ` +
-        `Their study data is kept, pseudonymously, and can never be linked ` +
-        `back to them again — including by us. This cannot be undone.\n\n` +
-        `Type the subject code to confirm:`,
-    );
+    const typed = window.prompt(t("erase.confirm", { subjectCode: subject.subjectCode }));
     if (typed?.trim() !== subject.subjectCode) return;
 
     setError(null);
     try {
       const out = await eraseSubject(token, subject.id);
-      setNotice(`${out.subjectCode} erased. Re-identification is now severed.`);
+      setNotice(t("erase.done", { subjectCode: out.subjectCode }));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not erase the subject");
+      setError(e instanceof Error ? e.message : t("erase.failed"));
     }
   }
 
   async function onPrintSheet() {
     try {
-      const blob = await downloadCodeSheet(token, studyId, "Study");
+      const blob = await downloadCodeSheet(token, studyId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -187,51 +209,69 @@ export default function IdentityPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not generate the sheet");
+      setError(e instanceof Error ? e.message : t("roster.sheetFailed"));
     }
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>{tc("loading")}</p>;
 
   const usable = register?.exists === true && register.assigned === true;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Identity register</h1>
-      <p style={{ color: "#666" }}>
-        Roles: {roles.join(", ") || "none"}.{" "}
-        {canReadPii
-          ? "You can see participant names."
-          : "You see subject codes and status only — names are not returned to your role."}
-      </p>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>
+            {t("rolesLine", { roles: roles.join(", ") || t("noRoles") })}{" "}
+            {canReadPii ? t("canSeeNames") : t("cannotSeeNames")}
+          </p>
+        </div>
+      </div>
 
-      <section style={{ margin: "16px 0" }}>
-        <label>
-          Study ID{" "}
-          <input
+      <div className={styles.filters}>
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>{t("study")}</span>
+          <select
+            className={styles.select}
             value={studyId}
-            onChange={(e) => setStudyId(e.target.value.trim())}
-            placeholder="24-hex study id"
-            style={{ width: 260 }}
-          />
-        </label>{" "}
-        <label>
-          Search{" "}
+            onChange={(e) => setStudyId(e.target.value)}
+            aria-label={t("study")}
+          >
+            <option value="">{registers.length === 0 ? t("noRegisters") : t("chooseStudy")}</option>
+            {registers.map((r) => (
+              <option key={r.hhhStudyId} value={r.hhhStudyId}>
+                {r.studyName ? `${r.studyName} (${r.subjectCodePrefix})` : r.subjectCodePrefix}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>{t("search")}</span>
           <input
+            className={styles.input}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={canReadPii ? "name or subject code" : "subject code"}
+            placeholder={canReadPii ? t("searchWithNames") : t("searchCodesOnly")}
+            aria-label={t("search")}
           />
-        </label>{" "}
-        <button onClick={() => void load()} disabled={!studyId || busy}>
-          {busy ? "Loading…" : "Refresh"}
-        </button>{" "}
+        </div>
+
+        <button
+          type="button"
+          className={styles.actionBtn}
+          onClick={() => void load()}
+          disabled={!studyId || busy}
+        >
+          {busy ? tc("loading") : t("refresh")}
+        </button>
         {canReadPii && usable && (
-          <button onClick={() => void onPrintSheet()} disabled={!studyId}>
-            Print code sheet
+          <button type="button" className={styles.actionBtn} onClick={() => void onPrintSheet()}>
+            {t("printSheet")}
           </button>
         )}
-      </section>
+      </div>
 
       {studyId && register && (
         <RegisterSetup
@@ -240,6 +280,7 @@ export default function IdentityPage() {
           state={register}
           canManage={canManage}
           onCreated={() => {
+            void loadRegisters();
             void loadRegister();
             void load();
           }}
@@ -247,124 +288,141 @@ export default function IdentityPage() {
       )}
 
       {error && (
-        <p role="alert" style={{ color: "#a00" }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
       {notice && (
-        <p role="status" style={{ color: "#0a0" }}>
+        <p role="status" className={styles.subtitle}>
           {notice}
         </p>
       )}
 
       {issuedCode && (
-        <div
-          role="status"
-          style={{ border: "2px solid #a00", padding: 12, margin: "12px 0" }}
-        >
-          <strong>Enrolment code for {issuedCode.subjectCode}</strong>
-          <div style={{ fontSize: 24, fontFamily: "monospace" }}>
-            {issuedCode.code}
-          </div>
-          <p style={{ margin: 0, fontSize: 12 }}>
-            Shown once. Hand it to this participant only — it enrols them as
-            this specific subject. To see it again, print the code sheet.
-          </p>
-          <button onClick={() => void onSendCode()}>Send by email</button>{" "}
-          <button onClick={() => setIssuedCode(null)}>Dismiss</button>
-          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#666" }}>
-            Email goes to the address held in the register for this subject —
-            you cannot type a different one. Sending is recorded in the audit
-            log and requires SMTP to be configured.
-          </p>
+        <div role="status" className={styles.credBox}>
+          <strong>{t("code.issuedFor", { subjectCode: issuedCode.subjectCode })}</strong>
+          <div className={styles.code}>{issuedCode.code}</div>
+          <p className={styles.muted}>{t("code.shownOnce")}</p>
+          <button type="button" className={styles.actionBtn} onClick={() => void onSendCode()}>
+            {t("code.sendEmail")}
+          </button>{" "}
+          <button type="button" className={styles.actionBtn} onClick={() => setIssuedCode(null)}>
+            {t("code.dismiss")}
+          </button>
+          <p className={styles.muted}>{t("code.emailNote")}</p>
         </div>
       )}
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th align="left">Subject code</th>
-            {canReadPii && <th align="left">Name</th>}
-            {canReadPii && <th align="left">Date of birth</th>}
-            <th align="left">Status</th>
-            <th align="left">Verified</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {subjects.map((s) => (
-            <tr key={s.id} style={{ borderTop: "1px solid #eee" }}>
-              <td>{s.subjectCode}</td>
-              {canReadPii && (
-                <td>
-                  {[s.givenName, s.familyName].filter(Boolean).join(" ") || "—"}
-                </td>
-              )}
-              {canReadPii && <td>{s.dateOfBirth ?? "—"}</td>}
-              <td>{s.status}</td>
-              <td>{s.verifiedAt ? "yes" : "no"}</td>
-              <td>
-                {canReadPii && (
-                  <>
-                    <button onClick={() => void onIssue(s)}>Issue code</button>{" "}
-                    {!s.verifiedAt && (
-                      <button onClick={() => void onVerify(s)}>
-                        Mark verified
-                      </button>
-                    )}{" "}
-                  </>
-                )}
-                {canManage && (
-                  <button onClick={() => void onErase(s)}>Erase</button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {subjects.length === 0 && (
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={6} style={{ padding: 12, color: "#666" }}>
-                {!studyId
-                  ? "Enter a study ID to load its register."
-                  : usable
-                    ? "No subjects yet."
-                    : ""}
-              </td>
+              <th>{t("roster.subjectCode")}</th>
+              {canReadPii && <th>{t("roster.name")}</th>}
+              {canReadPii && <th>{t("roster.dateOfBirth")}</th>}
+              <th>{t("roster.status")}</th>
+              <th>{t("roster.verified")}</th>
+              <th />
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {subjects.map((s) => (
+              <tr key={s.id}>
+                <td className={styles.code}>{s.subjectCode}</td>
+                {canReadPii && (
+                  <td>{[s.givenName, s.familyName].filter(Boolean).join(" ") || "—"}</td>
+                )}
+                {canReadPii && <td>{s.dateOfBirth ?? "—"}</td>}
+                <td>{s.status}</td>
+                <td>{s.verifiedAt ? t("roster.yes") : t("roster.no")}</td>
+                <td>
+                  {canReadPii && (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => void onIssue(s)}
+                      >
+                        {t("roster.issueCode")}
+                      </button>{" "}
+                      {!s.verifiedAt && (
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => void onVerify(s)}
+                        >
+                          {t("roster.markVerified")}
+                        </button>
+                      )}{" "}
+                    </>
+                  )}
+                  {canManage && (
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => void onErase(s)}
+                    >
+                      {t("roster.erase")}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {subjects.length === 0 && (
+              <tr>
+                <td colSpan={6} className={styles.muted}>
+                  {!studyId ? t("roster.chooseStudyFirst") : usable ? t("roster.empty") : ""}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {canReadPii && studyId && usable && (
-        <section style={{ marginTop: 24 }}>
-          <h2>Add a subject</h2>
-          <form
-            action={onAdd}
-            style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
-          >
-            <input name="givenName" placeholder="Vorname" />
-            <input name="familyName" placeholder="Nachname" required />
-            <input name="dateOfBirth" placeholder="YYYY-MM-DD" />
-            <input name="email" placeholder="E-Mail" type="email" />
-            <button type="submit">Add</button>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>{t("roster.addTitle")}</h2>
+          <form action={onAdd} className={styles.filters}>
+            <input
+              className={styles.input}
+              name="givenName"
+              placeholder={t("roster.givenName")}
+              aria-label={t("roster.givenName")}
+            />
+            <input
+              className={styles.input}
+              name="familyName"
+              placeholder={t("roster.familyName")}
+              aria-label={t("roster.familyName")}
+              required
+            />
+            <input
+              className={styles.input}
+              name="dateOfBirth"
+              placeholder={t("roster.dob")}
+              aria-label={t("roster.dateOfBirth")}
+            />
+            <input
+              className={styles.input}
+              name="email"
+              type="email"
+              placeholder={t("roster.email")}
+              aria-label={t("roster.email")}
+            />
+            <button type="submit" className={styles.addButton}>
+              {t("roster.add")}
+            </button>
           </form>
         </section>
       )}
 
       {canManage && studyId && usable && (
-        <RosterImport
-          token={token}
-          studyId={studyId}
-          onImported={() => void load()}
-        />
+        <RosterImport token={token} studyId={studyId} onImported={() => void load()} />
       )}
 
       {studyId && usable && (
-        <AssignmentsPanel
-          token={token}
-          studyId={studyId}
-          canManage={canManage}
-        />
+        <AssignmentsPanel token={token} studyId={studyId} canManage={canManage} />
       )}
-    </main>
+    </div>
   );
 }

@@ -31,7 +31,7 @@ flowchart TB
 
     %% ------- Data layer -------
     subgraph data["Data Stores"]
-        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts · habit_donations")]
+        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts · habit_donations<br/>study_memberships · study_consent_documents")]
         neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
         lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
         redis[("Redis 7<br/>API-service response cache · BullMQ habitQueue")]
@@ -48,6 +48,7 @@ flowchart TB
     subgraph external["External Services"]
         llm["LLM Provider<br/>(OpenAI-compatible API)"]
         fcm["Firebase Cloud<br/>Messaging (FCM)"]
+        smtp["SMTP relay<br/>enrolment invites · reveal alerts to the DPO"]
     end
 
     %% ------- Monitoring -------
@@ -128,9 +129,14 @@ flowchart TB
     backend -- "internal :3003<br/>reserve / confirm / release<br/>NO PII crosses this edge" --> identitysvc
     identitysvc --> identitydb
     identitysvc -. "JWKS" .-> keycloak
+    identitysvc -. "invite to the address held in the register;<br/>an alert on EVERY reveal" .-> smtp
     %% Deliberately absent: any edge from identitysvc to mongo or neo4j. The
     %% register is not on hhh-proxy, so no such route exists — asserted by
     %% app/tests/unit/identityIsolation.test.js.
+    %%
+    %% Also deliberately absent: any edge from identitysvc to Sentry. Stack
+    %% traces capture local variables, which here would carry patient names
+    %% across the trust boundary.
 
     %% ------- Edges: monitoring -------
     prometheus -. "scrape /metrics" .-> backend

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { IdentityTab, type IdentityConfig } from "./IdentityTab";
 import { StudyMembersPanel } from "./StudyMembersPanel";
+import styles from "@/components/admin-page.module.css";
 
 /**
  * The Identity tab, wired to the API.
@@ -33,6 +35,8 @@ export function IdentityTabPanel({
   participantCount: number;
   token: string;
 }) {
+  const t = useTranslations("identity");
+  const tc = useTranslations("common");
   const [value, setValue] = useState<IdentityConfig | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,9 +49,9 @@ export function IdentityTabPanel({
       setValue(study.identity as IdentityConfig);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load the study");
+      setError(e instanceof Error ? e.message : t("config.loadFailed"));
     }
-  }, [studyId, token]);
+  }, [studyId, token, t]);
 
   useEffect(() => {
     void load();
@@ -67,7 +71,7 @@ export function IdentityTabPanel({
       setDirty(false);
       await load();
     } catch (e) {
-      setError(explain(e instanceof Error ? e.message : String(e)));
+      setError(explain(e instanceof Error ? e.message : String(e), t("config.consentNotReady")));
     } finally {
       setSaving(false);
     }
@@ -75,12 +79,12 @@ export function IdentityTabPanel({
 
   if (error && !value) {
     return (
-      <p role="alert" style={{ color: "#a00" }}>
+      <p role="alert" className={styles.error}>
         {error}
       </p>
     );
   }
-  if (!value) return <p>Loading…</p>;
+  if (!value) return <p>{tc("loading")}</p>;
 
   return (
     <div>
@@ -95,14 +99,19 @@ export function IdentityTabPanel({
       />
 
       {error && (
-        <p role="alert" style={{ color: "#a00", maxWidth: 640 }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
-      {saved && <p style={{ color: "#0a0" }}>Saved.</p>}
+      {saved && <p className={styles.subtitle}>{t("config.saved")}</p>}
 
-      <button onClick={() => void onSave()} disabled={!dirty || saving}>
-        {saving ? "Saving…" : "Save identity settings"}
+      <button
+        type="button"
+        className={styles.saveButton}
+        onClick={() => void onSave()}
+        disabled={!dirty || saving}
+      >
+        {saving ? t("config.saving") : t("config.save")}
       </button>
 
       <StudyMembersPanel studyId={studyId} token={token} />
@@ -111,30 +120,16 @@ export function IdentityTabPanel({
 }
 
 /**
- * Turn the API's error codes into something an operator can act on.
+ * Turn the one API refusal that arrives as a bare CODE into something an
+ * operator can act on.
  *
- * `apiFetch` flattens the response into one message, so this matches on the
- * code it contains. Unknown messages pass through unchanged — a refusal this
- * page has not been taught about must still reach the person configuring the
- * study.
+ * Deliberately narrow. The frozen-fields refusal already arrives as a full
+ * sentence naming the exact fields ("Cannot change mode, subjectCodePrefix on
+ * a study that already has enrolments"), and an earlier version of this
+ * function matched on the word "frozen" and replaced that with something
+ * vaguer — losing the field list the operator actually needed. Anything not
+ * matched here passes through untouched.
  */
-function explain(message: string): string {
-  if (message.includes("consent_document_not_ready")) {
-    return (
-      "The consent document named here is not ready to be attached. It must " +
-      "be published in every language, at one version, with no ⟦…⟧ " +
-      "placeholders left in it. Fix it under Consent Documents, then save " +
-      "again. (Saving was refused rather than allowed, because an incomplete " +
-      "document fails the participant after they have already enrolled.)"
-    );
-  }
-  if (message.includes("identity_fields_frozen") || message.includes("frozen")) {
-    return (
-      "Mode and subject-code prefix are frozen once a participant has " +
-      "enrolled. Switching to anonymous would orphan live subject links, and " +
-      "a new prefix would break the link between an issued subject code and " +
-      "the register that minted it."
-    );
-  }
-  return message;
+function explain(message: string, consentNotReady: string): string {
+  return message.includes("consent_document_not_ready") ? consentNotReady : message;
 }

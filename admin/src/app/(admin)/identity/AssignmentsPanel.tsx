@@ -1,18 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   listAssignments,
   createAssignment,
   deleteAssignment,
   type Assignment,
 } from "@/lib/identityApi";
+import styles from "@/components/admin-page.module.css";
 
-const ROLES: Assignment["role"][] = [
-  "identity-manager",
-  "study-nurse",
-  "monitor",
-];
+const ROLES: Assignment["role"][] = ["identity-manager", "study-nurse", "monitor"];
 
 /**
  * Who may work in this register.
@@ -23,8 +21,8 @@ const ROLES: Assignment["role"][] = [
  *
  * Removing the last identity-manager is refused by the API — a register nobody
  * can administer needs database surgery to recover, and the person doing it is
- * usually removing themselves. That refusal is surfaced here as a sentence,
- * not a raw 409.
+ * usually removing themselves. That refusal arrives as a full sentence and is
+ * shown as one, rather than being replaced with something vaguer here.
  */
 export function AssignmentsPanel({
   token,
@@ -35,6 +33,7 @@ export function AssignmentsPanel({
   studyId: string;
   canManage: boolean;
 }) {
+  const t = useTranslations("identity");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [actorSub, setActorSub] = useState("");
   const [role, setRole] = useState<Assignment["role"]>("study-nurse");
@@ -48,9 +47,9 @@ export function AssignmentsPanel({
       setAssignments(assignments);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load assignments");
+      setError(e instanceof Error ? e.message : t("assignments.loadFailed"));
     }
-  }, [token, studyId]);
+  }, [token, studyId, t]);
 
   useEffect(() => {
     void load();
@@ -60,11 +59,14 @@ export function AssignmentsPanel({
     setBusy(true);
     setError(null);
     try {
-      await createAssignment(token, studyId, { actorSub: actorSub.trim(), role });
+      await createAssignment(token, studyId, {
+        actorSub: actorSub.trim(),
+        role,
+      });
       setActorSub("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add the assignment");
+      setError(e instanceof Error ? e.message : t("assignments.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -79,95 +81,92 @@ export function AssignmentsPanel({
       });
       await load();
     } catch (e) {
-      // The API's `last_manager` refusal already carries a full explanation;
-      // show it rather than replacing it with something vaguer.
-      setError(
-        e instanceof Error ? e.message : "Could not remove the assignment",
-      );
+      setError(e instanceof Error ? e.message : t("assignments.removeFailed"));
     }
   }
 
   return (
-    <section style={{ marginTop: 24 }}>
-      <h2>Who may work in this register</h2>
-      <p style={{ color: "#666", fontSize: 13, margin: "0 0 8px" }}>
-        A realm role says what someone may do; an assignment says where. Without
-        a row here they see nothing, whatever role they hold.
-      </p>
+    <section className={styles.section}>
+      <h2 className={styles.sectionTitle}>{t("assignments.title")}</h2>
+      <p className={styles.muted}>{t("assignments.intro")}</p>
 
       {error && (
-        <p role="alert" style={{ color: "#a00" }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
 
-      <table style={{ borderCollapse: "collapse", minWidth: 480 }}>
-        <thead>
-          <tr>
-            <th align="left">Keycloak subject</th>
-            <th align="left">Role</th>
-            {canManage && <th />}
-          </tr>
-        </thead>
-        <tbody>
-          {assignments.map((a) => (
-            <tr
-              key={`${a.actorSub}:${a.role}`}
-              style={{ borderTop: "1px solid #eee" }}
-            >
-              <td style={{ fontFamily: "monospace", fontSize: 12 }}>
-                {a.actorSub}
-              </td>
-              <td>{a.role}</td>
-              {canManage && (
-                <td>
-                  <button onClick={() => void onRemove(a)}>Remove</button>
-                </td>
-              )}
-            </tr>
-          ))}
-          {assignments.length === 0 && (
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={3} style={{ padding: 8, color: "#666" }}>
-                Nobody is assigned yet.
-              </td>
+              <th>{t("assignments.subject")}</th>
+              <th>{t("assignments.role")}</th>
+              {canManage && <th />}
             </tr>
-          )}
-        </tbody>
-      </table>
-
-      {canManage && (
-        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-          <input
-            value={actorSub}
-            onChange={(e) => setActorSub(e.target.value)}
-            placeholder="Keycloak subject (sub)"
-            aria-label="Keycloak subject"
-            style={{ width: 320, fontFamily: "monospace" }}
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Assignment["role"])}
-            aria-label="Role"
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
+          </thead>
+          <tbody>
+            {assignments.map((a) => (
+              <tr key={`${a.actorSub}:${a.role}`}>
+                <td className={styles.code}>{a.actorSub}</td>
+                <td>{a.role}</td>
+                {canManage && (
+                  <td>
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      onClick={() => void onRemove(a)}
+                    >
+                      {t("assignments.remove")}
+                    </button>
+                  </td>
+                )}
+              </tr>
             ))}
-          </select>
-          <button onClick={() => void onAdd()} disabled={!actorSub.trim() || busy}>
-            {busy ? "Adding…" : "Assign"}
-          </button>
-        </div>
-      )}
+            {assignments.length === 0 && (
+              <tr>
+                <td colSpan={3} className={styles.muted}>
+                  {t("assignments.empty")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {canManage && (
-        <p style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
-          The subject is the account&rsquo;s Keycloak <code>sub</code>, found on the
-          Team &amp; Roles page. Assigning someone who does not hold the matching
-          realm role grants them nothing — both are required.
-        </p>
+        <>
+          <div className={styles.filters}>
+            <input
+              className={styles.input}
+              value={actorSub}
+              onChange={(e) => setActorSub(e.target.value)}
+              placeholder={t("assignments.subjectPlaceholder")}
+              aria-label={t("assignments.subject")}
+            />
+            <select
+              className={styles.select}
+              value={role}
+              onChange={(e) => setRole(e.target.value as Assignment["role"])}
+              aria-label={t("assignments.role")}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={() => void onAdd()}
+              disabled={!actorSub.trim() || busy}
+            >
+              {busy ? t("assignments.assigning") : t("assignments.assign")}
+            </button>
+          </div>
+          <p className={styles.muted}>{t("assignments.subHint")}</p>
+        </>
       )}
     </section>
   );

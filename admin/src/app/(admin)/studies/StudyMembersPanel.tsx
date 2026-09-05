@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   listStudyMembers,
   addStudyMember,
@@ -9,6 +10,7 @@ import {
   type MemberRole,
   type MemberScope,
 } from "@/lib/studyMembersApi";
+import styles from "@/components/admin-page.module.css";
 
 /**
  * Who may read and export this study.
@@ -21,13 +23,8 @@ import {
  * does not let them manage this list. Deciding who may read research data
  * adjacent to identifiable participants is an operator decision.
  */
-export function StudyMembersPanel({
-  studyId,
-  token,
-}: {
-  studyId: string;
-  token: string;
-}) {
+export function StudyMembersPanel({ studyId, token }: { studyId: string; token: string }) {
+  const t = useTranslations("identity");
   const [members, setMembers] = useState<StudyMember[]>([]);
   const [enforced, setEnforced] = useState(false);
   const [userId, setUserId] = useState("");
@@ -44,9 +41,9 @@ export function StudyMembersPanel({
       setEnforced(data.enforced);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load members");
+      setError(e instanceof Error ? e.message : t("members.loadFailed"));
     }
-  }, [token, studyId]);
+  }, [token, studyId, t]);
 
   useEffect(() => {
     void load();
@@ -66,7 +63,7 @@ export function StudyMembersPanel({
       setUsername("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add the member");
+      setError(e instanceof Error ? e.message : t("members.addFailed"));
     } finally {
       setBusy(false);
     }
@@ -78,118 +75,105 @@ export function StudyMembersPanel({
       await removeStudyMember(token, studyId, m.userId);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not remove the member");
+      setError(e instanceof Error ? e.message : t("members.removeFailed"));
     }
   }
 
   return (
-    <section style={{ marginTop: 24, maxWidth: 640 }}>
-      <h3 style={{ margin: "0 0 4px" }}>Researcher access</h3>
-      <p style={{ color: "#666", fontSize: 13, margin: "0 0 8px" }}>
-        {enforced ? (
-          <>
-            This study is <strong>scoped</strong>: the researcher role alone
-            grants nothing here. Only the people below can open it, and only
-            those with <em>export</em> can download the study bundle. Admins
-            always have access.
-          </>
-        ) : (
-          <>
-            This study is <strong>open</strong> — every researcher can already
-            read it, so entries here have no effect yet. They take effect if the
-            study is switched to verified identity mode.
-          </>
-        )}
-      </p>
+    <section className={styles.section}>
+      <h3 className={styles.sectionTitle}>{t("members.title")}</h3>
+      <p className={styles.muted}>{enforced ? t("members.enforced") : t("members.open")}</p>
 
       {error && (
-        <p role="alert" style={{ color: "#a00" }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
 
-      <table style={{ borderCollapse: "collapse", width: "100%" }}>
-        <thead>
-          <tr>
-            <th align="left">User</th>
-            <th align="left">Role</th>
-            <th align="left">Access</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.userId} style={{ borderTop: "1px solid #eee" }}>
-              <td>
-                {m.username ?? "—"}
-                <div style={{ fontFamily: "monospace", fontSize: 11, color: "#666" }}>
-                  {m.userId}
-                </div>
-              </td>
-              <td>{m.role}</td>
-              <td>{m.scope === "export" ? "read + export" : "read only"}</td>
-              <td>
-                <button onClick={() => void onRemove(m)}>Remove</button>
-              </td>
-            </tr>
-          ))}
-          {members.length === 0 && (
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={4} style={{ padding: 8, color: "#666" }}>
-                No researchers have been given access.
-              </td>
+              <th>{t("members.user")}</th>
+              <th>{t("members.role")}</th>
+              <th>{t("members.access")}</th>
+              <th />
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map((m) => (
+              <tr key={m.userId}>
+                <td>
+                  {m.username ?? "\u2014"}
+                  <div className={styles.code}>{m.userId}</div>
+                </td>
+                <td>{m.role}</td>
+                <td>{m.scope === "export" ? t("members.readExport") : t("members.readOnly")}</td>
+                <td>
+                  <button
+                    type="button"
+                    className={styles.actionBtn}
+                    onClick={() => void onRemove(m)}
+                  >
+                    {t("members.remove")}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {members.length === 0 && (
+              <tr>
+                <td colSpan={4} className={styles.muted}>
+                  {t("members.empty")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
+      <div className={styles.filters}>
         <input
+          className={styles.input}
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
-          placeholder="Keycloak subject (sub)"
-          aria-label="Keycloak subject"
-          style={{ width: 300, fontFamily: "monospace" }}
+          placeholder={t("members.subjectPlaceholder")}
+          aria-label={t("assignments.subject")}
         />
         <input
+          className={styles.input}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username (for display)"
-          aria-label="Username"
+          placeholder={t("members.usernamePlaceholder")}
+          aria-label={t("members.username")}
         />
         <select
+          className={styles.select}
           value={role}
           onChange={(e) => setRole(e.target.value as MemberRole)}
-          aria-label="Role"
+          aria-label={t("members.role")}
         >
           <option value="researcher">researcher</option>
           <option value="lead">lead</option>
         </select>
         <select
+          className={styles.select}
           value={scope}
           onChange={(e) => setScope(e.target.value as MemberScope)}
-          aria-label="Access"
+          aria-label={t("members.access")}
         >
-          <option value="read">read only</option>
-          <option value="export">read + export</option>
+          <option value="read">{t("members.readOnly")}</option>
+          <option value="export">{t("members.readExport")}</option>
         </select>
-        <button onClick={() => void onAdd()} disabled={!userId.trim() || busy}>
-          {busy ? "Adding…" : "Add"}
+        <button
+          type="button"
+          className={styles.addButton}
+          onClick={() => void onAdd()}
+          disabled={!userId.trim() || busy}
+        >
+          {busy ? t("members.adding") : t("members.add")}
         </button>
       </div>
-      <p style={{ color: "#666", fontSize: 12, marginTop: 6 }}>
-        The subject is the account&rsquo;s Keycloak <code>sub</code>, shown on the
-        Team &amp; Roles page. Adding an existing member updates their role and
-        access rather than creating a second entry.
-      </p>
+      <p className={styles.muted}>{t("members.hint")}</p>
     </section>
   );
 }

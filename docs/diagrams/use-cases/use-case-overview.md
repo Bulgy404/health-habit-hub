@@ -2,8 +2,8 @@
 
 Structured catalogue of all use cases. Each use case has a sequence diagram in
 [`../sequences/`](../sequences/) named `UC-XX-<slug>.mmd`. The UML use case
-diagram is in [`use-case-diagram.puml`](use-case-diagram.puml). There are 39
-use cases in total (UC-01 – UC-39); numbering is not contiguous within each
+diagram is in [`use-case-diagram.puml`](use-case-diagram.puml). There are 47
+use cases in total (UC-01 – UC-47); numbering is not contiguous within each
 table because use cases were added over time and are grouped by actor rather
 than by ID. [`../sequences/UC-recommend-llm-prompt.mmd`](../sequences/UC-recommend-llm-prompt.mmd)
 is a supplementary flowchart (not a numbered use case) detailing the internal
@@ -18,6 +18,9 @@ LLM-call architecture of UC-07's recommendation pipeline.
 | Admin                         | Full platform access, role `admin` (inherits all researcher use cases)    |
 | AI Agent                      | MCP client (e.g. Claude) connected to `knowledge-mcp`                     |
 | Backup Scheduler              | Sleep-loop inside the backup-service container (not real cron)            |
+| Identity Manager              | Runs a study's identity register, role `identity-manager` — **refused alongside `researcher`** |
+| Study Nurse                   | Site staff working inside one register, role `study-nurse` — sees only registers they are assigned to |
+| Monitor                       | Approves re-identification and reads the identity audit trail, role `monitor` |
 | Keycloak / LLM Provider / FCM | Supporting external systems                                               |
 
 ---
@@ -69,6 +72,44 @@ LLM-call architecture of UC-07's recommendation pipeline.
 | UC-37 | View, trigger & restore backups            | admin only        | Last-backup status (per-component), on-demand trigger, and restore from an existing or uploaded archive — typed-filename confirmation, single-use restore token, automatic pre-restore safety backup, audit log; API only reachable internally, never proxied to the browser directly | `/api/v1/admin/backups*`                                         | MongoDB, backup-api (internal, inside `hhh-backup`) |
 | UC-36 | Configure per-group study design           | researcher, admin | Configure per-group toggles/config within a study (cue sets, reminder cadence, habit-donation input mode — text/speech/participant's choice — and an optional post-donation questionnaire from the library, etc.), distinct from UC-19's study/group/code CRUD                                                                                                                                                     | `/api/v1/admin/studies/:id`                                      | MongoDB                                             |
 
+## Verified-identity use cases (identity register)
+
+Only reachable on a study whose `identity.mode` is `verified`. Every anonymous
+study is untouched by all of them — the code path is never entered and the
+service need not be deployed. See [`../../identity-register.md`](../../identity-register.md).
+
+The register is a **separate service with its own PostgreSQL**, so these use
+cases do not touch MongoDB or Neo4j at all. That is the point: no single
+database compromise both identifies a participant and holds their research
+data.
+
+| ID    | Use Case | Actor | Description | Key Endpoints | Main Services / Stores |
+| ----- | -------- | ----- | ----------- | ------------- | ---------------------- |
+| UC-40 | Create a study register | identity-manager | One register per verified study, with the subject-code prefix frozen at creation because every code issued embeds it. The creator is auto-assigned, so a register is never left with nobody able to administer it | `POST /identity/api/v1/studies/:id/register`, `GET /identity/api/v1/registers` | identity-service, PostgreSQL |
+| UC-41 | Assign staff to a register | identity-manager | A realm role says *what*; an assignment says *where*. Removing the last `identity-manager` is refused — a register nobody can administer needs database surgery to recover | `GET/POST/DELETE /identity/api/v1/studies/:id/assignments` | identity-service |
+| UC-42 | Build the roster | identity-manager, study-nurse | Add subjects one at a time or import a CSV (German headings and Excel's BOM recognised). Probable duplicates are **warned about, never rejected** — two people can share a name and a birthday. The import report never echoes the uploaded data | `POST /identity/api/v1/studies/:id/subjects`, `.../subjects/import` | identity-service |
+| UC-43 | Issue and deliver an enrolment code | identity-manager, study-nurse | `HHV-XXXXX-XXXXX`, single use, shown once. Delivered on a printed sheet generated on demand and never stored, or emailed to the address held in the register — which the operator cannot override | `POST /identity/api/v1/subjects/:id/codes`, `.../codes/:codeId/send`, `GET .../codes/sheet.pdf` | identity-service, SMTP |
+| UC-44 | Enrol with a verified code | Participant | Reserve → confirm → release across two databases with no shared transaction. A crash mid-protocol releases the code rather than burning it; the subject code, and nothing else, crosses into HHH | `POST /api/v1/study/enroll` → internal `/internal/v1/codes/*` | Backend, identity-service, MongoDB, Neo4j |
+| UC-45 | Accept the study consent | Participant | The additional consent for a verified study, shown **after** the code is redeemed — the study, and therefore the document, is unknown until then. Recorded with its own `documentSlug` and version | `GET /api/v1/consent?slug=…`, `POST /api/v1/consent` | Backend, MongoDB, `study_consent_documents` |
+| UC-46 | Re-identify a participant | identity-manager (request), monitor (approve) | Documented legal basis, a reason, a **second approver enforced by a database trigger**, and a time-limited grant. Every reveal is recorded and never deduplicated. There is no bulk reveal and no endpoint accepting a list of subject codes | `POST /identity/api/v1/studies/:id/reidentification-requests`, `.../decide`, `.../reveal`, `.../revoke` | identity-service, SMTP (DPO alert) |
+| UC-47 | Erase a subject (Art. 17) | identity-manager | Deletes the register row outright, cascading to links and codes; only an audit entry naming the subject code survives. The pseudonymous research data in HHH is retained and stays analysable — an asymmetry that must appear verbatim in the consent document | `DELETE /identity/api/v1/subjects/:id`, `POST /internal/v1/links/revoke` | identity-service |
+
+**Two role combinations are refused at runtime**, not merely discouraged:
+`researcher` + any identity role (the person analysing the pseudonymous data
+must not be able to resolve the pseudonyms), and `admin` +
+`identity-manager`/`study-nurse` (an admin may approve, never request).
+
+Supporting admin use cases that are not identity-register operations but exist
+because of it:
+
+| ID | Use Case | Actor | Description | Key Endpoints |
+| -- | -------- | ----- | ----------- | ------------- |
+| UC-19a | Configure verified identity mode | admin | Study **Identity** tab: mode, subject-code prefix, consent slug, approver count, reveal window. Refused with 409 when the fields are frozen by an existing enrolment, or when the named consent document is not ready | `PUT /api/v1/admin/studies/:id` |
+| UC-19b | Author study consent documents | admin | Write and publish the per-study consent in every supported language. A database row overrides the file shipped with the image, so an ethics-committee wording change needs no redeploy | `/api/v1/admin/consent-documents*` |
+| UC-19c | Grant researcher access to a study | admin | On a verified study the `researcher` role alone grants nothing; membership names who may read and, separately, who may export | `/api/v1/admin/studies/:id/members*` |
+
+---
+
 ## System use cases
 
 | ID    | Use Case                  | Actor            | Description                                                                                                                                                                                                                                                                                                                                                                             | Components                                         |
@@ -90,3 +131,4 @@ LLM-call architecture of UC-07's recommendation pipeline.
 | Knowledge base            | UC-25, UC-26, UC-30                                      | `app/routes/kbRouter.js`, `API-service/kb/`, `lightrag/`, `knowledge-mcp/`                                                                                                                               |
 | Operations                | UC-29                                                    | `backup-service/`                                                                                                                                                                                        |
 | Security monitoring       | UC-39                                                    | `app/routes/admin/restoreAttemptsRouter.js`, `app/models/restoreAttempt.js`, `admin/src/app/(admin)/restore-attempts/`                                                                                   |
+| Verified identity         | UC-40 – UC-47, UC-19a – UC-19c                           | `identity-service/`, `app/middleware/requireStudyAccess.js`, `app/services/identityConfig.js`, `identityLinkClient.js`, `consentDocumentService.js`, `app/models/studyMembership.js`, `studyConsentDocument.js`, `admin/src/app/(admin)/identity/`, `admin/src/app/(admin)/consent-documents/` |

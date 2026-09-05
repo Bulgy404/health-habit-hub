@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useIdentityGuard } from "@/lib/useIdentityGuard";
 import {
   listReidRequests,
@@ -8,10 +9,13 @@ import {
   decideReidRequest,
   revealRequest,
   revokeReidRequest,
+  listMyRegisters,
   LEGAL_BASES,
   type ReidRequest,
   type LegalBasis,
+  type RegisterSummary,
 } from "@/lib/identityApi";
+import styles from "@/components/admin-page.module.css";
 
 const REVEALABLE = [
   "givenName",
@@ -32,11 +36,19 @@ const SAFETY_BASES: LegalBasis[] = ["sae", "safety_report", "regulatory_inspecti
  * The UI exists so the controls are *visible*, not just enforced. A reviewer
  * asking "who identified whom, and why" should be able to answer it here
  * rather than from the database.
+ *
+ * The legal bases and the requestable field names stay as their raw
+ * identifiers in every language, on purpose: they are what the API and the
+ * audit log record, and an auditor comparing this screen against an exported
+ * trail should be reading the same token in both places.
  */
 export default function ReidentificationPage() {
   const { token, roles, canApprove, loading } = useIdentityGuard();
+  const t = useTranslations("identity");
+  const tc = useTranslations("common");
   const canRequest = roles.includes("identity-manager");
 
+  const [registers, setRegisters] = useState<RegisterSummary[]>([]);
   const [studyId, setStudyId] = useState("");
   const [requests, setRequests] = useState<ReidRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +58,21 @@ export default function ReidentificationPage() {
     expiresAt: string;
   } | null>(null);
 
+  useEffect(() => {
+    if (!token) return;
+    void listMyRegisters(token)
+      .then(({ registers }) => {
+        setRegisters(registers);
+        setStudyId((current) =>
+          current || registers.length !== 1 ? current : registers[0].hhhStudyId
+        );
+      })
+      .catch(() => {
+        // Non-fatal — the queue simply stays empty until a study is chosen,
+        // and an unrelated failure here must not blank the page.
+      });
+  }, [token]);
+
   const load = useCallback(async () => {
     if (!token || !studyId) return;
     setError(null);
@@ -53,9 +80,9 @@ export default function ReidentificationPage() {
       const { requests } = await listReidRequests(token, studyId);
       setRequests(requests);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load requests");
+      setError(e instanceof Error ? e.message : t("requests.loadFailed"));
     }
-  }, [token, studyId]);
+  }, [token, studyId, t]);
 
   useEffect(() => {
     void load();
@@ -73,7 +100,7 @@ export default function ReidentificationPage() {
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not raise the request");
+      setError(e instanceof Error ? e.message : t("requests.createFailed"));
     }
   }
 
@@ -85,7 +112,7 @@ export default function ReidentificationPage() {
     } catch (e) {
       // The four-eyes refusal arrives here. Surface it as the rule it is,
       // rather than as a generic failure.
-      setError(e instanceof Error ? e.message : "Decision failed");
+      setError(e instanceof Error ? e.message : t("requests.decideFailed"));
     }
   }
 
@@ -95,9 +122,9 @@ export default function ReidentificationPage() {
     // hesitating over a grant that should not stand is a disclosure.
     if (
       !window.confirm(
-        `Withdraw the approval for ${r.subject_code ?? "this request"}? ` +
-          `The window closes immediately and no further reveal is possible ` +
-          `without a new request and a new approval.`,
+        t("requests.revokeConfirm", {
+          subjectCode: r.subject_code ?? t("requests.accountLookup"),
+        })
       )
     )
       return;
@@ -106,7 +133,7 @@ export default function ReidentificationPage() {
       await revokeReidRequest(token, r.id);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not revoke the approval");
+      setError(e instanceof Error ? e.message : t("requests.revokeFailed"));
     }
   }
 
@@ -116,130 +143,181 @@ export default function ReidentificationPage() {
       setRevealed(await revealRequest(token, r.id));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reveal failed");
+      setError(e instanceof Error ? e.message : t("requests.revealFailed"));
     }
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) return <p>{tc("loading")}</p>;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Re-identification</h1>
-      <p style={{ color: "#666", maxWidth: 720 }}>
-        Every approved reveal is recorded permanently and is never collapsed in
-        the audit log. Whoever raises a request cannot approve it — that rule is
-        enforced by the database, not by this page.
-      </p>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}>{t("requests.title")}</h1>
+          <p className={styles.subtitle}>{t("requests.intro")}</p>
+        </div>
+      </div>
 
-      <label>
-        Study ID{" "}
-        <input
-          value={studyId}
-          onChange={(e) => setStudyId(e.target.value.trim())}
-          placeholder="24-hex study id"
-          style={{ width: 260 }}
-        />
-      </label>{" "}
-      <button onClick={() => void load()} disabled={!studyId}>
-        Refresh
-      </button>
+      <div className={styles.filters}>
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>{t("study")}</span>
+          <select
+            className={styles.select}
+            value={studyId}
+            onChange={(e) => setStudyId(e.target.value)}
+            aria-label={t("study")}
+          >
+            <option value="">{registers.length === 0 ? t("noRegisters") : t("chooseStudy")}</option>
+            {registers.map((r) => (
+              <option key={r.hhhStudyId} value={r.hhhStudyId}>
+                {r.studyName ? `${r.studyName} (${r.subjectCodePrefix})` : r.subjectCodePrefix}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          className={styles.actionBtn}
+          onClick={() => void load()}
+          disabled={!studyId}
+        >
+          {t("requests.refresh")}
+        </button>
+      </div>
 
       {error && (
-        <p role="alert" style={{ color: "#a00", maxWidth: 720 }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}
 
       {revealed && (
-        <div
-          role="status"
-          style={{ border: "2px solid #a00", padding: 12, margin: "12px 0", maxWidth: 720 }}
-        >
+        <div role="status" className={styles.credBox}>
           <strong>{revealed.subjectCode}</strong>
           <dl>
             {Object.entries(revealed.fields).map(([k, v]) => (
               <div key={k}>
-                <dt style={{ fontWeight: 600 }}>{k}</dt>
-                <dd style={{ margin: "0 0 6px 0" }}>{v ?? "—"}</dd>
+                <dt className={styles.detailLabel}>{k}</dt>
+                <dd className={styles.detailText}>{v ?? "—"}</dd>
               </div>
             ))}
           </dl>
-          <p style={{ fontSize: 12, margin: 0 }}>
-            Grant expires {new Date(revealed.expiresAt).toLocaleString()}. This
-            view was recorded in the audit log.
+          <p className={styles.muted}>
+            {t("requests.grantExpires", {
+              when: new Date(revealed.expiresAt).toLocaleString(),
+            })}
           </p>
-          <button onClick={() => setRevealed(null)}>Dismiss</button>
+          <button type="button" className={styles.actionBtn} onClick={() => setRevealed(null)}>
+            {t("requests.dismiss")}
+          </button>
         </div>
       )}
 
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th align="left">Subject</th>
-            <th align="left">Basis</th>
-            <th align="left">Fields</th>
-            <th align="left">Status</th>
-            <th align="left">Requested by</th>
-            <th align="left">Reveals</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map((r) => (
-            <tr key={r.id} style={{ borderTop: "1px solid #eee" }}>
-              <td>{r.subject_code ?? "(account lookup)"}</td>
-              <td>
-                {r.legal_basis}
-                {SAFETY_BASES.includes(r.legal_basis) && " ⚠"}
-              </td>
-              <td style={{ fontSize: 12 }}>{r.fields_requested.join(", ")}</td>
-              <td>{r.status}</td>
-              <td style={{ fontSize: 12 }}>{r.requested_by}</td>
-              <td>{r.reveal_count}</td>
-              <td>
-                {canApprove && r.status === "pending" && (
-                  <>
-                    <button onClick={() => void onDecide(r, "approved")}>Approve</button>{" "}
-                    <button onClick={() => void onDecide(r, "rejected")}>Reject</button>
-                  </>
-                )}
-                {r.status === "approved" && (
-                  <>
-                    <button onClick={() => void onReveal(r)}>Reveal</button>{" "}
-                    {canApprove && (
-                      <button onClick={() => void onRevoke(r)}>Revoke</button>
-                    )}
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-          {requests.length === 0 && (
+      <div className={styles.tableWrap}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={7} style={{ padding: 12, color: "#666" }}>
-                {studyId ? "No requests." : "Enter a study ID."}
-              </td>
+              <th>{t("requests.subject")}</th>
+              <th>{t("requests.basis")}</th>
+              <th>{t("requests.fields")}</th>
+              <th>{t("requests.status")}</th>
+              <th>{t("requests.requestedBy")}</th>
+              <th>{t("requests.reveals")}</th>
+              <th />
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {requests.map((r) => (
+              <tr key={r.id}>
+                <td className={styles.code}>{r.subject_code ?? t("requests.accountLookup")}</td>
+                <td>
+                  {r.legal_basis}
+                  {SAFETY_BASES.includes(r.legal_basis) && " ⚠"}
+                </td>
+                <td>{r.fields_requested.join(", ")}</td>
+                <td>{r.status}</td>
+                <td className={styles.code}>{r.requested_by}</td>
+                <td>{r.reveal_count}</td>
+                <td>
+                  {canApprove && r.status === "pending" && (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => void onDecide(r, "approved")}
+                      >
+                        {t("requests.approve")}
+                      </button>{" "}
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => void onDecide(r, "rejected")}
+                      >
+                        {t("requests.reject")}
+                      </button>
+                    </>
+                  )}
+                  {r.status === "approved" && (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.actionBtn}
+                        onClick={() => void onReveal(r)}
+                      >
+                        {t("requests.reveal")}
+                      </button>{" "}
+                      {canApprove && (
+                        <button
+                          type="button"
+                          className={styles.actionBtn}
+                          onClick={() => void onRevoke(r)}
+                        >
+                          {t("requests.revoke")}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {requests.length === 0 && (
+              <tr>
+                <td colSpan={7} className={styles.muted}>
+                  {studyId ? t("requests.empty") : t("requests.chooseStudyFirst")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {canRequest && studyId && (
-        <section style={{ marginTop: 24, maxWidth: 720 }}>
-          <h2>Raise a request</h2>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>{t("requests.raiseTitle")}</h2>
           <form action={onCreate}>
-            <p>
-              <input name="subjectCode" placeholder="TUD-DFG01-0042" required />{" "}
-              <select name="legalBasis" defaultValue="sae">
+            <div className={styles.filters}>
+              <input
+                className={styles.input}
+                name="subjectCode"
+                placeholder={t("requests.subjectCodePlaceholder")}
+                aria-label={t("requests.subject")}
+                required
+              />
+              <select
+                className={styles.select}
+                name="legalBasis"
+                defaultValue="sae"
+                aria-label={t("requests.basis")}
+              >
                 {LEGAL_BASES.map((b) => (
                   <option key={b} value={b}>
                     {b}
                   </option>
                 ))}
               </select>
-            </p>
+            </div>
             <fieldset>
-              <legend>Fields (request only what you need)</legend>
+              <legend>{t("requests.fieldsLegend")}</legend>
               {REVEALABLE.map((f) => (
                 <label key={f} style={{ marginRight: 12 }}>
                   <input type="checkbox" name={`field_${f}`} /> {f}
@@ -248,18 +326,22 @@ export default function ReidentificationPage() {
             </fieldset>
             <p>
               <textarea
+                className={styles.input}
                 name="reason"
                 required
                 minLength={50}
                 rows={3}
                 style={{ width: "100%" }}
-                placeholder="At least 50 characters. Read by the approver and by any later auditor."
+                placeholder={t("requests.reasonPlaceholder")}
+                aria-label={t("requests.reasonPlaceholder")}
               />
             </p>
-            <button type="submit">Submit for approval</button>
+            <button type="submit" className={styles.saveButton}>
+              {t("requests.submit")}
+            </button>
           </form>
         </section>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  createRegister,
-  SUBJECT_CODE_PREFIX_PATTERN,
-  type RegisterState,
-} from "@/lib/identityApi";
+import { useTranslations } from "next-intl";
+import { createRegister, SUBJECT_CODE_PREFIX_PATTERN, type RegisterState } from "@/lib/identityApi";
+import styles from "@/components/admin-page.module.css";
 
 /**
  * The state of a register before it is usable, and the way out of each.
@@ -27,57 +25,42 @@ export function RegisterSetup({
   studyId,
   state,
   canManage,
-  defaultPrefix,
   onCreated,
 }: {
   token: string;
   studyId: string;
   state: RegisterState;
   canManage: boolean;
-  /** The study's configured `identity.subjectCodePrefix`, when known. */
-  defaultPrefix?: string | null;
   onCreated: () => void;
 }) {
-  const [prefix, setPrefix] = useState(defaultPrefix ?? "");
+  const t = useTranslations("identity");
+  const [prefix, setPrefix] = useState("");
+  const [studyName, setStudyName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (state.exists && state.assigned) {
     return (
-      <p style={{ color: "#666", margin: "8px 0" }}>
-        Register ready — subject codes are minted as{" "}
-        <code>{state.subjectCodePrefix}-0001</code>.
+      <p className={styles.muted}>
+        {t("prefixHint", { example: `${state.subjectCodePrefix}-0001` })}
       </p>
     );
   }
 
   if (state.exists && !state.assigned) {
     return (
-      <div
-        role="status"
-        style={{ border: "1px solid #b26a00", padding: 12, margin: "12px 0" }}
-      >
-        <strong>You are not assigned to this register.</strong>
-        <p style={{ margin: "6px 0 0", fontSize: 13 }}>
-          Your role says what you may do; an assignment says where. Until an
-          identity-manager assigns you to this register you will see an empty
-          roster, whatever role you hold. This is not a fault — ask them to add
-          you.
-        </p>
+      <div role="status" className={styles.statusBanner}>
+        <strong>{t("setup.notAssignedTitle")}</strong>
+        <p className={styles.muted}>{t("setup.notAssignedBody")}</p>
       </div>
     );
   }
 
   if (!canManage) {
     return (
-      <div
-        role="status"
-        style={{ border: "1px solid #b26a00", padding: 12, margin: "12px 0" }}
-      >
-        <strong>No register exists for this study yet.</strong>
-        <p style={{ margin: "6px 0 0", fontSize: 13 }}>
-          An identity-manager has to create it before anyone can be enrolled.
-        </p>
+      <div role="status" className={styles.statusBanner}>
+        <strong>{t("setup.none")}</strong>
+        <p className={styles.muted}>{t("setup.noneForNonManager")}</p>
       </div>
     );
   }
@@ -88,48 +71,59 @@ export function RegisterSetup({
     setBusy(true);
     setError(null);
     try {
-      await createRegister(token, studyId, prefix);
+      await createRegister(token, studyId, prefix, studyName.trim() || undefined);
       onCreated();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create the register");
+      setError(e instanceof Error ? e.message : t("setup.createFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 12, margin: "12px 0" }}>
-      <strong>No register exists for this study yet.</strong>
-      <p style={{ margin: "6px 0", fontSize: 13 }}>
-        The prefix is <em>frozen once created</em> — every subject code issued
-        embeds it, so it cannot be changed later. It must match the study&rsquo;s
-        configured subject-code prefix, or a code will not be traceable back to
-        the register that minted it.
-      </p>
-      <label>
-        Subject-code prefix{" "}
+    <div className={styles.statusBanner}>
+      <strong>{t("setup.none")}</strong>
+      <p className={styles.muted}>{t("setup.frozenNote")}</p>
+
+      <div className={styles.formRow}>
+        <label className={styles.formLabel} htmlFor="reg-prefix">
+          {t("setup.prefixLabel")}
+        </label>
         <input
+          id="reg-prefix"
+          className={styles.input}
           value={prefix}
           onChange={(e) => setPrefix(e.target.value.toUpperCase())}
-          placeholder="TUD-ICU01"
-          aria-label="Subject-code prefix"
-          style={{ width: 200, fontFamily: "monospace" }}
+          placeholder={t("setup.prefixPlaceholder")}
         />
-      </label>{" "}
-      <button onClick={() => void onCreate()} disabled={!valid || busy}>
-        {busy ? "Creating…" : "Create register"}
+      </div>
+
+      <div className={styles.formRow}>
+        <label className={styles.formLabel} htmlFor="reg-name">
+          {t("setup.nameLabel")}
+        </label>
+        <input
+          id="reg-name"
+          className={styles.input}
+          value={studyName}
+          onChange={(e) => setStudyName(e.target.value)}
+          placeholder={t("setup.namePlaceholder")}
+        />
+      </div>
+
+      <button
+        type="button"
+        className={styles.saveButton}
+        onClick={() => void onCreate()}
+        disabled={!valid || busy}
+      >
+        {busy ? t("setup.creating") : t("setup.create")}
       </button>
-      {prefix !== "" && !valid && (
-        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#a00" }}>
-          Upper-case letters, digits and dashes only, 2–32 characters.
-        </p>
-      )}
-      <p style={{ margin: "6px 0 0", fontSize: 12, color: "#666" }}>
-        You will be assigned to it automatically as identity-manager, so the
-        register is never left with nobody able to administer it.
-      </p>
+
+      {prefix !== "" && !valid && <p className={styles.error}>{t("setup.prefixInvalid")}</p>}
+      <p className={styles.muted}>{t("setup.autoAssigned")}</p>
       {error && (
-        <p role="alert" style={{ color: "#a00", margin: "6px 0 0" }}>
+        <p role="alert" className={styles.error}>
           {error}
         </p>
       )}

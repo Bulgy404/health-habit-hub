@@ -13,8 +13,7 @@ import { apiFetch } from "./api";
  * Both services sit behind the same host with different path prefixes, so this
  * is same-origin and needs no CORS today.
  */
-export const IDENTITY_BASE_URL =
-  process.env.NEXT_PUBLIC_IDENTITY_API_URL ?? "/identity/api";
+export const IDENTITY_BASE_URL = process.env.NEXT_PUBLIC_IDENTITY_API_URL ?? "/identity/api";
 
 export function identityUrl(path: string): string {
   return `${IDENTITY_BASE_URL}${path}`;
@@ -26,6 +25,13 @@ export interface RegisterState {
   exists: boolean;
   subjectCodePrefix?: string;
   /**
+   * Display-only label, shown on printed code sheets and in invitations.
+   * The register stores it rather than the caller sending it per request:
+   * what a participant is told they enrolled in must not depend on whatever
+   * the client happened to pass that time.
+   */
+  studyName?: string | null;
+  /**
    * Whether the caller holds an assignment row on this register. A realm role
    * says *what*; an assignment says *where*. Someone with the right role and no
    * assignment sees an empty roster, which looks identical to an empty study —
@@ -35,10 +41,7 @@ export interface RegisterState {
   roles?: string[];
 }
 
-export function getRegister(
-  token: string,
-  studyId: string,
-): Promise<RegisterState> {
+export function getRegister(token: string, studyId: string): Promise<RegisterState> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/register`), token);
 }
 
@@ -53,11 +56,33 @@ export function createRegister(
   token: string,
   studyId: string,
   subjectCodePrefix: string,
-): Promise<{ id: string; subjectCodePrefix: string }> {
+  studyName?: string
+): Promise<{ id: string; subjectCodePrefix: string; studyName: string | null }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/register`), token, {
     method: "POST",
-    body: JSON.stringify({ subjectCodePrefix }),
+    body: JSON.stringify({ subjectCodePrefix, studyName }),
   });
+}
+
+/**
+ * The registers this account may actually work in.
+ *
+ * The portal previously asked for a 24-character hexadecimal study id typed
+ * from memory, because the study LIST lives behind `/admin/studies`, which
+ * needs `admin` or `researcher` — and a study nurse is neither. So the role
+ * that uses this screen daily was the one that could not discover what to
+ * type.
+ */
+export interface RegisterSummary {
+  hhhStudyId: string;
+  subjectCodePrefix: string;
+  studyName: string | null;
+  status: string;
+  roles: string[];
+}
+
+export function listMyRegisters(token: string): Promise<{ registers: RegisterSummary[] }> {
+  return apiFetch(identityUrl("/v1/registers"), token);
 }
 
 export interface Subject {
@@ -89,7 +114,7 @@ export interface ImportReport {
 export function listSubjects(
   token: string,
   studyId: string,
-  query = "",
+  query = ""
 ): Promise<{ subjects: Subject[] }> {
   const q = query ? `?q=${encodeURIComponent(query)}` : "";
   return apiFetch(identityUrl(`/v1/studies/${studyId}/subjects${q}`), token);
@@ -98,7 +123,7 @@ export function listSubjects(
 export function createSubject(
   token: string,
   studyId: string,
-  person: Record<string, string>,
+  person: Record<string, string>
 ): Promise<{ id: string; subjectCode: string }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/subjects`), token, {
     method: "POST",
@@ -108,7 +133,7 @@ export function createSubject(
 
 export function issueCode(
   token: string,
-  subjectId: string,
+  subjectId: string
 ): Promise<{
   code: string;
   codeId: string;
@@ -136,19 +161,16 @@ export function issueCode(
 export async function importRoster(
   token: string,
   studyId: string,
-  file: File,
+  file: File
 ): Promise<ImportReport> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(
-    identityUrl(`/v1/studies/${studyId}/subjects/import`),
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-      cache: "no-store",
-    },
-  );
+  const res = await fetch(identityUrl(`/v1/studies/${studyId}/subjects/import`), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+    cache: "no-store",
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `Import failed: ${res.status}`);
@@ -166,14 +188,12 @@ export async function importRoster(
 export function sendCodeByEmail(
   token: string,
   subjectId: string,
-  codeId: string,
-  studyName: string,
+  codeId: string
 ): Promise<{ sent: boolean; reason: string | null }> {
-  return apiFetch(
-    identityUrl(`/v1/subjects/${subjectId}/codes/${codeId}/send`),
-    token,
-    { method: "POST", body: JSON.stringify({ studyName }) },
-  );
+  return apiFetch(identityUrl(`/v1/subjects/${subjectId}/codes/${codeId}/send`), token, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 /**
@@ -187,7 +207,7 @@ export function sendCodeByEmail(
  */
 export function eraseSubject(
   token: string,
-  subjectId: string,
+  subjectId: string
 ): Promise<{ erased: boolean; subjectCode: string }> {
   return apiFetch(identityUrl(`/v1/subjects/${subjectId}`), token, {
     method: "DELETE",
@@ -197,7 +217,7 @@ export function eraseSubject(
 export function markVerified(
   token: string,
   subjectId: string,
-  method: "in_person" | "email" | "sms",
+  method: "in_person" | "email" | "sms"
 ): Promise<{ ok: boolean }> {
   return apiFetch(identityUrl(`/v1/subjects/${subjectId}/verify`), token, {
     method: "POST",
@@ -210,17 +230,14 @@ export function markVerified(
  * roster of patients. Fetched directly rather than through `apiFetch`, which
  * always parses JSON.
  */
-export async function downloadCodeSheet(
-  token: string,
-  studyId: string,
-  studyName: string,
-): Promise<Blob> {
-  const res = await fetch(
-    identityUrl(
-      `/v1/studies/${studyId}/codes/sheet.pdf?studyName=${encodeURIComponent(studyName)}`,
-    ),
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
+export async function downloadCodeSheet(token: string, studyId: string): Promise<Blob> {
+  // The study's name is read from the register, not passed here: a handout
+  // given to a patient should not say whatever the caller sent, and it used
+  // to say the literal word "Study".
+  const res = await fetch(identityUrl(`/v1/studies/${studyId}/codes/sheet.pdf`), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error(`Code sheet failed: ${res.status}`);
   return res.blob();
 }
@@ -235,7 +252,7 @@ export interface Assignment {
 
 export function listAssignments(
   token: string,
-  studyId: string,
+  studyId: string
 ): Promise<{ assignments: Assignment[] }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/assignments`), token);
 }
@@ -243,7 +260,7 @@ export function listAssignments(
 export function createAssignment(
   token: string,
   studyId: string,
-  body: { actorSub: string; role: Assignment["role"]; siteId?: string | null },
+  body: { actorSub: string; role: Assignment["role"]; siteId?: string | null }
 ): Promise<{ ok: boolean }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/assignments`), token, {
     method: "POST",
@@ -254,7 +271,7 @@ export function createAssignment(
 export function deleteAssignment(
   token: string,
   studyId: string,
-  body: { actorSub: string; role: Assignment["role"] },
+  body: { actorSub: string; role: Assignment["role"] }
 ): Promise<{ ok: boolean }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/assignments`), token, {
     method: "DELETE",
@@ -291,12 +308,9 @@ export interface ReidRequest {
 
 export function listReidRequests(
   token: string,
-  studyId: string,
+  studyId: string
 ): Promise<{ requests: ReidRequest[] }> {
-  return apiFetch(
-    identityUrl(`/v1/studies/${studyId}/reidentification-requests`),
-    token,
-  );
+  return apiFetch(identityUrl(`/v1/studies/${studyId}/reidentification-requests`), token);
 }
 
 export function createReidRequest(
@@ -307,26 +321,24 @@ export function createReidRequest(
     legalBasis: LegalBasis;
     reason: string;
     fieldsRequested: string[];
-  },
+  }
 ): Promise<{ id: string; status: string }> {
-  return apiFetch(
-    identityUrl(`/v1/studies/${studyId}/reidentification-requests`),
-    token,
-    { method: "POST", body: JSON.stringify(body) },
-  );
+  return apiFetch(identityUrl(`/v1/studies/${studyId}/reidentification-requests`), token, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function decideReidRequest(
   token: string,
   requestId: string,
   decision: "approved" | "rejected",
-  note?: string,
+  note?: string
 ): Promise<{ status: string }> {
-  return apiFetch(
-    identityUrl(`/v1/reidentification-requests/${requestId}/decide`),
-    token,
-    { method: "POST", body: JSON.stringify({ decision, note }) },
-  );
+  return apiFetch(identityUrl(`/v1/reidentification-requests/${requestId}/decide`), token, {
+    method: "POST",
+    body: JSON.stringify({ decision, note }),
+  });
 }
 
 /**
@@ -336,15 +348,11 @@ export function decideReidRequest(
  * only option is waiting out the TTL, which is the wrong answer under exactly
  * the time pressure that produces a mistaken approval.
  */
-export function revokeReidRequest(
-  token: string,
-  requestId: string,
-): Promise<{ status: string }> {
-  return apiFetch(
-    identityUrl(`/v1/reidentification-requests/${requestId}/revoke`),
-    token,
-    { method: "POST", body: JSON.stringify({}) },
-  );
+export function revokeReidRequest(token: string, requestId: string): Promise<{ status: string }> {
+  return apiFetch(identityUrl(`/v1/reidentification-requests/${requestId}/revoke`), token, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 /**
@@ -355,17 +363,17 @@ export function revokeReidRequest(
  */
 export async function revealRequest(
   token: string,
-  requestId: string,
+  requestId: string
 ): Promise<{
   subjectCode: string;
   fields: Record<string, string | null>;
   revealCount: number;
   expiresAt: string;
 }> {
-  const res = await fetch(
-    identityUrl(`/v1/reidentification-requests/${requestId}/reveal`),
-    { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
-  );
+  const res = await fetch(identityUrl(`/v1/reidentification-requests/${requestId}/reveal`), {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? body.error ?? `Reveal failed: ${res.status}`);
@@ -391,10 +399,7 @@ export interface AuditEntry {
 export function listAudit(
   token: string,
   studyId: string,
-  limit = 200,
+  limit = 200
 ): Promise<{ entries: AuditEntry[] }> {
-  return apiFetch(
-    identityUrl(`/v1/studies/${studyId}/audit?limit=${limit}`),
-    token,
-  );
+  return apiFetch(identityUrl(`/v1/studies/${studyId}/audit?limit=${limit}`), token);
 }

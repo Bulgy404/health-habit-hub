@@ -109,8 +109,8 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
   /** Resolve the register for an HHH study id, and the caller's scope in it. */
   async function scopeFor(req, res, hhhStudyId) {
     const { rows } = await db.query(
-      `SELECT id, subject_code_prefix, hhh_study_id FROM study_registers
-        WHERE hhh_study_id = $1`,
+      `SELECT id, subject_code_prefix, hhh_study_id, study_name
+         FROM study_registers WHERE hhh_study_id = $1`,
       [hhhStudyId]
     );
     if (rows.length === 0) {
@@ -142,6 +142,39 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
   /* ── Registers ─────────────────────────────────────────────────────────── */
 
   /**
+   * The registers this caller is assigned to.
+   *
+   * Without it the portal asked an operator to type a 24-character hexadecimal
+   * study id from memory, because the study LIST lives behind `/admin/studies`,
+   * which needs `admin` or `researcher` — and a study nurse is neither. So the
+   * one role that uses this screen daily was the one role that could not
+   * discover what to type.
+   *
+   * Scoped by assignment, not by realm role: it answers "where may I work",
+   * which is the same question `scopeFor` answers per request.
+   */
+  router.get(
+    '/v1/registers',
+    requireIdentityRole(MANAGER, NURSE, MONITOR),
+    async (req, res) => {
+      const { rows } = await db.query(
+        `SELECT r.hhh_study_id       AS "hhhStudyId",
+                r.subject_code_prefix AS "subjectCodePrefix",
+                r.study_name          AS "studyName",
+                r.status,
+                array_agg(a.role ORDER BY a.role) AS roles
+           FROM study_registers r
+           JOIN study_site_assignments a
+             ON a.register_id = r.id AND a.actor_sub = $1
+          GROUP BY r.id
+          ORDER BY r.created_at`,
+        [req.user.sub]
+      );
+      res.json({ registers: rows });
+    }
+  );
+
+  /**
    * Does a register exist for this study, and is the caller assigned to it?
    *
    * Deliberately does NOT go through `scopeFor`: that answers 404 for "no
@@ -159,7 +192,8 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER, NURSE, MONITOR),
     async (req, res) => {
       const { rows } = await db.query(
-        `SELECT id, subject_code_prefix AS "subjectCodePrefix"
+        `SELECT id, subject_code_prefix AS "subjectCodePrefix",
+                study_name AS "studyName"
            FROM study_registers WHERE hhh_study_id = $1`,
         [req.params.studyId]
       );
@@ -173,6 +207,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       res.json({
         exists: true,
         subjectCodePrefix: rows[0].subjectCodePrefix,
+        studyName: rows[0].studyName,
         assigned: mine.length > 0,
         roles: mine.map((r) => r.role),
       });
@@ -183,18 +218,25 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/register',
     requireIdentityRole(MANAGER),
     async (req, res) => {
-      const { subjectCodePrefix } = req.body ?? {};
+      const { subjectCodePrefix, studyName } = req.body ?? {};
       if (!/^[A-Z0-9][A-Z0-9-]{1,31}$/.test(subjectCodePrefix ?? '')) {
         return res.status(400).json({ error: 'invalid_prefix' });
       }
+      // Display-only, so it is length-capped rather than pattern-checked — it
+      // ends up on a printed handout and in an email subject, not in a query.
+      const label =
+        typeof studyName === 'string' && studyName.trim()
+          ? studyName.trim().slice(0, 120)
+          : null;
       const dek = generateDek();
       const { rows: idRows } = await db.query('SELECT gen_random_uuid() AS id');
       const registerId = idRows[0].id;
 
       await db.query(
         `INSERT INTO study_registers
-           (id, hhh_study_id, subject_code_prefix, dek_wrapped, kek_version, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
+           (id, hhh_study_id, subject_code_prefix, dek_wrapped, kek_version,
+            study_name, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
         [
           registerId,
           req.params.studyId,
@@ -206,6 +248,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
             dek,
           }),
           keys.kekVersion,
+          label,
           req.user.sub,
         ]
       );
@@ -222,7 +265,9 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
         action: 'create_register',
         sensitivity: 'write',
       });
-      res.status(201).json({ id: registerId, subjectCodePrefix });
+      res
+        .status(201)
+        .json({ id: registerId, subjectCodePrefix, studyName: label });
     }
   );
 
@@ -560,9 +605,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER, NURSE),
     async (req, res) => {
       const { rows } = await db.query(
-        `SELECT s.id, s.subject_code, s.register_id, s.email_ct, c.code_ct, c.expires_at
+        `SELECT s.id, s.subject_code, s.register_id, s.email_ct,
+                c.code_ct, c.expires_at, r.study_name
            FROM subjects s
            JOIN enrollment_codes c ON c.id = $2 AND c.subject_id = s.id
+           JOIN study_registers r ON r.id = s.register_id
           WHERE s.id = $1 AND c.status = 'issued'`,
         [req.params.id, req.params.codeId]
       );
@@ -591,7 +638,9 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       const result = await mailer.sendInvite({
         to: email,
         code,
-        studyName: req.body?.studyName ?? 'the study',
+        // From the register, not the request: what a participant is told
+        // they enrolled in must not be whatever the caller happened to send.
+        studyName: row.study_name ?? 'the study',
         expiresAt: row.expires_at,
       });
 
@@ -677,7 +726,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       }));
 
       const pdf = await buildCodeSheet({
-        studyName: req.query.studyName ?? 'Study',
+        studyName: scope.register.study_name ?? 'Study',
         subjectCodePrefix: scope.register.subject_code_prefix,
         rows: sheetRows,
       });

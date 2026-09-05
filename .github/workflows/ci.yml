@@ -52,6 +52,16 @@ jobs:
         working-directory: app
         run: node scripts/checkLegalDocs.mjs
 
+      # Rendering every diagram here would mean a headless Chromium for
+      # mermaid-cli. This catches the failure that actually happened instead:
+      # two sequence diagrams sat unrenderable for months because of a
+      # semicolon in an arrow message, and nothing noticed.
+      - name: Diagram consistency
+        run: node scripts/checkDiagrams.mjs
+
+      - name: Analytics registry consistency
+        run: node scripts/generate-analytics-registry.mjs --check
+
       - name: OpenAPI spec drift
         working-directory: app
         run: |

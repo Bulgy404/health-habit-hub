@@ -217,6 +217,48 @@ describe(
       );
     });
 
+    test('a nurse can discover the registers they are assigned to, and only those', async () => {
+      // Without this the portal asked an operator to type a 24-hex study id
+      // from memory: the study list needs `admin` or `researcher`, and a nurse
+      // is neither.
+      await setupRegister();
+
+      const mine = await api('GET', '/api/v1/registers', null, ACTORS.nurse);
+      assert.equal(mine.status, 200);
+      assert.deepEqual(
+        mine.body.registers.map((r) => r.hhhStudyId),
+        [STUDY_ID]
+      );
+      assert.equal(mine.body.registers[0].subjectCodePrefix, 'TUD-E2E');
+      assert.deepEqual(mine.body.registers[0].roles, ['study-nurse']);
+
+      // Someone assigned nowhere sees an empty list, not everyone's registers.
+      const stranger = await api('GET', '/api/v1/registers', null, {
+        sub: 'nurse-elsewhere',
+        roles: ['study-nurse'],
+      });
+      assert.deepEqual(stranger.body.registers, []);
+    });
+
+    test('the study label is stored on the register, not taken from the caller', async () => {
+      // It ends up on a printed handout and in an invitation. What a
+      // participant is told they enrolled in must not be whatever the client
+      // happened to send with that particular request.
+      await api(
+        'POST',
+        `/api/v1/studies/${STUDY_ID}/register`,
+        { subjectCodePrefix: 'TUD-E2E', studyName: 'HabConnect ICU' },
+        ACTORS.manager
+      );
+      const state = await api(
+        'GET',
+        `/api/v1/studies/${STUDY_ID}/register`,
+        null,
+        ACTORS.manager
+      );
+      assert.equal(state.body.studyName, 'HabConnect ICU');
+    });
+
     test('a nurse with the right role but no assignment sees nothing', async () => {
       await api(
         'POST',
