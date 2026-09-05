@@ -146,9 +146,15 @@ function makeDb() {
       hit.verification_method = params[2];
       return { rows: [], rowCount: 1 };
     }
-    if (s.startsWith('SELECT subject_code FROM subjects WHERE id')) {
+    if (
+      s.startsWith('SELECT subject_code, register_id FROM subjects WHERE id')
+    ) {
       const hit = state.subjects.find((x) => x.id === params[0]);
-      return { rows: hit ? [{ subject_code: hit.subject_code }] : [] };
+      return {
+        rows: hit
+          ? [{ subject_code: hit.subject_code, register_id: hit.register_id }]
+          : [],
+      };
     }
     if (s.startsWith('DELETE FROM subjects')) {
       const i = state.subjects.findIndex((x) => x.id === params[0]);
@@ -628,8 +634,13 @@ describe('lookups and lifecycle', () => {
     assert.equal(out.erased, true);
     assert.equal(out.subjectCode, 'TUD-DFG01-0001');
     assert.equal(db.state.subjects.length, 0);
-    assert.equal(db.state.audit.length, 1);
-    assert.equal(db.state.audit[0].subjectCode, 'TUD-DFG01-0001');
+    // The register is read from the row, not taken from the caller: it used to
+    // be a request-body field the portal never sent, so every erasure was
+    // recorded against register NULL and never appeared in the audit view.
+    assert.equal(out.registerId, REGISTER_ID);
+    // The service writes no audit row of its own — the route records it, and
+    // doing both logged the same erasure twice.
+    assert.equal(db.state.audit.length, 0);
   });
 
   it('eraseSubject 404s an unknown subject', async () => {

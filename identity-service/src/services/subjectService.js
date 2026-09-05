@@ -379,29 +379,25 @@ export async function markVerified({ db, subjectId, actorSub, method }) {
  * untouched and remains analysable. That asymmetry is the correct and
  * defensible outcome, and it belongs verbatim in the consent document.
  */
-export async function eraseSubject({ db, subjectId, actorSub, registerId }) {
+export async function eraseSubject({ db, subjectId }) {
+  // The register id is read from the row rather than taken from the caller.
+  // It used to be a request-body field the portal never sent, so every erasure
+  // was recorded against register NULL — and the study audit view filters by
+  // register, which meant an Art. 17 erasure did not appear in it at all.
   const { rows } = await db.query(
-    `SELECT subject_code FROM subjects WHERE id = $1`,
+    `SELECT subject_code, register_id FROM subjects WHERE id = $1`,
     [subjectId]
   );
   if (rows.length === 0) {
     throw new SubjectError('subject_not_found', 'Subject not found', 404);
   }
-  const subjectCode = rows[0].subject_code;
+  const { subject_code: subjectCode, register_id: registerId } = rows[0];
 
   await db.query(`DELETE FROM subjects WHERE id = $1`, [subjectId]);
-  await db.query(
-    `INSERT INTO identity_audit_log
-       (register_id, actor_sub, actor_roles, action, sensitivity, subject_code, detail)
-     VALUES ($1, $2, ARRAY['identity-manager'], 'erase_subject', 'write', $3, $4)`,
-    [
-      registerId,
-      actorSub,
-      subjectCode,
-      JSON.stringify({
-        note: 'Art. 17 erasure; research data retained pseudonymously',
-      }),
-    ]
-  );
-  return { erased: true, subjectCode };
+
+  // Deliberately does NOT write its own audit row: the route records this
+  // through the ordinary auditor, and doing both wrote the same erasure twice.
+  // A compliance log that double-counts is worse than one that under-reports,
+  // because the second is obvious and the first is not.
+  return { erased: true, subjectCode, registerId };
 }

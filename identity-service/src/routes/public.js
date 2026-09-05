@@ -465,18 +465,19 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER),
     async (req, res) => {
       try {
-        const out = await eraseSubject({
-          db,
-          subjectId: req.params.id,
-          actorSub: req.user.sub,
-          registerId: req.body?.registerId ?? null,
-        });
+        const out = await eraseSubject({ db, subjectId: req.params.id });
         audit(res, {
+          registerId: out.registerId,
           action: 'erase_subject',
           sensitivity: 'write',
           subjectCode: out.subjectCode,
+          detail: {
+            note: 'Art. 17 erasure; research data retained pseudonymously',
+          },
         });
-        res.json(out);
+        // The register id is internal bookkeeping — the caller asked to erase
+        // a subject and gets back what was erased, nothing more.
+        res.json({ erased: out.erased, subjectCode: out.subjectCode });
       } catch (err) {
         if (err instanceof SubjectError)
           return res.status(err.status).json({ error: err.code });

@@ -507,14 +507,22 @@ describe(
       );
       assert.equal(rows[0].n, 0);
 
-      // What survives is the audit entry, carrying the subject code and no
-      // identity. That is what makes the erasure itself accountable.
+      // Exactly ONE audit entry, carrying the subject code and no identity —
+      // that is what makes the erasure accountable. It used to be written
+      // twice, once by the service and once by the route.
+      //
+      // And it must carry the register: the study audit view filters on it, so
+      // a register-less row means an Art. 17 erasure that nobody can find.
       const { rows: audit } = await pool.query(
-        `SELECT subject_code FROM identity_audit_log
+        `SELECT subject_code, register_id FROM identity_audit_log
           WHERE action = 'erase_subject'`
       );
       assert.equal(audit.length, 1);
       assert.equal(audit[0].subject_code, subject.subjectCode);
+      assert.ok(
+        audit[0].register_id,
+        'an erasure recorded against no register is invisible in the audit view'
+      );
 
       // ON DELETE CASCADE takes the account link and any issued codes with
       // it, so nothing left in the register can resolve that code to a person.
