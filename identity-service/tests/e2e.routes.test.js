@@ -157,6 +157,29 @@ describe(
         body: JSON.stringify(body),
       }).then(async (r) => ({ status: r.status, body: await r.json() }));
 
+    /**
+     * Wait for a row the service writes AFTER responding.
+     *
+     * `auditor.middleware` records on `res.on('finish')` and deliberately does
+     * not await the insert — "never blocks the response" is a documented
+     * property, because a failing audit write must not break a clinical
+     * workflow. So the response reaching this test does not mean the audit row
+     * exists yet.
+     *
+     * These assertions passed for two CI runs by luck and then failed the day
+     * a rate limiter shifted the timing by a millisecond. Polling is the
+     * correct shape: it asserts the row eventually appears, which is what the
+     * product actually promises.
+     */
+    async function waitForRows(sql, params = [], { timeoutMs = 2000 } = {}) {
+      const deadline = Date.now() + timeoutMs;
+      for (;;) {
+        const { rows } = await pool.query(sql, params);
+        if (rows.length > 0 || Date.now() > deadline) return rows;
+        await new Promise((r) => setTimeout(r, 25));
+      }
+    }
+
     /** Register + assignments for every actor that needs one. */
     async function setupRegister() {
       const created = await api(
@@ -555,7 +578,7 @@ describe(
       //
       // And it must carry the register: the study audit view filters on it, so
       // a register-less row means an Art. 17 erasure that nobody can find.
-      const { rows: audit } = await pool.query(
+      const audit = await waitForRows(
         `SELECT subject_code, register_id FROM identity_audit_log
           WHERE action = 'erase_subject'`
       );
@@ -608,7 +631,7 @@ describe(
         ACTORS.manager
       );
 
-      const { rows } = await pool.query(
+      const rows = await waitForRows(
         `SELECT action, sensitivity, subject_code, fields, actor_sub
          FROM identity_audit_log WHERE sensitivity = 'reveal'`
       );
