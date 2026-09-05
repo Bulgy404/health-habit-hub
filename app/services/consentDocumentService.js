@@ -40,17 +40,31 @@ export function isValidSlug(slug) {
 /**
  * Read one shipped document from disk.
  *
+ * Validates the slug and the locale HERE rather than trusting the caller.
+ * Every current caller already checks, so this is redundant today — which is
+ * exactly why it is worth writing down: `describeConsentDocument` is exported,
+ * the slug reaches this function from a URL path segment, and the next caller
+ * to be added is the one that forgets. A `..` here reads an arbitrary file off
+ * the container filesystem.
+ *
+ * The result is resolved and re-checked against the language directory as
+ * well, so the guarantee does not rest on the pattern alone.
+ *
  * @returns {Promise<{meta: Record<string,string>, body: string}|null>} null when
  *   the file does not exist — a missing document is an ordinary state here, not
  *   an error, because most slugs exist in only some locales while being written.
  */
 async function readFileDocument(lang, slug) {
+  if (!isValidSlug(slug) || !SUPPORTED_LANGS.includes(lang)) return null;
+
+  const dir = path.resolve(LANG_DIR(lang));
+  const file = path.resolve(dir, `consent-${slug}.md`);
+  // Belt and braces: the slug pattern already forbids `/` and `.`, so this can
+  // only fire if that pattern is ever loosened.
+  if (path.dirname(file) !== dir) return null;
+
   try {
-    const raw = await readFile(
-      path.join(LANG_DIR(lang), `consent-${slug}.md`),
-      'utf-8'
-    );
-    return parseFrontMatter(raw);
+    return parseFrontMatter(await readFile(file, 'utf-8'));
   } catch (err) {
     if (err?.code === 'ENOENT') return null;
     throw err;

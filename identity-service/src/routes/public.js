@@ -13,6 +13,7 @@ import multer from 'multer';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { IDENTITY_ROLES, requireIdentityRole } from '../middleware/roles.js';
 import { audit } from '../middleware/audit.js';
+import { revealLimiter } from '../middleware/rateLimit.js';
 import {
   createSubject,
   importRoster,
@@ -845,6 +846,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
 
   router.get(
     '/v1/reidentification-requests/:id/reveal',
+    revealLimiter,
     requireIdentityRole(MANAGER),
     async (req, res) => {
       try {

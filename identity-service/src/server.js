@@ -17,6 +17,7 @@ import { createAuthMiddleware } from './middleware/auth.js';
 import { createAuditor } from './middleware/audit.js';
 import { createMailer } from './services/mailer.js';
 import { createInternalRouter } from './routes/internal.js';
+import { publicLimiter, internalLimiter } from './middleware/rateLimit.js';
 import { createPublicRouter } from './routes/public.js';
 import { sweepStaleReservations } from './services/linkService.js';
 import { expireStaleApprovals } from './services/reidentificationService.js';
@@ -65,6 +66,9 @@ export async function start() {
   publicApp.disable('x-powered-by');
   publicApp.set('trust proxy', 1);
   publicApp.get('/api/v1/health', (_req, res) => res.json({ status: 'ok' }));
+  // Before authentication on purpose: a caller with no valid token can still
+  // reach token verification, and that must not be the one unlimited path.
+  publicApp.use(publicLimiter);
   publicApp.use(createAuthMiddleware(config));
   publicApp.use(auditor.middleware);
   publicApp.use(
@@ -75,9 +79,11 @@ export async function start() {
   /* Internal app */
   const internalApp = express();
   internalApp.disable('x-powered-by');
+  internalApp.set('trust proxy', 1);
   internalApp.get('/internal/v1/health', (_req, res) =>
     res.json({ status: 'ok' })
   );
+  internalApp.use(internalLimiter);
   internalApp.use(
     '/internal',
     createInternalRouter({ db: pool, keys: config.keys, config, auditor })
