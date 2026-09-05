@@ -860,7 +860,8 @@
         "habitCreation": "Habit Creation",
         "reminders": "Reminders",
         "behaviorChange": "Behavior Change",
-        "gamification": "Gamification"
+        "gamification": "Gamification",
+        "identity": "Identity"
       },
       "fields": {
         "nameLabel": "Name *",

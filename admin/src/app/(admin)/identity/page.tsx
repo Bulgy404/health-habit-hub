@@ -8,30 +8,58 @@ import {
   issueCode,
   markVerified,
   downloadCodeSheet,
+  getRegister,
+  sendCodeByEmail,
+  eraseSubject,
   type Subject,
+  type RegisterState,
 } from "@/lib/identityApi";
+import { RegisterSetup } from "./RegisterSetup";
+import { AssignmentsPanel } from "./AssignmentsPanel";
+import { RosterImport } from "./RosterImport";
 
 /**
  * Identity register — roster view.
  *
- * Two things this page does deliberately:
+ * Three things this page does deliberately:
  *
  * 1. It renders whatever the API returns and NOTHING it does not. A monitor's
  *    response carries no name fields at all, so the columns simply do not
  *    appear — the UI never has PII it is supposed to hide, rather than hiding
  *    PII it holds.
  * 2. A freshly issued enrolment code is shown ONCE and never re-fetched. It is
- *    a bearer credential; the only way to see it again is the printed sheet.
+ *    a bearer credential; the only ways to see it again are the printed sheet
+ *    and the email invite, both of which are audited.
+ * 3. It distinguishes "no register", "not assigned" and "empty roster", which
+ *    all look like an empty table. See {@link RegisterSetup}.
  */
 export default function IdentityPage() {
-  const { token, roles, canReadPii, loading } = useIdentityGuard();
+  const { token, roles, canReadPii, canManage, loading } = useIdentityGuard();
 
   const [studyId, setStudyId] = useState("");
   const [query, setQuery] = useState("");
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [register, setRegister] = useState<RegisterState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [issuedCode, setIssuedCode] = useState<{ code: string; subjectCode: string } | null>(null);
+  const [issuedCode, setIssuedCode] = useState<{
+    code: string;
+    codeId: string;
+    subjectId: string;
+    subjectCode: string;
+  } | null>(null);
+
+  const loadRegister = useCallback(async () => {
+    if (!token || !studyId) return;
+    try {
+      setRegister(await getRegister(token, studyId));
+    } catch {
+      // Unknown → let the roster load decide what to report. A failure here
+      // must not blank a page that would otherwise work.
+      setRegister(null);
+    }
+  }, [token, studyId]);
 
   const load = useCallback(async () => {
     if (!token || !studyId) return;
@@ -41,11 +69,22 @@ export default function IdentityPage() {
       const { subjects } = await listSubjects(token, studyId, query);
       setSubjects(subjects);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load the roster");
+      setSubjects([]);
+      // "No register" and "not assigned" are explained by RegisterSetup, which
+      // has the room to say what to do about them. Repeating them here as a
+      // red error would be noise on top of an explanation.
+      const msg = e instanceof Error ? e.message : "Failed to load the roster";
+      if (!/register_not_found|not_assigned_to_register/.test(msg)) {
+        setError(msg);
+      }
     } finally {
       setBusy(false);
     }
   }, [token, studyId, query]);
+
+  useEffect(() => {
+    void loadRegister();
+  }, [loadRegister]);
 
   useEffect(() => {
     void load();
@@ -70,20 +109,71 @@ export default function IdentityPage() {
     setError(null);
     try {
       const out = await issueCode(token, subject.id);
-      // Shown once. Not retrievable afterwards except via the printed sheet.
-      setIssuedCode({ code: out.code, subjectCode: out.subjectCode });
+      // Shown once. Not retrievable afterwards except via the printed sheet or
+      // an email invite.
+      setIssuedCode({
+        code: out.code,
+        codeId: out.codeId,
+        subjectId: subject.id,
+        subjectCode: out.subjectCode,
+      });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not issue a code");
     }
   }
 
+  async function onSendCode() {
+    if (!issuedCode) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const out = await sendCodeByEmail(
+        token,
+        issuedCode.subjectId,
+        issuedCode.codeId,
+        "the study",
+      );
+      // The service reports whether it went, deliberately never to where.
+      setNotice(
+        out.sent
+          ? `Invite sent to the address held for ${issuedCode.subjectCode}.`
+          : `Not sent: ${out.reason ?? "unknown reason"}.`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send the invite");
+    }
+  }
+
   async function onVerify(subject: Subject) {
+    setError(null);
     try {
       await markVerified(token, subject.id, "in_person");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not record verification");
+    }
+  }
+
+  async function onErase(subject: Subject) {
+    // A typed confirmation, not an "are you sure": this is irreversible and
+    // the subject code is the one thing the operator can check against the
+    // request in front of them.
+    const typed = window.prompt(
+      `Erasing ${subject.subjectCode} removes their identity permanently. ` +
+        `Their study data is kept, pseudonymously, and can never be linked ` +
+        `back to them again — including by us. This cannot be undone.\n\n` +
+        `Type the subject code to confirm:`,
+    );
+    if (typed?.trim() !== subject.subjectCode) return;
+
+    setError(null);
+    try {
+      const out = await eraseSubject(token, subject.id);
+      setNotice(`${out.subjectCode} erased. Re-identification is now severed.`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not erase the subject");
     }
   }
 
@@ -102,6 +192,8 @@ export default function IdentityPage() {
   }
 
   if (loading) return <p>Loading…</p>;
+
+  const usable = register?.exists === true && register.assigned === true;
 
   return (
     <main style={{ padding: 24 }}>
@@ -134,14 +226,36 @@ export default function IdentityPage() {
         <button onClick={() => void load()} disabled={!studyId || busy}>
           {busy ? "Loading…" : "Refresh"}
         </button>{" "}
-        {canReadPii && (
+        {canReadPii && usable && (
           <button onClick={() => void onPrintSheet()} disabled={!studyId}>
             Print code sheet
           </button>
         )}
       </section>
 
-      {error && <p role="alert" style={{ color: "#a00" }}>{error}</p>}
+      {studyId && register && (
+        <RegisterSetup
+          token={token}
+          studyId={studyId}
+          state={register}
+          canManage={canManage}
+          onCreated={() => {
+            void loadRegister();
+            void load();
+          }}
+        />
+      )}
+
+      {error && (
+        <p role="alert" style={{ color: "#a00" }}>
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" style={{ color: "#0a0" }}>
+          {notice}
+        </p>
+      )}
 
       {issuedCode && (
         <div
@@ -149,12 +263,20 @@ export default function IdentityPage() {
           style={{ border: "2px solid #a00", padding: 12, margin: "12px 0" }}
         >
           <strong>Enrolment code for {issuedCode.subjectCode}</strong>
-          <div style={{ fontSize: 24, fontFamily: "monospace" }}>{issuedCode.code}</div>
+          <div style={{ fontSize: 24, fontFamily: "monospace" }}>
+            {issuedCode.code}
+          </div>
           <p style={{ margin: 0, fontSize: 12 }}>
             Shown once. Hand it to this participant only — it enrols them as
             this specific subject. To see it again, print the code sheet.
           </p>
+          <button onClick={() => void onSendCode()}>Send by email</button>{" "}
           <button onClick={() => setIssuedCode(null)}>Dismiss</button>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#666" }}>
+            Email goes to the address held in the register for this subject —
+            you cannot type a different one. Sending is recorded in the audit
+            log and requires SMTP to be configured.
+          </p>
         </div>
       )}
 
@@ -174,7 +296,9 @@ export default function IdentityPage() {
             <tr key={s.id} style={{ borderTop: "1px solid #eee" }}>
               <td>{s.subjectCode}</td>
               {canReadPii && (
-                <td>{[s.givenName, s.familyName].filter(Boolean).join(" ") || "—"}</td>
+                <td>
+                  {[s.givenName, s.familyName].filter(Boolean).join(" ") || "—"}
+                </td>
               )}
               {canReadPii && <td>{s.dateOfBirth ?? "—"}</td>}
               <td>{s.status}</td>
@@ -184,9 +308,14 @@ export default function IdentityPage() {
                   <>
                     <button onClick={() => void onIssue(s)}>Issue code</button>{" "}
                     {!s.verifiedAt && (
-                      <button onClick={() => void onVerify(s)}>Mark verified</button>
-                    )}
+                      <button onClick={() => void onVerify(s)}>
+                        Mark verified
+                      </button>
+                    )}{" "}
                   </>
+                )}
+                {canManage && (
+                  <button onClick={() => void onErase(s)}>Erase</button>
                 )}
               </td>
             </tr>
@@ -194,14 +323,18 @@ export default function IdentityPage() {
           {subjects.length === 0 && (
             <tr>
               <td colSpan={6} style={{ padding: 12, color: "#666" }}>
-                {studyId ? "No subjects yet." : "Enter a study ID to load its register."}
+                {!studyId
+                  ? "Enter a study ID to load its register."
+                  : usable
+                    ? "No subjects yet."
+                    : ""}
               </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {canReadPii && studyId && (
+      {canReadPii && studyId && usable && (
         <section style={{ marginTop: 24 }}>
           <h2>Add a subject</h2>
           <form
@@ -215,6 +348,22 @@ export default function IdentityPage() {
             <button type="submit">Add</button>
           </form>
         </section>
+      )}
+
+      {canManage && studyId && usable && (
+        <RosterImport
+          token={token}
+          studyId={studyId}
+          onImported={() => void load()}
+        />
+      )}
+
+      {studyId && usable && (
+        <AssignmentsPanel
+          token={token}
+          studyId={studyId}
+          canManage={canManage}
+        />
       )}
     </main>
   );

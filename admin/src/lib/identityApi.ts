@@ -20,6 +20,46 @@ export function identityUrl(path: string): string {
   return `${IDENTITY_BASE_URL}${path}`;
 }
 
+/* ── Registers ────────────────────────────────────────────────────────────── */
+
+export interface RegisterState {
+  exists: boolean;
+  subjectCodePrefix?: string;
+  /**
+   * Whether the caller holds an assignment row on this register. A realm role
+   * says *what*; an assignment says *where*. Someone with the right role and no
+   * assignment sees an empty roster, which looks identical to an empty study —
+   * this is what lets the page say which it is.
+   */
+  assigned?: boolean;
+  roles?: string[];
+}
+
+export function getRegister(
+  token: string,
+  studyId: string,
+): Promise<RegisterState> {
+  return apiFetch(identityUrl(`/v1/studies/${studyId}/register`), token);
+}
+
+/**
+ * The prefix a register mints subject codes with. Frozen at creation — every
+ * code already issued embeds it — so the UI validates before submitting rather
+ * than surfacing a bare 400.
+ */
+export const SUBJECT_CODE_PREFIX_PATTERN = /^[A-Z0-9][A-Z0-9-]{1,31}$/;
+
+export function createRegister(
+  token: string,
+  studyId: string,
+  subjectCodePrefix: string,
+): Promise<{ id: string; subjectCodePrefix: string }> {
+  return apiFetch(identityUrl(`/v1/studies/${studyId}/register`), token, {
+    method: "POST",
+    body: JSON.stringify({ subjectCodePrefix }),
+  });
+}
+
 export interface Subject {
   id: string;
   subjectCode: string;
@@ -69,10 +109,87 @@ export function createSubject(
 export function issueCode(
   token: string,
   subjectId: string,
-): Promise<{ code: string; subjectCode: string; expiresAt: string }> {
+): Promise<{
+  code: string;
+  codeId: string;
+  subjectCode: string;
+  expiresAt: string;
+}> {
   return apiFetch(identityUrl(`/v1/subjects/${subjectId}/codes`), token, {
     method: "POST",
     body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Import a roster CSV.
+ *
+ * Raw `fetch`, not `apiFetch`: that helper forces `Content-Type:
+ * application/json`, which breaks `FormData` — the browser must set its own
+ * multipart boundary.
+ *
+ * The report it returns is keyed by row number and subject code and never
+ * echoes the submitted data back. Callers must not re-display the uploaded
+ * file to "helpfully" show what failed: that would put the names back on a
+ * screen the report format was designed to keep them off.
+ */
+export async function importRoster(
+  token: string,
+  studyId: string,
+  file: File,
+): Promise<ImportReport> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(
+    identityUrl(`/v1/studies/${studyId}/subjects/import`),
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Import failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Email one issued code to the address held for that subject.
+ *
+ * The address is never sent by the caller and never returned — the service
+ * decrypts it, uses it and discards it. The response says only whether the
+ * message went, deliberately not to where.
+ */
+export function sendCodeByEmail(
+  token: string,
+  subjectId: string,
+  codeId: string,
+  studyName: string,
+): Promise<{ sent: boolean; reason: string | null }> {
+  return apiFetch(
+    identityUrl(`/v1/subjects/${subjectId}/codes/${codeId}/send`),
+    token,
+    { method: "POST", body: JSON.stringify({ studyName }) },
+  );
+}
+
+/**
+ * Art. 17 erasure. Removes the identity and leaves a tombstone carrying only
+ * the subject code: re-identification is severed permanently, while the
+ * pseudonymous research data in HHH is retained and stays analysable.
+ *
+ * That asymmetry is deliberate, is stated in the participant consent, and
+ * cannot be undone.
+ */
+export function eraseSubject(
+  token: string,
+  subjectId: string,
+): Promise<{ erased: boolean; subjectCode: string }> {
+  return apiFetch(identityUrl(`/v1/subjects/${subjectId}`), token, {
+    method: "DELETE",
   });
 }
 
@@ -208,6 +325,24 @@ export function decideReidRequest(
     identityUrl(`/v1/reidentification-requests/${requestId}/decide`),
     token,
     { method: "POST", body: JSON.stringify({ decision, note }) },
+  );
+}
+
+/**
+ * Withdraw an approval before its window expires.
+ *
+ * The remedy for an approval granted on a mistaken premise. Without it the
+ * only option is waiting out the TTL, which is the wrong answer under exactly
+ * the time pressure that produces a mistaken approval.
+ */
+export function revokeReidRequest(
+  token: string,
+  requestId: string,
+): Promise<{ status: string }> {
+  return apiFetch(
+    identityUrl(`/v1/reidentification-requests/${requestId}/revoke`),
+    token,
+    { method: "POST", body: JSON.stringify({}) },
   );
 }
 

@@ -1252,6 +1252,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/studies/{id}/members:
+    get:
+      summary: List researchers with access to a study
+      description: >
+        Also reports whether membership is actually enforced for this study. An anonymous study is `open` — members can
+        be added, but the list has no effect until the study becomes verified. Saying so avoids the impression that
+        adding someone did nothing.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Members plus the study's scoping mode
+        '403':
+          description: Caller does not have admin role
+    post:
+      summary: Add or update a researcher's access to a study
+      description: >
+        Upserts on (userId, studyId), so re-adding an existing member changes their role or scope rather than failing on
+        the unique index.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Member added or updated
+        '400':
+          description: Invalid role, scope or user id
+  /admin/studies/{id}/members/{userId}:
+    delete:
+      summary: Remove a researcher's access to a study
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Removed, or there was nothing to remove
   /admin/studies/{id}/export:
     get:
       summary: Download all data for a study

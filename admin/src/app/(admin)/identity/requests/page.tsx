@@ -7,6 +7,7 @@ import {
   createReidRequest,
   decideReidRequest,
   revealRequest,
+  revokeReidRequest,
   LEGAL_BASES,
   type ReidRequest,
   type LegalBasis,
@@ -85,6 +86,27 @@ export default function ReidentificationPage() {
       // The four-eyes refusal arrives here. Surface it as the rule it is,
       // rather than as a generic failure.
       setError(e instanceof Error ? e.message : "Decision failed");
+    }
+  }
+
+  async function onRevoke(r: ReidRequest) {
+    // Confirmed, but not typed-confirmed: revoking is the safe direction. The
+    // cost of an unintended revoke is raising the request again; the cost of
+    // hesitating over a grant that should not stand is a disclosure.
+    if (
+      !window.confirm(
+        `Withdraw the approval for ${r.subject_code ?? "this request"}? ` +
+          `The window closes immediately and no further reveal is possible ` +
+          `without a new request and a new approval.`,
+      )
+    )
+      return;
+    setError(null);
+    try {
+      await revokeReidRequest(token, r.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not revoke the approval");
     }
   }
 
@@ -182,7 +204,12 @@ export default function ReidentificationPage() {
                   </>
                 )}
                 {r.status === "approved" && (
-                  <button onClick={() => void onReveal(r)}>Reveal</button>
+                  <>
+                    <button onClick={() => void onReveal(r)}>Reveal</button>{" "}
+                    {canApprove && (
+                      <button onClick={() => void onRevoke(r)}>Revoke</button>
+                    )}
+                  </>
                 )}
               </td>
             </tr>

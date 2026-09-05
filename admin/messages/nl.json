@@ -860,7 +860,8 @@
         "habitCreation": "Gewoonte aanmaken",
         "reminders": "Herinneringen",
         "behaviorChange": "Gedragsverandering",
-        "gamification": "Gamification"
+        "gamification": "Gamification",
+        "identity": "Identiteit"
       },
       "fields": {
         "nameLabel": "Naam *",

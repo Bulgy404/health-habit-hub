@@ -141,6 +141,44 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
 
   /* ── Registers ─────────────────────────────────────────────────────────── */
 
+  /**
+   * Does a register exist for this study, and is the caller assigned to it?
+   *
+   * Deliberately does NOT go through `scopeFor`: that answers 404 for "no
+   * register" and 403 for "not assigned", and the portal needs to tell those
+   * apart to decide whether to offer "create a register" or "ask a manager to
+   * assign you". Distinguishing them from a thrown error string would be
+   * brittle in exactly the place an operator is already confused.
+   *
+   * Returns no roster data and no identifying field — only whether the thing
+   * exists and what prefix it mints, both of which the caller's realm role
+   * already entitles them to know.
+   */
+  router.get(
+    '/v1/studies/:studyId/register',
+    requireIdentityRole(MANAGER, NURSE, MONITOR),
+    async (req, res) => {
+      const { rows } = await db.query(
+        `SELECT id, subject_code_prefix AS "subjectCodePrefix"
+           FROM study_registers WHERE hhh_study_id = $1`,
+        [req.params.studyId]
+      );
+      if (rows.length === 0) return res.json({ exists: false });
+
+      const { rows: mine } = await db.query(
+        `SELECT role FROM study_site_assignments
+          WHERE register_id = $1 AND actor_sub = $2`,
+        [rows[0].id, req.user.sub]
+      );
+      res.json({
+        exists: true,
+        subjectCodePrefix: rows[0].subjectCodePrefix,
+        assigned: mine.length > 0,
+        roles: mine.map((r) => r.role),
+      });
+    }
+  );
+
   router.post(
     '/v1/studies/:studyId/register',
     requireIdentityRole(MANAGER),
@@ -471,10 +509,15 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
         Date.now() + (Number(req.body?.expiresInDays) || 90) * 86_400_000
       );
 
-      await db.query(
+      // RETURNING the id so the caller can immediately offer "send this by
+      // email". Without it the invite endpoint is unreachable from the moment
+      // a code is minted — the only other way to learn a code's id is a
+      // database query.
+      const { rows: codeRows } = await db.query(
         `INSERT INTO enrollment_codes
          (subject_id, code_hash, code_ct, expires_at, issued_by)
-       VALUES ($1,$2,$3,$4,$5)`,
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id`,
         [
           subject.id,
           blindIndex(keys.peppers.code, code),
@@ -502,9 +545,12 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       });
       // Returned once, to be printed or sent. Not retrievable in plaintext
       // afterwards except through the sheet.
-      res
-        .status(201)
-        .json({ code, subjectCode: subject.subject_code, expiresAt });
+      res.status(201).json({
+        code,
+        codeId: codeRows[0].id,
+        subjectCode: subject.subject_code,
+        expiresAt,
+      });
     }
   );
 

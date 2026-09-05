@@ -29,6 +29,7 @@ export function useIdentityGuard(): {
   roles: IdentityRole[];
   canReadPii: boolean;
   canApprove: boolean;
+  canManage: boolean;
   loading: boolean;
 } {
   const { data: session, status } = useSession();
@@ -52,6 +53,10 @@ export function useIdentityGuard(): {
     canReadPii:
       roles.includes("identity-manager") || roles.includes("study-nurse"),
     canApprove: roles.includes("monitor"),
+    // Administering the register itself — creating it, assigning staff,
+    // importing a roster, erasing a subject. A nurse works inside a register
+    // someone else set up; those are different jobs, and the API agrees.
+    canManage: roles.includes("identity-manager"),
     loading: status === "loading",
   };
 }

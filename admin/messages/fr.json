@@ -860,7 +860,8 @@
         "habitCreation": "Création d'habitudes",
         "reminders": "Rappels",
         "behaviorChange": "Changement de comportement",
-        "gamification": "Gamification"
+        "gamification": "Gamification",
+        "identity": "Identité"
       },
       "fields": {
         "nameLabel": "Nom *",

@@ -38,6 +38,7 @@ import { createHabitDonationsRouter } from './admin/habitDonationsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
 import { createAuditLogRouter } from './admin/auditLogRouter.js';
 import { createConsentDocumentsRouter } from './admin/consentDocumentsRouter.js';
+import { createStudyMembersRouter } from './admin/studyMembersRouter.js';
 import { createRestoreAttemptsRouter } from './admin/restoreAttemptsRouter.js';
 import { createTeamRouter } from './admin/teamRouter.js';
 import { createAuditAdminActionsMiddleware } from '../middleware/auditAdminActions.js';
@@ -1056,6 +1057,8 @@ export function createAdminRouter({
   router.use('/', createAuditLogRouter({ db }));
 
   router.use('/', createConsentDocumentsRouter({ db }));
+
+  router.use('/', createStudyMembersRouter({ db }));
 
   router.use('/', createRestoreAttemptsRouter({ db }));
 

@@ -143,8 +143,9 @@ export async function apiFetch<T = any>(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const { error, details } = body as {
+    const { error, message: detailMessage, details } = body as {
       error?: string;
+      message?: string;
       details?: { path: string; message: string }[];
     };
     // The validate() middleware returns a generic "Validation failed" error
@@ -153,7 +154,14 @@ export async function apiFetch<T = any>(
     const detailText = details?.length
       ? details.map((d) => (d.path ? `${d.path}: ${d.message}` : d.message)).join("; ")
       : undefined;
-    const message = [error ?? `HTTP ${res.status}`, detailText].filter(Boolean).join(" — ");
+    // Prefer the API's own prose when it sent any. Several endpoints answer a
+    // refusal with a terse `error` code plus a `message` explaining what to do
+    // about it — "last_manager" versus "This is the only identity-manager for
+    // the register; assign another before removing this one". Dropping the
+    // second one turns a helpful refusal into a puzzle.
+    const message = [detailMessage ?? error ?? `HTTP ${res.status}`, detailText]
+      .filter(Boolean)
+      .join(" — ");
     throw new Error(message);
   }
   return res.json() as Promise<T>;

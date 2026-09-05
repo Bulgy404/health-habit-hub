@@ -22,8 +22,8 @@ behind it, see [`identity-mode-plan.md`](identity-mode-plan.md).
 
 | Page | Who sees it | What it does |
 | --- | --- | --- |
-| Study → **Identity** tab | `admin` | Turn verified mode on, set the subject-code prefix, consent slug, approver count and reveal window |
-| **Identity register** | identity roles | The roster: add subjects, issue codes, mark verification, print the code sheet |
+| Study → **Identity** tab | `admin` | Turn verified mode on, set the subject-code prefix, consent slug, approver count and reveal window — and name the researchers who may read or export the study |
+| **Identity register** | identity roles | Create the register, assign staff to it, import the roster, add subjects, issue codes, mark verification, print the sheet, send invites, erase a subject |
 | **Re-identification** | `identity-manager`, `monitor` | Raise, approve/reject and reveal — the queue |
 | **Identity audit** | `identity-manager`, `monitor` | Every recorded action, filterable to reveals, exportable as CSV |
 | **Consent documents** | `admin` | Write and publish the study consent text, per language — see below |
@@ -85,11 +85,16 @@ identity provider the operator does not control; see the plan's §5.
    asymmetry is deliberate.
 4. In the admin portal, set the study's **Identity** tab to `verified` and
    choose a subject-code prefix (e.g. `TUD-DFG01`).
-5. Create the register, then assign staff to it on the **Identity register**
-   page. Until someone is assigned they see nothing, whatever realm role they
-   hold — the creator is assigned automatically so the register is never
-   orphaned, and removing the last `identity-manager` is refused for the same
-   reason.
+5. On the **Identity register** page, enter the study id and choose **Create
+   register**. The prefix must match the one set in step 4 — it is frozen at
+   creation, because every subject code issued embeds it.
+6. Assign staff on the same page, under *Who may work in this register*. Until
+   someone is assigned they see nothing, whatever realm role they hold — the
+   creator is assigned automatically so the register is never orphaned, and
+   removing the last `identity-manager` is refused for the same reason.
+7. On a verified study, researchers are **scoped**: name them under *Researcher
+   access* on the study's Identity tab, choosing read or read + export. Without
+   an entry the `researcher` role grants nothing on that study.
 
 > A consent slug with no matching document 404s the participant **after** they
 > have enrolled. Attaching one that is not ready is therefore **refused**
@@ -182,9 +187,12 @@ roster import  →  subject codes  →  enrolment codes  →  delivery  →  red
 2. **Mint enrolment codes** — `HHV-XXXXX-XXXXX`, single use, 90-day default
    expiry. The alphabet excludes I, L, O and U because those are what get
    misread off a printed sheet.
-3. **Deliver** — print the code sheet, or send an invite. The sheet is
-   generated on demand and **never stored**; printing it is an audited
-   `pii_read` naming every subject on it.
+3. **Deliver** — print the code sheet, or use **Send by email** on the code
+   just issued. The sheet is generated on demand and **never stored**;
+   printing it is an audited `pii_read` naming every subject on it. The email
+   goes to the address held in the register — nobody can type a different one —
+   and the service reports only whether it went, never to where. Sending needs
+   `SMTP_HOST` configured.
 4. **Verify identity** — a human checks the identity document at the site. The
    app never sees an ID document; this is a clinical procedure, not a software
    feature.
@@ -266,6 +274,10 @@ Anonymous studies stay **open**, exactly as before, so nothing existing changed
 the day this shipped. Admins always pass: scoping limits researchers to their
 own studies, it does not lock operators out of the platform they run.
 
+Members are managed under *Researcher access* on the study's **Identity** tab.
+Adding someone to an anonymous study is allowed and simply has no effect yet;
+the panel says so rather than letting it look as though nothing happened.
+
 Study existence is deliberately **not** secret — a non-member sees the study in
 the list and a 403 on its detail. Hiding it would make the studies page look
 broken for no security gain; the sensitive thing is the data, not the name.
@@ -290,8 +302,9 @@ HHH holds the pseudonymous study data, joined by subject code.
 
 **Art. 17 (erasure)** is deliberately **not** a single cascade:
 
-- Deleting a subject removes the identity and leaves a tombstone carrying only
-  the subject code. Re-identification is severed permanently.
+- Deleting a subject (**Erase** on the roster, behind a typed confirmation)
+  removes the identity and leaves a tombstone carrying only the subject code.
+  Re-identification is severed permanently.
 - The pseudonymous research data in HHH is **retained** and stays analysable.
 
 That asymmetry is the correct and defensible outcome for research data, and it
@@ -330,7 +343,10 @@ rotation never triggers the expensive one.
 | Symptom | Cause |
 |---|---|
 | Every enrolment fails with `identity_service_unavailable` | `IDENTITY_SERVICE_URL`/`IDENTITY_SERVICE_SECRET` unset on the HHH backend, or the container is down |
-| `403 not_assigned_to_register` for a user who has the right role | They hold the realm role but have no assignment row — a role says *what*, an assignment says *where* |
+| `403 not_assigned_to_register` for a user who has the right role | They hold the realm role but have no assignment row — a role says *what*, an assignment says *where*. Fix it under *Who may work in this register* |
+| The roster is empty and no error is shown | Either no register exists for that study, or you are not assigned to it. The page says which, above the table |
+| `404 register_not_found` from the app on enrolment | The study is verified but its register was never created. Create it on the Identity register page |
+| Invite reports `sent: false` | Either no email is held for that subject, or SMTP is not configured on the identity service |
 | `403 role_separation_violation` | The account holds `researcher` alongside an identity role. Working as intended: use separate accounts |
 | Valid `HHV-` code rejected in the app | The mobile build predates the widened format. Ship the app update **before** minting any HHV codes |
 | Service refuses to start: "must not be used in production" | The master key was supplied as an environment variable. Mount it as a file and set `IDENTITY_MASTER_KEY_FILE` |
