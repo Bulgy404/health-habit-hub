@@ -57,15 +57,33 @@ export function isValidSlug(slug) {
 async function readFileDocument(lang, slug) {
   if (!isValidSlug(slug) || !SUPPORTED_LANGS.includes(lang)) return null;
 
+  // The path handed to readFile is built from a DIRECTORY LISTING, never from
+  // the request. The slug is only ever compared against names the filesystem
+  // produced, so no caller-supplied text reaches the path at all — a `..`
+  // simply matches nothing.
+  //
+  // The pattern check above already made traversal impossible; this makes it
+  // impossible to *analyse* it as anything else, which matters because the
+  // slug arrives from a URL path segment and a reviewer (human or CodeQL)
+  // should not have to trace a regex in another function to be sure.
   const dir = path.resolve(LANG_DIR(lang));
-  const file = path.resolve(dir, `consent-${slug}.md`);
-  // Belt and braces: the slug pattern already forbids `/` and `.`, so this can
-  // only fire if that pattern is ever loosened.
-  if (path.dirname(file) !== dir) return null;
+  const wanted = `consent-${slug}.md`;
+
+  let entries;
+  try {
+    entries = await readdir(dir);
+  } catch (err) {
+    if (err?.code === 'ENOENT') return null;
+    throw err;
+  }
+
+  const match = entries.find((name) => name === wanted);
+  if (!match) return null;
 
   try {
-    return parseFrontMatter(await readFile(file, 'utf-8'));
+    return parseFrontMatter(await readFile(path.join(dir, match), 'utf-8'));
   } catch (err) {
+    // Still possible: the file was removed between listing and reading.
     if (err?.code === 'ENOENT') return null;
     throw err;
   }

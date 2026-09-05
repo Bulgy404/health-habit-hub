@@ -133,7 +133,17 @@ describe('consentDocumentService — resolution', () => {
   });
 
   it('refuses a path-traversal slug rather than reading an arbitrary file', async () => {
-    for (const slug of ['../privacy', 'a/../../etc/passwd', 'Consent', '']) {
+    // Two independent barriers: the slug pattern, and the fact that the path
+    // handed to readFile is assembled from a directory listing rather than
+    // from the request — so caller text never reaches the filesystem call and
+    // a traversal attempt simply matches no entry.
+    for (const slug of [
+      '../privacy',
+      'a/../../etc/passwd',
+      '../../package',
+      'Consent',
+      '',
+    ]) {
       assert.equal(
         await resolveConsentDocument({ db: makeDb(), lang: 'de', slug }),
         null,
