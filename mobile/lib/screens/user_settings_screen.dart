@@ -5,6 +5,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+
+import '../widgets/subject_code_tile.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../config/app_config.dart';
@@ -135,6 +137,9 @@ class UserSettingsScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.push('/settings/profile'),
               ),
+              // Renders nothing for anonymous studies, which is every
+              // existing one.
+              const SubjectCodeTile(),
             ],
           ),
 

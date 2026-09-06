@@ -79,6 +79,43 @@ const INFO_OVERLOAD_GUARD_BSON = {
   },
 };
 
+/**
+ * Verified identity mode — see docs/identity-mode-plan.md.
+ *
+ * STUDY-LEVEL ONLY, deliberately not per-group. Identity mode follows the
+ * study's ethics approval, not an experimental condition; allowing one arm to
+ * be identified and another not is not a thing anyone wants, and it would
+ * double the resolver complexity for no benefit. This is a conscious deviation
+ * from the `gamificationEnabled` shape used by every other toggle here.
+ *
+ * Absent ⇒ `anonymous`, matching the back-compat convention of
+ * `recommenderEnabled`: every study that predates this feature keeps the
+ * platform's original anonymous model with no migration.
+ */
+const IDENTITY_BSON = {
+  bsonType: ['object', 'null'],
+  properties: {
+    mode: { bsonType: 'string', enum: ['anonymous', 'verified'] },
+    subjectCodePrefix: { bsonType: ['string', 'null'] },
+    verificationMethods: {
+      bsonType: ['array', 'null'],
+      items: { bsonType: 'string', enum: ['in_person', 'email', 'sms'] },
+    },
+    consentDocumentSlug: { bsonType: ['string', 'null'] },
+    reidentificationApprovers: {
+      bsonType: ['int', 'null'],
+      minimum: 1,
+      maximum: 2,
+    },
+    revealTtlMinutes: { bsonType: ['int', 'null'], minimum: 5, maximum: 1440 },
+    auditReads: { bsonType: ['bool', 'null'] },
+    researcherScoping: {
+      bsonType: ['string', 'null'],
+      enum: ['open', 'scoped', null],
+    },
+  },
+};
+
 /** Reusable bsonType shape for the { habit, questionnaire, endOfStudy, studyUpdate } group. */
 const REMINDERS_BSON = {
   bsonType: ['object', 'null'],
@@ -121,6 +158,9 @@ export const VALIDATOR = {
       informationOverloadGuard: INFO_OVERLOAD_GUARD_BSON,
       // §7.5 Gamification — study-wide on/off toggle; a group's value overrides.
       gamificationEnabled: { bsonType: 'bool' },
+      // Verified identity mode. Study-level only — there is intentionally no
+      // per-group counterpart. See IDENTITY_BSON above.
+      identity: IDENTITY_BSON,
       // Optional: absence is treated as 'freeText' for backward compatibility.
       habitEntryMode: { bsonType: 'string', enum: ['freeText', 'structured'] },
       structuredActivityKeys: {

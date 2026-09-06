@@ -428,6 +428,186 @@ In local development, the `keycloak-init` container automatically creates a user
 
 ---
 
+## Identity Register (verified-identity studies)
+
+**Optional and per study.** `identity.mode` is absent on every existing study
+and defaults to `anonymous`, so nothing below applies to them and the service
+need not be deployed at all. See [`identity-mode-plan.md`](identity-mode-plan.md)
+for the design and [`identity-register.md`](identity-register.md) for the
+operator runbook.
+
+### The boundary
+
+> The research databases know a **subject code**. The register knows **who
+> that is**. Nothing knows both except a person holding an approved,
+> time-limited re-identification grant — and every such grant is recorded.
+
+```
+participant → app → hhh-app ──internal :3003──▶ identity-service ──▶ identity-db
+                       │      reserve/confirm/release                (PostgreSQL,
+                       │      {reservationId, hhhStudyId,             encrypted PII)
+                       │       subjectCode} — NO PII
+                       ▼
+                  mongo / neo4j  ← subject code only
+```
+
+### Why a separate database, and a different engine
+
+PostgreSQL rather than a second Mongo, deliberately: a different engine makes
+it **structurally impossible** for the register to be swept into `mongodump`
+(`backup-service/backup.sh`) or into `studyExportService`'s collection loop.
+That mistake would require a code change, not a mis-set connection string.
+
+All encryption happens **in Node, never in Postgres** — no `pgcrypto`. The
+database never sees a key, so a stolen dump is inert on its own.
+
+### Network topology
+
+`identity-service` is **not on `hhh-proxy`**. That network is flat — every
+service in the stack joins it — so being on it would give the register a route
+to MongoDB and Neo4j. It sits on:
+
+- `hhh-identity-edge` — Traefik (admin portal), Keycloak (JWKS), and `hhh-app`
+  (the internal enrolment API), plus the profile-scoped identity health probe
+- `hhh-identity-net` — `internal: true`, carrying only its own database,
+  identity-service, and the backup service
+
+Because Traefik runs with `--providers.docker.network=hhh-proxy`, the service
+must pin `traefik.docker.network=hhh-identity-edge`; without it Traefik would
+look for an IP on a network the container is not on and `/identity` would fail
+with nothing obviously wrong in the configuration.
+
+Both properties are asserted by `app/tests/unit/identityIsolation.test.js`,
+which parses `docker-compose.yml` — they are the cheapest controls in the
+design and the easiest to undo with one line.
+
+### Authorization scope
+
+Identity access is always the intersection of three facts: the operation's
+allowed roles, the roles in the current Keycloak token, and matching
+`study_site_assignments` rows. A global subject or re-identification UUID never
+bypasses that calculation; the service resolves the owning register and site
+before it reads, changes, reveals, or erases anything. Multiple site
+assignments remain an explicit set and never collapse to whole-study access.
+
+### Enrolment: reserve → confirm → release
+
+Enrolment spans two databases with no shared transaction: HHH must create a
+Neo4j enrolment and a Mongo mirror before a code can count as spent. A
+single-phase redeem would burn the code first and leave a participant unable to
+enrol if enrolment then failed — the worse outcome, because it needs a nurse to
+issue a replacement.
+
+1. **reserve** — atomic `UPDATE … WHERE status='issued'`, so a double tap or a
+   retry cannot both win. Returns routing data only.
+2. **enrol** — HHH does exactly what it does for an anonymous code. Group
+   allocation stays in HHH: the register knows *who* someone is, not which arm
+   they belong in.
+3. **confirm** — the register records the account link and spends the code.
+4. **release** — on any failure the code is handed straight back, so the
+   participant can simply try again.
+
+A sweeper reclaims reservations abandoned mid-protocol, and ships with the
+protocol rather than after it.
+
+### Codes
+
+| | Format | Scope |
+|---|---|---|
+| Anonymous | `HHH-XXXXX` | full `A-Z0-9` alphabet |
+| Verified | `HHV-XXXXX-XXXXX` | Crockford base32 — **no I, L, O, U** |
+| Subject code | `TUD-DFG01-0042` | pseudonym; the only identifier crossing into HHH |
+
+The distinct prefix lets the backend route on sight, which it must: the study
+is unknown until the register resolves the code.
+
+⚠️ Because the anonymous alphabet **includes** I, L and O, the client-side
+"repair" of those characters is applied to `HHV-` codes only. Applying it to an
+`HHH-` code corrupts roughly 35% of them.
+
+### Separation of duties
+
+`researcher` may never hold an identity role — that is what makes the research
+data genuinely pseudonymous rather than pseudonymous in name only. `admin` may
+hold `monitor` (approve) but never `identity-manager`/`study-nurse` (request).
+Both refusals are runtime `403`s, and the four-eyes rule on approval is a
+**database trigger**, so it survives a refactor of the service.
+
+These give **non-repudiation, not prevention**: a Keycloak realm admin can
+always mint a principal. What is guaranteed is that doing so is visible.
+
+### Scoped researcher access
+
+Verified studies force `identity.researcherScoping` to `scoped`, and
+`app/middleware/requireStudyAccess.js` then requires an explicit
+`study_memberships` row rather than the bare `researcher` role. Membership
+separates **read** from **export**, because downloading a study bundle is
+materially more than opening a page.
+
+Three deliberate properties:
+
+- **Admins always pass.** Scoping limits researchers to their own studies; it
+  is not a way to lock operators out of the platform they run.
+- **Anonymous studies stay `open`**, exactly as before, so nothing that worked
+  the day before this shipped stopped working.
+- **Study existence is not secret.** A non-member sees the study in the list
+  and a 403 on its detail. Hiding it would make the studies page look broken
+  for no security gain — the sensitive thing is the data, not the name.
+
+The guard fails **closed**: an error resolving access is a 500, never access.
+
+### Study consent documents
+
+A verified study can name a consent document that participants accept *after*
+redeeming their code — the study, and therefore the document, is unknown until
+then. Each document resolves from one of two places, in this order:
+
+| Source | What it is |
+|---|---|
+| `study_consent_documents` (Mongo) | Edited in the admin portal — **wins where a row exists** |
+| `app/language/<lang>/consent-<slug>.md` | Shipped with the image, in version control, gated by `scripts/checkLegalDocs.mjs` |
+
+Both exist on purpose. The file keeps the binding text under review and under
+CI; the row means a wording change agreed with an ethics committee does not
+need a redeploy. The portal shows which of the two is live per language,
+because hidden precedence produces "I edited it and nothing changed".
+
+A document may only be **attached to a study** once it is published in every
+supported locale, at one version, with no `⟦…⟧` placeholders left in it.
+`PUT /admin/studies/:id` answers `409 consent_document_not_ready` otherwise.
+That check exists because the alternative failure is a 404 shown to a
+participant *after* they have enrolled — the worst possible moment, and
+invisible to the person who could fix it.
+
+The platform's own legal documents (privacy, imprint, accessibility, the
+general consent) are deliberately **not** in this collection. They are binding
+texts under version control with a CI consistency gate, and moving them into a
+database any admin can edit would remove that gate for no operational gain.
+
+### Erasure
+
+`DELETE /v1/subjects/:id` deletes the register row **outright**, cascading to
+its account link and any issued codes. Nothing of the person is kept — not
+even an empty row recording that one existed, which is the stronger answer to
+Art. 17 than a tombstone would be.
+
+What survives is a single audit entry naming the subject code, which is what
+makes the erasure itself accountable. Subject codes come from a counter on the
+register rather than a count of rows, so an erased code can never be minted
+again for someone else.
+
+The pseudonymous research data in HHH is **retained** and stays analysable.
+That asymmetry is the correct outcome for research data and must appear
+verbatim in the consent document participants sign.
+
+### Alerting
+
+Every reveal is mailed to `IDENTITY_DPO_ALERT_EMAIL` — on *every* reveal, not
+on a threshold. A re-identification nobody noticed is the failure mode that
+ends studies. The alert carries the subject code, the actor, the legal basis
+and the field **names**, never their values: the point is that someone was
+identified, not who they are.
+
 ## M3 Recommendation Pipeline
 
 The recommendation pipeline runs entirely inside the **API-service** (Python / FastAPI). It is triggered by `POST /api/v1/recommend/generate` on the Node.js backend, which proxies the request (with a service token) to `POST /api/v1/llm/recommend`.

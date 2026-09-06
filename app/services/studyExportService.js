@@ -6,6 +6,7 @@
 
 import { ObjectId } from 'mongodb';
 import { recoveryPhrasesEnabled } from '../utils/recoveryPhrase.js';
+import { resolveIdentityConfig } from './identityConfig.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 
 /** Collections keyed by participant `userId` that hold their generated data. */
@@ -38,11 +39,25 @@ async function safeFind(db, collection, filter) {
  * Remove bulky binaries and (unless explicitly enabled) account secrets from
  * participant records so the export stays a clean, portable JSON document.
  */
+/**
+ * Credential-bearing fields that must never leave the platform in a research
+ * export. Redacted unconditionally — unlike `recoveryPhrase`, there is no
+ * configuration under which a researcher legitimately needs these.
+ *
+ * `passwordHash` in particular was previously exported verbatim: bcrypt is
+ * slow but not unbreakable, and a study bundle is copied, emailed and archived
+ * far more freely than the database it came from.
+ */
+const CREDENTIAL_FIELDS = ['passwordHash', 'password', 'salt', 'email'];
+
 function sanitizeParticipant(p) {
   const clean = { ...p };
   if ('tokenCardPdf' in clean) clean.tokenCardPdf = '[binary omitted]';
   if (!recoveryPhrasesEnabled() && 'recoveryPhrase' in clean) {
     clean.recoveryPhrase = '[redacted]';
+  }
+  for (const field of CREDENTIAL_FIELDS) {
+    if (field in clean) clean[field] = '[redacted]';
   }
   return clean;
 }
@@ -69,9 +84,16 @@ export async function exportStudyData({ db, id }) {
   ];
   const byUser = { userId: { $in: userIds } };
 
-  const participants = userIds.length
-    ? (await safeFind(db, 'participants', byUser)).map(sanitizeParticipant)
-    : [];
+  // For a VERIFIED study the participants collection is dropped entirely
+  // rather than sanitised. It exists to describe accounts, and in a verified
+  // study the account is exactly the thing the subject code is meant to
+  // stand in for — shipping both would hand a researcher the correspondence
+  // the whole design exists to withhold.
+  const verified = resolveIdentityConfig(study).mode === 'verified';
+  const participants =
+    userIds.length && !verified
+      ? (await safeFind(db, 'participants', byUser)).map(sanitizeParticipant)
+      : [];
   const questionnaireAssignments = await safeFind(
     db,
     'questionnaire_assignments',
@@ -91,6 +113,38 @@ export async function exportStudyData({ db, id }) {
 
   for (const coll of USER_SCOPED_COLLECTIONS) {
     collections[coll] = userIds.length ? await safeFind(db, coll, byUser) : [];
+  }
+
+  // Rewrite every raw Keycloak sub to its study-local subject code. The sub is
+  // the join key into every other system, and this bundle is copied, emailed
+  // and archived far more freely than the database it came from.
+  //
+  // Fails CLOSED: a user with no subject code is redacted rather than falling
+  // back to the sub, so a gap in the register can never leak one.
+  if (verified) {
+    const bySub = new Map(
+      enrollments
+        .filter((e) => e.userId)
+        .map((e) => [e.userId, e.subjectCode ?? '[no-subject-code]'])
+    );
+    const pseudonymise = (value) => {
+      if (Array.isArray(value)) return value.map(pseudonymise);
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+          out[k] =
+            k === 'userId' || k === 'participantId'
+              ? (bySub.get(v) ?? '[redacted]')
+              : pseudonymise(v);
+        }
+        return out;
+      }
+      return value;
+    };
+    for (const key of Object.keys(collections)) {
+      if (key === 'studies') continue; // no user ids, and rewriting would corrupt config
+      collections[key] = pseudonymise(collections[key]);
+    }
   }
 
   const counts = Object.fromEntries(

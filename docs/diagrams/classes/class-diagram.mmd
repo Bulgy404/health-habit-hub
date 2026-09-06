@@ -24,7 +24,8 @@ classDiagram
         +ObjectId _id
         +String userId
         +String consentVersion  semver
-        +String locale  en|de|ja
+        +String documentSlug  null = the platform document
+        +String locale  en|de|ja|fr|nl
         +Date consentedAt
     }
     User "1" --> "0..1" UserPreferences : has
@@ -73,7 +74,8 @@ classDiagram
         +String userId
         +ObjectId studyId
         +ObjectId groupId
-        +String studyCodeUsed
+        +String studyCodeUsed  null on a verified study
+        +String subjectCode  verified studies only
         +Date enrolledAt
         +Date lastActiveAt
         +Date droppedOutAt
@@ -88,6 +90,126 @@ classDiagram
     Enrollment "*" --> "1" ExperimentGroup
     Enrollment "*" --> "1" User
     Enrollment "*" ..> "0..1" StudyCode : redeemed via
+
+    %% ===================== Verified identity =====================
+    %% Deliberately in its own PostgreSQL, in a separate service. Using a
+    %% different engine from the research stores makes it structurally
+    %% impossible for the register to be swept into mongodump or into
+    %% studyExportService's collection loop — that mistake would need a code
+    %% change, not a mis-set connection string.
+    %%
+    %% The ONLY thing that crosses into the research databases is
+    %% Enrollment.subjectCode. Read this diagram left to right and the boundary
+    %% is the dashed edge below: everything to its right knows a code, and
+    %% nothing to its right knows a person.
+    class StudyRegister {
+        <<PostgreSQL study_registers>>
+        +UUID id
+        +String hhhStudyId  Mongo ObjectId, as text
+        +String subjectCodePrefix  frozen at creation
+        +String studyName  display only
+        +Bytes dekWrapped  under KEK_kekVersion
+        +Int kekVersion
+        +Int nextSubjectSeq  counter, not a row count
+    }
+    class Subject {
+        <<PostgreSQL subjects>>
+        +UUID id
+        +String subjectCode  the only field that crosses
+        +Bytes givenNameCt  AES-256-GCM, AAD = row + column
+        +Bytes familyNameCt
+        +Bytes dobCt
+        +Bytes emailCt
+        +Bytes emailBi  keyed blind index
+        +Bytes personBi  duplicate WARNING only
+        +String status
+        +Date verifiedAt
+    }
+    class SubjectAccountLink {
+        <<PostgreSQL subject_account_links>>
+        +UUID id
+        +Bytes keycloakSubCt
+        +Bytes keycloakSubBi
+        +Date supersededAt  one live link per subject
+    }
+    class EnrollmentCode {
+        <<PostgreSQL enrollment_codes>>
+        +UUID id
+        +Bytes codeHash  HMAC, looked up by digest
+        +Bytes codeCt  for reprinting only
+        +String status  issued|reserved|redeemed|revoked|expired
+        +UUID reservationId
+        +Date expiresAt
+    }
+    class StudySiteAssignment {
+        <<PostgreSQL study_site_assignments>>
+        +String actorSub
+        +String role  identity-manager|study-nurse|monitor
+        +String siteId
+    }
+    class ReidentificationRequest {
+        <<PostgreSQL reidentification_requests>>
+        +UUID id
+        +String subjectCode
+        +String legalBasis
+        +String reason  min 50 chars
+        +String[] fieldsRequested
+        +String status
+        +String requestedBy
+        +Date revealExpiresAt
+        +Int revealCount  incremented by RETURNING
+    }
+    class ReidentificationApproval {
+        <<PostgreSQL reidentification_approvals>>
+        +String approvedBy
+        +String decision
+        +Date decidedAt
+    }
+    class IdentityAuditLog {
+        <<PostgreSQL identity_audit_log>>
+        +BigInt id
+        +String actorSub
+        +String[] actorRoles  as held at the time
+        +String action
+        +String sensitivity  list|write|pii_read|reveal|export
+        +String subjectCode
+        +String[] fields  NAMES, never values
+        +Bytes ipHash
+        +Int repeatCount  never collapses a reveal
+    }
+
+    StudyRegister "1" *-- "0..*" Subject : roster
+    StudyRegister "1" *-- "0..*" StudySiteAssignment : who may work here
+    StudyRegister "1" *-- "0..*" IdentityAuditLog
+    Subject "1" *-- "0..*" SubjectAccountLink : at most one live
+    Subject "1" *-- "0..*" EnrollmentCode
+    ReidentificationRequest "1" *-- "1..2" ReidentificationApproval : four-eyes, enforced by TRIGGER
+    Enrollment ..> Subject : subjectCode ONLY —\nno key, no join, no FK
+
+    %% ===================== Study consent documents =====================
+    class StudyConsentDocument {
+        <<MongoDB study_consent_documents>>
+        +ObjectId _id
+        +String slug
+        +String lang  en|de|ja|fr|nl
+        +String body  markdown
+        +String version  semver
+        +String effectiveDate
+        +String status  draft|published
+        +Date updatedAt
+    }
+    class StudyMembership {
+        <<MongoDB study_memberships>>
+        +ObjectId _id
+        +String userId
+        +ObjectId studyId
+        +String role  researcher|lead
+        +String scope  read|export
+    }
+    Study "1" ..> "0..*" StudyConsentDocument : identity.consentDocumentSlug
+    Study "1" *-- "0..*" StudyMembership : scoped access
+    Consent ..> StudyConsentDocument : documentSlug + version
+    StudyConsentDocument ..> StudyConsentDocument : a DB row overrides\nthe shipped file
 
     %% ===================== Habit formation (DFG) =====================
     class ImplementationIntention {

@@ -1,0 +1,38 @@
+{
+  "name": "hhh-identity-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Identity register for verified-identity studies. Holds the subject-code <-> person mapping in its own database, encrypted, isolated from the research platform.",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --test-force-exit \"tests/**/*.test.js\"",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "rotate-kek": "node scripts/rotate-kek.js"
+  },
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.3.1",
+    "multer": "^2.0.0",
+    "nodemailer": "^10.0.0",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.13.1",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "eslint": "^10.8.0",
+    "globals": "^15.3.0",
+    "prettier": "^3.3.0"
+  },
+  "overrides": {
+    "qs": "^6.16.0"
+  }
+}

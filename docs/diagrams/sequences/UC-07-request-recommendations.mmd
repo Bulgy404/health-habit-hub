@@ -39,7 +39,7 @@ sequenceDiagram
             AI->>N: db.index.vector.queryNodes('habit_embedding_idx', limit, emb)
             AI->>N: db.index.vector.queryNodes('context_embedding_idx', limit, emb)
             AI->>N: db.index.vector.queryNodes('bcio_embedding_idx', limit, emb)
-            N-->>AI: top-k per index; merge by max(score) → COMMUNITY_HABITS_LIMIT
+            N-->>AI: top-k per index, merged by max(score) → COMMUNITY_HABITS_LIMIT
         and Annotated habits (MongoDB + Neo4j)
             AI->>M: habit_annotations.find({userId, type:{$in:['helpful','iDoThis','like']}})
             M-->>AI: habit UUIDs this user liked/saved
@@ -74,7 +74,7 @@ sequenceDiagram
             AI->>AI: cap context at RECOMMEND_MAX_CONTEXT_CHARS,<br/>extract distinct file_paths → paper citations (citations.py + references.json)
         end
 
-        Note over AI,LLM: Single LLM call — recommend.txt<br/>model LLM_RECOMMEND_MODEL · temp 0.2 · max_tokens LLM_RECOMMEND_MAX_TOKENS<br/>system msg: goal = untrusted data; output in the goal's language<br/>vars: goal · profile · personal/annotated/community habits (+bcio)<br/>sources_json (capped) · source_documents_json · prior_feedback · previous_titles
+        Note over AI,LLM: Single LLM call — recommend.txt<br/>model LLM_RECOMMEND_MODEL · temp 0.2 · max_tokens LLM_RECOMMEND_MAX_TOKENS<br/>system msg: goal = untrusted data — output in the goal's language<br/>vars: goal · profile · personal/annotated/community habits (+bcio)<br/>sources_json (capped) · source_documents_json · prior_feedback · previous_titles
         AI->>LLM: POST /chat/completions
         LLM-->>AI: {recommendations: [{title, body, rationale, suggested_cue,<br/>selected_habit_uuids, source_filenames}]} or {refused, reason}
 

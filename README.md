@@ -71,7 +71,18 @@ Better participation  →  Richer graph  →  Better recommendations  →  More 
 
 Health Habit Hub is a research platform for studying health habits. Participants describe their personal health habits through a mobile app. The system stores, classifies, and organises those habits using a knowledge graph, then generates personalised recommendations using LLMs grounded in a researcher-curated knowledge base.
 
-Researchers and admins manage studies, questionnaires, and the knowledge base through a web portal. The DFG study module adds a longitudinal protocol: implementation intentions, daily behaviour logging, and weekly SRHI check-ins.
+Researchers and admins manage studies, questionnaires, and the knowledge base through a web portal.
+
+**Verified identity mode (optional, per study).** Anonymity is the default and
+is unchanged: accounts carry no name, email or phone, and every existing study
+stays that way. For clinical studies that must identify their participants, a
+study can opt in to a separate **identity register** — its own service and
+encrypted database — which holds the `subject code ↔ person` mapping. The
+research databases only ever see a study-local subject code such as
+`TUD-DFG01-0042`, researchers cannot resolve it, and re-identification requires
+a stated legal basis, a second approver and a time-limited grant that is
+permanently recorded. See
+[`docs/identity-register.md`](docs/identity-register.md). The DFG study module adds a longitudinal protocol: implementation intentions, daily behaviour logging, and weekly SRHI check-ins.
 
 ---
 

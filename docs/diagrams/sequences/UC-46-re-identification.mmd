@@ -1,0 +1,64 @@
+%% UC-46 — Re-identify a participant
+%%
+%% This is the only path from a subject code back to a person. The workflow
+%% exists to make that deliberate and visible, NOT to make it hard: in practice
+%% it takes a couple of minutes and does not slow down a real emergency.
+%%
+%% Three things are worth reading off this diagram:
+%%   - the four-eyes rule is a database TRIGGER, so it cannot be bypassed by a
+%%     change to application code;
+%%   - the grant is time-limited AND field-limited — asking for a phone number
+%%     does not also return an address;
+%%   - there is no bulk reveal and no endpoint that accepts a list of subject
+%%     codes. That absence is what makes "quietly de-anonymise the cohort" not
+%%     something the software can do, regardless of who is logged in.
+sequenceDiagram
+    autonumber
+    actor IM as Identity Manager
+    actor MO as Monitor (a different person)
+    participant UI as Admin Portal
+    participant I as identity-service (:3002 public)
+    participant PG as identity-db (PostgreSQL)
+    participant SMTP as SMTP relay
+    actor DPO as Data Protection Officer
+
+    Note over IM,UI: A `researcher` holding any identity role is refused at<br/>runtime (403 role_separation_violation). The person who<br/>analyses the pseudonymous data cannot resolve it.
+
+    IM->>UI: Raise a request
+    UI->>I: POST /v1/studies/:id/reidentification-requests<br/>{ subjectCode, legalBasis, reason, fieldsRequested }
+    I->>I: requireIdentityRole + assignment check<br/>(a role says WHAT, an assignment says WHERE)
+    I->>PG: INSERT reidentification_requests (requested_by = caller)
+    Note over PG: requested_by is what the trigger compares against.<br/>It was once bound to a missing placeholder and silently<br/>NULL — which disabled BOTH the four-eyes rule and the<br/>reveal requester check. Caught by the self-approval test.
+    I->>PG: audit: create_reidentification_request (write)
+    I-->>UI: 201 { id, status: pending }
+
+    IM->>UI: Approve own request
+    UI->>I: POST /v1/reidentification-requests/:id/decide { approved }
+    I->>PG: INSERT reidentification_approvals
+    PG--xI: enforce_four_eyes() raises
+    I-->>UI: 409 — the requester may not approve
+
+    MO->>UI: Approve
+    UI->>I: POST /v1/reidentification-requests/:id/decide { approved }
+    I->>PG: INSERT approval, set status=approved,<br/>reveal_expires_at = now() + revealTtlMinutes
+    I-->>UI: 200
+
+    IM->>UI: Reveal
+    UI->>I: GET /v1/reidentification-requests/:id/reveal
+    I->>PG: check status, window, and that the caller is the requester
+    I->>PG: UPDATE … SET reveal_count = reveal_count + 1 RETURNING
+    Note over PG: Counted by the database, not in JS: two concurrent<br/>reveals would otherwise report the same number.
+    PG-->>I: wrapped DEK + the requested ciphertext columns
+    I->>I: unwrap DEK, decrypt ONLY fieldsRequested
+    I->>PG: audit: reveal — never deduplicated, records field NAMES
+    I->>SMTP: alert — subject code, actor, legal basis, field names
+    SMTP-->>DPO: on EVERY reveal, not on a threshold
+    Note over I,DPO: The alert says that someone was identified.<br/>It never carries the values.
+    I-->>UI: { subjectCode, fields, revealCount, expiresAt }
+
+    opt approval granted in error
+        MO->>UI: Revoke
+        UI->>I: POST /v1/reidentification-requests/:id/revoke
+        I->>PG: status=revoked — the window closes immediately
+        Note over MO,I: The alternative was waiting out the TTL, which is<br/>the wrong answer under the time pressure that<br/>produces a mistaken approval in the first place.
+    end

@@ -34,6 +34,8 @@ services:
       - '${NEO4J_BOLT_PORT:-7687}:7687'
     networks:
       - hhh-proxy
+      # Reaches identity-service (verified-identity studies); see hhh-identity-edge.
+      - hhh-identity-edge
     volumes:
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - traefik-certs:/certs
@@ -206,6 +208,8 @@ services:
       - ENABLE_QUEUE_DASHBOARD=${ENABLE_QUEUE_DASHBOARD:-true}
     networks:
       - hhh-proxy
+      # Reaches identity-service (verified-identity studies); see hhh-identity-edge.
+      - hhh-identity-edge
     depends_on:
       config-sync:
         condition: service_completed_successfully
@@ -616,6 +620,8 @@ services:
     command: start --import-realm --health-enabled=true
     networks:
       - hhh-proxy
+      # Reaches identity-service (verified-identity studies); see hhh-identity-edge.
+      - hhh-identity-edge
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
     depends_on:
@@ -698,6 +704,9 @@ services:
       do sleep 2; done &&
       /opt/keycloak/bin/kcadm.sh update realms/hhh -s offlineSessionIdleTimeout=15552000 -s offlineSessionMaxLifespanEnabled=false &&
       /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
+      for R in identity-manager study-nurse monitor; do
+        /opt/keycloak/bin/kcadm.sh create roles -r hhh -s name=$$R 2>/dev/null || true;
+      done &&
       BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
       ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
@@ -1035,6 +1044,9 @@ services:
         NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: https://${DOMAIN}/auth
         NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
         NEXT_PUBLIC_API_DOCS_URL: https://${DOMAIN}/api-docs
+        # Inlined by `next build`. Without it here the browser bundle carries
+        # `undefined` no matter what the runtime environment says.
+        NEXT_PUBLIC_IDENTITY_API_URL: ${NEXT_PUBLIC_IDENTITY_API_URL:-/identity/api}
         NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
         NEXT_PUBLIC_MONGO_EXPRESS_URL: https://${DOMAIN}/mongo
         NEXT_PUBLIC_LIGHTRAG_WEBUI_URL: https://${DOMAIN}/lightrag/webui
@@ -1062,6 +1074,9 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api/v1
       - NEXT_PUBLIC_API_DOCS_URL=https://${DOMAIN}/api-docs
+      # Inlined at `next build` — a runtime-only value would stay
+      # undefined in the browser. Must be in BOTH build args and env.
+      - NEXT_PUBLIC_IDENTITY_API_URL=${NEXT_PUBLIC_IDENTITY_API_URL:-/identity/api}
       - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
       - NEXT_PUBLIC_MONGO_EXPRESS_URL=https://${DOMAIN}/mongo
       - NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://${DOMAIN}/lightrag/webui
@@ -1177,6 +1192,42 @@ services:
     depends_on:
       config-sync:
         condition: service_completed_successfully
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:9115/-/healthy',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Profile-aware identity probe. The normal exporter cannot reach the
+  # isolated identity edge; keeping this exporter in the identity profile also
+  # prevents a disabled optional service from producing a permanent alert. It
+  # joins hhh-proxy only so Prometheus can scrape the probe result.
+  identity-blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: hhh-identity-blackbox-exporter
+    restart: always
+    profiles: ['identity']
+    networks:
+      - hhh-proxy
+      - hhh-identity-edge
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     command:
@@ -1375,6 +1426,13 @@ services:
       # docker-socket-proxy access is needed for the Keycloak DB backup/restore).
       - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
+      # Identity register — disabled unless a verified-identity deployment opts
+      # in. These belong on the backup process (not Keycloak) because Portainer
+      # UI variables are Compose substitutions, not container environment.
+      - BACKUP_INCLUDE_IDENTITY=${BACKUP_INCLUDE_IDENTITY:-false}
+      - IDENTITY_DB_HOST=identity-db
+      - IDENTITY_DB_USERNAME=${IDENTITY_DB_USERNAME:-identity}
+      - IDENTITY_DB_PASSWORD=${IDENTITY_DB_PASSWORD:-}
       # Keycloak runs under /auth in prod (KC_HTTP_RELATIVE_PATH=/auth below) —
       # backup.sh/restore.sh's realm export/import and admin-token calls need
       # this full base URL, matching the app service's KEYCLOAK_URL above.
@@ -1401,6 +1459,9 @@ services:
     networks:
       - hhh-proxy
       - hhh-backup-internal
+      # pg_dump/pg_restore need the same private database path as the identity
+      # service when BACKUP_INCLUDE_IDENTITY=true.
+      - hhh-identity-net
     depends_on:
       mongo:
         condition: service_started
@@ -1480,12 +1541,130 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # ── Identity register (verified-identity studies only) ────────────────────
+  # Holds the subject-code <-> person mapping, encrypted, in its OWN database.
+  # See docs/identity-mode-plan.md and identity-service/README.md.
+  #
+  # Deploy is OPTIONAL: with no study in verified mode nothing calls it, and
+  # `identity.mode` is absent (=> anonymous) on every existing study.
+  identity-db:
+    image: postgres:16-alpine
+    container_name: hhh-identity-db
+    restart: always
+    profiles: ['identity']
+    environment:
+      - POSTGRES_DB=identity
+      - POSTGRES_USER=${IDENTITY_DB_USERNAME:-identity}
+      - POSTGRES_PASSWORD=${IDENTITY_DB_PASSWORD}
+    networks:
+      # PRIVATE ONLY. Deliberately not on hhh-proxy: only identity-service and
+      # the backup container may reach this database; it is never routable.
+      - hhh-identity-net
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${IDENTITY_DB_USERNAME:-identity} -d identity']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  identity-service:
+    build:
+      context: ./identity-service
+    image: hhh/identity-service
+    container_name: hhh-identity
+    restart: always
+    profiles: ['identity']
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - IDENTITY_DB_URL=postgres://${IDENTITY_DB_USERNAME:-identity}:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity
+      # Mounted as a FILE, never an env var: env leaks via docker inspect,
+      # /proc/<pid>/environ and crash dumps. The service refuses to start with
+      # an inline key when NODE_ENV=production.
+      - IDENTITY_MASTER_KEY_FILE=/run/secrets/identity-master-key
+      - IDENTITY_KEK_VERSION=${IDENTITY_KEK_VERSION:-1}
+      - IDENTITY_BI_VERSION=${IDENTITY_BI_VERSION:-1}
+      - IDENTITY_SERVICE_SECRET=${IDENTITY_SERVICE_SECRET}
+      - KEYCLOAK_JWKS_URL=${KEYCLOAK_JWKS_URL}
+      - KEYCLOAK_ISSUER=${KEYCLOAK_JWT_ISSUER}
+      - KEYCLOAK_AUDIENCE=${KEYCLOAK_JWT_AUDIENCE}
+      - SMTP_HOST=${IDENTITY_SMTP_HOST:-}
+      - SMTP_PORT=${IDENTITY_SMTP_PORT:-587}
+      - SMTP_USER=${IDENTITY_SMTP_USER:-}
+      - SMTP_PASS=${IDENTITY_SMTP_PASS:-}
+      - SMTP_FROM=${IDENTITY_SMTP_FROM:-}
+      - IDENTITY_DPO_ALERT_EMAIL=${IDENTITY_DPO_ALERT_EMAIL:-}
+    volumes:
+      # 0400 on the host. Read-only here.
+      - ${HHH_DATA_DIR:-/opt/hhh/data}/identity-master-key:/run/secrets/identity-master-key:ro
+    networks:
+      # NOT on hhh-proxy. That network is flat — everything in the stack joins
+      # it — so being on it would give the register a route to mongo and neo4j.
+      # This list IS the control; a CI check asserts it stays this way.
+      - hhh-identity-edge
+      - hhh-identity-net
+    healthcheck:
+      # Probes the INTERNAL port: if that is not answering, HHH cannot enrol
+      # anyone, which is the failure that actually matters.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3003/internal/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      - 'traefik.enable=true'
+      # Admin-portal traffic only. The internal API on :3003 has NO label and
+      # is therefore unreachable from outside the Docker network.
+      - 'traefik.http.routers.identity.rule=Host(`${DOMAIN}`) && PathPrefix(`/identity`)'
+      - 'traefik.http.routers.identity.entrypoints=websecure'
+      - 'traefik.http.routers.identity.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.identity.middlewares=identity-strip,identity-ratelimit'
+      - 'traefik.http.middlewares.identity-strip.stripprefix.prefixes=/identity'
+      - 'traefik.http.middlewares.identity-ratelimit.ratelimit.average=60'
+      - 'traefik.http.middlewares.identity-ratelimit.ratelimit.burst=30'
+      - 'traefik.http.services.identity.loadbalancer.server.port=3002'
+      # REQUIRED. Traefik is started with --providers.docker.network=hhh-proxy,
+      # and this service is deliberately NOT on that network, so without this
+      # override Traefik would look for an IP it cannot find and routing to
+      # /identity would silently fail.
+      - 'traefik.docker.network=hhh-identity-edge'
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
 networks:
   hhh-proxy:
     name: hhh-proxy
   hhh-backup-internal:
     name: hhh-backup-internal
     internal: true
+  # Private: identity-service/backup <-> identity-db only. Nothing else joins
+  # it, which makes "the register cannot reach the research databases" a
+  # property of the network rather than of application code.
+  hhh-identity-net:
+    name: hhh-identity-net
+    internal: true
+  # Carries ONLY the traffic the register legitimately needs: Traefik (admin
+  # portal), Keycloak (JWKS) and the HHH backend (the internal enrolment API).
+  # identity-service is deliberately NOT on hhh-proxy, because that network is
+  # flat and would give it a path to mongo and neo4j.
+  hhh-identity-edge:
+    name: hhh-identity-edge
 
 volumes:
   traefik-certs:
@@ -1500,6 +1679,8 @@ volumes:
     name: hhh-neo4j-logs
   keycloak-db-data:
     name: hhh-keycloak-db-data
+  identity-db-data:
+    name: hhh-identity-db-data
   redis-data:
     name: hhh-redis-data
   redisinsight-data:
