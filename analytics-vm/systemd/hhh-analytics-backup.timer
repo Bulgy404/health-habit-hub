@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Health Habit Hub analytics backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Europe/Berlin
+Persistent=true
+RandomizedDelaySec=15m
+Unit=hhh-analytics-backup.service
+
+[Install]
+WantedBy=timers.target

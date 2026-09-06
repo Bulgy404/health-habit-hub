@@ -191,13 +191,13 @@ Traefik sits in front of everything as the reverse proxy and TLS terminator; int
 
 ## Use Cases
 
-The platform covers **39 use cases** across five actors. Each one is specified with its own sequence diagram.
+The platform covers **41 use cases** across the participant, research, administration, automation, and external-system actors. Each one is specified with its own sequence diagram.
 
 |                                                                           |                                                                                                  |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | 📋 Structured catalogue (actors, endpoints, stores, traceability to code) | [`docs/diagrams/use-cases/use-case-overview.md`](docs/diagrams/use-cases/use-case-overview.md)   |
 | 🎭 UML use case diagram                                                   | [`docs/diagrams/use-cases/use-case-diagram.puml`](docs/diagrams/use-cases/use-case-diagram.puml) |
-| 🔁 Sequence diagrams UC-01 … UC-39 (one per use case)                     | [`docs/diagrams/sequences/`](docs/diagrams/sequences/)                                           |
+| 🔁 Sequence diagrams UC-01 … UC-41 (one per use case)                     | [`docs/diagrams/sequences/`](docs/diagrams/sequences/)                                           |
 | 🧩 Domain class diagram (MongoDB + Neo4j + domain classes)                | [`docs/diagrams/classes/class-diagram.mmd`](docs/diagrams/classes/class-diagram.mmd)             |
 
 Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-habit.mmd) (translate → LLM classify → BCIO map → Neo4j), the [RAG recommendation flow](docs/diagrams/sequences/UC-07-request-recommendations.mmd), and the [DFG study flows](docs/diagrams/sequences/UC-11-create-intention.mmd) (UC-09 – UC-13).
@@ -206,21 +206,21 @@ Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-h
 
 ## Repository Layout
 
-| Path               | Contents                                                                   |
-| ------------------ | -------------------------------------------------------------------------- |
-| `mobile/`          | Flutter app (iOS / Android / Web) — Riverpod, GoRouter, Firebase           |
-| `app/`             | Node.js/Express backend — REST API `/api/v1/*`, routes → services → models |
-| `admin/`           | Next.js 15 admin portal — NextAuth + Keycloak, MUI + CSS Modules UI        |
-| `API-service/`     | Python FastAPI — LLM classification, BCIO mapping, RAG recommendations     |
-| `lightrag/`        | LightRAG knowledge base (graph + vector)                                   |
-| `knowledge-mcp/`   | MCP server exposing the KB to AI agents (SSE)                              |
-| `keycloak/`        | Realm config and init scripts                                              |
-| `mongo/`, `neo4j/` | Data store seeds and init data                                             |
-| `backup-service/`  | Daily cron backups of all stores                                           |
-| `monitoring/`      | Monitoring stack configuration                                             |
-| `scripts/`         | Seeding, migration, and ops scripts                                        |
+| Path               | Contents                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mobile/`          | Flutter app (iOS / Android / Web) — Riverpod, GoRouter, Firebase                                                                                 |
+| `app/`             | Node.js/Express backend — REST API `/api/v1/*`, routes → services → models                                                                       |
+| `admin/`           | Next.js 15 admin portal — NextAuth + Keycloak, MUI + CSS Modules UI                                                                              |
+| `API-service/`     | Python FastAPI — LLM classification, BCIO mapping, RAG recommendations                                                                           |
+| `lightrag/`        | LightRAG knowledge base (graph + vector)                                                                                                         |
+| `knowledge-mcp/`   | MCP server exposing the KB to AI agents (SSE)                                                                                                    |
+| `keycloak/`        | Realm config and init scripts                                                                                                                    |
+| `mongo/`, `neo4j/` | Data store seeds and init data                                                                                                                   |
+| `backup-service/`  | Daily cron backups of all stores                                                                                                                 |
+| `monitoring/`      | Monitoring stack configuration                                                                                                                   |
+| `scripts/`         | Seeding, migration, and ops scripts                                                                                                              |
 | `website/`         | Astro marketing site ([healthhabithub.de](https://healthhabithub.de)) — own domain, own Docker image, see [website/README.md](website/README.md) |
-| `docs/`            | All documentation — see [Documentation](#documentation)                    |
+| `docs/`            | All documentation — see [Documentation](#documentation)                                                                                          |
 
 ---
 
@@ -294,7 +294,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | Translation    | LibreTranslate                                                                                                  |
 | Proxy / SSL    | Traefik v3, Let's Encrypt                                                                                       |
 | Infrastructure | Docker Compose, Portainer                                                                                       |
-| Marketing site | Astro 7, self-hosted Node server ([website/](website/), see [website/README.md](website/README.md))            |
+| Marketing site | Astro 7, self-hosted Node server ([website/](website/), see [website/README.md](website/README.md))             |
 
 ---
 
@@ -319,7 +319,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | --------------------------------- | ---------------------------------------------------------- |
 | System architecture               | [docs/diagrams/architecture/](docs/diagrams/architecture/) |
 | Use cases (diagram + catalogue)   | [docs/diagrams/use-cases/](docs/diagrams/use-cases/)       |
-| Sequence diagrams (UC-01 … UC-39) | [docs/diagrams/sequences/](docs/diagrams/sequences/)       |
+| Sequence diagrams (UC-01 … UC-41) | [docs/diagrams/sequences/](docs/diagrams/sequences/)       |
 | Domain class diagram              | [docs/diagrams/classes/](docs/diagrams/classes/)           |
 
 **Reference**
@@ -331,7 +331,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | OpenAPI 3.1 spec ([Postman collection](docs/api/hhh-postman-collection.json))                                  |
 | [docs/migration.md](docs/migration.md)         | Neo4j schema migration plan                                                                                    |
 | [docs/runbook.md](docs/runbook.md)             | Operations runbook                                                                                             |
-| [website/README.md](website/README.md)         | Marketing site (healthhabithub.de) — structure, local dev, self-hosted Node/Docker/Traefik deploy               |
+| [website/README.md](website/README.md)         | Marketing site (healthhabithub.de) — structure, local dev, self-hosted Node/Docker/Traefik deploy              |
 
 **Guides & manuals**
 

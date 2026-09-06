@@ -1,0 +1,12 @@
+[Unit]
+Description=Health Habit Hub analytics backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/hhh-analytics-config
+ExecStart=/opt/hhh-analytics-config/manage.sh backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

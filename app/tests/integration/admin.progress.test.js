@@ -324,21 +324,20 @@ before(async () => {
     },
   ]);
 
-  // Seed recommendations_log
-  mockDb._seed('recommendations_log', [
+  // Recommendation adoption is derived from durable intention lineage.
+  mockDb._seed('implementation_intentions', [
     {
-      _id: 'rl-1',
-      participantId: PARTICIPANT_ID,
-      type: 'accepted',
-      timestamp: new Date('2026-01-06T11:00:00Z'),
-      recommendationId: 'rec-1',
-    },
-    {
-      _id: 'rl-2',
-      participantId: PARTICIPANT_ID,
-      type: 'dismissed',
-      timestamp: new Date('2026-01-07T15:00:00Z'),
-      recommendationId: 'rec-2',
+      _id: { toString: () => 'intention-1' },
+      userId: PARTICIPANT_ID,
+      behaviorKey: 'walking',
+      behaviorLabel: 'Walking',
+      durationMinutes: 20,
+      cues: [],
+      intentionStatement: 'I will walk.',
+      sourceRecommendationId: 'f81d4fae-7dec-4f01-a765-00a0c91e6bf6',
+      status: 'active',
+      createdAt: new Date('2026-01-06T11:00:00Z'),
+      updatedAt: new Date('2026-01-06T11:00:00Z'),
     },
   ]);
 
@@ -510,7 +509,7 @@ test('GET /participants/:id/progress - returns full progress structure', async (
 
   assert.ok('recommendations' in body, 'should have recommendations');
   assert.strictEqual(body.recommendations.accepted, 1);
-  assert.strictEqual(body.recommendations.dismissed, 1);
+  assert.strictEqual(body.recommendations.dismissed, 0);
 
   assert.ok(Array.isArray(body.timeline), 'should have timeline');
   assert.ok(body.timeline.length >= 1);

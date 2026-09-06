@@ -171,6 +171,7 @@ import {
   errorReportingMiddleware,
 } from './utils/errorReporting.js';
 import { checkAudioStorage } from './utils/healthCheck.js';
+import { productAnalytics } from './services/productAnalyticsService.js';
 // enableQueue: true — this is the real app boot, so the BullMQ donation queue
 // and worker should run (they connect to Redis). Tests never set this.
 app.use('/api/v1', express.json(), createApiRouter({ enableQueue: true }));
@@ -326,6 +327,7 @@ async function shutdown(signal) {
       closeTranscribeQueue(),
       closeAllNeo4jDrivers(),
       disconnectMongo(),
+      productAnalytics.shutdown(),
     ]);
     log.info('Shutdown complete');
     clearTimeout(forceExitTimer);

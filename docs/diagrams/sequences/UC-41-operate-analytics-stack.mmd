@@ -1,0 +1,39 @@
+%% UC-41 — Operate the private analytics stack
+%% Sources: analytics-vm/manage.sh, docker-compose.override.yml,
+%% monitoring/prometheus.yml, monitoring/render-targets.sh
+sequenceDiagram
+    autonumber
+    actor A as Admin
+    participant M as manage.sh
+    participant G as Pinned PostHog Git revision
+    participant D as Docker Compose
+    participant E as node-exporter / cAdvisor
+    participant P as Prometheus on habitvm
+    participant B as blackbox-exporter
+    participant GF as Grafana alerts
+    participant DB as PostgreSQL + ClickHouse
+    participant O as Optional offsite rclone remote
+
+    A->>M: init and configure .env
+    A->>M: doctor
+    M->>M: Validate secrets, digests, Linux, RAM, ext4 and Docker data-root
+    A->>M: prepare
+    M->>G: Fetch exact 40-character revision
+    G-->>M: Official hobby Compose files
+    M->>M: Layer tracked private-port and memory overrides
+    A->>M: config
+    M->>D: Validate merged Compose model (starts nothing)
+    A->>M: up
+    M->>D: Pull immutable images and start separate services
+    D-->>E: Start private exporters
+    P->>E: Scrape host/container metrics
+    P->>B: Probe private PostHog /_health
+    P-->>GF: Store measurements
+    GF-->>A: Alert on exporter, disk, memory or reachability failure
+    A->>M: backup (manual or systemd timer)
+    M->>DB: pg_dump + consistent ClickHouse snapshot
+    DB-->>M: Database artifacts
+    M->>M: SHA-256 checksum manifest + local retention
+    opt OFFSITE_REMOTE configured
+        M->>O: Copy artifacts and manifest
+    end

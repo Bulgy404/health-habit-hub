@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../analytics/analytics_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
@@ -22,7 +23,12 @@ import 'my_habits_provider.dart';
 /// free text instead.
 class PickBehaviorScreen extends ConsumerStatefulWidget {
   /// Creates a [PickBehaviorScreen].
-  const PickBehaviorScreen({super.key});
+  const PickBehaviorScreen({this.recommendationId, super.key});
+
+  /// Recommendation that opened this flow, if any. It is deliberately kept
+  /// separate from the selected catalog behaviour so restricted studies retain
+  /// lineage without accepting the recommendation's free-text title.
+  final String? recommendationId;
 
   @override
   ConsumerState<PickBehaviorScreen> createState() => _PickBehaviorScreenState();
@@ -48,6 +54,11 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   @override
   void initState() {
     super.initState();
+    ref.read(analyticsProvider).capture('habit_creation_started', {
+      'entry_point': widget.recommendationId == null
+          ? 'my_habits'
+          : 'recommendation',
+    });
     HabitOnboardingPrefs.hasSeenHabitIntro().then((seen) {
       if (mounted) setState(() => _hasSeenIntro = seen);
     });
@@ -114,10 +125,9 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                   child: Text(
                     l10n.pickBehaviorTitle,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -133,8 +143,15 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
               Expanded(
                 child: config.behaviorOptions.isEmpty
                     ? _FreeEntryBehaviorForm(
-                        config: config, habitType: _habitType)
-                    : _BehaviorList(config: config, habitType: _habitType),
+                        config: config,
+                        habitType: _habitType,
+                        recommendationId: widget.recommendationId,
+                      )
+                    : _BehaviorList(
+                        config: config,
+                        habitType: _habitType,
+                        recommendationId: widget.recommendationId,
+                      ),
               ),
             ],
           );
@@ -215,8 +232,10 @@ class _HabitTypeCardState extends State<_HabitTypeCard>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, value: widget.selected ? 1 : 0);
+    _controller = AnimationController(
+      vsync: this,
+      value: widget.selected ? 1 : 0,
+    );
   }
 
   @override
@@ -244,8 +263,9 @@ class _HabitTypeCardState extends State<_HabitTypeCard>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedFill =
-        isDark ? widget.color.withAlpha(40) : widget.color.withAlpha(25);
+    final selectedFill = isDark
+        ? widget.color.withAlpha(40)
+        : widget.color.withAlpha(25);
     final unselectedBorder = context.appColors.border;
     final contentColor = widget.selected
         ? widget.color
@@ -263,8 +283,7 @@ class _HabitTypeCardState extends State<_HabitTypeCard>
           builder: (context, child) {
             final t = _controller.value;
             return Container(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
               decoration: BoxDecoration(
                 color: Color.lerp(Colors.transparent, selectedFill, t),
                 borderRadius: BorderRadius.circular(16),
@@ -285,8 +304,9 @@ class _HabitTypeCardState extends State<_HabitTypeCard>
                 widget.label,
                 style: TextStyle(
                   color: contentColor,
-                  fontWeight:
-                      widget.selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: widget.selected
+                      ? FontWeight.w700
+                      : FontWeight.w500,
                   fontSize: 13,
                 ),
               ),
@@ -299,14 +319,19 @@ class _HabitTypeCardState extends State<_HabitTypeCard>
 }
 
 /// Catalog picker shown when the study restricts behavior options.
-class _BehaviorList extends StatelessWidget {
-  const _BehaviorList({required this.config, required this.habitType});
+class _BehaviorList extends ConsumerWidget {
+  const _BehaviorList({
+    required this.config,
+    required this.habitType,
+    this.recommendationId,
+  });
 
   final HabitConfig config;
   final HabitType habitType;
+  final String? recommendationId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: config.behaviorOptions.length,
@@ -317,15 +342,22 @@ class _BehaviorList extends StatelessWidget {
           child: ListTile(
             title: Text(option.label),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => context.push(
-              '/habits/new/cue',
-              extra: {
-                'behaviorKey': option.key,
-                'behaviorLabel': option.label,
-                'habitType': habitType.wire,
-                'config': config,
-              },
-            ),
+            onTap: () {
+              ref.read(analyticsProvider).capture('habit_behavior_selected', {
+                'habit_type': habitType.wire,
+                'behavior_source': 'catalog',
+              });
+              context.push(
+                '/habits/new/cue',
+                extra: {
+                  'behaviorKey': option.key,
+                  'behaviorLabel': option.label,
+                  'habitType': habitType.wire,
+                  'config': config,
+                  'recommendationId': ?recommendationId,
+                },
+              );
+            },
           ),
         );
       },
@@ -334,17 +366,24 @@ class _BehaviorList extends StatelessWidget {
 }
 
 /// Free-text habit entry for public users (no behavior catalog).
-class _FreeEntryBehaviorForm extends StatefulWidget {
-  const _FreeEntryBehaviorForm({required this.config, required this.habitType});
+class _FreeEntryBehaviorForm extends ConsumerStatefulWidget {
+  const _FreeEntryBehaviorForm({
+    required this.config,
+    required this.habitType,
+    this.recommendationId,
+  });
 
   final HabitConfig config;
   final HabitType habitType;
+  final String? recommendationId;
 
   @override
-  State<_FreeEntryBehaviorForm> createState() => _FreeEntryBehaviorFormState();
+  ConsumerState<_FreeEntryBehaviorForm> createState() =>
+      _FreeEntryBehaviorFormState();
 }
 
-class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
+class _FreeEntryBehaviorFormState
+    extends ConsumerState<_FreeEntryBehaviorForm> {
   final _controller = TextEditingController();
   String? _error;
 
@@ -371,6 +410,12 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
       setState(() => _error = l10n.describeYourHabitMinLength);
       return;
     }
+    ref.read(analyticsProvider).capture('habit_behavior_selected', {
+      'habit_type': widget.habitType.wire,
+      'behavior_source': widget.recommendationId == null
+          ? 'free_text'
+          : 'recommendation',
+    });
     context.push(
       '/habits/new/cue',
       extra: {
@@ -378,6 +423,7 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
         'behaviorLabel': label,
         'habitType': widget.habitType.wire,
         'config': widget.config,
+        'recommendationId': ?widget.recommendationId,
       },
     );
   }

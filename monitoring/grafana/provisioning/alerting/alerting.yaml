@@ -1,8 +1,9 @@
 # Critical-alert routing for metric-driven signals (BullMQ job failures,
-# service reachability, 5xx spikes). Backup failures and LLM-model-unavailable
-# alerts are sent directly by application code (backup-service/backup.sh,
-# API-service/alerting.py) and do not go through Grafana — see
-# docs/runbook.md for the full picture of what alerts on what and why.
+# service reachability, 5xx spikes, host disk/memory pressure and container
+# memory pressure). Backup failures and LLM-model-unavailable alerts are sent
+# directly by application code (backup-service/backup.sh,
+# API-service/alerting.py) and do not go through Grafana — see docs/runbook.md
+# for the full picture of what alerts on what and why.
 #
 # Schema and env-var expansion ($HHH_ALERT_EMAIL below) verified against a
 # real Grafana 12.0.1 instance before committing this file — see the
@@ -49,7 +50,7 @@ groups:
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
-              expr: probe_success{job=~"blackbox-http|blackbox-tcp"}
+              expr: probe_success{job=~"blackbox-http|blackbox-tcp|analytics-posthog"}
               instant: true
               refId: A
           - refId: B
@@ -133,3 +134,151 @@ groups:
           alert_type: 5xx-spike
         annotations:
           summary: 'Backend 5xx rate has been elevated for 5+ minutes'
+
+      # ── Host resource safety ─────────────────────────────────────────────
+      - uid: hhh-host-disk-low
+        title: Host filesystem space low
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint=~"/|/var|/data"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint=~"/|/var|/data"}) * 100
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [15] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: critical
+          alert_type: host-disk
+        annotations:
+          summary: '{{ $labels.host }} {{ $labels.mountpoint }} has less than 15% free space'
+
+      - uid: hhh-host-memory-low
+        title: Host memory low
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [10] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: critical
+          alert_type: host-memory
+        annotations:
+          summary: '{{ $labels.host }} has less than 10% available memory'
+
+      - uid: hhh-container-memory-high
+        title: Container memory near limit
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: ((container_memory_working_set_bytes{name=~"hhh-.+",image!=""} / container_spec_memory_limit_bytes{name=~"hhh-.+",image!=""}) * 100) and on(id) (container_spec_memory_limit_bytes{name=~"hhh-.+",image!=""} > 0) and on(id) (container_spec_memory_limit_bytes{name=~"hhh-.+",image!=""} < 9e18)
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [90] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: critical
+          alert_type: container-memory
+        annotations:
+          summary: '{{ $labels.name }} has used more than 90% of its memory limit'
+
+      - uid: hhh-metrics-exporter-down
+        title: Resource metrics exporter unreachable
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: up{job=~"node-exporter|cadvisor|analytics-node-exporter|analytics-cadvisor|traefik"} == 0
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: critical
+          alert_type: metrics-exporter
+        annotations:
+          summary: '{{ $labels.job }} at {{ $labels.instance }} has been unreachable for 2 minutes'
+
+      # ── Product-event budget ────────────────────────────────────────────
+      # Count requests at the public ingest-only Traefik router. This avoids
+      # granting Prometheus an administrative PostHog API token and measures
+      # the traffic that consumes capacity before payload processing. One
+      # batch request can contain up to roughly 20 events, so 12,500 requests
+      # is a conservative early warning for a possible 250,000-event month;
+      # confirm exact event volume in PostHog itself.
+      - uid: hhh-posthog-ingest-volume
+        title: Product analytics ingest volume high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 2592000, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: sum(increase(traefik_router_requests_total{router="posthog-ingest@file"}[30d]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [12500] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+          alert_type: analytics-volume
+        annotations:
+          summary: 'PostHog ingest exceeded 12,500 requests in 30 days; verify the event budget in PostHog'

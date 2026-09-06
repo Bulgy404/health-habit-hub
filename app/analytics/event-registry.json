@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "commonProperties": {
+    "study_id": { "type": "opaque_id" },
+    "group_id": { "type": "opaque_id" },
+    "app_version": { "type": "version" },
+    "platform": {
+      "type": "enum",
+      "values": [
+        "android",
+        "ios",
+        "web",
+        "macos",
+        "windows",
+        "linux",
+        "server",
+        "unknown"
+      ]
+    },
+    "locale": {
+      "type": "enum",
+      "values": ["de", "en", "fr", "ja", "nl", "unknown"]
+    },
+    "schema_version": { "type": "integer" }
+  },
+  "events": {
+    "app_opened": {
+      "properties": {}
+    },
+    "onboarding_started": {
+      "properties": {
+        "entry_point": {
+          "type": "enum",
+          "values": ["fresh_install", "signed_out"]
+        }
+      }
+    },
+    "onboarding_step_viewed": {
+      "properties": {
+        "step": {
+          "type": "enum",
+          "values": [
+            "welcome",
+            "consent",
+            "passphrase",
+            "profile_setup",
+            "study_code"
+          ]
+        }
+      }
+    },
+    "onboarding_step_completed": {
+      "properties": {
+        "step": {
+          "type": "enum",
+          "values": [
+            "welcome",
+            "consent",
+            "passphrase",
+            "profile_setup",
+            "study_code"
+          ]
+        }
+      }
+    },
+    "onboarding_completed": {
+      "properties": {
+        "study_code_used": {
+          "type": "boolean"
+        }
+      }
+    },
+    "habit_creation_started": {
+      "properties": {
+        "entry_point": {
+          "type": "enum",
+          "values": ["my_habits", "recommendation", "auto"]
+        }
+      }
+    },
+    "habit_behavior_selected": {
+      "properties": {
+        "habit_type": {
+          "type": "enum",
+          "values": ["build", "quit"]
+        },
+        "behavior_source": {
+          "type": "enum",
+          "values": ["catalog", "free_text", "recommendation"]
+        }
+      }
+    },
+    "habit_cue_selected": {
+      "properties": {
+        "cue_source": {
+          "type": "enum",
+          "values": ["self_selected", "pre_rated", "recommendation", "stacked"]
+        }
+      }
+    },
+    "habit_stitch_shown": {
+      "properties": {
+        "creation_mode": {
+          "type": "enum",
+          "values": ["standalone", "stacked"]
+        }
+      }
+    },
+    "habit_stitch_accepted": {
+      "properties": {
+        "creation_mode": {
+          "type": "enum",
+          "values": ["standalone", "stacked"]
+        }
+      }
+    },
+    "habit_created": {
+      "properties": {
+        "creation_mode": {
+          "type": "enum",
+          "values": ["standalone", "stacked"]
+        },
+        "from_recommendation": { "type": "boolean" }
+      }
+    },
+    "habit_creation_blocked": {
+      "properties": {
+        "reason": {
+          "type": "enum",
+          "values": ["information_overload", "study_limit", "study_disabled"]
+        }
+      }
+    },
+    "recommendation_viewed": {
+      "properties": {
+        "recommendation_id": { "type": "opaque_id" },
+        "count": { "type": "integer" }
+      }
+    },
+    "recommendation_requested": {
+      "properties": {}
+    },
+    "recommendation_adopted": {
+      "properties": {
+        "recommendation_id": { "type": "opaque_id" }
+      }
+    },
+    "recommendation_feedback_submitted": {
+      "properties": {
+        "recommendation_id": { "type": "opaque_id" }
+      }
+    },
+    "recommendation_generated": {
+      "properties": {
+        "latency_ms": { "type": "integer" },
+        "count": { "type": "integer" },
+        "cache_hit": { "type": "boolean" }
+      }
+    },
+    "recommendation_failed": {
+      "properties": {
+        "latency_ms": { "type": "integer" },
+        "reason": {
+          "type": "enum",
+          "values": ["timeout", "upstream_error", "unavailable"]
+        }
+      }
+    },
+    "enrollment_completed": {
+      "properties": {
+        "study_code_used": { "type": "boolean" }
+      }
+    }
+  }
+}

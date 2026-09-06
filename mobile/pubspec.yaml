@@ -30,6 +30,9 @@ dependencies:
   timezone: ^0.11.0
   flutter_timezone: ^5.0.2
   sentry_flutter: ^9.6.0
+  # Explicit analytics only; configured manually with autocapture/replay and
+  # SDK error collection disabled in lib/analytics/analytics_service.dart.
+  posthog_flutter: 5.39.0
   connectivity_plus: ^7.1.1
   shared_preferences: ^2.3.5
   package_info_plus: ^10.2.0

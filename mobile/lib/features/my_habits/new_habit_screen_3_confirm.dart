@@ -5,10 +5,12 @@ library;
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDatePickerMode;
+import 'package:flutter/cupertino.dart'
+    show CupertinoDatePicker, CupertinoDatePickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../analytics/analytics_service.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
@@ -36,6 +38,7 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     this.anchorText,
     this.alsoTrackAnchor = false,
     this.stitchedSentence,
+    this.recommendationId,
     super.key,
   });
 
@@ -74,6 +77,9 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
   /// LLM-stitched intention sentence (from /habits/stitch-intention), if available.
   final String? stitchedSentence;
 
+  /// Recommendation that initiated this habit flow, if any.
+  final String? recommendationId;
+
   @override
   ConsumerState<ConfirmPlanScreen> createState() => _ConfirmPlanScreenState();
 }
@@ -90,6 +96,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   bool _reminderEnabled = true;
   bool _submitting = false;
   String? _error;
+
   /// Whether [_error] came from the §7.3 information-overload guard and the
   /// participant's study condition allows opting out — shows a link to the
   /// Settings toggle rather than leaving the block a dead end.
@@ -105,8 +112,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
         widget.stitchedSentence ?? _buildFallbackStatement();
     // A single, persistent controller — recreating it on every build (the
     // previous behaviour) reset the cursor and fought the user's typing.
-    _statementController =
-        TextEditingController(text: _intentionStatementEditable);
+    _statementController = TextEditingController(
+      text: _intentionStatementEditable,
+    );
     // The opt-in is only shown (and pre-selected) when the platform-wide
     // communityShareDefault flag is enabled in the admin portal.
     _shareWithCommunity = widget.config.communityShareDefault;
@@ -202,7 +210,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
       return widget.stackedOn;
     }
     try {
-      final anchorIntention = await ref.read(myHabitsServiceProvider).createIntention(
+      final anchorIntention = await ref
+          .read(myHabitsServiceProvider)
+          .createIntention(
             behaviorKey: _slugify(anchor),
             behaviorLabel: anchor,
             // No dedicated duration UI for an anchor created this way — a
@@ -238,7 +248,8 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     final String? effectiveReminderTime = switch (mode) {
       ReminderMode.off => null,
       ReminderMode.adminFixed => habitReminder!.time,
-      ReminderMode.participantChoice => _reminderEnabled ? _reminderTimeString : null,
+      ReminderMode.participantChoice =>
+        _reminderEnabled ? _reminderTimeString : null,
     };
 
     setState(() {
@@ -256,7 +267,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
 
     try {
       final resolvedStackedOn = await _resolveStackedOn();
-      await ref.read(myHabitsServiceProvider).createIntention(
+      await ref
+          .read(myHabitsServiceProvider)
+          .createIntention(
             behaviorKey: widget.behaviorKey,
             behaviorLabel: widget.behaviorLabel,
             durationMinutes: _durationMinutes,
@@ -269,9 +282,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             reminderTime: effectiveReminderTime,
             cadence: Cadence(
               type: _cadenceType,
-              targetPerWeek:
-                  _cadenceType == CadenceType.weekly ? _targetPerWeek : null,
+              targetPerWeek: _cadenceType == CadenceType.weekly
+                  ? _targetPerWeek
+                  : null,
             ),
+            recommendationId: widget.recommendationId,
           );
       ref.invalidate(intentionsProvider);
       // §7.5 — a new habit earns the First Step badge; refresh so Settings/
@@ -307,6 +322,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
         language: language,
       );
     } on InformationOverloadException {
+      unawaited(
+        ref.read(analyticsProvider).capture('habit_creation_blocked', {
+          'reason': 'information_overload',
+        }),
+      );
       // §7.3 — explain the block (focus on the current habit first) rather
       // than showing the generic limit message. If this participant's study
       // condition permits opting out, surface that here too — the only other
@@ -318,6 +338,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             widget.config.informationOverloadOptOutAllowed;
       });
     } on ValidationException {
+      unawaited(
+        ref.read(analyticsProvider).capture('habit_creation_blocked', {
+          'reason': 'study_limit',
+        }),
+      );
       setState(() => _error = l10n.habitLimitReached);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -378,8 +403,8 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             '${AppConfig.apiBaseUrl}/habits/share',
             data: {'sentence': anchor, 'language': language},
           );
-          anchorUuid = res.data?['jobId']?.toString() ??
-              res.data?['uuid']?.toString();
+          anchorUuid =
+              res.data?['jobId']?.toString() ?? res.data?['uuid']?.toString();
         } catch (_) {
           // Non-fatal: anchor donation failed; link is simply omitted.
         }
@@ -432,212 +457,221 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Text(l10n.confirmPlanSubtitle,
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 24),
-            // §7.1 — the stacking anchor is shown as its own field, not
-            // folded into the intention sentence, so stacking reads as a
-            // distinct mechanism from typing a cue.
-            if (widget.creationMode == 'stacked' &&
-                (widget.anchorText?.trim().isNotEmpty ?? false)) ...[
-              Chip(
-                avatar: const Icon(Icons.link, size: 18),
-                label: Text(
-                  l10n.stackedOntoLabel(widget.anchorText!.trim()),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            // Editable intention statement card
-            Card(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  controller: _statementController,
-                  onChanged: (v) => _intentionStatementEditable = v,
-                  maxLines: null,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        height: 1.5,
-                      ),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: l10n.confirmPlanEditHint,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(l10n.dailyReminderLabel,
-                style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            if (mode == ReminderMode.off)
-              // Study disables habit reminders entirely for this
-              // participant — no switch, no picker, nothing to enter.
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications_off,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.confirmPlanNoRemindersByStudy,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              )
-            else if (mode == ReminderMode.adminFixed)
-              // Study locks the reminder to a fixed time — read-only,
-              // participant has no input.
-              Row(
-                children: [
-                  Icon(
-                    Icons.notifications_active,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.confirmPlanReminderAtTime(habitReminder!.time!),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              )
-            else
-              // participantChoice: the participant picks their own reminder
-              // time.
-              Row(
-                children: [
-                  Switch(
-                    key: const Key('reminderSwitch'),
-                    value: _reminderEnabled,
-                    onChanged: (v) => setState(() => _reminderEnabled = v),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_reminderEnabled)
-                    ActionChip(
-                      avatar: const Icon(Icons.schedule, size: 18),
-                      label: Text(_reminderTimeString),
-                      onPressed: _pickReminderTime,
-                    )
-                  else
-                    Text(l10n.noReminders),
-                ],
-              ),
-            if (mode == ReminderMode.participantChoice && _reminderEnabled)
               Text(
-                l10n.reminderFadingHint,
-                style: Theme.of(context).textTheme.bodySmall,
+                l10n.confirmPlanSubtitle,
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
-            const SizedBox(height: 24),
-            Text(l10n.habitCadenceQuestion,
-                style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            // Switch, not SegmentedButton — matches this screen's own
-            // reminder-enabled/share-with-community toggles instead of
-            // introducing a different control style just for this row.
-            Row(
-              children: [
-                Switch(
-                  key: const Key('cadenceSwitch'),
-                  // On = daily (the default/pre-selected state), off = a
-                  // weekly target — inverted from a naive "on = weekly"
-                  // mapping, which read as backwards: flipping the switch
-                  // *off* to mean daily (the more restrictive/frequent
-                  // option) was confusing.
-                  value: _cadenceType == CadenceType.daily,
-                  onChanged: (isDaily) => setState(() {
-                    _cadenceType =
-                        isDaily ? CadenceType.daily : CadenceType.weekly;
-                  }),
+              const SizedBox(height: 24),
+              // §7.1 — the stacking anchor is shown as its own field, not
+              // folded into the intention sentence, so stacking reads as a
+              // distinct mechanism from typing a cue.
+              if (widget.creationMode == 'stacked' &&
+                  (widget.anchorText?.trim().isNotEmpty ?? false)) ...[
+                Chip(
+                  avatar: const Icon(Icons.link, size: 18),
+                  label: Text(l10n.stackedOntoLabel(widget.anchorText!.trim())),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _cadenceType == CadenceType.weekly
-                        ? l10n.habitCadenceWeeklyOption
-                        : l10n.habitCadenceDaily,
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
-            ),
-            if (_cadenceType == CadenceType.weekly) ...[
+              // Editable intention statement card
+              Card(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    controller: _statementController,
+                    onChanged: (v) => _intentionStatementEditable = v,
+                    maxLines: null,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: l10n.confirmPlanEditHint,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
-                l10n.habitCadenceTargetLabel(_targetPerWeek),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                l10n.dailyReminderLabel,
+                style: Theme.of(context).textTheme.labelLarge,
               ),
-              Slider(
-                value: _targetPerWeek.toDouble(),
-                min: 1,
-                max: 6,
-                divisions: 5,
-                label: l10n.habitCadenceTargetLabel(_targetPerWeek),
-                onChanged: (v) =>
-                    setState(() => _targetPerWeek = v.round()),
+              const SizedBox(height: 8),
+              if (mode == ReminderMode.off)
+                // Study disables habit reminders entirely for this
+                // participant — no switch, no picker, nothing to enter.
+                Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_off,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.confirmPlanNoRemindersByStudy,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                )
+              else if (mode == ReminderMode.adminFixed)
+                // Study locks the reminder to a fixed time — read-only,
+                // participant has no input.
+                Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_active,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.confirmPlanReminderAtTime(habitReminder!.time!),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                )
+              else
+                // participantChoice: the participant picks their own reminder
+                // time.
+                Row(
+                  children: [
+                    Switch(
+                      key: const Key('reminderSwitch'),
+                      value: _reminderEnabled,
+                      onChanged: (v) => setState(() => _reminderEnabled = v),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_reminderEnabled)
+                      ActionChip(
+                        avatar: const Icon(Icons.schedule, size: 18),
+                        label: Text(_reminderTimeString),
+                        onPressed: _pickReminderTime,
+                      )
+                    else
+                      Text(l10n.noReminders),
+                  ],
+                ),
+              if (mode == ReminderMode.participantChoice && _reminderEnabled)
+                Text(
+                  l10n.reminderFadingHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.habitCadenceQuestion,
+                style: Theme.of(context).textTheme.labelLarge,
               ),
-            ],
-            if (widget.config.communityShareDefault) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              // Switch, not SegmentedButton — matches this screen's own
+              // reminder-enabled/share-with-community toggles instead of
+              // introducing a different control style just for this row.
               Row(
                 children: [
                   Switch(
-                    key: const Key('shareWithCommunitySwitch'),
-                    value: _shareWithCommunity,
-                    onChanged: (v) => setState(() => _shareWithCommunity = v),
+                    key: const Key('cadenceSwitch'),
+                    // On = daily (the default/pre-selected state), off = a
+                    // weekly target — inverted from a naive "on = weekly"
+                    // mapping, which read as backwards: flipping the switch
+                    // *off* to mean daily (the more restrictive/frequent
+                    // option) was confusing.
+                    value: _cadenceType == CadenceType.daily,
+                    onChanged: (isDaily) => setState(() {
+                      _cadenceType = isDaily
+                          ? CadenceType.daily
+                          : CadenceType.weekly;
+                    }),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(l10n.confirmPlanShareWithCommunity),
+                    child: Text(
+                      _cadenceType == CadenceType.weekly
+                          ? l10n.habitCadenceWeeklyOption
+                          : l10n.habitCadenceDaily,
+                    ),
                   ),
                 ],
               ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 16),
-              Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              if (_errorIsOverloadOptOutEligible) ...[
-                const SizedBox(height: 4),
+              if (_cadenceType == CadenceType.weekly) ...[
+                Text(
+                  l10n.habitCadenceTargetLabel(_targetPerWeek),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Slider(
+                  value: _targetPerWeek.toDouble(),
+                  min: 1,
+                  max: 6,
+                  divisions: 5,
+                  label: l10n.habitCadenceTargetLabel(_targetPerWeek),
+                  onChanged: (v) => setState(() => _targetPerWeek = v.round()),
+                ),
+              ],
+              if (widget.config.communityShareDefault) ...[
+                const SizedBox(height: 16),
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        l10n.informationOverloadBlockedOptOutHint,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
+                    Switch(
+                      key: const Key('shareWithCommunitySwitch'),
+                      value: _shareWithCommunity,
+                      onChanged: (v) => setState(() => _shareWithCommunity = v),
                     ),
-                    TextButton(
-                      onPressed: () => context.push('/settings'),
-                      child: Text(l10n.informationOverloadBlockedOptOutAction),
-                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(l10n.confirmPlanShareWithCommunity)),
                   ],
                 ),
               ],
-            ],
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(l10n.createHabit),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                if (_errorIsOverloadOptOutEligible) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.informationOverloadBlockedOptOutHint,
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/settings'),
+                        child: Text(
+                          l10n.informationOverloadBlockedOptOutAction,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submitting ? null : _submit,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(l10n.createHabit),
+                ),
               ),
-            ),
             ],
           ),
         ),

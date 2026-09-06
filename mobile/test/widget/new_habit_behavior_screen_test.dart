@@ -36,13 +36,14 @@ class _FakeLocaleNotifier extends LocaleNotifier {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _buildSubject(HabitConfig config) {
+Widget _buildSubject(HabitConfig config, {String? recommendationId}) {
   final router = GoRouter(
     initialLocation: '/habits/new/behavior',
     routes: [
       GoRoute(
         path: '/habits/new/behavior',
-        builder: (context, state) => const PickBehaviorScreen(),
+        builder: (context, state) =>
+            PickBehaviorScreen(recommendationId: recommendationId),
       ),
       GoRoute(
         path: '/habits/new/cue',
@@ -50,7 +51,7 @@ Widget _buildSubject(HabitConfig config) {
           final extra = state.extra as Map<String, dynamic>;
           return Scaffold(
             body: Text(
-              'CUE:${extra['behaviorKey']}|${extra['behaviorLabel']}',
+              'CUE:${extra['behaviorKey']}|${extra['behaviorLabel']}|${extra['recommendationId']}',
             ),
           );
         },
@@ -96,9 +97,7 @@ const _freeEntryConfig = HabitConfig(
 const _overloadGuardConfig = HabitConfig(
   cueCount: 'multi',
   cueSource: 'high_quality',
-  behaviorOptions: [
-    BehaviorOption(key: 'walk', label: 'Walking'),
-  ],
+  behaviorOptions: [BehaviorOption(key: 'walk', label: 'Walking')],
   srhiItems: [],
   informationOverloadEnabled: true,
 );
@@ -120,130 +119,154 @@ void main() {
   });
 
   testWidgets(
-      'shows the onboarding explainer card when onboarding is enabled and not yet seen',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_catalogConfig));
-    await tester.pumpAndSettle();
+    'shows the onboarding explainer card when onboarding is enabled and not yet seen',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_catalogConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.text("What's a habit?"), findsOneWidget);
-    expect(
-      find.textContaining('A habit is a small action you repeat regularly'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets(
-      'does not show the explainer card once already dismissed (persisted)',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'habit_onboarding_seen_v1': true,
-    });
-
-    await tester.pumpWidget(_buildSubject(_catalogConfig));
-    await tester.pumpAndSettle();
-
-    expect(find.text("What's a habit?"), findsNothing);
-  });
+      expect(find.text("What's a habit?"), findsOneWidget);
+      expect(
+        find.textContaining('A habit is a small action you repeat regularly'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
-      'dismissing the explainer card hides it and persists the dismissal',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_catalogConfig));
-    await tester.pumpAndSettle();
+    'does not show the explainer card once already dismissed (persisted)',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'habit_onboarding_seen_v1': true,
+      });
 
-    expect(find.text("What's a habit?"), findsOneWidget);
+      await tester.pumpWidget(_buildSubject(_catalogConfig));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.close));
-    await tester.pumpAndSettle();
-
-    expect(find.text("What's a habit?"), findsNothing);
-
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('habit_onboarding_seen_v1'), isTrue);
-  });
+      expect(find.text("What's a habit?"), findsNothing);
+    },
+  );
 
   testWidgets(
-      'shows the §7.3 information-overload explainer card when the guard is enabled and not yet seen',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
-    await tester.pumpAndSettle();
+    'dismissing the explainer card hides it and persists the dismissal',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_catalogConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.text('One habit at a time'), findsOneWidget);
-    expect(
-      find.textContaining("Habit stacking isn't affected by this limit"),
-      findsOneWidget,
-    );
-  });
+      expect(find.text("What's a habit?"), findsOneWidget);
 
-  testWidgets(
-      'does not show the information-overload explainer card once already dismissed (persisted)',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'overload_guard_onboarding_seen_v1': true,
-    });
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
 
-    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
-    await tester.pumpAndSettle();
+      expect(find.text("What's a habit?"), findsNothing);
 
-    expect(find.text('One habit at a time'), findsNothing);
-  });
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('habit_onboarding_seen_v1'), isTrue);
+    },
+  );
 
   testWidgets(
-      'dismissing the information-overload explainer card hides it, persists the dismissal, and leaves the "what\'s a habit?" card alone',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
-    await tester.pumpAndSettle();
+    'shows the §7.3 information-overload explainer card when the guard is enabled and not yet seen',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.text('One habit at a time'), findsOneWidget);
-    expect(find.text("What's a habit?"), findsOneWidget);
-
-    // Two dismissible cards are stacked (habit intro above, overload guard
-    // below) — tap the second close button, which belongs to the guard card.
-    await tester.tap(find.byIcon(Icons.close).last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('One habit at a time'), findsNothing);
-    expect(find.text("What's a habit?"), findsOneWidget);
-
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('overload_guard_onboarding_seen_v1'), isTrue);
-    expect(prefs.getBool('habit_onboarding_seen_v1'), isNot(isTrue));
-  });
+      expect(find.text('One habit at a time'), findsOneWidget);
+      expect(
+        find.textContaining("Habit stacking isn't affected by this limit"),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
-      'shows a catalog list picker when the study restricts behavior options',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_catalogConfig));
-    await tester.pumpAndSettle();
+    'does not show the information-overload explainer card once already dismissed (persisted)',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'overload_guard_onboarding_seen_v1': true,
+      });
 
-    expect(find.text('Walking'), findsOneWidget);
-    expect(find.text('Meditation'), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
-  });
+      await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+      await tester.pumpAndSettle();
 
-  testWidgets('tapping a catalog item navigates to the cue step with extra',
-      (tester) async {
+      expect(find.text('One habit at a time'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'dismissing the information-overload explainer card hides it, persists the dismissal, and leaves the "what\'s a habit?" card alone',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+      await tester.pumpAndSettle();
+
+      expect(find.text('One habit at a time'), findsOneWidget);
+      expect(find.text("What's a habit?"), findsOneWidget);
+
+      // Two dismissible cards are stacked (habit intro above, overload guard
+      // below) — tap the second close button, which belongs to the guard card.
+      await tester.tap(find.byIcon(Icons.close).last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('One habit at a time'), findsNothing);
+      expect(find.text("What's a habit?"), findsOneWidget);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('overload_guard_onboarding_seen_v1'), isTrue);
+      expect(prefs.getBool('habit_onboarding_seen_v1'), isNot(isTrue));
+    },
+  );
+
+  testWidgets(
+    'shows a catalog list picker when the study restricts behavior options',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_catalogConfig));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Walking'), findsOneWidget);
+      expect(find.text('Meditation'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    },
+  );
+
+  testWidgets('tapping a catalog item navigates to the cue step with extra', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_catalogConfig));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Walking'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CUE:walk|Walking'), findsOneWidget);
+    expect(find.text('CUE:walk|Walking|null'), findsOneWidget);
+  });
+
+  testWidgets('catalog selection preserves recommendation lineage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildSubject(_catalogConfig, recommendationId: 'rec-uuid'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Walking'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CUE:walk|Walking|rec-uuid'), findsOneWidget);
   });
 
   testWidgets(
-      'shows free-text entry for public users (empty behaviorOptions)',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_freeEntryConfig));
-    await tester.pumpAndSettle();
+    'shows free-text entry for public users (empty behaviorOptions)',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_freeEntryConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.byType(ListTile), findsNothing);
-  });
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    },
+  );
 
-  testWidgets('shows a validation error for free text under 3 characters',
-      (tester) async {
+  testWidgets('shows a validation error for free text under 3 characters', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_freeEntryConfig));
     await tester.pumpAndSettle();
 
@@ -257,20 +280,26 @@ void main() {
     );
   });
 
-  testWidgets('tapping Next with valid free text navigates with slugified key',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_freeEntryConfig));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'tapping Next with valid free text navigates with slugified key',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_freeEntryConfig));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'Meditate Daily');
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Meditate Daily');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('CUE:meditate_daily|Meditate Daily'), findsOneWidget);
-  });
+      expect(
+        find.text('CUE:meditate_daily|Meditate Daily|null'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('pressing Enter (submitting the field) submits the free text',
-      (tester) async {
+  testWidgets('pressing Enter (submitting the field) submits the free text', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_freeEntryConfig));
     await tester.pumpAndSettle();
 
@@ -279,13 +308,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('CUE:read_every_night|Read every night'),
+      find.text('CUE:read_every_night|Read every night|null'),
       findsOneWidget,
     );
   });
 
-  testWidgets('typing clears a previously shown validation error',
-      (tester) async {
+  testWidgets('typing clears a previously shown validation error', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_freeEntryConfig));
     await tester.pumpAndSettle();
 

@@ -1,5 +1,7 @@
 import express from 'express';
 import { isPrivileged } from '../middleware/roles.js';
+import { productAnalytics } from '../services/productAnalyticsService.js';
+import { makeGetDb } from '../utils/getDb.js';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -13,7 +15,15 @@ const PROXY_TIMEOUT_MS = parseInt(
   10
 );
 
-async function proxyToRecommender(req, res, targetUrl) {
+function notifyResult(listener, result) {
+  if (!listener) return;
+  Promise.resolve(listener(result)).catch(() => {
+    // Analytics is deliberately detached from the participant response.
+  });
+}
+
+async function proxyToRecommender(req, res, targetUrl, onResult) {
+  const startedAt = Date.now();
   const headers = {};
   if (req.headers.authorization) {
     headers['Authorization'] = req.headers.authorization;
@@ -37,30 +47,107 @@ async function proxyToRecommender(req, res, targetUrl) {
     // parsing blindly would otherwise mask the real status as a 502 below.
     const text = await upstream.text();
     if (!text) {
+      notifyResult(onResult, {
+        status: upstream.status,
+        data: null,
+        latencyMs: Date.now() - startedAt,
+        cacheHit: upstream.headers.get('x-hhh-recommendation-cache') === 'hit',
+      });
       return res.status(upstream.status).end();
     }
     let data;
     try {
       data = JSON.parse(text);
     } catch {
+      notifyResult(onResult, {
+        status: upstream.status,
+        data: null,
+        latencyMs: Date.now() - startedAt,
+        cacheHit: false,
+      });
       return res
         .status(upstream.status)
         .json({ error: 'Recommender returned a non-JSON response' });
     }
+    notifyResult(onResult, {
+      status: upstream.status,
+      data,
+      latencyMs: Date.now() - startedAt,
+      cacheHit: upstream.headers.get('x-hhh-recommendation-cache') === 'hit',
+    });
     res.status(upstream.status).json(data);
   } catch (err) {
     if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      notifyResult(onResult, {
+        status: 504,
+        reason: 'timeout',
+        latencyMs: Date.now() - startedAt,
+        cacheHit: false,
+      });
       res.status(504).json({ error: 'Recommender service timed out' });
     } else {
+      notifyResult(onResult, {
+        status: 502,
+        reason: 'unavailable',
+        latencyMs: Date.now() - startedAt,
+        cacheHit: false,
+      });
       res.status(502).json({ error: 'Recommender service unavailable' });
     }
   }
 }
 
-export function createRecommendRouter({ recommenderUrl } = {}) {
+export function createRecommendRouter({ recommenderUrl, db } = {}) {
   const baseUrl =
     recommenderUrl || process.env.RECOMMENDER_URL || 'http://recommender:8000';
   const router = express.Router();
+  const getDb = makeGetDb(db);
+
+  async function trackGeneration(req, result) {
+    if (!productAnalytics.enabled) return;
+    const userId = String(req.user?.sub ?? '');
+    if (!userId) return;
+    let enrollment = null;
+    try {
+      const database = await getDb();
+      enrollment = await database
+        .collection('enrollments')
+        .findOne({ userId }, { projection: { studyId: 1, groupId: 1 } });
+    } catch {
+      // Missing context must not suppress the event; the service uses a
+      // controlled `not_assigned` sentinel for unavailable enrollment data.
+    }
+
+    const context = {
+      distinctId: userId,
+      studyId: enrollment?.studyId?.toString(),
+      groupId: enrollment?.groupId?.toString(),
+    };
+    if (result.status >= 200 && result.status < 300 && result.data) {
+      productAnalytics.capture({
+        ...context,
+        event: 'recommendation_generated',
+        properties: {
+          latency_ms: result.latencyMs,
+          count: Array.isArray(result.data.recommendations)
+            ? result.data.recommendations.length
+            : 0,
+          cache_hit: result.cacheHit,
+        },
+      });
+      return;
+    }
+    productAnalytics.capture({
+      ...context,
+      event: 'recommendation_failed',
+      properties: {
+        latency_ms: result.latencyMs,
+        reason:
+          result.reason ??
+          (result.status === 504 ? 'timeout' : 'upstream_error'),
+      },
+    });
+  }
 
   /**
    * @swagger
@@ -337,7 +424,19 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
    */
   // POST /api/v1/recommend/generate → Python POST /api/v1/llm/recommend
   router.post('/generate', async (req, res) => {
-    await proxyToRecommender(req, res, `${baseUrl}/api/v1/llm/recommend`);
+    if (
+      !isPrivileged(req.user) &&
+      req.body?.user_id !== undefined &&
+      req.body.user_id !== req.user?.sub
+    ) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    await proxyToRecommender(
+      req,
+      res,
+      `${baseUrl}/api/v1/llm/recommend`,
+      (result) => trackGeneration(req, result)
+    );
   });
 
   return router;

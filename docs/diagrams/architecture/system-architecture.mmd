@@ -48,6 +48,7 @@ flowchart TB
     subgraph external["External Services"]
         llm["LLM Provider<br/>(OpenAI-compatible API)"]
         fcm["Firebase Cloud<br/>Messaging (FCM)"]
+        offsite["Optional offsite<br/>backup remote"]
     end
 
     %% ------- Monitoring -------
@@ -55,6 +56,19 @@ flowchart TB
         prometheus["Prometheus<br/>metrics · 30d retention"]
         grafana["Grafana<br/>dashboards · own Keycloak OIDC"]
         blackbox["blackbox-exporter<br/>endpoint probes"]
+        habitexporters["habitvm exporters<br/>node-exporter · cAdvisor"]
+    end
+
+    subgraph analyticsvm["Dedicated analytics VM — private TU network only"]
+        posthogproxy["PostHog internal proxy<br/>private :8000<br/>ingest + TU/VPN admin UI"]
+        posthogapp["PostHog application<br/>web · worker · capture · ingestion"]
+        eventbus["Kafka / ZooKeeper<br/>event stream"]
+        clickhouse[("ClickHouse<br/>raw product events · 1 year")]
+        posthogdb[("PostgreSQL<br/>PostHog metadata")]
+        posthogcache[("Redis / Valkey")]
+        posthogobjects[("Object storage<br/>SeaweedFS")]
+        analyticsexporters["node-exporter · cAdvisor<br/>private :9100 / :8080"]
+        analyticsbackup["Analytics backup job<br/>systemd timer · checksum manifest"]
     end
 
     %% ------- Internal tools (behind oauth2-proxy SSO, admin role) -------
@@ -75,6 +89,7 @@ flowchart TB
 
     %% ------- Edges: clients → edge -------
     flutter -- "HTTPS REST + JWT" --> traefik
+    flutter -- "allowlisted product events<br/>HTTPS /ingest/*" --> traefik
     adminui -- "HTTPS" --> traefik
     traefik -- "app.*" --> backend
     traefik -- "admin.*" --> adminui
@@ -92,6 +107,7 @@ flowchart TB
     backend -- "POST /translate" --> translate
     backend -- "/api/v1/llm/* · /api/v1/kb/*<br/>(service token)" --> apiservice
     backend -- "push campaigns" --> fcm
+    backend -- "trusted server events<br/>private HTTP" --> posthogproxy
 
     %% ------- Edges: AI service -------
     apiservice -- "chat / embeddings" --> llm
@@ -113,6 +129,7 @@ flowchart TB
 
     %% ------- Edges: internal-tool SSO -------
     researcher_actor -- "internal tools" --> traefik
+    researcher_actor -- "TU network / VPN only<br/>product analytics" --> posthogproxy
     traefik -- "/prometheus /grafana /mongo /redisinsight /queues /neo4j" --> oauth2proxy
     oauth2proxy -. "forward-auth (302 → Keycloak)" .-> keycloak
     oauth2proxy -- "admin role OK" --> prometheus
@@ -135,9 +152,25 @@ flowchart TB
     %% ------- Edges: monitoring -------
     prometheus -. "scrape /metrics" .-> backend
     prometheus -. "scrape /metrics" .-> apiservice
+    prometheus -. "scrape private :8082<br/>ingest request budget" .-> traefik
+    prometheus -. "scrape host/container metrics" .-> habitexporters
+    prometheus -. "private scrape" .-> analyticsexporters
     prometheus -. "probe" .-> blackbox
+    blackbox -. "private /_health probe" .-> posthogproxy
     grafana -. "OIDC SSO" .-> keycloak
     grafana --> prometheus
+
+    %% ------- Edges: product analytics -------
+    traefik -- "strict /ingest path allowlist<br/>strip prefix · rate limit" --> posthogproxy
+    posthogproxy --> posthogapp
+    posthogapp --> eventbus
+    eventbus --> clickhouse
+    posthogapp --> posthogdb
+    posthogapp --> posthogcache
+    posthogapp --> posthogobjects
+    analyticsbackup -- "pg_dump" --> posthogdb
+    analyticsbackup -- "clickhouse-backup" --> clickhouse
+    analyticsbackup -. "optional rclone" .-> offsite
 
     classDef actor fill:#fff3cd,stroke:#b8860b
     classDef store fill:#e7f1ff,stroke:#2a6fb8
@@ -145,9 +178,9 @@ flowchart TB
     classDef ops fill:#eafbe7,stroke:#2e8c00
     classDef tool fill:#ffe9e0,stroke:#d2601a
     class participant_actor,researcher_actor,agent_actor actor
-    class mongo,neo4j,lightrag,redis,postgres store
-    class llm,fcm ext
-    class backup,dockerproxy,prometheus,grafana,blackbox ops
+    class mongo,neo4j,lightrag,redis,postgres,clickhouse,posthogdb,posthogcache,posthogobjects store
+    class llm,fcm,offsite ext
+    class backup,analyticsbackup,dockerproxy,prometheus,grafana,blackbox,habitexporters,analyticsexporters,eventbus ops
     class oauth2proxy,mongoexpress,redisinsight,bullboard,lightragui tool
     classDef identity fill:#fde2e2,stroke:#b02a37,stroke-width:2px
     class identitysvc,identitydb identity

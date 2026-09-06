@@ -107,14 +107,19 @@ Widget _buildSubject({
           final extra = state.extra as Map<String, dynamic>;
           return Scaffold(
             body: Text(
-              'cue:${extra['behaviorKey']}|${extra['behaviorLabel']}|${extra['initialCue']}',
+              'cue:${extra['behaviorKey']}|${extra['behaviorLabel']}|${extra['initialCue']}|${extra['recommendationId']}',
             ),
           );
         },
       ),
       GoRoute(
         path: '/habits/new/behavior',
-        builder: (context, state) => const Scaffold(body: Text('behavior-picker')),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return Scaffold(
+            body: Text('behavior-picker:${extra?['recommendationId']}'),
+          );
+        },
       ),
     ],
   );
@@ -154,14 +159,16 @@ Future<void> _openResults(WidgetTester tester, Widget subject) async {
 void main() {
   group('error state', () {
     Widget subject() => _buildSubject(
-          resultsScreenBuilder: () => const RecommendationResultsScreen(
-            goal: 'Sleep better',
-            response: null,
-            error: 'Something went wrong.',
-          ),
-        );
+      resultsScreenBuilder: () => const RecommendationResultsScreen(
+        goal: 'Sleep better',
+        response: null,
+        error: 'Something went wrong.',
+      ),
+    );
 
-    testWidgets('shows the error message and a Try Again button', (tester) async {
+    testWidgets('shows the error message and a Try Again button', (
+      tester,
+    ) async {
       await _openResults(tester, subject());
 
       expect(find.text('Something went wrong.'), findsOneWidget);
@@ -180,27 +187,31 @@ void main() {
       expect(find.text('Something went wrong.'), findsNothing);
     });
 
-    testWidgets('tapping "Try a different goal" in the bottom bar pops the route',
-        (tester) async {
-      await _openResults(tester, subject());
+    testWidgets(
+      'tapping "Try a different goal" in the bottom bar pops the route',
+      (tester) async {
+        await _openResults(tester, subject());
 
-      await tester.tap(find.text('Try a different goal'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Try a different goal'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Open Results'), findsOneWidget);
-      expect(find.text('Something went wrong.'), findsNothing);
-    });
+        expect(find.text('Open Results'), findsOneWidget);
+        expect(find.text('Something went wrong.'), findsNothing);
+      },
+    );
   });
 
   group('empty state', () {
     Widget subject() => _buildSubject(
-          resultsScreenBuilder: () => const RecommendationResultsScreen(
-            goal: 'Sleep better',
-            response: _emptyResponse,
-          ),
-        );
+      resultsScreenBuilder: () => const RecommendationResultsScreen(
+        goal: 'Sleep better',
+        response: _emptyResponse,
+      ),
+    );
 
-    testWidgets('shows the empty message and a Try Again button', (tester) async {
+    testWidgets('shows the empty message and a Try Again button', (
+      tester,
+    ) async {
       await _openResults(tester, subject());
 
       expect(
@@ -224,38 +235,42 @@ void main() {
   });
 
   group('populated results', () {
-    Widget subject({_FakeRecommendationService? service, HabitConfig? habitConfig}) =>
-        _buildSubject(
-          resultsScreenBuilder: () => const RecommendationResultsScreen(
-            goal: 'Sleep better',
-            response: _populatedResponse,
-          ),
-          service: service,
-          habitConfig: habitConfig,
-        );
+    Widget subject({
+      _FakeRecommendationService? service,
+      HabitConfig? habitConfig,
+    }) => _buildSubject(
+      resultsScreenBuilder: () => const RecommendationResultsScreen(
+        goal: 'Sleep better',
+        response: _populatedResponse,
+      ),
+      service: service,
+      habitConfig: habitConfig,
+    );
 
     testWidgets(
-        'shows title, body, rationale, suggested cue, and a collapsed sources list',
-        (tester) async {
-      await _openResults(tester, subject());
+      'shows title, body, rationale, suggested cue, and a collapsed sources list',
+      (tester) async {
+        await _openResults(tester, subject());
 
-      expect(find.text('Drink more water'), findsOneWidget);
-      expect(find.text('Keep a bottle nearby.'), findsOneWidget);
-      expect(find.text('Why this helps:'), findsOneWidget);
-      expect(find.text('Hydration improves alertness.'), findsOneWidget);
-      expect(find.text('After I wake up'), findsOneWidget);
+        expect(find.text('Drink more water'), findsOneWidget);
+        expect(find.text('Keep a bottle nearby.'), findsOneWidget);
+        expect(find.text('Why this helps:'), findsOneWidget);
+        expect(find.text('Hydration improves alertness.'), findsOneWidget);
+        expect(find.text('After I wake up'), findsOneWidget);
 
-      // Sources list starts collapsed: the ExpansionTile title is visible but
-      // its child content is not yet.
-      expect(find.text('Sources (1)'), findsOneWidget);
-      expect(
-        find.text('Wood & Rünger (2016) — Psychology of Habit'),
-        findsNothing,
-      );
-    });
+        // Sources list starts collapsed: the ExpansionTile title is visible but
+        // its child content is not yet.
+        expect(find.text('Sources (1)'), findsOneWidget);
+        expect(
+          find.text('Wood & Rünger (2016) — Psychology of Habit'),
+          findsNothing,
+        );
+      },
+    );
 
-    testWidgets('expanding the sources list reveals the citation and quote',
-        (tester) async {
+    testWidgets('expanding the sources list reveals the citation and quote', (
+      tester,
+    ) async {
       await _openResults(tester, subject());
 
       await tester.tap(find.text('Sources (1)'));
@@ -265,79 +280,84 @@ void main() {
         find.text('Wood & Rünger (2016) — Psychology of Habit'),
         findsOneWidget,
       );
-      expect(
-        find.text('“Habits form through repetition.”'),
-        findsOneWidget,
-      );
+      expect(find.text('“Habits form through repetition.”'), findsOneWidget);
     });
 
     testWidgets(
-        'tapping "Add to my habits" pushes into the new-habit cue screen with prefilled data',
-        (tester) async {
-      await _openResults(tester, subject());
+      'tapping "Add to my habits" pushes into the new-habit cue screen with prefilled data',
+      (tester) async {
+        await _openResults(tester, subject());
 
-      await tester.tap(find.text('Add to my habits'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Add to my habits'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text('cue:drink_more_water|Drink more water|After I wake up'),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.text(
+            'cue:drink_more_water|Drink more water|After I wake up|rec-1',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets(
-        'tapping "Add to my habits" routes to the catalog picker instead of '
-        'free-texting the title when the study restricts habit entry to a '
-        'fixed activity catalog',
-        (tester) async {
-      // Regression test: a study configured for structured habit entry must
-      // not let a recommendation's arbitrary free-text title become an
-      // uncatalogued behaviorKey — that would silently bypass the admin's
-      // activity-type restriction (see results_screen.dart _addToHabits).
-      const restrictedConfig = HabitConfig(
-        cueCount: 'single',
-        cueSource: 'self_selected',
-        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
-        srhiItems: [],
-      );
-      await _openResults(tester, subject(habitConfig: restrictedConfig));
+      'tapping "Add to my habits" routes to the catalog picker instead of '
+      'free-texting the title when the study restricts habit entry to a '
+      'fixed activity catalog',
+      (tester) async {
+        // Regression test: a study configured for structured habit entry must
+        // not let a recommendation's arbitrary free-text title become an
+        // uncatalogued behaviorKey — that would silently bypass the admin's
+        // activity-type restriction (see results_screen.dart _addToHabits).
+        const restrictedConfig = HabitConfig(
+          cueCount: 'single',
+          cueSource: 'self_selected',
+          behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+          srhiItems: [],
+        );
+        await _openResults(tester, subject(habitConfig: restrictedConfig));
 
-      await tester.tap(find.text('Add to my habits'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Add to my habits'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('behavior-picker'), findsOneWidget);
-      expect(find.textContaining('cue:'), findsNothing);
-    });
+        expect(find.text('behavior-picker:rec-1'), findsOneWidget);
+        expect(find.textContaining('cue:'), findsNothing);
+      },
+    );
 
-    testWidgets('submitting feedback replaces the field with a submitted-state indicator',
-        (tester) async {
-      final service = _FakeRecommendationService();
-      await _openResults(tester, subject(service: service));
+    testWidgets(
+      'submitting feedback replaces the field with a submitted-state indicator',
+      (tester) async {
+        final service = _FakeRecommendationService();
+        await _openResults(tester, subject(service: service));
 
-      expect(find.text('Feedback submitted, thank you!'), findsNothing);
-      expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Feedback submitted, thank you!'), findsNothing);
+        expect(find.byType(TextField), findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), 'Great idea, thanks!');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'Great idea, thanks!');
+        await tester.tap(find.byIcon(Icons.send));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Feedback submitted, thank you!'), findsOneWidget);
-      expect(find.byType(TextField), findsNothing);
-      expect(service.submittedComments, ['Great idea, thanks!']);
-    });
+        expect(find.text('Feedback submitted, thank you!'), findsOneWidget);
+        expect(find.byType(TextField), findsNothing);
+        expect(service.submittedComments, ['Great idea, thanks!']);
+      },
+    );
 
-    testWidgets('shows an error and keeps the field when feedback submission fails',
-        (tester) async {
-      final service = _FakeRecommendationService(shouldThrow: true);
-      await _openResults(tester, subject(service: service));
+    testWidgets(
+      'shows an error and keeps the field when feedback submission fails',
+      (tester) async {
+        final service = _FakeRecommendationService(shouldThrow: true);
+        await _openResults(tester, subject(service: service));
 
-      await tester.enterText(find.byType(TextField), 'Great idea, thanks!');
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'Great idea, thanks!');
+        await tester.tap(find.byIcon(Icons.send));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Failed to submit feedback'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Feedback submitted, thank you!'), findsNothing);
-    });
+        expect(find.text('Failed to submit feedback'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Feedback submitted, thank you!'), findsNothing);
+      },
+    );
   });
 }

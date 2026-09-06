@@ -8,6 +8,52 @@ scrape_configs:
       - targets:
           - app:9091
 
+  - job_name: traefik
+    static_configs:
+      - targets:
+          - proxy:8082
+
+  - job_name: node-exporter
+    static_configs:
+      - targets:
+          - node-exporter:9100
+        labels:
+          host: habitvm
+
+  - job_name: cadvisor
+    static_configs:
+      - targets:
+          - cadvisor:8080
+        labels:
+          host: habitvm
+
+  # Optional analytics-VM targets are rendered from ANALYTICS_VM_HOST by the
+  # one-shot monitoring-targets service. The files contain [] until configured.
+  - job_name: analytics-node-exporter
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/analytics-node-exporter.json
+
+  - job_name: analytics-cadvisor
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/analytics-cadvisor.json
+
+  - job_name: analytics-posthog
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/analytics-posthog.json
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
   # Reachability probes via blackbox-exporter (see monitoring/blackbox/blackbox.yml
   # and docs/runbook.md) — covers every long-running service that doesn't
   # expose its own Prometheus metrics. Two jobs so each can use a different

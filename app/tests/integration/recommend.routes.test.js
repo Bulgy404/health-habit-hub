@@ -56,6 +56,10 @@ const FIXTURE_CLASSIFY = { category: 'exercise', confidence: 0.92 };
 const FIXTURE_HISTORY = {
   history: [{ date: '2026-01-01', habit: 'walk 10 min' }],
 };
+const FIXTURE_GENERATED = {
+  recommendation_id: '102e5fe1-b495-4e6e-a57f-c3e15f6d8510',
+  recommendations: [{ title: 'Walk after lunch' }],
+};
 
 let mockRecommender;
 let recommenderUrl;
@@ -74,6 +78,10 @@ function startMockRecommender() {
 
   app.post('/classify', (req, res) => {
     res.json(FIXTURE_CLASSIFY);
+  });
+
+  app.post('/api/v1/llm/recommend', (req, res) => {
+    res.set('X-HHH-Recommendation-Cache', 'miss').json(FIXTURE_GENERATED);
   });
 
   const server = createServer(app);
@@ -187,6 +195,27 @@ test('POST /api/v1/recommend/classify proxies to recommender and returns fixture
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.deepStrictEqual(body, FIXTURE_CLASSIFY);
+});
+
+test('POST /api/v1/recommend/generate proxies a participant own request', async () => {
+  const token = makeToken(['user']);
+  const res = await post(
+    '/api/v1/recommend/generate',
+    { user_id: TEST_USER_ID, goal: 'walk more', session_id: 'session-1' },
+    token
+  );
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(await res.json(), FIXTURE_GENERATED);
+});
+
+test('POST /api/v1/recommend/generate rejects a participant request for another user', async () => {
+  const token = makeToken(['user']);
+  const res = await post(
+    '/api/v1/recommend/generate',
+    { user_id: OTHER_USER_ID, goal: 'walk more', session_id: 'session-1' },
+    token
+  );
+  assert.strictEqual(res.status, 403);
 });
 
 test('GET /api/v1/recommend/:userId/history proxies to recommender and returns fixture', async () => {

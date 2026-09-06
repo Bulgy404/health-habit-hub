@@ -9,10 +9,23 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=hhh-proxy
+      # External services (the future analytics VM) cannot be discovered by
+      # the Docker provider. A tracked dynamic file defines the ingest-only
+      # route and renders nothing while POSTHOG_INTERNAL_URL is unset.
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:443
+      # Internal-only Prometheus endpoint. Router labels let the alert rules
+      # count just the public PostHog ingest router without inspecting event
+      # payloads or exposing PostHog's private admin API.
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
+      - --metrics.prometheus.addrouterslabels=true
+      - --metrics.prometheus.addserviceslabels=true
       # Dedicated entrypoint for Neo4j's bolt-over-websocket channel (used by
       # the Browser UI at /neo4j to actually run queries — see neo4j service
       # labels below). It can't share the websecure entrypoint's Host($DOMAIN)
@@ -36,9 +49,20 @@ services:
       - hhh-proxy
       # Reaches identity-service (verified-identity studies); see hhh-identity-edge.
       - hhh-identity-edge
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
+      traefik-config:
+        condition: service_completed_successfully
+    environment:
+      - DOMAIN=${DOMAIN}
+      - POSTHOG_INTERNAL_URL=${POSTHOG_INTERNAL_URL:-}
+      - POSTHOG_INGEST_RATE_AVERAGE=${POSTHOG_INGEST_RATE_AVERAGE:-100}
+      - POSTHOG_INGEST_RATE_BURST=${POSTHOG_INGEST_RATE_BURST:-200}
     volumes:
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - traefik-certs:/certs
+      - traefik-dynamic:/etc/traefik/dynamic:ro
     labels:
       - traefik.enable=true
       # NOTE: the Traefik dashboard/api@internal router is intentionally NOT
@@ -48,6 +72,32 @@ services:
       # /admin/api/auth/* — behind Traefik basic-auth, breaking the mobile app
       # and admin login. If the Traefik dashboard is needed, expose it on a
       # dedicated host (e.g. traefik.${DOMAIN}), never under /api.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Renders a plain Traefik dynamic file from validated environment values.
+  # Traefik's file provider does not evaluate environment/Go templates itself.
+  # An empty POSTHOG_INTERNAL_URL writes `http: {}` and exposes nothing.
+  traefik-config:
+    image: busybox:1.37.0
+    container_name: hhh-traefik-config
+    restart: 'no'
+    environment:
+      - DOMAIN=${DOMAIN}
+      - POSTHOG_INTERNAL_URL=${POSTHOG_INTERNAL_URL:-}
+      - POSTHOG_INGEST_RATE_AVERAGE=${POSTHOG_INGEST_RATE_AVERAGE:-100}
+      - POSTHOG_INGEST_RATE_BURST=${POSTHOG_INGEST_RATE_BURST:-200}
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/render-traefik.sh:/config/render-traefik.sh:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/traefik/posthog-ingest.yml.tmpl:/config/posthog-ingest.yml.tmpl:ro
+      - traefik-dynamic:/dynamic
+    command: ['/bin/sh', '/config/render-traefik.sh']
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
     logging:
       driver: json-file
       options:
@@ -199,6 +249,10 @@ services:
       - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
       - ALERT_EMAIL=${ALERT_EMAIL}
       - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      # Server-side product events go directly over the private VM link. Both
+      # values are required; either blank makes the analytics client a no-op.
+      - POSTHOG_PROJECT_KEY=${POSTHOG_PROJECT_KEY:-}
+      - POSTHOG_SERVER_HOST=${POSTHOG_SERVER_HOST:-}
       # Dev-only backdoors — hard-default OFF in production.
       - EXPOSE_RECOVERY_PHRASES=${EXPOSE_RECOVERY_PHRASES:-false}
       - ENABLE_TEST_TOOLS=${ENABLE_TEST_TOOLS:-false}
@@ -272,8 +326,9 @@ services:
   # permissions on every (re)deploy, so config changes never need a manual
   # `git pull`. Best-effort: it always exits 0 so a transient fetch failure can't
   # block the stack — services then use the files already on disk. The
-  # config-consuming services (mongo, neo4j, keycloak, keycloak-init,
-  # blackbox-exporter, prometheus, grafana) depend on it completing.
+  # config-consuming services (traefik-config/proxy, mongo, neo4j, keycloak,
+  # keycloak-init, blackbox-exporter, monitoring-targets, prometheus, grafana)
+  # depend on it.
   config-sync:
     image: alpine/git:latest
     container_name: hhh-config-sync
@@ -562,7 +617,8 @@ services:
     volumes:
       - keycloak-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${KC_DB_USERNAME:-keycloak} -d keycloak']
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${KC_DB_USERNAME:-keycloak} -d keycloak']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1164,7 +1220,13 @@ services:
       - SMTP_FROM=${SMTP_FROM}
       - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://localhost:4321/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:4321/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -1220,6 +1282,79 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # Host-level filesystem and memory metrics. The root filesystem is mounted
+  # read-only and reported with its real mountpoints, so alerts can distinguish
+  # /, /var and the Docker data disk at /data.
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    container_name: hhh-node-exporter
+    restart: always
+    mem_limit: 128m
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/host/root
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|run/docker/netns/.+)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+    networks:
+      - hhh-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Per-container working-set and memory-limit metrics. cAdvisor needs read-only
+  # access to the host cgroups and Docker metadata; it has no published port and
+  # is reachable only by Prometheus on hhh-proxy.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    container_name: hhh-cadvisor
+    restart: always
+    mem_limit: 256m
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - hhh-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Generates optional Prometheus file-discovery targets for the future
+  # analytics VM. With ANALYTICS_VM_HOST unset it writes empty arrays, so this
+  # branch can be deployed before the VM or its private address exists.
+  monitoring-targets:
+    image: busybox:1.37.0
+    container_name: hhh-monitoring-targets
+    restart: 'no'
+    environment:
+      - ANALYTICS_VM_HOST=${ANALYTICS_VM_HOST:-}
+      - ANALYTICS_VM_POSTHOG_PORT=${ANALYTICS_VM_POSTHOG_PORT:-8000}
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/render-targets.sh:/config/render-targets.sh:ro
+      - monitoring-targets:/targets
+    command: ['/bin/sh', '/config/render-targets.sh']
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   prometheus:
     image: prom/prometheus:v3.4.1
     container_name: hhh-prometheus
@@ -1229,8 +1364,11 @@ services:
     depends_on:
       config-sync:
         condition: service_completed_successfully
+      monitoring-targets:
+        condition: service_completed_successfully
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - monitoring-targets:/etc/prometheus/targets:ro
       - prometheus-data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -1521,7 +1659,11 @@ services:
     volumes:
       - identity-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${IDENTITY_DB_USERNAME:-identity} -d identity']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${IDENTITY_DB_USERNAME:-identity} -d identity',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1627,6 +1769,8 @@ networks:
 volumes:
   traefik-certs:
     name: hhh-traefik-certs
+  traefik-dynamic:
+    name: hhh-traefik-dynamic
   mongo-data:
     name: hhh-mongo-data
   mongo-config:
@@ -1653,6 +1797,8 @@ volumes:
     name: hhh-prometheus-data
   grafana-data:
     name: hhh-grafana-data
+  monitoring-targets:
+    name: hhh-monitoring-targets
   # Recorded audio clips from habit-donation voice input, mounted into the
   # app container at AUDIO_STORAGE_DIR. Kept out of the image and out of
   # git — see docs/data-model.md's habit_donations collection.

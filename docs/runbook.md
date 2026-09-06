@@ -20,6 +20,7 @@ and is annotated with the expected output.
 10. [Checking Service Health](#checking-service-health)
 11. [Critical Alerts](#critical-alerts)
 12. [Queue & Cache Monitoring](#queue--cache-monitoring-local-dev)
+    - [Dedicated analytics VM](#dedicated-analytics-vm)
 13. [Troubleshooting](#troubleshooting)
     - [Keycloak 401 errors](#keycloak-401-errors--jwks-url-misconfigured)
     - [Keycloak DB unavailable — PostgreSQL not ready](#keycloak-db-unavailable--postgresql-not-ready)
@@ -61,15 +62,15 @@ git --version
 
 ### Open Ports
 
-| Port | Protocol | Purpose                                                   |
-| ---- | -------- | --------------------------------------------------------- |
-| 80   | TCP      | HTTP (redirected to HTTPS by Traefik)                     |
-| 443  | TCP      | HTTPS (Traefik TLS termination)                           |
+| Port | Protocol | Purpose                                                                                                                      |
+| ---- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 80   | TCP      | HTTP (redirected to HTTPS by Traefik)                                                                                        |
+| 443  | TCP      | HTTPS (Traefik TLS termination)                                                                                              |
 | 7687 | TCP      | Neo4j Browser's bolt-over-websocket channel (Traefik-proxied, TLS; auth is Neo4j's own username/password), `NEO4J_BOLT_PORT` |
-| 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production) |
+| 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production)                                                                    |
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
-> Never expose Neo4j (7474/7687) or MongoDB (27017) *directly* — the only
+> Never expose Neo4j (7474/7687) or MongoDB (27017) _directly_ — the only
 > supported public path to Neo4j is through Traefik: the `/neo4j` Browser UI is
 > Keycloak-SSO gated (admin role), and its bolt query channel on port 7687 uses
 > Neo4j's own username/password. MongoDB stays fully internal; use mongo-express
@@ -174,14 +175,14 @@ Then, in Neo4j Browser:
 - Connect URL: `bolt+s://<DOMAIN>:7687` (`+s` — Traefik terminates TLS on 7687)
 - Auth: Username / Password, `neo4j` / `NEO4J_PASSWORD`
 
-Check whether 7687 is reachable: the server always *listens*
+Check whether 7687 is reachable: the server always _listens_
 (`sudo ss -tlnp | grep 7687` shows docker-proxy); if an external client gets
 "connection refused"/timeout, the firewall is still blocking it.
 
 **Method B — SSH tunnel (no firewall change; recommended for admin use).**
 The neo4j service publishes its HTTP (7474) and bolt (7687) ports on the
 server's **loopback only** at `127.0.0.1:17474` / `127.0.0.1:17687` (see
-docker-compose.yml). These are reachable *only* from the server's localhost —
+docker-compose.yml). These are reachable _only_ from the server's localhost —
 i.e. only through an SSH tunnel, never from the internet — so no firewall change
 is involved. Tunnel BOTH ports:
 
@@ -198,7 +199,7 @@ http://localhost:7474
 
 and connect with:
 
-- Connect URL: `bolt://localhost:7687`  — plain `bolt://`, **not** `bolt+s://`.
+- Connect URL: `bolt://localhost:7687` — plain `bolt://`, **not** `bolt+s://`.
   (Browser may pre-fill the advertised `<DOMAIN>:7687`; overwrite it.)
 - Auth: Username / Password, `neo4j` / `NEO4J_PASSWORD`
 
@@ -854,8 +855,12 @@ All critical-alert emails go to `ALERT_EMAIL` via generic SMTP (`SMTP_HOST`/`SMT
 | BullMQ job failures     | A queued job exhausts all retry attempts (`bullmq_jobs_failed_total`, terminal failures only)                           | Grafana (`monitoring/grafana/provisioning/alerting/alerting.yaml`, rule `hhh-bullmq-failures`) | Grafana's own `group_wait`/`group_interval`/`repeat_interval` (30s/5m/4h)                                      |
 | Service unreachable     | `blackbox-exporter` can't reach a service (TCP-connect or HTTP-GET) for 2+ consecutive minutes                          | Grafana, rule `hhh-reachability`                                                               | Same as above                                                                                                  |
 | Backend 5xx spike       | Sustained 5xx rate > 0.1 req/s for 5+ minutes (tune the threshold in `alerting.yaml` once real traffic volume is known) | Grafana, rule `hhh-5xx-spike`                                                                  | Same as above                                                                                                  |
+| Host filesystem low     | `/`, `/var`, or `/data` remains below 15% free for 10 minutes                                                           | Grafana, rule `hhh-host-disk-low`                                                              | Same as above                                                                                                  |
+| Host memory low         | Available host memory remains below 10% for 10 minutes                                                                  | Grafana, rule `hhh-host-memory-low`                                                            | Same as above                                                                                                  |
+| Container memory high   | A `hhh-*` container remains above 90% of its configured memory limit for 10 minutes                                     | Grafana, rule `hhh-container-memory-high`                                                      | Same as above                                                                                                  |
+| Metrics exporter down   | A configured node-exporter or cAdvisor target is unreachable for 2 minutes                                              | Grafana, rule `hhh-metrics-exporter-down`                                                      | Same as above                                                                                                  |
 
-The backup and LLM alerts fire directly from application code — they don't depend on Prometheus/Grafana being up. The other three are metric-driven and route through Grafana's unified alerting engine.
+The backup and LLM alerts fire directly from application code — they don't depend on Prometheus/Grafana being up. The other seven are metric-driven and route through Grafana's unified alerting engine.
 
 ### Testing each alert path
 
@@ -876,6 +881,10 @@ curl -s http://localhost:9091/metrics | grep bullmq_jobs_failed_total
 docker stop hhh-redis
 curl -s 'http://localhost:9090/api/v1/query?query=probe_success{instance="redis:6379"}'
 docker start hhh-redis
+
+# Host/container metrics: both queries should return one or more series
+curl -s 'http://localhost:9090/api/v1/query?query=node_memory_MemAvailable_bytes'
+curl -s 'http://localhost:9090/api/v1/query?query=container_memory_working_set_bytes{name=~"hhh-.+"}'
 ```
 
 ### Muting alerts during planned maintenance
@@ -887,7 +896,9 @@ Don't edit the provisioned rule files for a temporary silence — they're reprov
 ```bash
 curl -s -u "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
   https://<DOMAIN>/grafana/api/v1/provisioning/alert-rules | python3 -m json.tool
-# Expect 3 rules: hhh-reachability, hhh-bullmq-failures, hhh-5xx-spike,
+# Expect 7 rules: hhh-reachability, hhh-bullmq-failures, hhh-5xx-spike,
+# hhh-host-disk-low, hhh-host-memory-low, hhh-container-memory-high,
+# hhh-metrics-exporter-down,
 # each with "provenance": "file"
 ```
 
@@ -967,6 +978,60 @@ gated by Keycloak SSO (admin role, the `sso-auth` forward-auth middleware —
 same as Prometheus, Bull Board, Neo4j Browser and mongo-express; see
 docker-compose.yml). The connection to the app's Redis instance is pre-configured via `RI_REDIS_*`
 env vars, so there's no "Add Redis Database" step to do by hand there.
+
+### Dedicated analytics VM
+
+The analytics integration is inert while its PostHog environment values are
+blank. Once enabled, diagnose it in this order:
+
+1. On the analytics VM, run `./manage.sh doctor` and `./manage.sh status`.
+2. From `habitvm`, request `http://<analytics-private-address>:8000/_health`.
+   A failure here is normally the TU firewall rule or PostHog itself.
+3. Inspect Prometheus targets for `host="analyticsvm"` on ports 8000, 9100 and 8080. A blank `ANALYTICS_VM_HOST` intentionally creates no targets.
+4. From an off-TU device, send through
+   `https://<DOMAIN>/ingest/batch/`. The private analytics address and its UI
+   must remain unreachable from that same device.
+5. Confirm the Flutter build uses the public `/ingest` URL, never the private
+   VM address; the backend must use `POSTHOG_SERVER_HOST` privately.
+6. In Prometheus, confirm `up{job="traefik"} == 1` and that
+   `traefik_router_requests_total{router="posthog-ingest@file"}` increases after
+   a test event. Grafana warns after 12,500 ingest requests in 30 days, a
+   conservative proxy for a possible 250,000-event month because SDK uploads
+   can batch multiple events. Use PostHog's ingestion graph for the exact count.
+
+If the `/ingest` router is absent, inspect the one-shot renderer before
+debugging PostHog:
+
+```bash
+docker logs hhh-traefik-config
+docker exec hhh-proxy cat /etc/traefik/dynamic/posthog-ingest.yml
+```
+
+A blank `http: {}` is correct when `POSTHOG_INTERNAL_URL` is empty. A malformed
+origin, domain, port, or non-numeric rate limit makes `traefik-config` fail and
+prevents the proxy from starting with a silently unsafe configuration.
+
+Useful operations on the analytics VM:
+
+```bash
+./manage.sh status
+./manage.sh logs web
+./manage.sh logs clickhouse
+./manage.sh backup
+systemctl status hhh-analytics-backup.timer
+journalctl -u hhh-analytics-backup.service --since today
+```
+
+Every backup creates PostgreSQL and ClickHouse archives plus a JSON manifest
+with SHA-256 checksums and `offsite: true|false`. Kafka is transient and is not
+backed up. A local backup with `offsite: false` does not protect against VM
+loss. Restore drills use a scratch VM and the exact pinned PostHog revision;
+never test a restore against the live study stack.
+
+Do not “fix” ingestion by proxying PostHog `/`. Only `/i/`, `/e/`,
+`/decide[/]`, `/flags[/]`, `/batch[/]`, and `/array/` under public `/ingest`
+are allowed. A publicly reachable PostHog login page is a security incident:
+blank `POSTHOG_INTERNAL_URL`, redeploy Traefik, and inspect the dynamic file.
 
 ---
 
@@ -1335,8 +1400,8 @@ actually live on the server — commonly because it was only set in a local
 `.env` (gitignored, per-environment — never deployed) or never added to
 Portainer's stack environment variables. Traefik's Docker-provider label
 templating does **not** fail loudly on a missing variable: a rule written as
-`` Host(`${WEBSITE_DOMAIN}`) || Host(`www.${WEBSITE_DOMAIN}`) `` silently
-renders as `` Host(``) || Host(`www.`) `` — syntactically valid, so nothing
+``Host(`${WEBSITE_DOMAIN}`) || Host(`www.${WEBSITE_DOMAIN}`)`` silently
+renders as ` Host(`) || Host(`www.`) `` — syntactically valid, so nothing
 crashes — which then makes Let's Encrypt reject the request outright:
 
 ```
@@ -1476,11 +1541,11 @@ Two things this maintenance does **not** cover, both currently unaddressed:
   remote is configured and every backup lives on the same VM as the data it
   protects. Losing the VM loses both. The machinery is already built and only
   needs configuring — see [Offsite sync](#offsite-sync).
-- **No disk-space alerting.** Grafana's rules
-  (`monitoring/grafana/provisioning/alerting/alerting.yaml`) cover service
-  reachability, BullMQ job failures and 5xx spikes only. No node-exporter is
-  deployed, so no filesystem metrics exist to alert on — the btrfs exhaustion
-  above would have been visible weeks earlier with either.
+- **The separate analytics VM still needs its private address after
+  provisioning.** Its deployment package includes node-exporter and cAdvisor.
+  Set `ANALYTICS_VM_HOST` on `habitvm` and allow only `habitvm` to reach ports
+  8000/9100/8080 on the private network; the PostHog health probe, exporter
+  target files, and `host: analyticsvm` labels are generated automatically.
 
 ---
 

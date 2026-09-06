@@ -38,7 +38,7 @@
 > | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
 > | [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md) | Design for optional per-study verified-identity mode (clinical studies) |
 > | [`docs/identity-register.md`](docs/identity-register.md) | Operator & study-site runbook for verified-identity studies: roles, roster, codes, re-identification, erasure |
-> | [`docs/analytics-posthog-plan.md`](docs/analytics-posthog-plan.md) | Design for product analytics via self-hosted PostHog (event taxonomy, funnels, recommendation lineage) — **approved, not yet implemented** |
+> | [`docs/analytics-posthog-plan.md`](docs/analytics-posthog-plan.md) | Implementation status and activation plan for optional self-hosted PostHog on a dedicated private VM; repository setup is complete and remains inert until the future VM is configured |
 > | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention, and the spring-based motion vocabulary (`AppSpring`, `PressableScale`, reduced-motion handling) |
 
 ## 1. Project Overview
@@ -59,16 +59,18 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 
 ## 2. Architecture
 
-> **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-39, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
+> **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-41, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
 
 ### System Diagram
 
-Everything runs as Docker containers on one host, path-routed behind Traefik on a
-single domain (`habit.wiwi.tu-dresden.de`). The Flutter app and admin panel are
-the public entrypoints; a set of internal admin/debug tools sit behind a Keycloak
-SSO gate (`oauth2-proxy`).
+The study platform runs as Docker containers on the primary host, path-routed
+behind Traefik on a single domain (`habit.wiwi.tu-dresden.de`). The optional
+PostHog stack runs independently on a dedicated private analytics VM and remains
+disabled until its environment is configured. The Flutter app and admin panel
+are the public entrypoints; internal admin/debug tools sit behind a Keycloak SSO
+gate (`oauth2-proxy`).
 
-![System diagram: Flutter app and admin browser enter through Traefik, which routes to app/admin/keycloak/oauth2-proxy; app calls the Python recommender, which calls LightRAG and an external LLM; app, recommender, and LightRAG share MongoDB, Neo4j, and Redis; oauth2-proxy gates the internal tools (Grafana, Prometheus, Bull Board, mongo-express, RedisInsight)](docs/assets/architecture/system-diagram.svg)
+![System diagram: Flutter app and admin browser enter through Traefik on the primary host; app calls the Python recommender, which calls LightRAG and an external LLM; the application uses MongoDB, Neo4j, and Redis; oauth2-proxy gates internal tools; optional allowlisted analytics events travel through an ingest-only route to PostHog on a dedicated private VM, whose host and container metrics are scraped by Prometheus](docs/assets/architecture/system-diagram.svg)
 
 The diagram above shows the main request path. Not pictured (see the service
 tables below for the full picture): `knowledge-mcp` (MCP/SSE server exposing the
@@ -78,55 +80,60 @@ ops/support containers with no inbound routes — `config-sync` (git pull),
 
 ### Service Responsibilities
 
-All 22 containers, grouped by role. Container names are prefixed `hhh-`
+All 27 primary-host Compose services, grouped by role. Container names are prefixed `hhh-`
 (e.g. service `app` → container `hhh-app`).
 
 **Edge & identity**
 
-| Service | Image | Responsibility |
-| --- | --- | --- |
-| `proxy` | `traefik:v3.6.1` | Reverse proxy; TLS via Let's Encrypt; path-based routing on `${DOMAIN}`; dedicated `neo4jbolt` entrypoint on :7687 |
-| `oauth2-proxy` | `oauth2-proxy:v7.13.0` | Keycloak SSO **forward-auth gate** for the internal tools; only realm `admin` role passes. Identifies users by `preferred_username` |
-| `keycloak` | `keycloak:26.5.5` | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential SA), `hhh-admin`, `hhh-ropc`, `grafana`, `oauth2-proxy` |
-| `keycloak-db` | `postgres:16-alpine` | Keycloak's persistence backend |
-| `keycloak-init` | `keycloak:26.5.5` | One-shot init: injects client secrets, creates the `oauth2-proxy` client if missing, seeds the admin user (via `kcadm`) |
+| Service          | Image                  | Responsibility                                                                                                                                            |
+| ---------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `proxy`          | `traefik:v3.6.1`       | Reverse proxy; TLS via Let's Encrypt; path-based routing on `${DOMAIN}`; dedicated `neo4jbolt` entrypoint on :7687                                        |
+| `oauth2-proxy`   | `oauth2-proxy:v7.13.0` | Keycloak SSO **forward-auth gate** for the internal tools; only realm `admin` role passes. Identifies users by `preferred_username`                       |
+| `keycloak`       | `keycloak:26.5.5`      | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential SA), `hhh-admin`, `hhh-ropc`, `grafana`, `oauth2-proxy` |
+| `keycloak-db`    | `postgres:16-alpine`   | Keycloak's persistence backend                                                                                                                            |
+| `keycloak-init`  | `keycloak:26.5.5`      | One-shot init: injects client secrets, creates the `oauth2-proxy` client if missing, seeds the admin user (via `kcadm`)                                   |
+| `traefik-config` | `alpine:3.22`          | One-shot: validates analytics routing variables and renders the optional ingest-only Traefik file configuration                                           |
 
 **Application**
 
-| Service | Image | Responsibility |
-| --- | --- | --- |
-| `app` | `hhh/app` (Node 22, Express) | REST API `/api/v1/*` (JWT-verified via Keycloak JWKS); WebSocket recommendations; notification scheduler; BullMQ `habitQueue`; Bull Board at `/queues` |
-| `admin` | `hhh/admin` (Next.js 15, MUI, NextAuth) | Researcher/admin dashboard at `/admin`; participant management; questionnaire authoring; study config. OIDC login via Keycloak (`hhh-admin`) |
-| `recommender` | `hhh/recommender` (Python, FastAPI) | LLM habit classification, BCIO mapping, context extraction, RAG recommendation; protected by `API_SERVICE_SECRET` |
-| `knowledge-mcp` | `hhh/knowledge-mcp` (FastMCP, SSE, :8002) | MCP server exposing `search_knowledge` / `ingest_document` over the LightRAG KB to AI agents |
-| `translate` | `hhh/translate` (LibreTranslate, baked EN/DE/JA/FR/NL) | Self-hosted machine translation used by the backend |
+| Service         | Image                                                  | Responsibility                                                                                                                                         |
+| --------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app`           | `hhh/app` (Node 22, Express)                           | REST API `/api/v1/*` (JWT-verified via Keycloak JWKS); WebSocket recommendations; notification scheduler; BullMQ `habitQueue`; Bull Board at `/queues` |
+| `admin`         | `hhh/admin` (Next.js 15, MUI, NextAuth)                | Researcher/admin dashboard at `/admin`; participant management; questionnaire authoring; study config. OIDC login via Keycloak (`hhh-admin`)           |
+| `recommender`   | `hhh/recommender` (Python, FastAPI)                    | LLM habit classification, BCIO mapping, context extraction, RAG recommendation; protected by `API_SERVICE_SECRET`                                      |
+| `knowledge-mcp` | `hhh/knowledge-mcp` (FastMCP, SSE, :8002)              | MCP server exposing `search_knowledge` / `ingest_document` over the LightRAG KB to AI agents                                                           |
+| `translate`     | `hhh/translate` (LibreTranslate, baked EN/DE/JA/FR/NL) | Self-hosted machine translation used by the backend                                                                                                    |
+| `website`       | `hhh/website` (Astro static build + nginx)             | Public bilingual project website on `${WEBSITE_DOMAIN}`                                                                                                |
 
 **Data stores**
 
-| Service | Image | Responsibility |
-| --- | --- | --- |
-| `mongo` | `mongo:7.0` | Studies, questionnaires, intentions, logs, SRHI trajectories, recommendations, restore attempts, device tokens |
-| `neo4j` | `neo4j:5` | Habit / Context / BCIOConcept graph; bolt :7687. Loopback ports `127.0.0.1:17474/17687` for admin SSH tunnels |
-| `redis` | `redis:7-alpine` | API-service response cache; BullMQ `habitQueue`; notification-cron lock |
-| `lightrag` | `hhh/lightrag` (lightrag-hku 1.5.0, :9621) | Graph + vector knowledge base for RAG. Has its **own** login (`AUTH_ACCOUNTS`) — not on the SSO |
+| Service    | Image                                      | Responsibility                                                                                                 |
+| ---------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `mongo`    | `mongo:7.0`                                | Studies, questionnaires, intentions, logs, SRHI trajectories, recommendations, restore attempts, device tokens |
+| `neo4j`    | `neo4j:5`                                  | Habit / Context / BCIOConcept graph; bolt :7687. Loopback ports `127.0.0.1:17474/17687` for admin SSH tunnels  |
+| `redis`    | `redis:7-alpine`                           | API-service response cache; BullMQ `habitQueue`; notification-cron lock                                        |
+| `lightrag` | `hhh/lightrag` (lightrag-hku 1.5.0, :9621) | Graph + vector knowledge base for RAG. Has its **own** login (`AUTH_ACCOUNTS`) — not on the SSO                |
 
 **Internal tools** (all HTTP tools gated by `oauth2-proxy` SSO / admin role)
 
-| Service | Image | Responsibility |
-| --- | --- | --- |
-| `mongo-express` | `mongo-express:1.0` | Web UI for MongoDB at `/mongo` (own basic-auth disabled; SSO-gated) |
-| `redisinsight` | `redis/redisinsight:latest` | Web UI for Redis at `/redisinsight` |
-| `prometheus` | `prom/prometheus:v3.4.1` | Metrics scraping + 30-day retention at `/prometheus` |
-| `grafana` | `grafana/grafana-oss:12.0.1` | Dashboards at `/grafana`; its own Keycloak OIDC SSO (separate from oauth2-proxy) |
-| `blackbox-exporter` | `prom/blackbox-exporter:v0.25.0` | Probes service endpoints for Prometheus uptime metrics |
+| Service             | Image                              | Responsibility                                                                   |
+| ------------------- | ---------------------------------- | -------------------------------------------------------------------------------- |
+| `mongo-express`     | `mongo-express:1.0`                | Web UI for MongoDB at `/mongo` (own basic-auth disabled; SSO-gated)              |
+| `redisinsight`      | `redis/redisinsight:latest`        | Web UI for Redis at `/redisinsight`                                              |
+| `prometheus`        | `prom/prometheus:v3.4.1`           | Metrics scraping + 30-day retention at `/prometheus`                             |
+| `grafana`           | `grafana/grafana-oss:12.0.1`       | Dashboards at `/grafana`; its own Keycloak OIDC SSO (separate from oauth2-proxy) |
+| `blackbox-exporter` | `prom/blackbox-exporter:v0.25.0`   | Probes service endpoints for Prometheus uptime metrics                           |
+| `node-exporter`     | `prom/node-exporter:v1.9.1`        | Exposes primary-host operating-system metrics to Prometheus                      |
+| `cadvisor`          | `gcr.io/cadvisor/cadvisor:v0.49.2` | Exposes primary-host container resource metrics to Prometheus                    |
 
 **Ops & support**
 
-| Service | Image | Responsibility |
-| --- | --- | --- |
-| `config-sync` | `alpine/git:latest` | One-shot: refreshes the on-server `/opt/hhh/repo` config clone before dependents start |
-| `backup` | `hhh/backup` | ~24h loop: MongoDB dump, Neo4j dump, LightRAG tar, Keycloak realm export; configurable retention |
-| `docker-socket-proxy` | `tecnativa/docker-socket-proxy:0.3.0` | Scoped Docker API for the backup service (no raw socket mount) |
+| Service               | Image                                 | Responsibility                                                                                                |
+| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `config-sync`         | `alpine/git:latest`                   | One-shot: refreshes the on-server `/opt/hhh/repo` config clone before dependents start                        |
+| `monitoring-targets`  | `alpine:3.22`                         | One-shot: renders optional analytics-VM file-discovery targets; blank configuration yields empty target lists |
+| `backup`              | `hhh/backup`                          | ~24h loop: MongoDB dump, Neo4j dump, LightRAG tar, Keycloak realm export; configurable retention              |
+| `docker-socket-proxy` | `tecnativa/docker-socket-proxy:0.3.0` | Scoped Docker API for the backup service (no raw socket mount)                                                |
 
 ---
 
@@ -329,11 +336,11 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 
 ### Domain & TLS
 
-| Variable                 | Default                    | Description                                       |
-| ------------------------ | -------------------------- | ------------------------------------------------- |
-| `DOMAIN`                 | `habit.wiwi.tu-dresden.de` | Production domain name                            |
-| `SERVER_IP`              | `141.76.16.16`             | Server IP address                                 |
-| `ACME_EMAIL`             | —                          | Email for Let's Encrypt certificate notifications |
+| Variable     | Default                    | Description                                       |
+| ------------ | -------------------------- | ------------------------------------------------- |
+| `DOMAIN`     | `habit.wiwi.tu-dresden.de` | Production domain name                            |
+| `SERVER_IP`  | `141.76.16.16`             | Server IP address                                 |
+| `ACME_EMAIL` | —                          | Email for Let's Encrypt certificate notifications |
 
 ### Application
 
@@ -365,15 +372,15 @@ its own login. There are **no** per-tool htpasswd/basic-auth variables anymore
 (the former `INTERNAL_TOOLS_TRAEFIK_AUTH`, per-tool `*_TRAEFIK_AUTH`,
 `MONGO_EXPRESS_*`, and `TRAEFIK_DASHBOARD_AUTH` were removed).
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `OAUTH2_PROXY_CLIENT_SECRET` | — | Secret for the `oauth2-proxy` Keycloak client (injected by `keycloak-init`) **(change in Portainer)** |
-| `OAUTH2_PROXY_COOKIE_SECRET` | — | Signs the SSO session cookie; **must be 16/24/32 chars** (`openssl rand -base64 24`) **(change in Portainer)** |
-| `GRAFANA_CLIENT_SECRET` | — | Secret for the `grafana` Keycloak OIDC client **(change in Portainer)** |
-| `LIGHTRAG_API_KEY` | — | Bearer token for the LightRAG REST API (internal callers) |
-| `LIGHTRAG_AUTH_PASSWORD` | — | Password for LightRAG's own WebUI login (user `admin`) **(change in Portainer)** |
-| `LIGHTRAG_TOKEN_SECRET` | — | Signs LightRAG's login JWTs (`openssl rand -hex 32`) **(change in Portainer)** |
-| `ENABLE_QUEUE_DASHBOARD` | `true` | Mounts Bull Board at `/queues` in production (SSO-gated) |
+| Variable                     | Default | Description                                                                                                    |
+| ---------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `OAUTH2_PROXY_CLIENT_SECRET` | —       | Secret for the `oauth2-proxy` Keycloak client (injected by `keycloak-init`) **(change in Portainer)**          |
+| `OAUTH2_PROXY_COOKIE_SECRET` | —       | Signs the SSO session cookie; **must be 16/24/32 chars** (`openssl rand -base64 24`) **(change in Portainer)** |
+| `GRAFANA_CLIENT_SECRET`      | —       | Secret for the `grafana` Keycloak OIDC client **(change in Portainer)**                                        |
+| `LIGHTRAG_API_KEY`           | —       | Bearer token for the LightRAG REST API (internal callers)                                                      |
+| `LIGHTRAG_AUTH_PASSWORD`     | —       | Password for LightRAG's own WebUI login (user `admin`) **(change in Portainer)**                               |
+| `LIGHTRAG_TOKEN_SECRET`      | —       | Signs LightRAG's login JWTs (`openssl rand -hex 32`) **(change in Portainer)**                                 |
+| `ENABLE_QUEUE_DASHBOARD`     | `true`  | Mounts Bull Board at `/queues` in production (SSO-gated)                                                       |
 
 ### MongoDB
 
@@ -582,7 +589,7 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 
 Researchers assign questionnaires to a study (all groups) or a specific group on a **cadence**
 (recurring interval, or fixed weeks/days after enrollment) in **Studies → Questionnaires**. Each
-questionnaire *definition* has a `scope` — `study` (default) or `habit` — which decides what an
+questionnaire _definition_ has a `scope` — `study` (default) or `habit` — which decides what an
 assignment's cadence anchors to, not a separate per-assignment flag:
 
 ![Questionnaire delivery flow: scope 'study' windows anchor to enrollment via generateWindowsForUser; scope 'habit' windows anchor to each habit's creation via generateHabitCreationWindows and stay invisible until a relevant habit exists; SRHI is a separate, unconditional system entirely outside this scheduling model](docs/assets/architecture/questionnaire-scope-flow.svg)
@@ -598,7 +605,7 @@ assignment's cadence anchors to, not a separate per-assignment flag:
   `questionnaire_windows` for the exact visibility rule.
 
 Submitting a response marks the next open window complete. Completion is shown as
-**completed / total** per questionnaire (the count reflects *submitted* windows, not merely
+**completed / total** per questionnaire (the count reflects _submitted_ windows, not merely
 scheduled ones) in the study's Questionnaires tab, and per-occurrence with an exact timestamp
 (`t("doneOn")`) in a participant's Progress modal.
 
@@ -607,7 +614,7 @@ questionnaire is only fillable while it has an open `questionnaire_windows` entr
 (`getQuestionnaireCompletionStatus`, `app/services/questionnaireScheduleService.js`) — once that
 window closes, the participant's Profile → Health Questionnaires list greys the item out
 (non-interactive, `Completed on {date}`) instead of the usual green, tappable button, and it stays
-that way until the *next* cadence occurrence's window opens (windows for the full cadence are
+that way until the _next_ cadence occurrence's window opens (windows for the full cadence are
 pre-generated upfront, so "available again" isn't a manual admin action — it's just the next
 occurrence's `scheduledFor` arriving). This is enforced server-side too, not just hidden in the
 UI: `POST /questionnaire-responses` rejects a submission with `409` if the slug has ever had a
@@ -802,16 +809,16 @@ Rules:
 The internal admin/debug tools are gated by **Keycloak SSO** via `oauth2-proxy`,
 which runs as a Traefik forward-auth backend. Design notes and per-tool auth:
 
-| Path | Tool | Auth |
-| --- | --- | --- |
-| `/prometheus` | Prometheus | Keycloak SSO (admin role) |
-| `/queues` | Bull Board | Keycloak SSO (admin role) |
-| `/redisinsight` | RedisInsight | Keycloak SSO (admin role) |
-| `/mongo` | mongo-express | Keycloak SSO (admin role); own basic-auth disabled (`ME_CONFIG_BASICAUTH=false`) |
-| `/neo4j` | Neo4j Browser **UI** | Keycloak SSO (admin role) |
-| bolt :7687 | Neo4j **query channel** | Neo4j's own username/password (raw TCP — can't be SSO-gated) |
-| `/lightrag` | LightRAG WebUI | LightRAG's **own** login (`AUTH_ACCOUNTS`) — no OIDC, so not on the SSO |
-| `/grafana` | Grafana | Grafana's own Keycloak OIDC (separate `grafana` client, role-mapped) |
+| Path            | Tool                    | Auth                                                                             |
+| --------------- | ----------------------- | -------------------------------------------------------------------------------- |
+| `/prometheus`   | Prometheus              | Keycloak SSO (admin role)                                                        |
+| `/queues`       | Bull Board              | Keycloak SSO (admin role)                                                        |
+| `/redisinsight` | RedisInsight            | Keycloak SSO (admin role)                                                        |
+| `/mongo`        | mongo-express           | Keycloak SSO (admin role); own basic-auth disabled (`ME_CONFIG_BASICAUTH=false`) |
+| `/neo4j`        | Neo4j Browser **UI**    | Keycloak SSO (admin role)                                                        |
+| bolt :7687      | Neo4j **query channel** | Neo4j's own username/password (raw TCP — can't be SSO-gated)                     |
+| `/lightrag`     | LightRAG WebUI          | LightRAG's **own** login (`AUTH_ACCOUNTS`) — no OIDC, so not on the SSO          |
+| `/grafana`      | Grafana                 | Grafana's own Keycloak OIDC (separate `grafana` client, role-mapped)             |
 
 Implementation details:
 
@@ -837,11 +844,11 @@ Implementation details:
 
 All Keycloak token-minting call sites for the mobile app (`app/services/keycloakRopcClient.js`, used by `/onboard`, `/restore`, and `/users/me/rotate-credentials`; and the currently-unused PKCE `AuthService.login()` in `mobile/lib/services/auth_service.dart`) request the `offline_access` OAuth scope, which changes which Keycloak session settings govern the resulting refresh token:
 
-| Setting | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
-| --- | --- | --- |
-| SSO session idle / max (regular tokens, no `offline_access`) | 30 min / 10 h | unchanged (not used by the mobile app) |
-| `offlineSessionIdleTimeout` | 30 days | **180 days** |
-| `offlineSessionMaxLifespanEnabled` | `false` (no cap) | `false` (no cap) |
+| Setting                                                      | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
+| ------------------------------------------------------------ | ---------------- | -------------------------------------- |
+| SSO session idle / max (regular tokens, no `offline_access`) | 30 min / 10 h    | unchanged (not used by the mobile app) |
+| `offlineSessionIdleTimeout`                                  | 30 days          | **180 days**                           |
+| `offlineSessionMaxLifespanEnabled`                           | `false` (no cap) | `false` (no cap)                       |
 
 Without `offline_access`, refresh tokens are bound to the regular SSO session — a 30-minute idle default was logging participants out after every ordinary gap between app opens, since this is a habit tracker checked a few times a day rather than continuously.
 
@@ -921,17 +928,17 @@ For the full operational runbook (service restart procedures, database access, b
 ## 13. Behavioral Principle Features
 
 This app's habit-formation mechanics are grounded in a specific research
-foundation: Stark et al. (2023, *Building Habits in the Digital Age*) derived 13
+foundation: Stark et al. (2023, _Building Habits in the Digital Age_) derived 13
 design principles (DPs) for digital habit formation from a literature review and
-a content analysis of 57 commercial habit apps; Reinsch et al. (2026, *Built For
-Sprints, Needed For Marathons*) empirically prioritized those principles (a
+a content analysis of 57 commercial habit apps; Reinsch et al. (2026, _Built For
+Sprints, Needed For Marathons_) empirically prioritized those principles (a
 survey of 22 habit-formation scientists and 108 app users) and folded in four
 further studies (Stawarz et al. 2016; Pinder et al. 2016; Zhu et al. 2024;
 Schwarzer et al. 2018), arriving at 18 distinct principles across the four
 stages of habit formation (Decision → Action → Repetition → Automaticity).
 
 §13.0 below catalogs all 18 and states plainly whether each is implemented and
-where. §13.1–§13.5 document the five that were *added* to close the gaps that
+where. §13.1–§13.5 document the five that were _added_ to close the gaps that
 catalog identified — those five share this section's conventions: the nullable
 study→group config-override pattern (like `recommenderEnabled`), the Mongo
 (event/state) vs. Neo4j (structural/graph) split, transparent
@@ -944,26 +951,26 @@ scoring-algorithm reference for §7.3 and §7.5.
 
 ### 13.0 All 18 design principles
 
-| # | Design principle | Stage | Status | Where |
-|---|---|---|---|---|
-| 1 | **Information Provision** — educational content on a habit's benefits, to support the initial decision | Decision | ✅ Fulfilled | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline); the Share screen's always-visible "Why share?" card explains the research rationale for donating a habit, linking to the full project-info page (`project_info_screen.dart`) |
-| 2 | **Implementation Intention** — the if-then plan binding a behavior to a context | Decision | ✅ Fulfilled | The core habit-creation flow (`intentionStatement`) — the app's organizing concept, not a bolt-on |
-| 3 | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision | ✅ Fulfilled | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`) |
-| 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §13.4 |
-| 5 | **Habit Distinction** — build- and quit-habits need different handling | Decision | ✅ Fulfilled (§7.4) | `habitType` — see §13.1 |
-| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.8 §A) |
-| 7 | **Flexible Habit Management** — pause/skip without penalty, plus choosing a cadence that fits the habit (§7.6) | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action; `implementation_intentions.cadence` (daily vs. an N-times-a-week target) — see §13.6 |
-| 8 | **Personalization** — goals/reminders/interface adapt to the individual | all 4 stages | ✅ Fulfilled | Cue config, reminder time, locale, habit-entry mode — all resolved per study/group in `habitConfigService.resolveHabitConfig()` |
-| 9 | **Self-Comparison** — compare against your own history | Action–Repetition | ✅ Fulfilled | SRHI trajectory/sparkline, daily-log contribution graph |
-| 10 | **Social Interaction** — compare with other users | Action–Repetition | ✅ Fulfilled, by design | Anonymized community bubble graph + reactions — see the note below |
-| 11 | **Social Sharing** — share achievements with others | Action–Repetition | ✅ Fulfilled, by design | Anonymous habit donation (not named-friend sharing) + share XP/badge (§13.2/§13.5) |
-| 12 | **Praise Messages** — motivational text on completion | Action–Repetition | ✅ Fulfilled (§7.5) | Rotating praise copy tied to a badge/tier-up — see §13.5 |
-| 13 | **Praise Rewards** — virtual rewards for achievements | Action–Repetition | ✅ Fulfilled (§7.5) | Badges — see §13.5 |
-| 14 | **Challenges and Levels** — difficulty tiers to sustain engagement | Action–Repetition | ✅ Fulfilled (§7.5) | XP/level curve + per-habit traffic light — see §13.5 |
-| 15 | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition | ✅ Fulfilled (§7.2) | Rotating "when {cue}, {behavior}" templates — see §13.3 |
-| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.8 §A |
-| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.8 §A |
-| 18 | **Habit Stacking** — anchor a new habit to an already-automatic one | Automaticity | ✅ Fulfilled (§7.1) | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §13.2 |
+| #   | Design principle                                                                                                    | Stage               | Status                  | Where                                                                                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Information Provision** — educational content on a habit's benefits, to support the initial decision              | Decision            | ✅ Fulfilled            | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline); the Share screen's always-visible "Why share?" card explains the research rationale for donating a habit, linking to the full project-info page (`project_info_screen.dart`)                                    |
+| 2   | **Implementation Intention** — the if-then plan binding a behavior to a context                                     | Decision            | ✅ Fulfilled            | The core habit-creation flow (`intentionStatement`) — the app's organizing concept, not a bolt-on                                                                                                                                                                                                   |
+| 3   | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision            | ✅ Fulfilled            | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`)                                                                                                                                      |
+| 4   | **Avoid Information Overload** — don't present everything at once                                                   | Decision            | ✅ Fulfilled (§7.3)     | The Information Overload guard — see §13.4                                                                                                                                                                                                                                                          |
+| 5   | **Habit Distinction** — build- and quit-habits need different handling                                              | Decision            | ✅ Fulfilled (§7.4)     | `habitType` — see §13.1                                                                                                                                                                                                                                                                             |
+| 6   | **Just-in-Time Reminders** — notify when the habit should happen                                                    | Action              | ✅ Fulfilled            | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.8 §A)                                                                                                                                                                                                                   |
+| 7   | **Flexible Habit Management** — pause/skip without penalty, plus choosing a cadence that fits the habit (§7.6)      | Action–Automaticity | ✅ Fulfilled            | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action; `implementation_intentions.cadence` (daily vs. an N-times-a-week target) — see §13.6                                                                                                                   |
+| 8   | **Personalization** — goals/reminders/interface adapt to the individual                                             | all 4 stages        | ✅ Fulfilled            | Cue config, reminder time, locale, habit-entry mode — all resolved per study/group in `habitConfigService.resolveHabitConfig()`                                                                                                                                                                     |
+| 9   | **Self-Comparison** — compare against your own history                                                              | Action–Repetition   | ✅ Fulfilled            | SRHI trajectory/sparkline, daily-log contribution graph                                                                                                                                                                                                                                             |
+| 10  | **Social Interaction** — compare with other users                                                                   | Action–Repetition   | ✅ Fulfilled, by design | Anonymized community bubble graph + reactions — see the note below                                                                                                                                                                                                                                  |
+| 11  | **Social Sharing** — share achievements with others                                                                 | Action–Repetition   | ✅ Fulfilled, by design | Anonymous habit donation (not named-friend sharing) + share XP/badge (§13.2/§13.5)                                                                                                                                                                                                                  |
+| 12  | **Praise Messages** — motivational text on completion                                                               | Action–Repetition   | ✅ Fulfilled (§7.5)     | Rotating praise copy tied to a badge/tier-up — see §13.5                                                                                                                                                                                                                                            |
+| 13  | **Praise Rewards** — virtual rewards for achievements                                                               | Action–Repetition   | ✅ Fulfilled (§7.5)     | Badges — see §13.5                                                                                                                                                                                                                                                                                  |
+| 14  | **Challenges and Levels** — difficulty tiers to sustain engagement                                                  | Action–Repetition   | ✅ Fulfilled (§7.5)     | XP/level curve + per-habit traffic light — see §13.5                                                                                                                                                                                                                                                |
+| 15  | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition   | ✅ Fulfilled (§7.2)     | Rotating "when {cue}, {behavior}" templates — see §13.3                                                                                                                                                                                                                                             |
+| 16  | **Fading Reminders** — taper reminders as the habit strengthens                                                     | Repetition          | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.8 §A                                                                                                                                                                                                                               |
+| 17  | **Fading Features** — stop reinforcing a habit once it's automatic                                                  | Automaticity        | ✅ Fulfilled            | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.8 §A |
+| 18  | **Habit Stacking** — anchor a new habit to an already-automatic one                                                 | Automaticity        | ✅ Fulfilled (§7.1)     | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §13.2                                                                                                                                                                                                                                               |
 
 **All 18 are implemented.** Principles 1–3, 6–11, and 16–17 predate the §7 work
 (they were already part of the app); 4, 5, 12–15, and 18 were the gaps §7 closed.
@@ -1042,7 +1049,7 @@ nudge.
 ### 13.4 Information Overload guard (§7.3, depends on §7.4)
 
 Focus a participant's limited attention on strengthening current habits before
-adding new ones of the *same type*. The cap is not fixed — it grows as existing
+adding new ones of the _same type_. The cap is not fixed — it grows as existing
 habits become automatic.
 
 - **Config:** `informationOverloadGuard: { enabled, userOptOutAllowed }` (study +
@@ -1061,7 +1068,7 @@ habits become automatic.
     isn't the kind of "new habit" this cap exists to slow down.
 - **API:** a blocked `POST /habits/intentions` returns `409` with
   `{ limitReached: true, reason: 'information_overload', unlockTier, currentTier }`
-  so the app can explain *why*, not just refuse.
+  so the app can explain _why_, not just refuse.
 - **Opt-out:** `GET /me/preferences` and
   `PATCH /me/preferences/information-overload-opt-out` (stored in
   `user_preferences`); the opt-out is only honoured when the study/group sets
@@ -1092,26 +1099,27 @@ milestones, not the market's fire-on-every-log pattern.
   params are `admin_settings` keys (`gamification_*`), making them an
   experimental factor. **Exact formulas, defaults, and a worked example:
   [§13.8](#138-scoring-algorithms--full-reference).**
-- **Badges** (tied to meaningful states, not arbitrary counts): *First Step*
-  (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
-  streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
-  stacking — rewards §7.1), *Quit Champion* (a quit habit reaches `off`),
-  *First Share* (shared/donated a habit for the first time), *Community
-  Contributor* (shares/donates habits for several consecutive weeks — see
+- **Badges** (tied to meaningful states, not arbitrary counts): _First Step_
+  (habit created), _Building Momentum_ (first tier-up), _Steady Habit_ (14-day
+  streak), _Second Nature_ (habit reaches `off`), _Habit Architect_ (created via
+  stacking — rewards §7.1), _Quit Champion_ (a quit habit reaches `off`),
+  _First Share_ (shared/donated a habit for the first time), _Community
+  Contributor_ (shares/donates habits for several consecutive weeks — see
   "Sharing" below). Exact trigger predicates:
   [§13.8](#138-scoring-algorithms--full-reference).
 
   ![The nine badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
 
   Colours aren't decorative: amber matches the traffic light's amber tiers,
-  green matches the `off` tier's green, and *Quit Champion* reuses the same red
+  green matches the `off` tier's green, and _Quit Champion_ reuses the same red
   already used for quit-type habits (§7.4) — badge colour always follows an
   already-established meaning, never an arbitrary series order.
+
 - **Sharing (user-level, not tied to any one habit):** donating a habit to the
   community corpus (`POST /habits/share`) earns `xpPerShare` XP (default 20)
-  per share. *First Share* is awarded the moment `shareCount ≥ 1` — an
+  per share. _First Share_ is awarded the moment `shareCount ≥ 1` — an
   immediate, one-off acknowledgement of the very first contribution, deliberately
-  low-friction unlike the streak badge below. *Community Contributor* requires
+  low-friction unlike the streak badge below. _Community Contributor_ requires
   sharing in each of the last `shareStreakWeeksForBadge` (default 4)
   **consecutive weeks** — rewarding sustained contribution, not a single
   one-off share — computed from Neo4j donation timestamps
@@ -1121,8 +1129,8 @@ milestones, not the market's fire-on-every-log pattern.
   per-user Mongo doc (`user_gamification`) rather than on an
   `implementation_intentions` document.
 - **API:** `GET /habits/intentions/gamification` returns `{ enabled, totalXp,
-  level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, newlyLost, perHabit,
-  shareCount, shareStreakWeeks }` and persists newly earned/lost badges.
+level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, newlyLost, perHabit,
+shareCount, shareStreakWeeks }` and persists newly earned/lost badges.
   `enabled` reflects the study/group `gamificationEnabled` toggle; when `false`
   every other field is zeroed and the client should hide the feature entirely.
 - **Mobile:** a Badges/Achievements section with an XP progress bar on the
@@ -1196,7 +1204,7 @@ habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
   (`srhiService.submitSrhi` → `checkAutomaticityGraduation`) and is best-effort
   — a failure there never blocks a normal SRHI submission. When applicable, the
   response gains a `graduation: { candidate, graduated, badgeKey?, bonusXp?,
-  bankedXp? }` field alongside the normal SRHI response fields.
+bankedXp? }` field alongside the normal SRHI response fields.
 - **Mobile:** `srhi_form_screen.dart` reacts immediately when
   `graduation.graduated == true` — no need to wait for the next gamification
   sync, since the outcome is already known — showing a congratulations dialog,
@@ -1216,7 +1224,7 @@ habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
 Some habits are naturally weekly, not daily — "work out 3 times a week," not
 "work out every day." Before this feature, every adherence, streak, and
 gamification calculation assumed daily-calendar-day logging, so a participant
-fully compliant with their own weekly goal would show up as *low* adherence
+fully compliant with their own weekly goal would show up as _low_ adherence
 and never accumulate a streak. `cadence` lets a habit opt into weekly-target
 semantics instead, while staying provably identical to prior behavior for
 every habit that doesn't opt in.
@@ -1225,13 +1233,13 @@ every habit that doesn't opt in.
 > the pre-existing `questionnaire_assignments.cadence` field, which schedules
 > recurring SRHI check-ins — same word, different collection, no shared code
 > path. It's also distinct from `reminderPlanService`'s `frequency` tiers (§13.8
-> §A, the reminder-fading traffic light): `frequency` is how often the *app
-> pings*, `cadence` is what the participant *committed to*. Mobile copy always
+> §A, the reminder-fading traffic light): `frequency` is how often the _app
+> pings_, `cadence` is what the participant _committed to_. Mobile copy always
 > says "How often?" / "N times a week," never "frequency," since both concepts
 > are visible on the same habit card and the wrong word would conflate them.
 
 - **Mongo:** `implementation_intentions.cadence: { type: 'daily'|'weekly',
-  targetPerWeek: int|null }`, lenient schema (bsonType `['object','null']`,
+targetPerWeek: int|null }`, lenient schema (bsonType `['object','null']`,
   not required). Absent on every pre-existing document — there is no backfill
   migration. `normalizeCadence()` (`reminderPlanService.js`) is the single
   point every consumer reads through, mapping a missing or malformed field to
@@ -1245,19 +1253,18 @@ every habit that doesn't opt in.
   over the last `weeklyAdherenceWindowWeeks` (2) **completed** weeks (the
   current week is always excluded — the same "don't penalize today for not
   being logged yet" convention as the daily version, extended to "don't
-  penalize this week"), and `currentStreakWeeks` (capped at `streakCapWeeks`,
-  8) replaces `currentStreakDays` (capped at 14) in the streak component.
+  penalize this week"), and `currentStreakWeeks` (capped at `streakCapWeeks`, 8) replaces `currentStreakDays` (capped at 14) in the streak component.
   Weeks are Monday-anchored and bucketed in UTC (`weekKeyUtc`), not local
   time, to avoid the DST-related day-skipping bug already documented for
   `ContributionGraphWidget` on mobile. Recovery and graduation-silence
   detection get weekly equivalents: `weeklyRecoveryTriggered` (the most
-  recently *completed* week missed target → snap straight back to `daily`
+  recently _completed_ week missed target → snap straight back to `daily`
   reminders, replacing the 7-day-adherence check) and `consecutiveMissedWeeks`
   (replacing `daysSinceLastEnactedLog` in §13.5.2's graduation-silence check,
   threshold `graduationSilenceWeeks`, default 2).
 - **Gamification** (§7.5): `computeHabitGamification` dispatches the same way
   — `weeklyStreakMilestones: {4: 50, 8: 120, 12: 300}` (weeks) alongside the
-  existing daily `streakMilestones` (§13.8 §B), and *Steady Habit* retriggers
+  existing daily `streakMilestones` (§13.8 §B), and _Steady Habit_ retriggers
   at `currentStreakWeeks ≥ 8` instead of 14 days. The response gains a new
   `streakUnit: 'days'|'weeks'` field alongside the existing `streakDays`
   value, so a weekly habit's streak count isn't ambiguous on the wire.
@@ -1278,14 +1285,14 @@ every habit that doesn't opt in.
   the already-fetched log data (no extra API call); streak stats branch their
   unit label on the new `streakUnit` field. Logging itself is unchanged —
   weekly-cadence habits use the exact same daily checkbox and retrospective
-  backfill sheet as daily habits; only how that data is *interpreted* differs.
+  backfill sheet as daily habits; only how that data is _interpreted_ differs.
 
 **Automaticity development compares differently by cadence.** The 14-day
 daily adherence window and the 2-completed-week weekly adherence window both
 span 14 calendar days, so under matched full compliance the adherence
 component saturates at about the same time for either cadence. The streak
 component doesn't: `streakCapDays` (14) caps out in two weeks, while
-`streakCapWeeks` (8) needs eight *weeks* — 56 days — of uninterrupted target-
+`streakCapWeeks` (8) needs eight _weeks_ — 56 days — of uninterrupted target-
 hitting. Combined with the weekly habit's SRHI-hysteresis timing, a
 weekly-cadence habit reaches each reminder tier noticeably later in calendar
 days than a daily habit under equivalent full compliance with its own target,
@@ -1310,15 +1317,15 @@ mid-course, not as a lower ceiling for weekly-cadence habits.
 
 All signals are additive to the existing Mongo/Neo4j split:
 
-| New signal | Mongo | Neo4j |
-|---|---|---|
-| Build vs. quit | `implementation_intentions.habitType` | `Habit.habit_type` property |
-| Stacking | `stackedOn`, `creationMode` | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
-| Reminder mode | `reminderContentMode` resolved per plan | — |
-| Overload gating | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out | — |
-| Gamification | `earnedBadges` per habit (added *and removed*, §13.5.1); `user_gamification.earnedBadges` for user-scoped badges | — |
-| Sharing | (read-only from Neo4j; no Mongo write) | `Habit.created_at` per donated habit → share XP and streak |
-| Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§13.5.2) | — |
+| New signal              | Mongo                                                                                                                 | Neo4j                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Build vs. quit          | `implementation_intentions.habitType`                                                                                 | `Habit.habit_type` property                                 |
+| Stacking                | `stackedOn`, `creationMode`                                                                                           | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
+| Reminder mode           | `reminderContentMode` resolved per plan                                                                               | —                                                           |
+| Overload gating         | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out                                    | —                                                           |
+| Gamification            | `earnedBadges` per habit (added _and removed_, §13.5.1); `user_gamification.earnedBadges` for user-scoped badges      | —                                                           |
+| Sharing                 | (read-only from Neo4j; no Mongo write)                                                                                | `Habit.created_at` per donated habit → share XP and streak  |
+| Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§13.5.2) | —                                                           |
 
 Because the stacking relationship and habit type live on the graph, a
 researcher-facing view (an admin analytics panel, or a documented Cypher query
@@ -1337,7 +1344,7 @@ algorithms and their defaults.
 
 Implemented in `app/services/reminderPlanService.js`. This pre-dates the §7
 features; §7.3's unlock rule and §7.5's traffic light, tier-up XP, and
-*Building Momentum* / *Second Nature* / *Quit Champion* badges all **read this
+_Building Momentum_ / _Second Nature_ / _Quit Champion_ badges all **read this
 tier** rather than defining a second notion of "automatic". The extended
 narrative (rationale, literature) is in
 [`docs/architecture.md`](docs/architecture.md).
@@ -1347,29 +1354,29 @@ autonomy = wSrhi·srhiNorm + wAdherence·adherence14d + wStreak·streakNorm
          = 0.50·srhiNorm + 0.35·adherence14d + 0.15·streakNorm      (defaults)
 ```
 
-| Component | Definition | Range |
-| --- | --- | --- |
-| `srhiNorm` | Latest weekly SRHI composite mapped `(score − 1) / 6`, clamped. Missing SRHI → **0** (not "excluded"). | 0–1 |
-| `adherence14d` | Distinct days with an `enacted: true` log among the **14 calendar days before today** (today is excluded — it may simply not be logged yet). | 0–1 |
-| `streakNorm` | `min(streakDays / 14, 1)`, where the streak is consecutive enacted days ending today or yesterday. | 0–1 |
+| Component      | Definition                                                                                                                                   | Range |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `srhiNorm`     | Latest weekly SRHI composite mapped `(score − 1) / 6`, clamped. Missing SRHI → **0** (not "excluded").                                       | 0–1   |
+| `adherence14d` | Distinct days with an `enacted: true` log among the **14 calendar days before today** (today is excluded — it may simply not be logged yet). | 0–1   |
+| `streakNorm`   | `min(streakDays / 14, 1)`, where the streak is consecutive enacted days ending today or yesterday.                                           | 0–1   |
 
 The score maps onto five tiers by lower-bound thresholds
 `[0.45, 0.60, 0.75, 0.90]`:
 
-| Tier index | `frequency` | Autonomy ≥ | Traffic light (§7.5) | Reminders scheduled / 14 days |
-| --- | --- | --- | --- | --- |
-| 0 | `daily` | — | 🔴 red | 14 |
-| 1 | `every_2_days` | 0.45 | 🟡 amber | 7 |
-| 2 | `twice_weekly` | 0.60 | 🟡 amber | 4 |
-| 3 | `weekly` | 0.75 | 🟢 green | 2 |
-| 4 | `off` | 0.90 | 🟢 green | 0 |
+| Tier index | `frequency`    | Autonomy ≥ | Traffic light (§7.5) | Reminders scheduled / 14 days |
+| ---------- | -------------- | ---------- | -------------------- | ----------------------------- |
+| 0          | `daily`        | —          | 🔴 red               | 14                            |
+| 1          | `every_2_days` | 0.45       | 🟡 amber             | 7                             |
+| 2          | `twice_weekly` | 0.60       | 🟡 amber             | 4                             |
+| 3          | `weekly`       | 0.75       | 🟢 green             | 2                             |
+| 4          | `off`          | 0.90       | 🟢 green             | 0                             |
 
 ![Reminder-frequency tier as a function of the autonomy score, with a worked example at score 0.62](docs/assets/gamification/autonomy-tier-function.svg)
 
 Two deliberate asymmetries:
 
 - **Hysteresis (fading is slow).** Reaching tier ≥ 2 additionally requires the
-  *previous* week's SRHI to support at least the same tier; otherwise the tier is
+  _previous_ week's SRHI to support at least the same tier; otherwise the tier is
   held at `max(previousTier, 1)`. One good week is not yet a habit.
 - **Recovery (re-scaffolding is immediate).** If 7-day adherence falls below
   `recoveryAdherence` (0.5), the tier snaps straight back to `daily`, regardless
@@ -1386,11 +1393,11 @@ daily logs; SRHI submitted weekly, improving 3.0 → 6.8 across 10 windows:
 
 ![One build habit's autonomy score across 10 weeks, background shaded by tier, each badge's first day marked](docs/assets/gamification/autonomy-worked-example.svg)
 
-The score crosses 0.45 on day 11 (`daily → every_2_days`, *Building Momentum*).
+The score crosses 0.45 on day 11 (`daily → every_2_days`, _Building Momentum_).
 By day 20 it reaches 0.767 — past the 0.75 `weekly` threshold — but hysteresis
 holds it at `twice_weekly`, because the previous week's SRHI (3.6) doesn't yet
 support a two-tier jump. It isn't until day 54, with two strong consecutive
-SRHI weeks, that it clears 0.9 and the habit reaches `off` — *Second Nature*.
+SRHI weeks, that it clears 0.9 and the habit reaches `off` — _Second Nature_.
 
 Cumulative XP for the same run, same badge days marked:
 
@@ -1411,16 +1418,16 @@ XP(user)  = Σ XP(habit) over active habits
           + shareCount · xpPerShare        (habits shared/donated, all-time)
 ```
 
-| Parameter | Default | `admin_settings` key |
-| --- | --- | --- |
-| `xpPerEnactedLog` | 10 | `gamification_xp_per_log` |
-| `xpPerSrhiSubmission` | 25 | `gamification_xp_per_srhi` |
-| `xpPerTierUp` | 200 | `gamification_xp_per_tier_up` |
-| `streakMilestones` | `{7: 50, 14: 120, 30: 300}` | *(not overridable)* |
-| `levelCurveBase` | 100 | `gamification_level_curve_base` |
-| `levelCurveExp` | 1.5 | `gamification_level_curve_exp` |
-| `xpPerShare` | 20 | `gamification_xp_per_share` |
-| `shareStreakWeeksForBadge` | 4 | `gamification_share_streak_weeks_for_badge` |
+| Parameter                  | Default                     | `admin_settings` key                        |
+| -------------------------- | --------------------------- | ------------------------------------------- |
+| `xpPerEnactedLog`          | 10                          | `gamification_xp_per_log`                   |
+| `xpPerSrhiSubmission`      | 25                          | `gamification_xp_per_srhi`                  |
+| `xpPerTierUp`              | 200                         | `gamification_xp_per_tier_up`               |
+| `streakMilestones`         | `{7: 50, 14: 120, 30: 300}` | _(not overridable)_                         |
+| `levelCurveBase`           | 100                         | `gamification_level_curve_base`             |
+| `levelCurveExp`            | 1.5                         | `gamification_level_curve_exp`              |
+| `xpPerShare`               | 20                          | `gamification_xp_per_share`                 |
+| `shareStreakWeeksForBadge` | 4                           | `gamification_share_streak_weeks_for_badge` |
 
 Streak bonuses are **cumulative**: a 30-day streak awards 50 + 120 + 300 = 470.
 The 20:1 ratio between a tier-up (200) and a daily log (10) is the core design
@@ -1439,9 +1446,9 @@ level(totalXp) = the largest n such that xpForLevel(n) ≤ totalXp
 
 With the defaults (base 100, exp 1.5):
 
-| Level | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Cumulative XP | 0 | 100 | 283 | 520 | 800 | 1118 | 1470 | 1852 | 2263 | 2700 |
+| Level         | 1   | 2   | 3   | 4   | 5   | 6    | 7    | 8    | 9    | 10   |
+| ------------- | --- | --- | --- | --- | --- | ---- | ---- | ---- | ---- | ---- |
+| Cumulative XP | 0   | 100 | 283 | 520 | 800 | 1118 | 1470 | 1852 | 2263 | 2700 |
 
 **Worked example.** A build habit with 20 enacted logs, a current 14-day streak,
 2 submitted SRHI check-ins, sitting at tier 3 (`weekly`):
@@ -1454,7 +1461,7 @@ XP = 20·10 + 2·25 + (50 + 120) + 3·200 = 200 + 50 + 170 + 600 = 1020
 ![xpForLevel(n) = 100·(n−1)^1.5, with the §A worked example's 2,200 XP marked against the curve](docs/assets/gamification/xp-level-curve.svg)
 
 The curve is superlinear by design: level 2 costs only 100 XP (reachable from
-*First Step* alone), but level 9 costs 2,263 — climbing later levels needs
+_First Step_ alone), but level 9 costs 2,263 — climbing later levels needs
 sustained habit strength over time, not just more logging. The §A worked
 example's 10-week run ends at 2,200 XP, landing at level 8.
 
@@ -1465,17 +1472,17 @@ Evaluated per habit (or, for sharing, per user) on every read of
 count-based** — each is a predicate over current state, so they cannot be
 farmed by volume.
 
-| Badge | `badgeKey` | Exact condition | Scope | Revocable? |
-| --- | --- | --- | --- | --- |
-| First Step | `first_step` | Always (the habit exists) | per habit | No |
-| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit | Yes (§13.5.1) |
-| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit | Yes (§13.5.1) |
-| Second Nature | `second_nature` | `frequency === 'off'` | per habit | Yes (§13.5.1) |
-| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit | No |
-| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit | Yes (§13.5.1) |
-| First Share | `first_share` | `shareCount ≥ 1` (the very first share/donation) | per user | No |
-| Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user | No |
-| Habit Graduate | `habit_graduate` | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§13.5.2) | per habit | No |
+| Badge                 | `badgeKey`              | Exact condition                                                                                  | Scope     | Revocable?    |
+| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ | --------- | ------------- |
+| First Step            | `first_step`            | Always (the habit exists)                                                                        | per habit | No            |
+| Building Momentum     | `building_momentum`     | `tierIndex ≥ 1` (faded past `daily`)                                                             | per habit | Yes (§13.5.1) |
+| Steady Habit          | `steady_habit`          | `currentStreakDays ≥ 14`                                                                         | per habit | Yes (§13.5.1) |
+| Second Nature         | `second_nature`         | `frequency === 'off'`                                                                            | per habit | Yes (§13.5.1) |
+| Habit Architect       | `habit_architect`       | `creationMode === 'stacked'` (§7.1)                                                              | per habit | No            |
+| Quit Champion         | `quit_champion`         | `habitType === 'quit'` **and** `frequency === 'off'`                                             | per habit | Yes (§13.5.1) |
+| First Share           | `first_share`           | `shareCount ≥ 1` (the very first share/donation)                                                 | per user  | No            |
+| Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user  | No            |
+| Habit Graduate        | `habit_graduate`        | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§13.5.2)          | per habit | No            |
 
 Per-habit badges persist on `implementation_intentions.earnedBadges`; the
 user-scoped First Share and Community Contributor persist on
@@ -1505,7 +1512,7 @@ explain what has to happen.
 - **Recomputed on read, not accumulated.** XP, level, and tier are derived fresh
   from logs/SRHI on every request; only `earnedBadges` is persisted. There is no
   running total to drift out of sync or to migrate.
-- **XP and level can go *down*.** Because `tierIndex` contributes 200 XP per tier
+- **XP and level can go _down_.** Because `tierIndex` contributes 200 XP per tier
   and the recovery rule can drop a habit from `weekly` back to `daily`, a lapse
   reduces total XP — and can therefore reduce the displayed level. Pausing or
   completing a habit also removes it from the sum (only `status: 'active'`
@@ -1516,7 +1523,7 @@ explain what has to happen.
   **Concretely, on the §A/§B worked example** (continuing it to day 70 with a
   single missed day at day 58 and a 4-day lapse at days 66–69, everything else
   identical): the streak-milestone bonus is **not sticky** — it depends on the
-  *current* streak at read time, not on having ever reached it — so even one
+  _current_ streak at read time, not on having ever reached it — so even one
   missed day zeroes it instantly, and losing a tier at the same time compounds
   the drop:
 
@@ -1528,6 +1535,7 @@ explain what has to happen.
   own justify `twice_weekly`, but the background shows `daily` — that's the
   recovery rule overriding the score outright once 7-day adherence drops below
   0.5, regardless of what the score says.
+
 - **Badges are sticky.** Once written to `earnedBadges` a badge is never revoked,
   even if the underlying predicate stops holding. `newlyEarned` is therefore
   non-empty only on the first read after a badge is achieved, which is what makes

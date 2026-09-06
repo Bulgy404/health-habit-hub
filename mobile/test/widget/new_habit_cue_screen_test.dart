@@ -33,7 +33,11 @@ class _FakeLocaleNotifier extends LocaleNotifier {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _buildSubject(HabitConfig config, {String? initialCue}) {
+Widget _buildSubject(
+  HabitConfig config, {
+  String? initialCue,
+  String? recommendationId,
+}) {
   final router = GoRouter(
     initialLocation: '/habits/new/cue',
     routes: [
@@ -45,6 +49,7 @@ Widget _buildSubject(HabitConfig config, {String? initialCue}) {
           config: config,
           habitType: HabitType.build,
           initialCue: initialCue,
+          recommendationId: recommendationId,
         ),
       ),
       GoRoute(
@@ -53,7 +58,11 @@ Widget _buildSubject(HabitConfig config, {String? initialCue}) {
           final extra = state.extra as Map<String, dynamic>;
           final cues = (extra['cues'] as List<dynamic>).cast<IntentionCue>();
           final alsoTrack = extra['alsoTrackAnchor'] as bool? ?? false;
-          return Scaffold(body: Text('STITCH:${cues.length}:$alsoTrack'));
+          return Scaffold(
+            body: Text(
+              'STITCH:${cues.length}:$alsoTrack:${extra['recommendationId']}',
+            ),
+          );
         },
       ),
       GoRoute(
@@ -61,16 +70,16 @@ Widget _buildSubject(HabitConfig config, {String? initialCue}) {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           final cues = (extra['cues'] as List<dynamic>).cast<IntentionCue>();
-          return Scaffold(body: Text('CONFIRM:${cues.length}'));
+          return Scaffold(
+            body: Text('CONFIRM:${cues.length}:${extra['recommendationId']}'),
+          );
         },
       ),
     ],
   );
 
   return ProviderScope(
-    overrides: [
-      localeProvider.overrideWith(() => _FakeLocaleNotifier()),
-    ],
+    overrides: [localeProvider.overrideWith(() => _FakeLocaleNotifier())],
     child: MaterialApp.router(
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -138,8 +147,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('shows the intro explainer card when not yet seen',
-      (tester) async {
+  testWidgets('shows the intro explainer card when not yet seen', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
 
@@ -147,36 +157,39 @@ void main() {
   });
 
   testWidgets(
-      'dismissing the intro card hides it and persists the dismissal under its own key',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+    'dismissing the intro card hides it and persists the dismissal under its own key',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.close));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
 
-    expect(find.text("What's a cue?"), findsNothing);
+      expect(find.text("What's a cue?"), findsNothing);
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool('cue_onboarding_seen_v1'), isTrue);
-    // Separate key from step 1's explainer — dismissing this one must not
-    // mark the habit-intro as seen.
-    expect(prefs.getBool('habit_onboarding_seen_v1'), isNot(true));
-  });
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('cue_onboarding_seen_v1'), isTrue);
+      // Separate key from step 1's explainer — dismissing this one must not
+      // mark the habit-intro as seen.
+      expect(prefs.getBool('habit_onboarding_seen_v1'), isNot(true));
+    },
+  );
 
   testWidgets(
-      'does not show the intro card once already dismissed (persisted)',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({'cue_onboarding_seen_v1': true});
+    'does not show the intro card once already dismissed (persisted)',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({'cue_onboarding_seen_v1': true});
 
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.text("What's a cue?"), findsNothing);
-  });
+      expect(find.text("What's a cue?"), findsNothing);
+    },
+  );
 
-  testWidgets('shows assigned cues read-only for pre-rated cue sources',
-      (tester) async {
+  testWidgets('shows assigned cues read-only for pre-rated cue sources', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_preRatedConfig));
     await tester.pumpAndSettle();
 
@@ -185,8 +198,9 @@ void main() {
     expect(find.byType(TextField), findsNothing);
   });
 
-  testWidgets('numbers assigned cues when the study assigns more than one',
-      (tester) async {
+  testWidgets('numbers assigned cues when the study assigns more than one', (
+    tester,
+  ) async {
     _growView(tester);
     const config = HabitConfig(
       cueCount: 'multi',
@@ -206,20 +220,22 @@ void main() {
   });
 
   testWidgets(
-      'shows a "none available" empty state when no cues are assigned yet',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_preRatedNoneAssignedConfig));
-    await tester.pumpAndSettle();
+    'shows a "none available" empty state when no cues are assigned yet',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_preRatedNoneAssignedConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.text('No cues available yet'), findsOneWidget);
-    expect(
-      find.text('Your study coordinator will assign cues soon'),
-      findsOneWidget,
-    );
-  });
+      expect(find.text('No cues available yet'), findsOneWidget);
+      expect(
+        find.text('Your study coordinator will assign cues soon'),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('shows a self-selected cue text field with add button',
-      (tester) async {
+  testWidgets('shows a self-selected cue text field with add button', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
 
@@ -227,8 +243,9 @@ void main() {
     expect(find.text('Add another cue (1/7)'), findsOneWidget);
   });
 
-  testWidgets('prefills the first self-selected cue field from initialCue',
-      (tester) async {
+  testWidgets('prefills the first self-selected cue field from initialCue', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildSubject(_selfSelectedConfig, initialCue: 'After morning coffee'),
     );
@@ -238,8 +255,9 @@ void main() {
     expect(field.controller!.text, 'After morning coffee');
   });
 
-  testWidgets('can add cues up to the maximum of 7, then the button hides',
-      (tester) async {
+  testWidgets('can add cues up to the maximum of 7, then the button hides', (
+    tester,
+  ) async {
     _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
@@ -256,14 +274,15 @@ void main() {
   });
 
   testWidgets(
-      'caps self-selected cues at 1 with no add button when cueCount is single',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_selfSelectedSingleConfig));
-    await tester.pumpAndSettle();
+    'caps self-selected cues at 1 with no add button when cueCount is single',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_selfSelectedSingleConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.textContaining('Add another cue'), findsNothing);
-  });
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.textContaining('Add another cue'), findsNothing);
+    },
+  );
 
   testWidgets('can remove a self-selected cue field', (tester) async {
     _growView(tester);
@@ -280,8 +299,9 @@ void main() {
     expect(find.byType(TextField), findsNWidgets(1));
   });
 
-  testWidgets('validates the first self-selected cue is at least 10 chars',
-      (tester) async {
+  testWidgets('validates the first self-selected cue is at least 10 chars', (
+    tester,
+  ) async {
     _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
@@ -296,8 +316,9 @@ void main() {
     );
   });
 
-  testWidgets('validates additional self-selected cues are at least 3 chars',
-      (tester) async {
+  testWidgets('validates additional self-selected cues are at least 3 chars', (
+    tester,
+  ) async {
     _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
@@ -319,191 +340,206 @@ void main() {
   });
 
   testWidgets(
-      'routes to the stitching screen when guidedHabitCreationEnabled is true',
-      (tester) async {
+    'routes to the stitching screen when guidedHabitCreationEnabled is true',
+    (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'After my morning coffee');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('STITCH:1:false:null'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'routes straight to confirm when guidedHabitCreationEnabled is false',
+    (tester) async {
+      _growView(tester);
+      const config = HabitConfig(
+        cueCount: 'multi',
+        cueSource: 'self_selected',
+        behaviorOptions: [],
+        srhiItems: [],
+        guidedHabitCreationEnabled: false,
+      );
+      await tester.pumpWidget(_buildSubject(config));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'After my morning coffee');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CONFIRM:1:null'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Next preserves recommendation lineage', (tester) async {
     _growView(tester);
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+    await tester.pumpWidget(
+      _buildSubject(_selfSelectedConfig, recommendationId: 'rec-uuid'),
+    );
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byType(TextField),
-      'After my morning coffee',
-    );
+    await tester.enterText(find.byType(TextField), 'After my morning coffee');
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.text('STITCH:1:false'), findsOneWidget);
+    expect(find.text('STITCH:1:false:rec-uuid'), findsOneWidget);
   });
 
   testWidgets(
-      'routes straight to confirm when guidedHabitCreationEnabled is false',
-      (tester) async {
-    _growView(tester);
-    const config = HabitConfig(
-      cueCount: 'multi',
-      cueSource: 'self_selected',
-      behaviorOptions: [],
-      srhiItems: [],
-      guidedHabitCreationEnabled: false,
-    );
-    await tester.pumpWidget(_buildSubject(config));
-    await tester.pumpAndSettle();
+    'tapping Next with no cues assigned still proceeds using the fallback assigned cue',
+    (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(_buildSubject(_preRatedNoneAssignedConfig));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.byType(TextField),
-      'After my morning coffee',
-    );
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('CONFIRM:1'), findsOneWidget);
-  });
-
-  testWidgets(
-      'tapping Next with no cues assigned still proceeds using the fallback assigned cue',
-      (tester) async {
-    _growView(tester);
-    await tester.pumpWidget(_buildSubject(_preRatedNoneAssignedConfig));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // guidedHabitCreationEnabled defaults to true, so this lands on stitching
-    // with exactly one (fallback) cue.
-    expect(find.text('STITCH:1:false'), findsOneWidget);
-  });
+      // guidedHabitCreationEnabled defaults to true, so this lands on stitching
+      // with exactly one (fallback) cue.
+      expect(find.text('STITCH:1:false:null'), findsOneWidget);
+    },
+  );
 
   // ── §7.1 Habit Stacking ──────────────────────────────────────────────────
 
   testWidgets(
-      'the stacking ExpansionTile suppresses its default top/bottom divider border',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+    'the stacking ExpansionTile suppresses its default top/bottom divider border',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    final tile = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
-    expect(
-      (tile.shape as RoundedRectangleBorder?)?.side,
-      BorderSide.none,
-    );
-    expect(
-      (tile.collapsedShape as RoundedRectangleBorder?)?.side,
-      BorderSide.none,
-    );
-  });
+      final tile = tester.widget<ExpansionTile>(find.byType(ExpansionTile));
+      expect((tile.shape as RoundedRectangleBorder?)?.side, BorderSide.none);
+      expect(
+        (tile.collapsedShape as RoundedRectangleBorder?)?.side,
+        BorderSide.none,
+      );
+    },
+  );
 
   testWidgets(
-      'stacking onto an anchor via free text does not require a separate cue',
-      (tester) async {
-    _growView(tester);
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+    'stacking onto an anchor via free text does not require a separate cue',
+    (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    // Expand the stacking section and type only the free-text anchor —
-    // leave the self-selected cue field empty.
-    await tester.tap(find.text('Stack onto an existing habit'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Or type an anchor habit'),
-      'my morning coffee',
-    );
+      // Expand the stacking section and type only the free-text anchor —
+      // leave the self-selected cue field empty.
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Or type an anchor habit'),
+        'my morning coffee',
+      );
 
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
 
-    // No validation error, and it proceeds with zero cues rather than
-    // blocking on the empty cue field or faking one from the anchor text —
-    // the anchor itself (anchorText) is the trigger, kept as its own field.
-    expect(
-      find.text('Please describe your cue in at least 10 characters.'),
-      findsNothing,
-    );
-    expect(find.text('STITCH:0:false'), findsOneWidget);
-  });
-
-  testWidgets(
-      'a typed cue is still used as-is when stacking, instead of the auto-derived one',
-      (tester) async {
-    _growView(tester);
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Stack onto an existing habit'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Or type an anchor habit'),
-      'my morning coffee',
-    );
-    // Short, self-selected cue text — would normally fail the 10-char rule.
-    await tester.enterText(find.widgetWithText(TextField, 'Your cue'), 'ok');
-
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('Please describe your cue in at least 10 characters.'),
-      findsNothing,
-    );
-    expect(find.text('STITCH:1:false'), findsOneWidget);
-  });
+      // No validation error, and it proceeds with zero cues rather than
+      // blocking on the empty cue field or faking one from the anchor text —
+      // the anchor itself (anchorText) is the trigger, kept as its own field.
+      expect(
+        find.text('Please describe your cue in at least 10 characters.'),
+        findsNothing,
+      );
+      expect(find.text('STITCH:0:false:null'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'the "what\'s a cue" explainer mentions habit stacking when it is enabled',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+    'a typed cue is still used as-is when stacking, instead of the auto-derived one',
+    (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('stack this habit'), findsOneWidget);
-  });
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Or type an anchor habit'),
+        'my morning coffee',
+      );
+      // Short, self-selected cue text — would normally fail the 10-char rule.
+      await tester.enterText(find.widgetWithText(TextField, 'Your cue'), 'ok');
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Please describe your cue in at least 10 characters.'),
+        findsNothing,
+      );
+      expect(find.text('STITCH:1:false:null'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'the "what\'s a cue" explainer omits the stacking mention when stacking is disabled',
-      (tester) async {
-    const config = HabitConfig(
-      cueCount: 'multi',
-      cueSource: 'self_selected',
-      behaviorOptions: [],
-      srhiItems: [],
-      guidedHabitCreationEnabled: true,
-      habitStackingEnabled: false,
-    );
-    await tester.pumpWidget(_buildSubject(config));
-    await tester.pumpAndSettle();
+    'the "what\'s a cue" explainer mentions habit stacking when it is enabled',
+    (tester) async {
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('stack this habit'), findsNothing);
-    // The stacking card itself is also hidden.
-    expect(find.text('Stack onto an existing habit'), findsNothing);
-  });
+      expect(find.textContaining('stack this habit'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'the opt-in "also track anchor" toggle appears only for a free-typed anchor',
-      (tester) async {
-    _growView(tester);
-    await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
-    await tester.pumpAndSettle();
+    'the "what\'s a cue" explainer omits the stacking mention when stacking is disabled',
+    (tester) async {
+      const config = HabitConfig(
+        cueCount: 'multi',
+        cueSource: 'self_selected',
+        behaviorOptions: [],
+        srhiItems: [],
+        guidedHabitCreationEnabled: true,
+        habitStackingEnabled: false,
+      );
+      await tester.pumpWidget(_buildSubject(config));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Stack onto an existing habit'));
-    await tester.pumpAndSettle();
+      expect(find.textContaining('stack this habit'), findsNothing);
+      // The stacking card itself is also hidden.
+      expect(find.text('Stack onto an existing habit'), findsNothing);
+    },
+  );
 
-    // Not shown until an anchor has been typed.
-    expect(find.byType(CupertinoSwitch), findsNothing);
+  testWidgets(
+    'the opt-in "also track anchor" toggle appears only for a free-typed anchor',
+    (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
+      await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Or type an anchor habit'),
-      'my morning coffee',
-    );
-    await tester.pump();
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(CupertinoSwitch), findsOneWidget);
-    expect(
-      find.text('Also track "my morning coffee" as a habit I\'m building'),
-      findsOneWidget,
-    );
-  });
+      // Not shown until an anchor has been typed.
+      expect(find.byType(CupertinoSwitch), findsNothing);
 
-  testWidgets('checking the opt-in forwards alsoTrackAnchor: true on Next',
-      (tester) async {
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Or type an anchor habit'),
+        'my morning coffee',
+      );
+      await tester.pump();
+
+      expect(find.byType(CupertinoSwitch), findsOneWidget);
+      expect(
+        find.text('Also track "my morning coffee" as a habit I\'m building'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('checking the opt-in forwards alsoTrackAnchor: true on Next', (
+    tester,
+  ) async {
     _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
@@ -522,7 +558,7 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.text('STITCH:0:true'), findsOneWidget);
+    expect(find.text('STITCH:0:true:null'), findsOneWidget);
   });
 
   group('picking a tracked anchor from the dropdown', () {
@@ -586,8 +622,9 @@ void main() {
       );
     }
 
-    testWidgets('hides the free-text anchor field instead of populating it',
-        (tester) async {
+    testWidgets('hides the free-text anchor field instead of populating it', (
+      tester,
+    ) async {
       _growView(tester);
       await tester.pumpWidget(buildWithExistingHabit());
       await tester.pumpAndSettle();
@@ -615,52 +652,55 @@ void main() {
     });
 
     testWidgets(
-        'still forwards the picked habit as stackedOn/anchorText on Next',
-        (tester) async {
-      _growView(tester);
-      await tester.pumpWidget(buildWithExistingHabit());
-      await tester.pumpAndSettle();
+      'still forwards the picked habit as stackedOn/anchorText on Next',
+      (tester) async {
+        _growView(tester);
+        await tester.pumpWidget(buildWithExistingHabit());
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Stack onto an existing habit'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(existingHabit.behaviorLabel).last);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Stack onto an existing habit'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(existingHabit.behaviorLabel).last);
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
 
-      expect(
-        find.text(
-          'STITCH stackedOn=${existingHabit.id} anchorText=${existingHabit.behaviorLabel}',
-        ),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.text(
+            'STITCH stackedOn=${existingHabit.id} anchorText=${existingHabit.behaviorLabel}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('picking None after a pick clears the anchor and re-shows the field',
-        (tester) async {
-      _growView(tester);
-      await tester.pumpWidget(buildWithExistingHabit());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'picking None after a pick clears the anchor and re-shows the field',
+      (tester) async {
+        _growView(tester);
+        await tester.pumpWidget(buildWithExistingHabit());
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Stack onto an existing habit'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(existingHabit.behaviorLabel).last);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Stack onto an existing habit'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(existingHabit.behaviorLabel).last);
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('None').last);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('None').last);
+        await tester.pumpAndSettle();
 
-      final field = find.widgetWithText(TextField, 'Or type an anchor habit');
-      expect(field, findsOneWidget);
-      // Not left over from the earlier pick.
-      expect(tester.widget<TextField>(field).controller!.text, isEmpty);
-    });
+        final field = find.widgetWithText(TextField, 'Or type an anchor habit');
+        expect(field, findsOneWidget);
+        // Not left over from the earlier pick.
+        expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+      },
+    );
   });
 }

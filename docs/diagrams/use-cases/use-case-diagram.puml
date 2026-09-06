@@ -19,6 +19,7 @@ actor "Backup Scheduler\n(cron)" as B
 actor "Keycloak" as KC <<system>>
 actor "LLM Provider" as LLM <<system>>
 actor "FCM" as FCM <<system>>
+actor "PostHog" as PH <<system>>
 
 A --|> R : inherits
 
@@ -70,11 +71,14 @@ rectangle "Admin Portal (Next.js)" {
   usecase "UC-26 View knowledge graph" as UC26
   usecase "UC-28 Configure platform\nsettings" as UC28
   usecase "UC-36 Configure per-group\nstudy design" as UC36
+  usecase "UC-37 View, trigger &\nrestore backups" as UC37
+  usecase "UC-40 Explore product\nanalytics" as UC40
 }
 
 rectangle "System / Integrations" {
   usecase "UC-29 Run daily backup" as UC29
   usecase "UC-30 Query / ingest KB\nvia MCP" as UC30
+  usecase "UC-41 Operate private\nanalytics stack" as UC41
 }
 
 ' --- Participant ---
@@ -113,11 +117,14 @@ R --> UC23
 R --> UC24
 R --> UC27
 R --> UC36
+R --> UC40
 
 ' --- Admin only ---
 A --> UC25
 A --> UC26
 A --> UC28
+A --> UC37
+A --> UC41
 
 ' --- System actors ---
 M --> UC30
@@ -140,6 +147,8 @@ UC03 ..> LLM : <<classify + map BCIO\n+ optional speech-to-text>>
 UC07 ..> LLM : <<RAG generation>>
 UC24 ..> FCM : <<push>>
 UC15 ..> FCM : <<receives>>
+UC40 ..> PH : <<queries pseudonymous events>>
+UC41 ..> PH : <<deploys / monitors / backs up>>
 
 ' --- include / extend ---
 UC03 ..> UC01 : <<include>>

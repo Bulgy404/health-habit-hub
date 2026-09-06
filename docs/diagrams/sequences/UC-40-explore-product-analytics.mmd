@@ -1,0 +1,31 @@
+%% UC-40 — Explore product analytics
+%% Sources: mobile/lib/analytics/, app/services/productAnalyticsService.js,
+%% monitoring/render-traefik.sh + monitoring/traefik/*.tmpl, analytics-vm/
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant M as Flutter app
+    participant A as AnalyticsService
+    participant T as habitvm Traefik
+    participant PH as PostHog (private VM)
+    participant K as Kafka
+    participant CH as ClickHouse
+    actor R as Researcher (TU/VPN)
+
+    P->>M: Complete an instrumented action
+    M->>A: capture(allowlisted event, controlled properties)
+    A->>A: Validate name, keys and values
+    A->>A: Add study/group, app, platform, locale, schema
+    alt analytics configuration is blank
+        A-->>M: No-op; participant flow continues
+    else configured
+        A->>T: POST /ingest/batch/
+        T->>T: Match ingest allowlist, rate-limit, strip /ingest
+        T->>PH: POST /batch/ over private network
+        PH->>K: Queue event
+        K->>CH: Persist event
+    end
+    R->>PH: Open private UI over TU network/VPN
+    PH->>CH: Query pseudonymous funnel
+    CH-->>PH: Aggregated results
+    PH-->>R: Funnel / breakdown by study and group

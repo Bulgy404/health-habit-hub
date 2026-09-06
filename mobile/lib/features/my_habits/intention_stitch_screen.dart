@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../analytics/analytics_service.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
@@ -36,6 +37,7 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
     this.creationMode = 'standalone',
     this.anchorText,
     this.alsoTrackAnchor = false,
+    this.recommendationId,
     super.key,
   });
 
@@ -67,6 +69,9 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
   /// forwarded to the confirm step.
   final bool alsoTrackAnchor;
 
+  /// Recommendation that initiated this habit flow, if any.
+  final String? recommendationId;
+
   @override
   ConsumerState<IntentionStitchScreen> createState() =>
       _IntentionStitchScreenState();
@@ -95,6 +100,9 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   @override
   void initState() {
     super.initState();
+    ref.read(analyticsProvider).capture('habit_stitch_shown', {
+      'creation_mode': widget.creationMode,
+    });
     // Slow, continuous flow (3s per cycle) so the joining animation feels calm
     // rather than frantic.
     _controller = AnimationController(
@@ -158,19 +166,19 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
       // mechanism behind it — is actually different from a cue-based habit.
       stitched = (anchor != null && anchor.isNotEmpty)
           ? await ref
-              .read(studyConfigServiceProvider)
-              .stackMerge(
-                anchorText: anchor,
-                newBehaviorText: widget.behaviorLabel,
-                language: lang,
-              )
+                .read(studyConfigServiceProvider)
+                .stackMerge(
+                  anchorText: anchor,
+                  newBehaviorText: widget.behaviorLabel,
+                  language: lang,
+                )
           : await ref
-              .read(studyConfigServiceProvider)
-              .stitchIntention(
-                action: widget.behaviorLabel,
-                cues: widget.cues.map((c) => c.text).toList(),
-                language: lang,
-              );
+                .read(studyConfigServiceProvider)
+                .stitchIntention(
+                  action: widget.behaviorLabel,
+                  cues: widget.cues.map((c) => c.text).toList(),
+                  language: lang,
+                );
     } catch (_) {
       stitched = null;
     }
@@ -192,6 +200,9 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   }
 
   void _continue() {
+    ref.read(analyticsProvider).capture('habit_stitch_accepted', {
+      'creation_mode': widget.creationMode,
+    });
     context.pushReplacement(
       '/habits/new/confirm',
       extra: <String, dynamic>{
@@ -204,6 +215,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
         'creationMode': widget.creationMode,
         'anchorText': ?widget.anchorText,
         'alsoTrackAnchor': widget.alsoTrackAnchor,
+        'recommendationId': ?widget.recommendationId,
         'stitchedSentence': _sentence,
       },
     );
