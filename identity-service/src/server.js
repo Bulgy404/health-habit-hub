@@ -73,7 +73,7 @@ export async function start() {
   publicApp.use(auditor.middleware);
   publicApp.use(
     '/api',
-    createPublicRouter({ db: pool, keys: config.keys, config, auditor, mailer })
+    createPublicRouter({ db: pool, keys: config.keys, config, mailer })
   );
 
   /* Internal app */

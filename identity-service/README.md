@@ -67,5 +67,18 @@ belongs in the DPIA rather than being discovered by a reviewer.
 ## Tests
 
 ```bash
+npm run format:check
+npm run lint
 npm test
 ```
+
+The route end-to-end suite uses real PostgreSQL when
+`IDENTITY_TEST_DB_URL` is set. CI always sets it and fails if that suite skips.
+
+## Authorization model
+
+A Keycloak realm role grants no register access by itself. Every request uses
+the intersection of the operation's permitted roles, the roles in the current
+token, and matching register/site assignments. Subject and re-identification
+UUID routes resolve their owning register and site before acting, so knowing a
+UUID never bypasses assignment scope.

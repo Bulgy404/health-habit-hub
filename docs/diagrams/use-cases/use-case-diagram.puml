@@ -218,7 +218,9 @@ note bottom of IDENTITY
 
   UC-46 is the only path from a subject code back to a person, and it needs a
   documented legal basis, a second approver enforced by a database trigger,
-  and a time-limited grant. There is no bulk reveal.
+  and a time-limited grant. Every subject/request UUID is resolved back to its
+  register and site before the matching role assignment is checked. There is
+  no bulk reveal.
 end note
 
 @enduml

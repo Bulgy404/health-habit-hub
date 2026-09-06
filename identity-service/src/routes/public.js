@@ -11,7 +11,11 @@
 import express from 'express';
 import multer from 'multer';
 import { parse as parseCsv } from 'csv-parse/sync';
-import { IDENTITY_ROLES, requireIdentityRole } from '../middleware/roles.js';
+import {
+  IDENTITY_ROLES,
+  identityRolesOf,
+  requireIdentityRole,
+} from '../middleware/roles.js';
 import { audit } from '../middleware/audit.js';
 import { revealLimiter } from '../middleware/rateLimit.js';
 import {
@@ -103,25 +107,30 @@ export function parseRosterCsv(buffer) {
   });
 }
 
-export function createPublicRouter({ db, keys, config, auditor, mailer }) {
+export function createPublicRouter({ db, keys, config, mailer }) {
   const router = express.Router();
   router.use(express.json({ limit: '256kb' }));
 
-  /** Resolve the register for an HHH study id, and the caller's scope in it. */
-  async function scopeFor(req, res, hhhStudyId) {
-    const { rows } = await db.query(
-      `SELECT id, subject_code_prefix, hhh_study_id, study_name
-         FROM study_registers WHERE hhh_study_id = $1`,
-      [hhhStudyId]
+  /**
+   * Resolve the caller's effective access inside one register.
+   *
+   * Both halves must match: the current token says WHAT the caller may do and
+   * the assignment says WHERE they may do that same thing. Keeping the sites
+   * as a set avoids accidentally turning two site assignments into study-wide
+   * access. `siteIds: null` is the one explicit representation of whole-study
+   * access.
+   */
+  async function assignmentScope(
+    req,
+    res,
+    register,
+    allowedRoles,
+    resourceSiteId = undefined
+  ) {
+    const tokenRoles = new Set(identityRolesOf(req.user));
+    const effectiveRoles = new Set(
+      allowedRoles.filter((role) => tokenRoles.has(role))
     );
-    if (rows.length === 0) {
-      res.status(404).json({ error: 'register_not_found' });
-      return null;
-    }
-    const register = rows[0];
-
-    // A realm role says WHAT; this says WHERE. A nurse with no assignment row
-    // sees nothing at all.
     const { rows: assignments } = await db.query(
       `SELECT role, site_id FROM study_site_assignments
         WHERE register_id = $1 AND actor_sub = $2`,
@@ -131,13 +140,170 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       res.status(403).json({ error: 'not_assigned_to_register' });
       return null;
     }
-    const sites = assignments.map((a) => a.site_id).filter(Boolean);
+    const effectiveAssignments = assignments.filter((assignment) =>
+      effectiveRoles.has(assignment.role)
+    );
+    if (effectiveAssignments.length === 0) {
+      res.status(403).json({ error: 'not_assigned_for_role' });
+      return null;
+    }
+
+    const wholeStudy = effectiveAssignments.some(
+      (assignment) => assignment.site_id == null
+    );
+    const siteIds = wholeStudy
+      ? null
+      : [
+          ...new Set(
+            effectiveAssignments.map((assignment) => assignment.site_id)
+          ),
+        ];
+
+    if (
+      resourceSiteId !== undefined &&
+      siteIds !== null &&
+      !siteIds.includes(resourceSiteId)
+    ) {
+      res.status(403).json({ error: 'site_not_assigned' });
+      return null;
+    }
+
     return {
       register,
-      // null = whole study
-      siteId: sites.length === 1 && assignments.length === 1 ? sites[0] : null,
-      roles: assignments.map((a) => a.role),
+      siteIds,
+      roles: [...new Set(effectiveAssignments.map((a) => a.role))],
     };
+  }
+
+  /** Resolve the register for an HHH study id, and the caller's scope in it. */
+  async function scopeFor(req, res, hhhStudyId, allowedRoles) {
+    const { rows } = await db.query(
+      `SELECT id, subject_code_prefix, hhh_study_id, study_name
+         FROM study_registers WHERE hhh_study_id = $1`,
+      [hhhStudyId]
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'register_not_found' });
+      return null;
+    }
+    return assignmentScope(req, res, rows[0], allowedRoles);
+  }
+
+  /** Resolve and authorize a subject addressed by its global UUID. */
+  async function scopeForSubject(req, res, subjectId, allowedRoles) {
+    const { rows } = await db.query(
+      `SELECT id, subject_code, register_id, site_id
+         FROM subjects WHERE id = $1`,
+      [subjectId]
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'subject_not_found' });
+      return null;
+    }
+    const subject = rows[0];
+    const scope = await assignmentScope(
+      req,
+      res,
+      { id: subject.register_id },
+      allowedRoles,
+      subject.site_id
+    );
+    return scope ? { ...scope, subject } : null;
+  }
+
+  /** Resolve and authorize a re-identification request through its target. */
+  async function scopeForRequest(req, res, requestId, allowedRoles) {
+    const { rows } = await db.query(
+      `SELECT rr.register_id, s.site_id
+         FROM reidentification_requests rr
+         LEFT JOIN subjects s
+           ON s.register_id = rr.register_id
+          AND (
+            (rr.request_type = 'identify_subject'
+              AND s.subject_code = rr.subject_code)
+            OR
+            (rr.request_type = 'deanonymize_account'
+              AND EXISTS (
+                SELECT 1 FROM subject_account_links l
+                 WHERE l.subject_id = s.id
+                   AND l.keycloak_sub_bi = rr.keycloak_sub_bi
+              ))
+          )
+        WHERE rr.id = $1
+        LIMIT 1`,
+      [requestId]
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'request_not_found' });
+      return null;
+    }
+    return assignmentScope(
+      req,
+      res,
+      { id: rows[0].register_id },
+      allowedRoles,
+      rows[0].site_id
+    );
+  }
+
+  /** Select a write site without allowing a caller to escape their site set. */
+  function siteForWrite(scope, res, requestedSiteId) {
+    const requested =
+      typeof requestedSiteId === 'string' && requestedSiteId.trim()
+        ? requestedSiteId.trim()
+        : null;
+    if (scope.siteIds === null) return { ok: true, siteId: requested };
+    if (!requested && scope.siteIds.length === 1) {
+      return { ok: true, siteId: scope.siteIds[0] };
+    }
+    if (!requested) {
+      res.status(400).json({ error: 'site_required' });
+      return { ok: false };
+    }
+    if (!scope.siteIds.includes(requested)) {
+      res.status(403).json({ error: 'site_not_assigned' });
+      return { ok: false };
+    }
+    return { ok: true, siteId: requested };
+  }
+
+  /** Resolve a new re-identification target before granting access to it. */
+  async function authorizeRequestTarget(scope, res, body) {
+    const requestType = body.requestType ?? 'identify_subject';
+    let rows = [];
+    if (requestType === 'identify_subject' && body.subjectCode) {
+      ({ rows } = await db.query(
+        `SELECT site_id FROM subjects
+          WHERE register_id = $1 AND subject_code = $2`,
+        [scope.register.id, body.subjectCode]
+      ));
+    } else if (requestType === 'deanonymize_account' && body.keycloakSub) {
+      const keycloakSubBi = blindIndex(
+        keys.peppers.keycloakSub,
+        body.keycloakSub
+      );
+      ({ rows } = await db.query(
+        `SELECT s.site_id
+           FROM subjects s
+           JOIN subject_account_links l ON l.subject_id = s.id
+          WHERE s.register_id = $1 AND l.keycloak_sub_bi = $2
+          ORDER BY l.linked_at DESC LIMIT 1`,
+        [scope.register.id, keycloakSubBi]
+      ));
+    } else {
+      // Let createRequest return its precise validation error.
+      return true;
+    }
+
+    if (rows.length === 0) {
+      res.status(404).json({ error: 'target_not_found' });
+      return false;
+    }
+    if (scope.siteIds !== null && !scope.siteIds.includes(rows[0].site_id)) {
+      res.status(403).json({ error: 'site_not_assigned' });
+      return false;
+    }
+    return true;
   }
 
   /* ── Registers ─────────────────────────────────────────────────────────── */
@@ -158,6 +324,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/registers',
     requireIdentityRole(MANAGER, NURSE, MONITOR),
     async (req, res) => {
+      const tokenRoles = identityRolesOf(req.user);
       const { rows } = await db.query(
         `SELECT r.hhh_study_id       AS "hhhStudyId",
                 r.subject_code_prefix AS "subjectCodePrefix",
@@ -167,9 +334,10 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
            FROM study_registers r
            JOIN study_site_assignments a
              ON a.register_id = r.id AND a.actor_sub = $1
+            AND a.role = ANY($2::text[])
           GROUP BY r.id
           ORDER BY r.created_at`,
-        [req.user.sub]
+        [req.user.sub, tokenRoles]
       );
       res.json({ registers: rows });
     }
@@ -202,8 +370,9 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
 
       const { rows: mine } = await db.query(
         `SELECT role FROM study_site_assignments
-          WHERE register_id = $1 AND actor_sub = $2`,
-        [rows[0].id, req.user.sub]
+          WHERE register_id = $1 AND actor_sub = $2
+            AND role = ANY($3::text[])`,
+        [rows[0].id, req.user.sub, identityRolesOf(req.user)]
       );
       res.json({
         exists: true,
@@ -281,14 +450,20 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/assignments',
     requireIdentityRole(MANAGER, MONITOR),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MANAGER,
+        MONITOR,
+      ]);
       if (!scope) return;
-      const { rows } = await db.query(
-        `SELECT actor_sub AS "actorSub", role, site_id AS "siteId"
-           FROM study_site_assignments WHERE register_id = $1
-          ORDER BY role, actor_sub`,
-        [scope.register.id]
-      );
+      const params = [scope.register.id];
+      let sql = `SELECT actor_sub AS "actorSub", role, site_id AS "siteId"
+                   FROM study_site_assignments WHERE register_id = $1`;
+      if (scope.siteIds !== null) {
+        params.push(scope.siteIds);
+        sql += ` AND site_id = ANY($${params.length}::text[])`;
+      }
+      sql += ' ORDER BY role, actor_sub';
+      const { rows } = await db.query(sql, params);
       audit(res, {
         registerId: scope.register.id,
         action: 'list_assignments',
@@ -302,7 +477,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/assignments',
     requireIdentityRole(MANAGER),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [MANAGER]);
       if (!scope) return;
       const { actorSub, role, siteId = null } = req.body ?? {};
       if (
@@ -311,17 +486,19 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       ) {
         return res.status(400).json({ error: 'invalid_assignment' });
       }
+      const site = siteForWrite(scope, res, siteId);
+      if (!site.ok) return;
       await db.query(
         `INSERT INTO study_site_assignments (register_id, actor_sub, role, site_id, created_by)
          VALUES ($1,$2,$3,$4,$5)
          ON CONFLICT (register_id, actor_sub, role, site_id) DO NOTHING`,
-        [scope.register.id, actorSub, role, siteId, req.user.sub]
+        [scope.register.id, actorSub, role, site.siteId, req.user.sub]
       );
       audit(res, {
         registerId: scope.register.id,
         action: 'grant_assignment',
         sensitivity: 'write',
-        detail: { actorSub, role, siteId },
+        detail: { actorSub, role, siteId: site.siteId },
       });
       res.status(201).json({ ok: true });
     }
@@ -331,9 +508,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/assignments',
     requireIdentityRole(MANAGER),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [MANAGER]);
       if (!scope) return;
-      const { actorSub, role } = req.body ?? {};
+      const { actorSub, role, siteId = null } = req.body ?? {};
+      const site = siteForWrite(scope, res, siteId);
+      if (!site.ok) return;
 
       // Refuse to remove the last identity-manager. A register nobody can
       // administer needs database surgery to recover, and the person doing
@@ -357,14 +536,15 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
 
       await db.query(
         `DELETE FROM study_site_assignments
-          WHERE register_id = $1 AND actor_sub = $2 AND role = $3`,
-        [scope.register.id, actorSub, role]
+          WHERE register_id = $1 AND actor_sub = $2 AND role = $3
+            AND site_id IS NOT DISTINCT FROM $4`,
+        [scope.register.id, actorSub, role, site.siteId]
       );
       audit(res, {
         registerId: scope.register.id,
         action: 'revoke_assignment',
         sensitivity: 'write',
-        detail: { actorSub, role },
+        detail: { actorSub, role, siteId: site.siteId },
       });
       res.json({ ok: true });
     }
@@ -376,7 +556,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/subjects',
     requireIdentityRole(MANAGER, NURSE, MONITOR),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MANAGER,
+        NURSE,
+        MONITOR,
+      ]);
       if (!scope) return;
 
       // A monitor sees codes and status, never names — and on that path
@@ -390,7 +574,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
         keys,
         registerId: scope.register.id,
         query: String(req.query.q ?? ''),
-        siteId: scope.siteId,
+        siteIds: scope.siteIds,
         includePii,
         limit: Math.min(500, Number(req.query.limit) || 200),
       });
@@ -411,8 +595,13 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/subjects',
     requireIdentityRole(MANAGER, NURSE),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MANAGER,
+        NURSE,
+      ]);
       if (!scope) return;
+      const site = siteForWrite(scope, res, req.body?.siteId);
+      if (!site.ok) return;
       try {
         const out = await createSubject({
           db,
@@ -420,7 +609,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
           registerId: scope.register.id,
           actorSub: req.user.sub,
           person: req.body ?? {},
-          siteId: req.body?.siteId ?? scope.siteId,
+          siteId: site.siteId,
         });
         audit(res, {
           registerId: scope.register.id,
@@ -445,7 +634,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER),
     upload.single('file'),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [MANAGER]);
       if (!scope) return;
       if (!req.file) return res.status(400).json({ error: 'file_required' });
 
@@ -461,12 +650,19 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       if (people.length > 5000)
         return res.status(400).json({ error: 'csv_too_large' });
 
+      const scopedPeople = [];
+      for (const person of people) {
+        const site = siteForWrite(scope, res, person.siteId);
+        if (!site.ok) return;
+        scopedPeople.push({ ...person, siteId: site.siteId });
+      }
+
       const report = await importRoster({
         db,
         keys,
         registerId: scope.register.id,
         actorSub: req.user.sub,
-        people,
+        people: scopedPeople,
       });
 
       audit(res, {
@@ -483,6 +679,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/subjects/:id/verify',
     requireIdentityRole(NURSE, MANAGER),
     async (req, res) => {
+      const scope = await scopeForSubject(req, res, req.params.id, [
+        NURSE,
+        MANAGER,
+      ]);
+      if (!scope) return;
       const method = req.body?.method ?? 'in_person';
       try {
         await markVerified({
@@ -492,8 +693,10 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
           method,
         });
         audit(res, {
+          registerId: scope.register.id,
           action: 'verify_subject',
           sensitivity: 'write',
+          subjectCode: scope.subject.subject_code,
           detail: { method },
         });
         res.json({ ok: true });
@@ -510,6 +713,8 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/subjects/:id',
     requireIdentityRole(MANAGER),
     async (req, res) => {
+      const scope = await scopeForSubject(req, res, req.params.id, [MANAGER]);
+      if (!scope) return;
       try {
         const out = await eraseSubject({ db, subjectId: req.params.id });
         audit(res, {
@@ -539,12 +744,21 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER, NURSE),
     async (req, res) => {
       const { rows } = await db.query(
-        `SELECT s.id, s.subject_code, s.register_id FROM subjects s WHERE s.id = $1`,
+        `SELECT s.id, s.subject_code, s.register_id, s.site_id
+           FROM subjects s WHERE s.id = $1`,
         [req.params.id]
       );
       if (rows.length === 0)
         return res.status(404).json({ error: 'subject_not_found' });
       const subject = rows[0];
+      const scope = await assignmentScope(
+        req,
+        res,
+        { id: subject.register_id },
+        [MANAGER, NURSE],
+        subject.site_id
+      );
+      if (!scope) return;
 
       const dek = await registerDek({
         db,
@@ -606,7 +820,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     requireIdentityRole(MANAGER, NURSE),
     async (req, res) => {
       const { rows } = await db.query(
-        `SELECT s.id, s.subject_code, s.register_id, s.email_ct,
+        `SELECT s.id, s.subject_code, s.register_id, s.site_id, s.email_ct,
                 c.code_ct, c.expires_at, r.study_name
            FROM subjects s
            JOIN enrollment_codes c ON c.id = $2 AND c.subject_id = s.id
@@ -617,6 +831,14 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
       if (rows.length === 0)
         return res.status(404).json({ error: 'code_not_found' });
       const row = rows[0];
+      const scope = await assignmentScope(
+        req,
+        res,
+        { id: row.register_id },
+        [MANAGER, NURSE],
+        row.site_id
+      );
+      if (!scope) return;
 
       const dek = await registerDek({ db, keys, registerId: row.register_id });
       const email = decryptField({
@@ -671,7 +893,10 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/codes/sheet.pdf',
     requireIdentityRole(MANAGER, NURSE),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MANAGER,
+        NURSE,
+      ]);
       if (!scope) return;
 
       const dek = await registerDek({
@@ -689,9 +914,9 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
                       ORDER BY issued_at DESC LIMIT 1
                    ) c ON true
                   WHERE s.register_id = $1`;
-      if (scope.siteId) {
-        params.push(scope.siteId);
-        sql += ` AND s.site_id = $${params.length}`;
+      if (scope.siteIds !== null) {
+        params.push(scope.siteIds);
+        sql += ` AND s.site_id = ANY($${params.length}::text[])`;
       }
       sql += ' ORDER BY s.subject_code';
 
@@ -758,15 +983,23 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/reidentification-requests',
     requireIdentityRole(MANAGER),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [MANAGER]);
       if (!scope) return;
       try {
+        const body = req.body ?? {};
+        if (!(await authorizeRequestTarget(scope, res, body))) return;
         const out = await createRequest({
           db,
           keys,
           registerId: scope.register.id,
           actorSub: req.user.sub,
-          ...req.body,
+          requestType: body.requestType,
+          subjectCode: body.subjectCode,
+          keycloakSub: body.keycloakSub,
+          legalBasis: body.legalBasis,
+          reason: body.reason,
+          fieldsRequested: body.fieldsRequested,
+          approversRequired: body.approversRequired,
         });
         audit(res, {
           registerId: scope.register.id,
@@ -793,17 +1026,42 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/reidentification-requests',
     requireIdentityRole(MANAGER, MONITOR),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MANAGER,
+        MONITOR,
+      ]);
       if (!scope) return;
+      const params = [scope.register.id];
+      let siteClause = '';
+      if (scope.siteIds !== null) {
+        params.push(scope.siteIds);
+        siteClause = `
+          AND (
+            (rr.request_type = 'identify_subject' AND EXISTS (
+              SELECT 1 FROM subjects s
+               WHERE s.register_id = rr.register_id
+                 AND s.subject_code = rr.subject_code
+                 AND s.site_id = ANY($2::text[])
+            ))
+            OR
+            (rr.request_type = 'deanonymize_account' AND EXISTS (
+              SELECT 1 FROM subjects s
+              JOIN subject_account_links l ON l.subject_id = s.id
+               WHERE s.register_id = rr.register_id
+                 AND l.keycloak_sub_bi = rr.keycloak_sub_bi
+                 AND s.site_id = ANY($2::text[])
+            ))
+          )`;
+      }
       const { rows } = await db.query(
         `SELECT id, subject_code, request_type, legal_basis, reason,
                 fields_requested, status, requested_by, requested_at,
                 reveal_expires_at, reveal_count
-           FROM reidentification_requests
-          WHERE register_id = $1
+           FROM reidentification_requests rr
+          WHERE register_id = $1${siteClause}
           ORDER BY requested_at DESC
           LIMIT 200`,
-        [scope.register.id]
+        params
       );
       audit(res, {
         registerId: scope.register.id,
@@ -818,6 +1076,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/reidentification-requests/:id/decide',
     requireIdentityRole(MONITOR, MANAGER),
     async (req, res) => {
+      const scope = await scopeForRequest(req, res, req.params.id, [
+        MONITOR,
+        MANAGER,
+      ]);
+      if (!scope) return;
       try {
         const out = await decide({
           db,
@@ -825,9 +1088,13 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
           approverSub: req.user.sub,
           decision: req.body?.decision,
           note: req.body?.note ?? null,
-          revealTtlMinutes: Number(req.body?.revealTtlMinutes) || 60,
+          revealTtlMinutes:
+            req.body?.revealTtlMinutes == null
+              ? 60
+              : Number(req.body.revealTtlMinutes),
         });
         audit(res, {
+          registerId: scope.register.id,
           action: `reidentification_${req.body?.decision}`,
           sensitivity: 'write',
           requestId: req.params.id,
@@ -849,6 +1116,8 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     revealLimiter,
     requireIdentityRole(MANAGER),
     async (req, res) => {
+      const scope = await scopeForRequest(req, res, req.params.id, [MANAGER]);
+      if (!scope) return;
       try {
         const out = await reveal({
           db,
@@ -858,6 +1127,7 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
         });
         // NEVER deduplicated. Every reveal is individually visible.
         audit(res, {
+          registerId: scope.register.id,
           action: 'reveal',
           sensitivity: 'reveal',
           subjectCode: out.subjectCode,
@@ -899,8 +1169,11 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/reidentification-requests/:id/revoke',
     requireIdentityRole(MONITOR),
     async (req, res) => {
+      const scope = await scopeForRequest(req, res, req.params.id, [MONITOR]);
+      if (!scope) return;
       const out = await revoke({ db, requestId: req.params.id });
       audit(res, {
+        registerId: scope.register.id,
         action: 'revoke_reidentification',
         sensitivity: 'write',
         requestId: req.params.id,
@@ -915,7 +1188,10 @@ export function createPublicRouter({ db, keys, config, auditor, mailer }) {
     '/v1/studies/:studyId/audit',
     requireIdentityRole(MONITOR, MANAGER),
     async (req, res) => {
-      const scope = await scopeFor(req, res, req.params.studyId);
+      const scope = await scopeFor(req, res, req.params.studyId, [
+        MONITOR,
+        MANAGER,
+      ]);
       if (!scope) return;
       const { rows } = await db.query(
         `SELECT id, actor_sub, actor_roles, action, sensitivity, subject_code,

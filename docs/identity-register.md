@@ -323,6 +323,15 @@ The register is **not** included in the nightly backup by default
 (`BACKUP_INCLUDE_IDENTITY=false`). Turn it on only for a deployment actually
 running a verified study.
 
+When enabled, the backup container receives `IDENTITY_DB_*` directly and joins
+`hhh-identity-net` solely for `pg_dump`/`pg_restore`. Keycloak does not receive
+these backup settings. Validate the effective wiring before the first study:
+
+```bash
+docker compose --profile identity config --quiet
+docker compose --profile identity exec backup pg_isready -h identity-db -U identity
+```
+
 > ⚠️ Field encryption makes a stolen dump inert **on its own**. A dump **plus**
 > the master key file is a total compromise, and by default both live on the
 > same host. Offsite copies of this component need a key the local operator
@@ -330,6 +339,14 @@ running a verified study.
 
 Run a restore drill before the study starts. An untested backup is not a
 backup, and this is the one component outside the pipeline you already trust.
+
+## Token validation
+
+Production startup requires `KEYCLOAK_JWT_AUDIENCE`, and every accepted access
+token must carry a numeric, unexpired `exp` claim, the configured issuer and
+audience, a subject, and an `RS256` signature from the configured JWKS. Leaving
+the audience empty is a startup error rather than permission to accept tokens
+minted for unrelated clients.
 
 ## Key rotation
 

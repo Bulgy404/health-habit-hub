@@ -468,8 +468,9 @@ service in the stack joins it — so being on it would give the register a route
 to MongoDB and Neo4j. It sits on:
 
 - `hhh-identity-edge` — Traefik (admin portal), Keycloak (JWKS), and `hhh-app`
-  (the internal enrolment API)
-- `hhh-identity-net` — `internal: true`, carrying only its own database
+  (the internal enrolment API), plus the profile-scoped identity health probe
+- `hhh-identity-net` — `internal: true`, carrying only its own database,
+  identity-service, and the backup service
 
 Because Traefik runs with `--providers.docker.network=hhh-proxy`, the service
 must pin `traefik.docker.network=hhh-identity-edge`; without it Traefik would
@@ -479,6 +480,15 @@ with nothing obviously wrong in the configuration.
 Both properties are asserted by `app/tests/unit/identityIsolation.test.js`,
 which parses `docker-compose.yml` — they are the cheapest controls in the
 design and the easiest to undo with one line.
+
+### Authorization scope
+
+Identity access is always the intersection of three facts: the operation's
+allowed roles, the roles in the current Keycloak token, and matching
+`study_site_assignments` rows. A global subject or re-identification UUID never
+bypasses that calculation; the service resolves the owning register and site
+before it reads, changes, reveals, or erases anything. Multiple site
+assignments remain an explicit set and never collapse to whole-study access.
 
 ### Enrolment: reserve → confirm → release
 

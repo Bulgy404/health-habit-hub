@@ -50,6 +50,10 @@ const compose = readFileSync(
   fileURLToPath(new URL('../../../docker-compose.yml', import.meta.url)),
   'utf8'
 );
+const prometheus = readFileSync(
+  fileURLToPath(new URL('../../../monitoring/prometheus.yml', import.meta.url)),
+  'utf8'
+);
 const nets = parseComposeNetworks(compose);
 
 describe('identity register network isolation', () => {
@@ -79,6 +83,50 @@ describe('identity register network isolation', () => {
 
   it('identity-db is reachable only on the private network', () => {
     assert.deepEqual(nets['identity-db'], ['hhh-identity-net']);
+  });
+
+  it('the backup service can reach identity-db without exposing it', () => {
+    assert.ok(nets.backup.includes('hhh-identity-net'));
+    assert.ok(!nets['identity-db'].includes('hhh-proxy'));
+
+    const backupFrom = compose.indexOf('\n  backup:');
+    const backupTo = compose.indexOf('\n  docker-socket-proxy:', backupFrom);
+    const backupBlock = compose.slice(backupFrom, backupTo);
+    assert.ok(backupBlock.includes('BACKUP_INCLUDE_IDENTITY='));
+    assert.ok(backupBlock.includes('IDENTITY_DB_PASSWORD='));
+
+    const keycloakFrom = compose.indexOf('\n  keycloak:');
+    const keycloakTo = compose.indexOf('\n  keycloak-init:', keycloakFrom);
+    const keycloakBlock = compose.slice(keycloakFrom, keycloakTo);
+    assert.ok(!keycloakBlock.includes('BACKUP_INCLUDE_IDENTITY='));
+  });
+
+  it('uses a profile-aware probe with a route to identity-service', () => {
+    assert.deepEqual(nets['identity-blackbox-exporter'].sort(), [
+      'hhh-identity-edge',
+      'hhh-proxy',
+    ]);
+    const shared = nets['identity-blackbox-exporter'].filter((network) =>
+      nets['identity-service'].includes(network)
+    );
+    assert.deepEqual(shared, ['hhh-identity-edge']);
+
+    const from = compose.indexOf('\n  identity-blackbox-exporter:');
+    const to = compose.indexOf('\n  prometheus:', from);
+    assert.ok(compose.slice(from, to).includes("profiles: ['identity']"));
+
+    const normalJobStart = prometheus.indexOf('job_name: blackbox-http');
+    const identityJobStart = prometheus.indexOf(
+      'job_name: identity-blackbox-http'
+    );
+    const normalJob = prometheus.slice(normalJobStart, identityJobStart);
+    const identityJob = prometheus.slice(
+      identityJobStart,
+      prometheus.indexOf('job_name: blackbox-tcp', identityJobStart)
+    );
+    assert.ok(!normalJob.includes('identity-service:3002'));
+    assert.ok(identityJob.includes('identity-service:3002'));
+    assert.ok(identityJob.includes('identity-blackbox-exporter:9115'));
   });
 
   it('the HHH backend can still reach the register', () => {

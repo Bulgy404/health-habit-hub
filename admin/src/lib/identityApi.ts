@@ -271,7 +271,11 @@ export function createAssignment(
 export function deleteAssignment(
   token: string,
   studyId: string,
-  body: { actorSub: string; role: Assignment["role"] }
+  body: {
+    actorSub: string;
+    role: Assignment["role"];
+    siteId?: string | null;
+  }
 ): Promise<{ ok: boolean }> {
   return apiFetch(identityUrl(`/v1/studies/${studyId}/assignments`), token, {
     method: "DELETE",

@@ -78,6 +78,7 @@ export function AssignmentsPanel({
       await deleteAssignment(token, studyId, {
         actorSub: a.actorSub,
         role: a.role,
+        siteId: a.siteId,
       });
       await load();
     } catch (e) {

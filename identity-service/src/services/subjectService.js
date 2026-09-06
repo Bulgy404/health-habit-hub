@@ -242,6 +242,7 @@ export async function searchSubjects({
   registerId,
   query = '',
   siteId = null,
+  siteIds = null,
   limit = 200,
   includePii = false,
 }) {
@@ -249,7 +250,11 @@ export async function searchSubjects({
   let sql = `SELECT id, subject_code, site_id, status, verified_at,
                     given_name_ct, family_name_ct, dob_ct, email_ct
                FROM subjects WHERE register_id = $1`;
-  if (siteId) {
+  if (Array.isArray(siteIds)) {
+    if (siteIds.length === 0) return [];
+    params.push(siteIds);
+    sql += ` AND site_id = ANY($${params.length}::text[])`;
+  } else if (siteId) {
     params.push(siteId);
     sql += ` AND site_id = $${params.length}`;
   }

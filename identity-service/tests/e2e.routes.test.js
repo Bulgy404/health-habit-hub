@@ -37,6 +37,7 @@ const DB_URL = process.env.IDENTITY_TEST_DB_URL;
 
 const SERVICE_SECRET = 'test-service-secret';
 const STUDY_ID = '0123456789abcdef01234567';
+const OTHER_STUDY_ID = 'fedcba9876543210fedcba98';
 
 /** Deterministic 32 bytes — this is a test key and must never be a real one. */
 const MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -46,6 +47,9 @@ const ACTORS = {
   nurse: { sub: 'nurse-1', roles: ['study-nurse'] },
   monitor: { sub: 'monitor-1', roles: ['monitor'] },
   otherMonitor: { sub: 'monitor-2', roles: ['monitor'] },
+  otherManager: { sub: 'manager-2', roles: ['identity-manager'] },
+  multiSiteNurse: { sub: 'nurse-multi', roles: ['study-nurse'] },
+  mismatchedManager: { sub: 'nurse-1', roles: ['identity-manager'] },
   researcher: { sub: 'researcher-1', roles: ['researcher'] },
 };
 
@@ -98,10 +102,7 @@ describe(
         next();
       });
       app.use(auditor.middleware);
-      app.use(
-        '/api',
-        createPublicRouter({ db: pool, keys, config, auditor, mailer })
-      );
+      app.use('/api', createPublicRouter({ db: pool, keys, config, mailer }));
       app.use(
         '/internal',
         createInternalRouter({ db: pool, keys, config, auditor })
@@ -218,6 +219,17 @@ describe(
       return res.body;
     }
 
+    async function createOtherRegister() {
+      const created = await api(
+        'POST',
+        `/api/v1/studies/${OTHER_STUDY_ID}/register`,
+        { subjectCodePrefix: 'OTHER' },
+        ACTORS.manager
+      );
+      assert.equal(created.status, 201);
+      return created.body.id;
+    }
+
     /* ── the chain ─────────────────────────────────────────────────────────── */
 
     test('a register is created, and its creator is assigned to it automatically', async () => {
@@ -297,6 +309,103 @@ describe(
       );
       assert.equal(res.status, 403);
       assert.equal(res.body.error, 'not_assigned_to_register');
+    });
+
+    test('an assignment only authorizes the matching token role', async () => {
+      await setupRegister();
+      const res = await api(
+        'GET',
+        `/api/v1/studies/${STUDY_ID}/assignments`,
+        null,
+        ACTORS.mismatchedManager
+      );
+      assert.equal(res.status, 403);
+      assert.equal(res.body.error, 'not_assigned_for_role');
+    });
+
+    test('multiple site assignments remain restricted to exactly those sites', async () => {
+      await setupRegister();
+      for (const siteId of ['site-a', 'site-b']) {
+        const assigned = await api(
+          'POST',
+          `/api/v1/studies/${STUDY_ID}/assignments`,
+          {
+            actorSub: ACTORS.multiSiteNurse.sub,
+            role: 'study-nurse',
+            siteId,
+          },
+          ACTORS.manager
+        );
+        assert.equal(assigned.status, 201);
+      }
+      for (const siteId of ['site-a', 'site-b', 'site-c']) {
+        await addSubject({
+          givenName: siteId,
+          email: `${siteId}@example.org`,
+          siteId,
+        });
+      }
+
+      const roster = await api(
+        'GET',
+        `/api/v1/studies/${STUDY_ID}/subjects`,
+        null,
+        ACTORS.multiSiteNurse
+      );
+      assert.equal(roster.status, 200);
+      assert.deepEqual(
+        roster.body.subjects.map((subject) => subject.siteId).sort(),
+        ['site-a', 'site-b']
+      );
+
+      const escaped = await api(
+        'POST',
+        `/api/v1/studies/${STUDY_ID}/subjects`,
+        {
+          givenName: 'Out',
+          familyName: 'Of scope',
+          siteId: 'site-c',
+        },
+        ACTORS.multiSiteNurse
+      );
+      assert.equal(escaped.status, 403);
+      assert.equal(escaped.body.error, 'site_not_assigned');
+    });
+
+    test('global resource ids do not bypass register assignments', async () => {
+      await setupRegister();
+      await createOtherRegister();
+      const otherSubject = await api(
+        'POST',
+        `/api/v1/studies/${OTHER_STUDY_ID}/subjects`,
+        { givenName: 'Other', familyName: 'Register' },
+        ACTORS.manager
+      );
+      assert.equal(otherSubject.status, 201);
+
+      const verify = await api(
+        'POST',
+        `/api/v1/subjects/${otherSubject.body.id}/verify`,
+        {},
+        ACTORS.nurse
+      );
+      assert.equal(verify.status, 403);
+
+      const issueCode = await api(
+        'POST',
+        `/api/v1/subjects/${otherSubject.body.id}/codes`,
+        {},
+        ACTORS.nurse
+      );
+      assert.equal(issueCode.status, 403);
+
+      const erase = await api(
+        'DELETE',
+        `/api/v1/subjects/${otherSubject.body.id}`,
+        null,
+        ACTORS.otherManager
+      );
+      assert.equal(erase.status, 403);
     });
 
     test('enrolment: reserve, confirm, and the participant is linked exactly once', async () => {
@@ -431,6 +540,68 @@ describe(
         ACTORS.monitor
       );
       assert.equal(approved.status, 200);
+    });
+
+    test('trusted re-identification ownership cannot be overridden by the body', async () => {
+      const registerId = await setupRegister();
+      const subject = await addSubject();
+      const otherRegisterId = await createOtherRegister();
+
+      const created = await api(
+        'POST',
+        `/api/v1/studies/${STUDY_ID}/reidentification-requests`,
+        {
+          registerId: otherRegisterId,
+          actorSub: 'forged-requester',
+          subjectCode: subject.subjectCode,
+          legalBasis: 'sae',
+          reason:
+            'Serious adverse event requires contact and this request verifies trusted ownership fields.',
+          fieldsRequested: ['givenName'],
+        },
+        ACTORS.manager
+      );
+      assert.equal(created.status, 201);
+
+      const { rows } = await pool.query(
+        `SELECT register_id, requested_by
+           FROM reidentification_requests WHERE id = $1`,
+        [created.body.id]
+      );
+      assert.equal(rows[0].register_id, registerId);
+      assert.equal(rows[0].requested_by, ACTORS.manager.sub);
+    });
+
+    test('re-identification ids require an assignment to their register', async () => {
+      await createOtherRegister();
+      const subject = await api(
+        'POST',
+        `/api/v1/studies/${OTHER_STUDY_ID}/subjects`,
+        { givenName: 'Other', familyName: 'Register' },
+        ACTORS.manager
+      );
+      const created = await api(
+        'POST',
+        `/api/v1/studies/${OTHER_STUDY_ID}/reidentification-requests`,
+        {
+          subjectCode: subject.body.subjectCode,
+          legalBasis: 'sae',
+          reason:
+            'Serious adverse event requires contact but only assigned staff may approve this request.',
+          fieldsRequested: ['givenName'],
+        },
+        ACTORS.manager
+      );
+      assert.equal(created.status, 201);
+
+      const decision = await api(
+        'POST',
+        `/api/v1/reidentification-requests/${created.body.id}/decide`,
+        { decision: 'approved' },
+        ACTORS.monitor
+      );
+      assert.equal(decision.status, 403);
+      assert.equal(decision.body.error, 'not_assigned_to_register');
     });
 
     test('a reveal returns only the requested fields, and counts every view', async () => {
@@ -647,6 +818,18 @@ describe(
           `the audit log must record that ${value} was disclosed, never the value itself`
         );
       }
+
+      const visible = await api(
+        'GET',
+        `/api/v1/studies/${STUDY_ID}/audit`,
+        null,
+        ACTORS.monitor
+      );
+      assert.equal(visible.status, 200);
+      assert.ok(
+        visible.body.entries.some((entry) => entry.action === 'reveal'),
+        'the per-study audit endpoint must include its re-identification events'
+      );
     });
 
     test('the roster import stores every row and echoes none of it back', async () => {

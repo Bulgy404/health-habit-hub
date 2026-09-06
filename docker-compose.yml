@@ -616,10 +616,6 @@ services:
       - KC_DB=postgres
       - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
       - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
-      # Identity register — OFF unless a verified-identity study is running.
-      - BACKUP_INCLUDE_IDENTITY=${BACKUP_INCLUDE_IDENTITY:-false}
-      - IDENTITY_DB_USERNAME=${IDENTITY_DB_USERNAME:-identity}
-      - IDENTITY_DB_PASSWORD=${IDENTITY_DB_PASSWORD:-}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
     command: start --import-realm --health-enabled=true
     networks:
@@ -1220,6 +1216,42 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # Profile-aware identity probe. The normal exporter cannot reach the
+  # isolated identity edge; keeping this exporter in the identity profile also
+  # prevents a disabled optional service from producing a permanent alert. It
+  # joins hhh-proxy only so Prometheus can scrape the probe result.
+  identity-blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: hhh-identity-blackbox-exporter
+    restart: always
+    profiles: ['identity']
+    networks:
+      - hhh-proxy
+      - hhh-identity-edge
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:9115/-/healthy',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   prometheus:
     image: prom/prometheus:v3.4.1
     container_name: hhh-prometheus
@@ -1394,6 +1426,13 @@ services:
       # docker-socket-proxy access is needed for the Keycloak DB backup/restore).
       - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
+      # Identity register — disabled unless a verified-identity deployment opts
+      # in. These belong on the backup process (not Keycloak) because Portainer
+      # UI variables are Compose substitutions, not container environment.
+      - BACKUP_INCLUDE_IDENTITY=${BACKUP_INCLUDE_IDENTITY:-false}
+      - IDENTITY_DB_HOST=identity-db
+      - IDENTITY_DB_USERNAME=${IDENTITY_DB_USERNAME:-identity}
+      - IDENTITY_DB_PASSWORD=${IDENTITY_DB_PASSWORD:-}
       # Keycloak runs under /auth in prod (KC_HTTP_RELATIVE_PATH=/auth below) —
       # backup.sh/restore.sh's realm export/import and admin-token calls need
       # this full base URL, matching the app service's KEYCLOAK_URL above.
@@ -1420,6 +1459,9 @@ services:
     networks:
       - hhh-proxy
       - hhh-backup-internal
+      # pg_dump/pg_restore need the same private database path as the identity
+      # service when BACKUP_INCLUDE_IDENTITY=true.
+      - hhh-identity-net
     depends_on:
       mongo:
         condition: service_started
@@ -1515,8 +1557,8 @@ services:
       - POSTGRES_USER=${IDENTITY_DB_USERNAME:-identity}
       - POSTGRES_PASSWORD=${IDENTITY_DB_PASSWORD}
     networks:
-      # PRIVATE ONLY. Deliberately not on hhh-proxy: nothing but the identity
-      # service may reach this database, and it must never be routable.
+      # PRIVATE ONLY. Deliberately not on hhh-proxy: only identity-service and
+      # the backup container may reach this database; it is never routable.
       - hhh-identity-net
     volumes:
       - identity-db-data:/var/lib/postgresql/data
@@ -1554,7 +1596,7 @@ services:
       - IDENTITY_SERVICE_SECRET=${IDENTITY_SERVICE_SECRET}
       - KEYCLOAK_JWKS_URL=${KEYCLOAK_JWKS_URL}
       - KEYCLOAK_ISSUER=${KEYCLOAK_JWT_ISSUER}
-      - KEYCLOAK_AUDIENCE=${KEYCLOAK_JWT_AUDIENCE:-}
+      - KEYCLOAK_AUDIENCE=${KEYCLOAK_JWT_AUDIENCE}
       - SMTP_HOST=${IDENTITY_SMTP_HOST:-}
       - SMTP_PORT=${IDENTITY_SMTP_PORT:-587}
       - SMTP_USER=${IDENTITY_SMTP_USER:-}
@@ -1611,9 +1653,9 @@ networks:
   hhh-backup-internal:
     name: hhh-backup-internal
     internal: true
-  # Private: identity-service <-> identity-db only. Nothing else joins it,
-  # which makes "the register cannot reach the research databases" a property
-  # of the network rather than of application code.
+  # Private: identity-service/backup <-> identity-db only. Nothing else joins
+  # it, which makes "the register cannot reach the research databases" a
+  # property of the network rather than of application code.
   hhh-identity-net:
     name: hhh-identity-net
     internal: true

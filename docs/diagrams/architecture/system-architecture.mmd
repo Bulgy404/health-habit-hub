@@ -56,6 +56,7 @@ flowchart TB
         prometheus["Prometheus<br/>metrics · 30d retention"]
         grafana["Grafana<br/>dashboards · own Keycloak OIDC"]
         blackbox["blackbox-exporter<br/>endpoint probes"]
+        identityblackbox["identity-blackbox-exporter<br/>profile-scoped identity probe"]
     end
 
     %% ------- Internal tools (behind oauth2-proxy SSO, admin role) -------
@@ -109,6 +110,7 @@ flowchart TB
     backup -- "tar lightrag-data" --> lightrag
     backup -- "tar audio-recordings" --> backend
     backup -- "partial-export API" --> keycloak
+    backup -- "pg_dump / pg_restore<br/>hhh-identity-net" --> identitydb
     backup -- "docker exec (Keycloak DB dump)" --> dockerproxy
     mongoexpress --> mongo
 
@@ -142,6 +144,8 @@ flowchart TB
     prometheus -. "scrape /metrics" .-> backend
     prometheus -. "scrape /metrics" .-> apiservice
     prometheus -. "probe" .-> blackbox
+    prometheus -. "probe (identity profile)" .-> identityblackbox
+    identityblackbox -. "health probe<br/>hhh-identity-edge" .-> identitysvc
     grafana -. "OIDC SSO" .-> keycloak
     grafana --> prometheus
 
@@ -153,7 +157,7 @@ flowchart TB
     class participant_actor,researcher_actor,agent_actor actor
     class mongo,neo4j,lightrag,redis,postgres store
     class llm,fcm ext
-    class backup,dockerproxy,prometheus,grafana,blackbox ops
+    class backup,dockerproxy,prometheus,grafana,blackbox,identityblackbox ops
     class oauth2proxy,mongoexpress,redisinsight,bullboard,lightragui tool
     classDef identity fill:#fde2e2,stroke:#b02a37,stroke-width:2px
     class identitysvc,identitydb identity

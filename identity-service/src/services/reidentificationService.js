@@ -74,6 +74,15 @@ export async function createRequest({
   fieldsRequested,
   approversRequired = 1,
 }) {
+  if (!['identify_subject', 'deanonymize_account'].includes(requestType)) {
+    throw new ReidError('invalid_request_type', 'Unknown request type');
+  }
+  if (![1, 2].includes(approversRequired)) {
+    throw new ReidError(
+      'invalid_approver_count',
+      'approversRequired must be 1 or 2'
+    );
+  }
   if (!LEGAL_BASES.includes(legalBasis)) {
     throw new ReidError('invalid_legal_basis', 'Unknown legal basis');
   }
@@ -158,6 +167,16 @@ export async function decide({
     throw new ReidError(
       'invalid_decision',
       'decision must be approved or rejected'
+    );
+  }
+  if (
+    !Number.isInteger(revealTtlMinutes) ||
+    revealTtlMinutes < 5 ||
+    revealTtlMinutes > 1440
+  ) {
+    throw new ReidError(
+      'invalid_reveal_ttl',
+      'revealTtlMinutes must be an integer from 5 to 1440'
     );
   }
 

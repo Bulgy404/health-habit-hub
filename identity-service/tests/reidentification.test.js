@@ -234,6 +234,20 @@ describe('createRequest', () => {
     );
   });
 
+  it('rejects an unknown request type before it reaches PostgreSQL', async () => {
+    await assert.rejects(
+      () => baseRequest(makeDb(), { requestType: 'bulk_reveal' }),
+      (e) => e.code === 'invalid_request_type'
+    );
+  });
+
+  it('accepts only the supported one- or two-approver policy', async () => {
+    await assert.rejects(
+      () => baseRequest(makeDb(), { approversRequired: 3 }),
+      (e) => e.code === 'invalid_approver_count'
+    );
+  });
+
   it('rejects a field that is not revealable', async () => {
     await assert.rejects(
       () =>
@@ -406,6 +420,23 @@ describe('decide — four eyes', () => {
         }),
       (e) => e.status === 404
     );
+  });
+
+  it('bounds the reveal window to the configured 5-1440 minute range', async () => {
+    const db = makeDb();
+    const { id } = await baseRequest(db);
+    await assert.rejects(
+      () =>
+        decide({
+          db,
+          requestId: id,
+          approverSub: 'monitor-1',
+          decision: 'approved',
+          revealTtlMinutes: 1441,
+        }),
+      (e) => e.code === 'invalid_reveal_ttl'
+    );
+    assert.equal(db.state.requests[0].status, 'pending');
   });
 });
 

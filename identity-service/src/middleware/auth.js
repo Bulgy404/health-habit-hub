@@ -55,6 +55,9 @@ export function createAuthMiddleware(config) {
         return res.status(401).json({ error: 'malformed_token' });
 
       const head = decodeSegment(h);
+      if (head.alg !== 'RS256') {
+        return res.status(401).json({ error: 'unsupported_algorithm' });
+      }
       let key = keyFor(await loadJwks(), head.kid);
       // One forced refresh covers key rotation without hammering Keycloak.
       if (!key) key = keyFor(await loadJwks(true), head.kid);
@@ -68,7 +71,10 @@ export function createAuthMiddleware(config) {
       }
 
       const claims = decodeSegment(p);
-      if (claims.exp && claims.exp * 1000 < Date.now()) {
+      if (!Number.isFinite(claims.exp)) {
+        return res.status(401).json({ error: 'missing_expiration' });
+      }
+      if (claims.exp * 1000 <= Date.now()) {
         return res.status(401).json({ error: 'token_expired' });
       }
       if (!config.keycloak.issuers.includes(claims.iss)) {
