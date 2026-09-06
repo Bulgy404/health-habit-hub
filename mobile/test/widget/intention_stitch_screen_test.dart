@@ -43,21 +43,21 @@ final _fakeDio = Dio();
 
 class _FakeStudyConfigService extends StudyConfigService {
   _FakeStudyConfigService.returning(this._sentence)
-      : _throws = false,
-        _completer = null,
-        super(dio: _fakeDio);
+    : _throws = false,
+      _completer = null,
+      super(dio: _fakeDio);
 
   _FakeStudyConfigService.throwing()
-      : _sentence = null,
-        _throws = true,
-        _completer = null,
-        super(dio: _fakeDio);
+    : _sentence = null,
+      _throws = true,
+      _completer = null,
+      super(dio: _fakeDio);
 
   _FakeStudyConfigService.pending()
-      : _sentence = null,
-        _throws = false,
-        _completer = Completer<String?>(),
-        super(dio: _fakeDio);
+    : _sentence = null,
+      _throws = false,
+      _completer = Completer<String?>(),
+      super(dio: _fakeDio);
 
   final String? _sentence;
   final bool _throws;
@@ -92,6 +92,7 @@ Widget _buildSubject(
   StudyConfigService studyConfigService, {
   List<IntentionCue> cues = _cues,
   String behaviorLabel = 'Walking',
+  String? recommendationId,
 }) {
   final router = GoRouter(
     initialLocation: '/habits/new/stitching',
@@ -104,6 +105,7 @@ Widget _buildSubject(
           config: _config,
           habitType: HabitType.build,
           cues: cues,
+          recommendationId: recommendationId,
         ),
       ),
       GoRoute(
@@ -111,7 +113,9 @@ Widget _buildSubject(
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return Scaffold(
-            body: Text('CONFIRM:${extra['stitchedSentence']}'),
+            body: Text(
+              'CONFIRM:${extra['stitchedSentence']}|${extra['recommendationId']}',
+            ),
           );
         },
       ),
@@ -147,28 +151,24 @@ Future<void> _unmount(WidgetTester tester) async {
 // ---------------------------------------------------------------------------
 
 void main() {
-  testWidgets('shows the first status message while stitching is in flight',
-      (tester) async {
+  testWidgets('shows the first status message while stitching is in flight', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_FakeStudyConfigService.pending()));
     await tester.pump();
 
-    expect(
-      find.text('Bringing your cue and habit together…'),
-      findsOneWidget,
-    );
+    expect(find.text('Bringing your cue and habit together…'), findsOneWidget);
     expect(find.text('Continue'), findsNothing);
 
     await _unmount(tester);
   });
 
-  testWidgets('cycles through status messages and holds on the last one',
-      (tester) async {
+  testWidgets('cycles through status messages and holds on the last one', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_FakeStudyConfigService.pending()));
     await tester.pump();
-    expect(
-      find.text('Bringing your cue and habit together…'),
-      findsOneWidget,
-    );
+    expect(find.text('Bringing your cue and habit together…'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 2600));
     expect(find.text('Forming your plan…'), findsOneWidget);
@@ -184,33 +184,37 @@ void main() {
   });
 
   testWidgets(
-      'respects the minimum on-screen duration even when the API responds instantly',
-      (tester) async {
-    await tester.pumpWidget(
-      _buildSubject(_FakeStudyConfigService.returning('After breakfast, walk.')),
-    );
-    await tester.pump();
+    'respects the minimum on-screen duration even when the API responds instantly',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(
+          _FakeStudyConfigService.returning('After breakfast, walk.'),
+        ),
+      );
+      await tester.pump();
 
-    // The API call resolves on the very next microtask, but the reveal must
-    // not happen before the minimum animation duration has elapsed.
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Continue'), findsNothing);
+      // The API call resolves on the very next microtask, but the reveal must
+      // not happen before the minimum animation duration has elapsed.
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Continue'), findsNothing);
 
-    await tester.pump(const Duration(milliseconds: 3000));
-    expect(find.text('Continue'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 3000));
+      expect(find.text('Continue'), findsNothing);
 
-    // Cross the minimum duration threshold and let the reveal transition run.
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.pump(const Duration(milliseconds: 400));
+      // Cross the minimum duration threshold and let the reveal transition run.
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Continue'), findsOneWidget);
-    expect(find.text('After breakfast, walk.'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('After breakfast, walk.'), findsOneWidget);
 
-    await _unmount(tester);
-  });
+      await _unmount(tester);
+    },
+  );
 
-  testWidgets('falls back to a locally-assembled sentence when the API fails',
-      (tester) async {
+  testWidgets('falls back to a locally-assembled sentence when the API fails', (
+    tester,
+  ) async {
     await tester.pumpWidget(_buildSubject(_FakeStudyConfigService.throwing()));
     await tester.pump();
 
@@ -225,10 +229,30 @@ void main() {
   });
 
   testWidgets(
-      'tapping Continue navigates to Confirm with the stitched sentence',
-      (tester) async {
+    'tapping Continue navigates to Confirm with the stitched sentence',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(
+          _FakeStudyConfigService.returning('After breakfast, walk.'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(_minAnimationDuration);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CONFIRM:After breakfast, walk.|null'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Continue preserves recommendation lineage', (tester) async {
     await tester.pumpWidget(
-      _buildSubject(_FakeStudyConfigService.returning('After breakfast, walk.')),
+      _buildSubject(
+        _FakeStudyConfigService.returning('After breakfast, walk.'),
+        recommendationId: 'rec-uuid',
+      ),
     );
     await tester.pump();
     await tester.pump(_minAnimationDuration);
@@ -237,6 +261,9 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CONFIRM:After breakfast, walk.'), findsOneWidget);
+    expect(
+      find.text('CONFIRM:After breakfast, walk.|rec-uuid'),
+      findsOneWidget,
+    );
   });
 }

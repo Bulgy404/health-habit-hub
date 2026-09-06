@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import socket
+import time
+
+
+def wait_for(host: str, port: int) -> None:
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=5):
+                print(f"{host}:{port} is ready", flush=True)
+                return
+        except OSError:
+            time.sleep(5)
+
+
+wait_for("clickhouse", 9000)
+wait_for("db", 5432)

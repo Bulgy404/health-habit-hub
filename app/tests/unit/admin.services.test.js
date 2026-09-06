@@ -545,7 +545,7 @@ test('getParticipantProgress returns null when participant not found', async () 
   assert.strictEqual(result, null);
 });
 
-test('getParticipantProgress aggregates surveys and recommendations', async () => {
+test('getParticipantProgress derives recommendation adoption from intentions', async () => {
   const now = new Date();
   const db = makeDb({
     participants: [{ userId: 'u1', enrolledAt: now }],
@@ -557,32 +557,40 @@ test('getParticipantProgress aggregates surveys and recommendations', async () =
         completedAt: now,
       },
     ],
-    recommendations_log: [
+    implementation_intentions: [
       {
-        participantId: 'u1',
-        type: 'accepted',
-        timestamp: now,
-        recommendationId: 'r1',
-      },
-      {
-        participantId: 'u1',
-        type: 'dismissed',
-        timestamp: now,
-        recommendationId: 'r2',
+        _id: { toString: () => 'i1' },
+        userId: 'u1',
+        behaviorKey: 'walking',
+        behaviorLabel: 'Walking',
+        durationMinutes: 20,
+        cues: [],
+        intentionStatement: 'I will walk.',
+        sourceRecommendationId: 'f81d4fae-7dec-4f01-a765-00a0c91e6bf6',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
       },
     ],
   });
   const result = await getParticipantProgress({ db, neo4jRun: null, id: 'u1' });
   assert.strictEqual(result.surveys.length, 1);
   assert.strictEqual(result.recommendations.accepted, 1);
-  assert.strictEqual(result.recommendations.dismissed, 1);
+  assert.strictEqual(result.recommendations.dismissed, 0);
+  assert.ok(
+    result.timeline.some(
+      (event) =>
+        event.type === 'recommendation_accepted' &&
+        event.detail === 'f81d4fae-7dec-4f01-a765-00a0c91e6bf6'
+    )
+  );
 });
 
 test('getParticipantProgress uses neo4jRun for habitsCount when provided', async () => {
   const db = makeDb({
     participants: [{ userId: 'u1', enrolledAt: new Date() }],
     survey_responses: [],
-    recommendations_log: [],
+    implementation_intentions: [],
   });
   const neo4jRun = async () => [{ cnt: 7 }];
   const result = await getParticipantProgress({ db, neo4jRun, id: 'u1' });

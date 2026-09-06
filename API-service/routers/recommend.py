@@ -26,7 +26,7 @@ from typing import Any, Optional, cast
 from uuid import uuid4
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
@@ -372,6 +372,7 @@ def _habits_to_json(
 @router.post("/llm/recommend", response_model=RecommendResponse)
 async def recommend(
     body: RecommendRequest,
+    response: Response,
     redis_client: Optional[aioredis.Redis] = Depends(get_redis),
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
 ) -> RecommendResponse:
@@ -384,6 +385,8 @@ async def recommend(
 
     Args:
         body: Validated request payload with user_id, goal, and session_id.
+        response: FastAPI response used to expose the internal cache hit/miss
+            signal to the trusted Node proxy; it is not part of the JSON body.
         redis_client: Injected Redis connection (optional, degrades gracefully).
         db: Injected MongoDB connection.
 
@@ -409,6 +412,7 @@ async def recommend(
         try:
             cached = await redis_client.get(key)
             if cached:
+                response.headers["X-HHH-Recommendation-Cache"] = "hit"
                 return RecommendResponse(**json.loads(cached))
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis read error (%s) — falling back to pipeline.", exc)
@@ -583,4 +587,5 @@ async def recommend(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis write error (%s) — result not cached.", exc)
 
+    response.headers["X-HHH-Recommendation-Cache"] = "miss"
     return result

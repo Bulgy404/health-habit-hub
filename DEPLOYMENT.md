@@ -91,22 +91,22 @@ curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 
 Expected local URLs in this mode:
 
-| Service                 | Local URL                                                           | Notes                                                                                |
-| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Main app via Traefik    | `http://app.localhost`                                              | Preferred browser URL for the app                                                    |
-| Admin panel via Traefik | `http://admin.localhost`                                            | Local Next.js admin UI                                                               |
-| Traefik dashboard       | `http://proxy.localhost`                                            | Same dashboard as `http://localhost:8888`                                            |
-| Backend API             | `http://localhost:3000/api/v1/health`                               | Main backend health check                                                            |
-| Keycloak                | `http://localhost:8080`                                             | Realm + admin console                                                                |
-| Keycloak Admin Console  | `http://localhost:8080/admin/`                                      | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`                              |
-| Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check                                                             |
-| Translation             | `http://localhost:5001`                                             | LibreTranslate in `docker-compose.local.yml`                                         |
+| Service                 | Local URL                                                           | Notes                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Main app via Traefik    | `http://app.localhost`                                              | Preferred browser URL for the app                                                                                                                       |
+| Admin panel via Traefik | `http://admin.localhost`                                            | Local Next.js admin UI                                                                                                                                  |
+| Traefik dashboard       | `http://proxy.localhost`                                            | Same dashboard as `http://localhost:8888`                                                                                                               |
+| Backend API             | `http://localhost:3000/api/v1/health`                               | Main backend health check                                                                                                                               |
+| Keycloak                | `http://localhost:8080`                                             | Realm + admin console                                                                                                                                   |
+| Keycloak Admin Console  | `http://localhost:8080/admin/`                                      | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`                                                                                                 |
+| Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check                                                                                                                                |
+| Translation             | `http://localhost:5001`                                             | LibreTranslate in `docker-compose.local.yml`                                                                                                            |
 | Neo4j Browser           | `http://localhost:7474`                                             | Login with `neo4j` + `NEO4J_PASSWORD` (prod publishes loopback-only equivalents at `17474`/`17687` for SSH-tunnel admin access — see `docs/runbook.md`) |
-| LightRAG                | `http://localhost:9622`                                             | Graph + vector knowledge base UI                                                     |
-| Recommender             | `http://localhost:8001/docs`                                        | FastAPI docs                                                                         |
-| Redis                   | `localhost:6379`                                                    | No auth in local mode                                                                |
-| Prometheus              | `http://prometheus.localhost`                                       | Scrapes app metrics from `app:9091`                                                  |
-| Grafana                 | `http://grafana.localhost`                                          | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned |
+| LightRAG                | `http://localhost:9622`                                             | Graph + vector knowledge base UI                                                                                                                        |
+| Recommender             | `http://localhost:8001/docs`                                        | FastAPI docs                                                                                                                                            |
+| Redis                   | `localhost:6379`                                                    | No auth in local mode                                                                                                                                   |
+| Prometheus              | `http://prometheus.localhost`                                       | Scrapes app metrics from `app:9091`                                                                                                                     |
+| Grafana                 | `http://grafana.localhost`                                          | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned                                                                    |
 
 Notes:
 
@@ -248,7 +248,7 @@ references them then points at a path that doesn't exist on disk.
 
 Docker's response to a missing bind-mount **source** is to silently
 auto-create an empty **directory** there to satisfy the mount — which then
-crashes any service expecting a *file* at that path (blackbox-exporter,
+crashes any service expecting a _file_ at that path (blackbox-exporter,
 Prometheus, the Keycloak realm import) with an OCI error like:
 
 ```
@@ -273,7 +273,7 @@ sudo mkdir -p /data/hhh/backups /data/hhh/rclone
 > (`/opt/hhh/data`) is on the 20 GB root filesystem, which backups will
 > eventually fill. On `habitvm` it is set to **`/data/hhh`**, on the 1 TB
 > volume — see [§7 Server Storage Layout](#7-server-storage-layout). The repo
-> clone stays on `/opt/hhh/repo`; only the *data* directory moves.
+> clone stays on `/opt/hhh/repo`; only the _data_ directory moves.
 
 Both directories need to be readable by whatever UID/GID the containers run
 as — usually **not** root and **not** your login user:
@@ -285,7 +285,7 @@ sudo chmod -R go+rX /opt/hhh
 Grant read access to **both** `group` (`g+r`) and `other` (`o+r`), not just
 one. Several images (e.g. Keycloak: `uid=1000(keycloak) gid=0(root)`) run as
 a non-root UID whose **group is `0`/root** — Linux permission checks use the
-*first matching class* (owner → group → other), so if a container's UID
+_first matching class_ (owner → group → other), so if a container's UID
 shares the file's owning group, the **group** bits are what get checked, and
 `other`-only permissions are silently ignored even though they'd otherwise
 allow the read. `go+rX` covers both cases.
@@ -329,12 +329,12 @@ The production server (`habitvm`) has **two separate LVM volume groups**, and th
 split is not obvious from `df -h /`. Getting this wrong is the single most likely
 way to run the box out of disk.
 
-| Mount | Filesystem | Size | Holds |
-|---|---|---|---|
-| `/` | btrfs (VG `main`) | 20 GB | OS, `/opt/hhh/repo` (config clone) |
-| `/var` | btrfs (VG `main`) | 10 GB | system logs, apt |
-| *(swap)* | VG `main` | 5 GB | — |
-| `/data` | ext4 (VG `data`, `/dev/sdb1`) | **1 TB** | Docker root + all HHH runtime data |
+| Mount    | Filesystem                    | Size     | Holds                              |
+| -------- | ----------------------------- | -------- | ---------------------------------- |
+| `/`      | btrfs (VG `main`)             | 20 GB    | OS, `/opt/hhh/repo` (config clone) |
+| `/var`   | btrfs (VG `main`)             | 10 GB    | system logs, apt                   |
+| _(swap)_ | VG `main`                     | 5 GB     | —                                  |
+| `/data`  | ext4 (VG `data`, `/dev/sdb1`) | **1 TB** | Docker root + all HHH runtime data |
 
 Three things follow from this:
 
@@ -352,7 +352,7 @@ data onto `/data`, not to resize.
 (`/opt/hhh/data`) is on the 20 GB root, and with `BACKUP_RETENTION_DAYS=14` the
 backup directory grows until it fills it. Set it in the Portainer stack
 environment (see [Step 4](#step-4-override-environment-variables)). The config
-clone stays at `/opt/hhh/repo` — only the *data* directory moves.
+clone stays at `/opt/hhh/repo` — only the _data_ directory moves.
 
 To migrate an existing server that is still on the default:
 
@@ -413,7 +413,7 @@ sudo chmod 0400 "$HHH_DATA_DIR/identity-master-key"
 > analysable — that asymmetry is deliberate. Keep a copy in a password manager
 > and a sealed printed copy in a safe.
 
-Set the variables documented in `.env.example` under *Identity register*, and
+Set the variables documented in `.env.example` under _Identity register_, and
 on the `hhh-app` side `IDENTITY_SERVICE_URL` plus `IDENTITY_SERVICE_SECRET`.
 
 **Network isolation is part of the design, not incidental.** `identity-service`
@@ -432,12 +432,77 @@ network.
 Backups are **off by default** (`BACKUP_INCLUDE_IDENTITY=false`). Enable only
 where a verified study actually runs, and read the warning in
 [`docs/identity-register.md`](docs/identity-register.md#backups): field
-encryption makes a stolen dump inert on its own, but a dump *plus* the key file
+encryption makes a stolen dump inert on its own, but a dump _plus_ the key file
 is a total compromise, and by default both live on this host.
 
 Full operator guide: [`docs/identity-register.md`](docs/identity-register.md).
 
 ---
+
+## Dedicated Analytics VM (optional PostHog)
+
+Do not add PostHog containers to `habitvm`. Clone this repository on the future
+analytics VM and use the package in `analytics-vm/`; the target address is not
+embedded anywhere in source control.
+
+The VM must be Linux with at least 4 vCPU/16 GB RAM, an ext4 data disk mounted
+at `/data`, and Docker configured with `data-root: /data/docker` before the first
+image pull. Install Git, curl, brotli, Docker Engine and Docker Compose 2.24.4+
+then run:
+
+```bash
+sudo install -d -m 0755 /opt/hhh-analytics-config
+sudo cp -a analytics-vm/. /opt/hhh-analytics-config/
+cd /opt/hhh-analytics-config
+./manage.sh init
+# Edit .env: private bind address, site URL, immutable pins and fresh secrets
+./manage.sh doctor
+./manage.sh prepare
+./manage.sh config
+./manage.sh up
+./manage.sh backup
+```
+
+`doctor`, `prepare`, and `config` do not start services. `up` is the first
+starting action. The package wraps the pinned official PostHog hobby Compose
+stack, so Kafka/ZooKeeper, ClickHouse, PostgreSQL, Redis/Valkey, object storage,
+Temporal and application/ingestion workers remain separate containers. Only
+private ports 8000 (PostHog), 9100 (node-exporter), and 8080 (cAdvisor) are
+published.
+
+Firewall rules must allow those three ports from `habitvm`; allow port 8000
+from the trusted TU/VPN admin network only if researchers need direct UI
+access. Do not expose the analytics VM to the internet.
+
+After PostHog starts, create one project and set the following values on the
+main `habitvm` stack:
+
+```dotenv
+POSTHOG_INTERNAL_URL=http://<analytics-private-address>:8000
+POSTHOG_SERVER_HOST=http://<analytics-private-address>:8000
+POSTHOG_PROJECT_KEY=phc_<write-only-project-key>
+ANALYTICS_VM_HOST=<analytics-private-address>
+ANALYTICS_VM_POSTHOG_PORT=8000
+```
+
+The first value enables the public ingest-only Traefik route, the next two
+enable trusted backend events, and the host enables Prometheus remote targets.
+Any incomplete pair stays disabled. Compile the Flutter release with the same
+write-only project key and the public proxy URL:
+
+```json
+{
+  "POSTHOG_PROJECT_KEY": "phc_<write-only-project-key>",
+  "POSTHOG_HOST": "https://habit.wiwi.tu-dresden.de/ingest"
+}
+```
+
+Install `analytics-vm/systemd/hhh-analytics-backup.*` only after a manual
+`./manage.sh backup` succeeds. Configure `OFFSITE_REMOTE` and host rclone for
+offsite copies. Before a study begins, restore a PostgreSQL dump and ClickHouse
+archive into a scratch copy of the pinned stack and record the result. Full
+commands, safety constraints and upgrade procedure are in
+`analytics-vm/README.md`.
 
 ## Portainer Deployment Steps
 
@@ -564,22 +629,22 @@ LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 
 All containers should be running:
 
-| Container           | Role                                                                                    |
-| ------------------- | --------------------------------------------------------------------------------------- |
-| `hhh-proxy`         | Traefik reverse proxy                                                                   |
-| `hhh-app`           | Node.js backend API                                                                     |
-| `hhh-mongo`         | MongoDB — survey responses, recommendations, user preferences                           |
-| `hhh-mongo-express` | MongoDB web UI                                                                          |
-| `hhh-neo4j`         | Neo4j graph database — habit graph, BCIO ontology                                       |
-| `hhh-redis`         | Redis — notification locks and recommendation caching                                   |
-| `hhh-translate`     | LibreTranslate — EN↔DE habit translation                                                |
-| `hhh-keycloak-db`   | PostgreSQL — Keycloak backend database                                                  |
-| `hhh-keycloak`      | Keycloak identity provider — authentication and authorisation                           |
-| `hhh-recommender`   | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
-| `hhh-lightrag`      | LightRAG — graph + vector knowledge base                                                |
-| `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents                                     |
-| `hhh-admin`         | Next.js admin panel — study management UI                                               |
-| `hhh-backup`        | Backup service                                                                          |
+| Container           | Role                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `hhh-proxy`         | Traefik reverse proxy                                                                       |
+| `hhh-app`           | Node.js backend API                                                                         |
+| `hhh-mongo`         | MongoDB — survey responses, recommendations, user preferences                               |
+| `hhh-mongo-express` | MongoDB web UI                                                                              |
+| `hhh-neo4j`         | Neo4j graph database — habit graph, BCIO ontology                                           |
+| `hhh-redis`         | Redis — notification locks and recommendation caching                                       |
+| `hhh-translate`     | LibreTranslate — EN↔DE habit translation                                                   |
+| `hhh-keycloak-db`   | PostgreSQL — Keycloak backend database                                                      |
+| `hhh-keycloak`      | Keycloak identity provider — authentication and authorisation                               |
+| `hhh-recommender`   | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement     |
+| `hhh-lightrag`      | LightRAG — graph + vector knowledge base                                                    |
+| `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents                                         |
+| `hhh-admin`         | Next.js admin panel — study management UI                                                   |
+| `hhh-backup`        | Backup service                                                                              |
 | `hhh-website`       | Astro marketing site (static build) behind nginx — served on `WEBSITE_DOMAIN`, not `DOMAIN` |
 
 ### 2. Verify SSL Certificate
@@ -776,7 +841,7 @@ things must all be correct (all handled in the repo; listed here so you know why
    `docker-compose.yml`) — it shadowed `/admin/api/auth/*` behind basic-auth, which
    is what produces the browser basic-auth popup.
 
-Because #1 lives in a **built** image (`middleware.ts`) *and* a runtime env, a
+Because #1 lives in a **built** image (`middleware.ts`) _and_ a runtime env, a
 redeploy must **rebuild the admin image** (Portainer rebuild, or
 `docker compose build --no-cache admin`) as well as pick up the new compose env.
 
@@ -796,7 +861,7 @@ docker exec hhh-keycloak /opt/keycloak/bin/kcadm.sh get clients -r hhh \
 
 **Problem:** Keycloak authenticates you, then the browser lands back on
 `…/admin/api/auth/signin?error=OAuthCallback` ("Try signing in with a different
-account"). This is *after* the sign-in loop above is fixed — Keycloak's own logs
+account"). This is _after_ the sign-in loop above is fixed — Keycloak's own logs
 look clean, because the failure is on the admin's server-to-server callback.
 
 **Diagnose first — NextAuth logs the real reason:**
@@ -862,11 +927,11 @@ one dot`.
 (or `docker compose`) is actually reading on **this** server — `.env` is
 gitignored and per-environment, so setting it in a local checkout does
 nothing here. Traefik's Docker-provider label templating doesn't fail loudly
-on a missing variable: `Host(\`${WEBSITE_DOMAIN}\`)` silently renders as
-`Host(\`\`)`, which is syntactically valid but matches nothing, and produces
+on a missing variable: `Host(\`${WEBSITE_DOMAIN}\`)`silently renders as`Host(\`\`)`, which is syntactically valid but matches nothing, and produces
 exactly the "www: needs at least one dot" ACME rejection above.
 
 **Fix:**
+
 ```bash
 # Confirm the actual rendered rule first — don't assume the env var is right:
 docker logs hhh-proxy --tail 200 | grep website
@@ -876,6 +941,7 @@ docker logs hhh-proxy --tail 200 | grep website
 # variables), then:
 docker compose up -d --force-recreate website
 ```
+
 Traefik retries ACME on its own once the rule is valid — no further action
 needed once the rendered rule shows the real domain.
 
@@ -934,8 +1000,8 @@ error mounting ".../monitoring/blackbox/blackbox.yml" to rootfs at
 "/etc/blackbox_exporter/config.yml" ... not a directory
 ```
 
-**Cause:** The bind-mount source doesn't exist on the host as a *file* —
-Docker auto-creates it as an empty *directory* to satisfy the mount, then
+**Cause:** The bind-mount source doesn't exist on the host as a _file_ —
+Docker auto-creates it as an empty _directory_ to satisfy the mount, then
 the container fails because it expected a file there. See [Bind-Mount Config
 Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
 under Prerequisites — this happens if `/opt/hhh/repo` hasn't been
@@ -964,32 +1030,32 @@ hhh-keycloak is unhealthy`, and `hhh-keycloak-init` never runs.
    that's why.
 2. **Missing `--health-enabled=true` on the `start` command:** Keycloak
    boots and runs fine, but Docker's healthcheck (`curl
-   .../health/ready`) fails continuously because Keycloak doesn't expose
+.../health/ready`) fails continuously because Keycloak doesn't expose
    that endpoint unless health checks are explicitly enabled. Symptom:
    Keycloak's own logs show a clean, successful boot (`Listening on:
-   http://0.0.0.0:8080`) that runs for several minutes before a *graceful*
+http://0.0.0.0:8080`) that runs for several minutes before a _graceful_
    shutdown — Docker gave up waiting on the healthcheck and stopped it, not
    a crash. Already set in `docker-compose.yml` (`command: start
-   --import-realm --health-enabled=true`) — if this regresses, that's why.
+--import-realm --health-enabled=true`) — if this regresses, that's why.
 3. **Healthcheck pointed at the wrong port:** enabling health checks in
    Keycloak 26.x also spins up a separate **management interface** (health
-   + metrics), listening on **port 9000** by default — `/health/ready` is no
-   longer served on the main port 8080 at all. Symptom: same as above (clean
-   boot, graceful shutdown after the healthcheck gives up), but Keycloak's
-   boot log will explicitly say `Listening on: http://0.0.0.0:8080.
-   Management interface listening on http://0.0.0.0:9000.` The
-   `healthcheck.test` in `docker-compose.yml` must target port **9000**, not
-   8080 — if this regresses, that's why.
+   - metrics), listening on **port 9000** by default — `/health/ready` is no
+     longer served on the main port 8080 at all. Symptom: same as above (clean
+     boot, graceful shutdown after the healthcheck gives up), but Keycloak's
+     boot log will explicitly say `Listening on: http://0.0.0.0:8080.
+Management interface listening on http://0.0.0.0:9000.` The
+     `healthcheck.test` in `docker-compose.yml` must target port **9000**, not
+     8080 — if this regresses, that's why.
 4. **`hhh-realm.json` permission denied:** see the group-vs-other permission
    gotcha in the [Bind-Mount Config
    Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
-   section — this file needs to be group- *or* other-readable by Keycloak's
+   section — this file needs to be group- _or_ other-readable by Keycloak's
    container UID, not just one or the other.
 
 **Debugging tip:** Portainer tears down the whole stack automatically the
 moment a deploy fails, often within a second or two — by the time you `docker
 logs <container>` by hand, it may already say `No such container`. To catch
-the real error, subscribe to Docker's live event stream *before* redeploying
+the real error, subscribe to Docker's live event stream _before_ redeploying
 so you attach to the log stream the moment the container starts, rather than
 racing to fetch logs afterward:
 
@@ -1120,23 +1186,23 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 
 ## URLs Reference
 
-| Service                 | Production URL                                | Local (`docker-compose.local.yml`)                                      | Direct Local Port                                                   |
-| ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Marketing Site          | `https://healthhabithub.de` (`WEBSITE_DOMAIN`, separate domain from `DOMAIN` below) | `npm run dev` in `website/` (not part of `docker-compose.local.yml`) | —                                                                   |
-| Backend API             | `https://habit.wiwi.tu-dresden.de/api/v1/`    | `http://app.localhost/api/v1/`                                          | `http://localhost:3000/api/v1/`                                     |
-| Flutter Web App         | `https://habit.wiwi.tu-dresden.de`            | local mobile/web build pointing to local backend                        | —                                                                   |
-| Admin Panel             | `https://habit.wiwi.tu-dresden.de/admin`      | `http://admin.localhost`                                                | `http://localhost:3001`                                             |
-| Keycloak                | `https://habit.wiwi.tu-dresden.de/auth/`      | `http://keycloak.localhost`                                             | `http://localhost:8080`                                             |
-| Keycloak Admin UI       | `https://habit.wiwi.tu-dresden.de/auth/admin` | `http://keycloak.localhost/admin/`                                      | `http://localhost:8080/admin/`                                      |
-| Keycloak Realm Metadata | —                                             | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
-| Mongo Express           | `https://habit.wiwi.tu-dresden.de/mongo`      | not in `docker-compose.local.yml`                                       | `http://localhost:8081` (with `docker compose up`)                  |
-| Translation             | `https://habit.wiwi.tu-dresden.de/translate`  | `http://translate.localhost`                                            | `http://localhost:5001`                                             |
-| Neo4j Browser           | not exposed (internal-only, see below)        | `http://neo4j.localhost`                                                | `http://localhost:7474`                                             |
-| LightRAG                | not exposed (internal-only)                   | `http://localhost:9622`                                                 | `http://localhost:9622`                                             |
-| Recommender API docs    | —                                             | not routed via Traefik locally                                          | `http://localhost:8001/docs`                                        |
-| Prometheus              | not exposed (internal-only)                   | `http://prometheus.localhost`                                           | `http://localhost:9090`                                             |
-| Grafana                 | `https://habit.wiwi.tu-dresden.de/grafana`    | `http://grafana.localhost`                                              | `http://localhost:3002`                                             |
-| Traefik Dashboard       | `https://habit.wiwi.tu-dresden.de/dashboard`  | `http://proxy.localhost`                                                | `http://localhost:8888`                                             |
+| Service                 | Production URL                                                                      | Local (`docker-compose.local.yml`)                                      | Direct Local Port                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Marketing Site          | `https://healthhabithub.de` (`WEBSITE_DOMAIN`, separate domain from `DOMAIN` below) | `npm run dev` in `website/` (not part of `docker-compose.local.yml`)    | —                                                                   |
+| Backend API             | `https://habit.wiwi.tu-dresden.de/api/v1/`                                          | `http://app.localhost/api/v1/`                                          | `http://localhost:3000/api/v1/`                                     |
+| Flutter Web App         | `https://habit.wiwi.tu-dresden.de`                                                  | local mobile/web build pointing to local backend                        | —                                                                   |
+| Admin Panel             | `https://habit.wiwi.tu-dresden.de/admin`                                            | `http://admin.localhost`                                                | `http://localhost:3001`                                             |
+| Keycloak                | `https://habit.wiwi.tu-dresden.de/auth/`                                            | `http://keycloak.localhost`                                             | `http://localhost:8080`                                             |
+| Keycloak Admin UI       | `https://habit.wiwi.tu-dresden.de/auth/admin`                                       | `http://keycloak.localhost/admin/`                                      | `http://localhost:8080/admin/`                                      |
+| Keycloak Realm Metadata | —                                                                                   | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
+| Mongo Express           | `https://habit.wiwi.tu-dresden.de/mongo`                                            | not in `docker-compose.local.yml`                                       | `http://localhost:8081` (with `docker compose up`)                  |
+| Translation             | `https://habit.wiwi.tu-dresden.de/translate`                                        | `http://translate.localhost`                                            | `http://localhost:5001`                                             |
+| Neo4j Browser           | not exposed (internal-only, see below)                                              | `http://neo4j.localhost`                                                | `http://localhost:7474`                                             |
+| LightRAG                | not exposed (internal-only)                                                         | `http://localhost:9622`                                                 | `http://localhost:9622`                                             |
+| Recommender API docs    | —                                                                                   | not routed via Traefik locally                                          | `http://localhost:8001/docs`                                        |
+| Prometheus              | not exposed (internal-only)                                                         | `http://prometheus.localhost`                                           | `http://localhost:9090`                                             |
+| Grafana                 | `https://habit.wiwi.tu-dresden.de/grafana`                                          | `http://grafana.localhost`                                              | `http://localhost:3002`                                             |
+| Traefik Dashboard       | `https://habit.wiwi.tu-dresden.de/dashboard`                                        | `http://proxy.localhost`                                                | `http://localhost:8888`                                             |
 
 ---
 
@@ -1331,11 +1397,11 @@ reporting — a silent no-op unless configured:
 | `MONGO_PASSWORD`                                     | mongo, app, backup                                                                  | regenerate + redeploy stack                                                                                                                         |
 | `NEO4J_PASSWORD`                                     | neo4j, app, api-service                                                             | regenerate + redeploy                                                                                                                               |
 | `KEYCLOAK_ADMIN_PASSWORD`                            | keycloak, keycloak-init                                                             | Keycloak admin console + .env                                                                                                                       |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` (hhh-backend client)  | app ↔ Keycloak                                                                      | regenerate + redeploy keycloak-init + app                                                                                                           |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` (hhh-backend client)  | app ↔ Keycloak                                                                     | regenerate + redeploy keycloak-init + app                                                                                                           |
 | `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` (hhh-admin client) | admin panel login                                                                   | regenerate + redeploy keycloak-init + admin                                                                                                         |
 | `KEYCLOAK_ROPC_CLIENT_SECRET` (hhh-ropc client)      | onboarding, credential rotation, passphrase-based restore                           | regenerate + redeploy keycloak-init + app                                                                                                           |
 | `GRAFANA_CLIENT_SECRET` (grafana client)             | Grafana SSO                                                                         | regenerate + redeploy keycloak-init + grafana                                                                                                       |
-| `API_SERVICE_SECRET`                                 | app ↔ api-service                                                                   | regenerate + redeploy both                                                                                                                          |
+| `API_SERVICE_SECRET`                                 | app ↔ api-service                                                                  | regenerate + redeploy both                                                                                                                          |
 | `LIGHTRAG_API_KEY`, `LLM_API_KEY`                    | lightrag, api-service                                                               | provider console                                                                                                                                    |
 | `SMTP_USER` / `SMTP_PASS`                            | backup, LLM-outage, BullMQ, and reachability/5xx alert emails (see docs/runbook.md) | provider console or relay config                                                                                                                    |
 | ~~`MAIL_USER` / `MAIL_PASS` (Mailjet)~~              | removed — replaced by generic SMTP above                                            | **revoke now** in the Mailjet console — previous values circulated in a repo working copy and were never rotated before the integration was removed |
@@ -1355,10 +1421,10 @@ Backend URLs are **compile-time constants** (`String.fromEnvironment` in
 `mobile/lib/config/app_config.dart`) — there is no runtime config file on the
 device. The defaults are **mode-dependent**, so the common paths need no flags:
 
-| Build mode                                          | Endpoints used                          |
-| --------------------------------------------------- | --------------------------------------- |
-| debug / profile (`flutter run`)                      | `localhost` (local dev stack)           |
-| release (`flutter build ipa`, Xcode Product→Archive) | `https://habit.wiwi.tu-dresden.de/...`  |
+| Build mode                                           | Endpoints used                         |
+| ---------------------------------------------------- | -------------------------------------- |
+| debug / profile (`flutter run`)                      | `localhost` (local dev stack)          |
+| release (`flutter build ipa`, Xcode Product→Archive) | `https://habit.wiwi.tu-dresden.de/...` |
 
 This matters because an **Xcode archive cannot pass Flutter `--dart-define`
 flags**. Before this was mode-dependent, archiving from Xcode silently produced
@@ -1371,7 +1437,7 @@ Override either default (e.g. a staging server) with:
 flutter build ipa --release --dart-define-from-file=dart_defines_prod.json
 ```
 
-If a *release* build is ever explicitly pointed at localhost, the app now renders
+If a _release_ build is ever explicitly pointed at localhost, the app now renders
 an on-screen configuration error naming the offending values instead of a white
 screen (`_ConfigErrorApp` in `mobile/lib/main.dart`).
 
@@ -1411,10 +1477,10 @@ also needs: **Settings → General → VPN & Device Management → Trust**.
 1. **Bump the build number** — every upload must be unique:
    ```yaml
    # mobile/pubspec.yaml
-   version: 1.0.0+2      # was 1.0.0+1
+   version: 1.0.0+2 # was 1.0.0+1
    ```
 2. **Check signing** (once): `open ios/Runner.xcworkspace` → Runner target →
-   **Signing & Capabilities** → *Automatically manage signing* ✓, correct **Team**,
+   **Signing & Capabilities** → _Automatically manage signing_ ✓, correct **Team**,
    and **Push Notifications** + **Background Modes → Remote notifications** present
    (required for FCM in a distribution build).
 3. **Build the archive**:
@@ -1426,7 +1492,7 @@ also needs: **Settings → General → VPN & Device Management → Trust**.
    Produces `build/ios/archive/Runner.xcarchive`.
 4. **Upload**: Xcode → **Window → Organizer → Archives** → select the archive →
    **Distribute App** → **App Store Connect** → **Upload** → defaults →
-   *Automatically manage signing* → **Upload**.
+   _Automatically manage signing_ → **Upload**.
    (Alternative: drag `build/ios/ipa/*.ipa` into the **Transporter** app.)
 5. **Wait for processing** — App Store Connect → app → **TestFlight** tab shows
    "Processing" for ~5–15 min. Answer the **export compliance** prompt (standard
@@ -1452,7 +1518,7 @@ Both are real assets, not placeholders — `flutter build ipa` validates this:
 - **Launch image**: `mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/`
   (180 / 360 / 540 px, generated from the same source; the storyboard centres it).
   Flutter ships 1×1 px placeholders by default, which trips
-  *"Launch image is set to the default placeholder icon"* — regenerate with:
+  _"Launch image is set to the default placeholder icon"_ — regenerate with:
   ```bash
   cd mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset
   SRC=../../../../assets/icon/app_icon.png
@@ -1463,11 +1529,11 @@ Both are real assets, not placeholders — `flutter build ipa` validates this:
 
 ### Legal URLs required by the stores
 
-| Field                     | URL                                                    |
-| ------------------------- | ------------------------------------------------------ |
-| Privacy Policy (required) | `https://habit.wiwi.tu-dresden.de/en/privacy`          |
-| Imprint                   | `https://habit.wiwi.tu-dresden.de/en/imprint`          |
-| Accessibility statement   | `https://habit.wiwi.tu-dresden.de/en/accessibility`    |
+| Field                     | URL                                                 |
+| ------------------------- | --------------------------------------------------- |
+| Privacy Policy (required) | `https://habit.wiwi.tu-dresden.de/en/privacy`       |
+| Imprint                   | `https://habit.wiwi.tu-dresden.de/en/imprint`       |
+| Accessibility statement   | `https://habit.wiwi.tu-dresden.de/en/accessibility` |
 
 German variants use `/de/...`. These are server-rendered HTML pages (browsers get
 a styled page, the mobile app gets JSON from the same URL via content

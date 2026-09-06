@@ -328,7 +328,7 @@ export function createApiRouter({
   router.use(
     '/recommend',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createRecommendRouter({ recommenderUrl })
+    createRecommendRouter({ recommenderUrl, db })
   );
 
   // Profile routes: require user, admin, or researcher role

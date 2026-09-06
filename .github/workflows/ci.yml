@@ -59,6 +59,9 @@ jobs:
       - name: Diagram consistency
         run: node scripts/checkDiagrams.mjs
 
+      - name: Analytics registry consistency
+        run: node scripts/generate-analytics-registry.mjs --check
+
       - name: OpenAPI spec drift
         working-directory: app
         run: |

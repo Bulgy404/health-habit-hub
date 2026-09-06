@@ -8,12 +8,12 @@ import { COLLECTION as SRHI_COLLECTION } from '../models/srhiResponse.js';
  * Build a chronological timeline of participant events.
  * @param {object} participant - Participant document
  * @param {Array} surveyResponses - Survey response documents
- * @param {Array} recDocs - Recommendation log documents
+ * @param {Array} adoptedIntentions - Intentions created from recommendations
  * @returns {Array} Sorted timeline events
  */
 const log = logger.child({ module: 'adminStatsService' });
 
-function buildTimeline(participant, surveyResponses, recDocs) {
+function buildTimeline(participant, surveyResponses, adoptedIntentions) {
   const timeline = [];
   if (participant.enrolledAt) {
     timeline.push({
@@ -29,11 +29,11 @@ function buildTimeline(participant, surveyResponses, recDocs) {
       detail: sr.surveyTitle || sr.surveyId,
     });
   }
-  for (const rec of recDocs) {
+  for (const intention of adoptedIntentions) {
     timeline.push({
-      type: `recommendation_${rec.type}`,
-      timestamp: rec.timestamp,
-      detail: rec.recommendationId || '',
+      type: 'recommendation_accepted',
+      timestamp: intention.createdAt,
+      detail: intention.sourceRecommendationId,
     });
   }
   timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -80,17 +80,6 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
     habitsCount = habitDocs.length;
   }
 
-  const recDocs = await db
-    .collection('recommendations_log')
-    .find({ participantId: id })
-    .toArray();
-  const accepted = recDocs.filter((r) => r.type === 'accepted').length;
-  const dismissed = recDocs.filter((r) => r.type === 'dismissed').length;
-
-  // Use participant doc if available, otherwise synthesise a minimal object for the timeline
-  const timelineSource = participant ?? {};
-  const timeline = buildTimeline(timelineSource, surveyResponses, recDocs);
-
   // Scheduled questionnaire windows + completion for this participant.
   let questionnaires = [];
   try {
@@ -108,6 +97,21 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   } catch (err) {
     log.error({ err }, '[adminStatsService] intentions error');
   }
+
+  // `recommendations_log` was a dead schema with no writers. Adoption is now
+  // derived from the durable lineage on the created intention itself.
+  const adoptedIntentions = createdHabits.filter(
+    (h) => h.sourceRecommendationId != null
+  );
+  const accepted = adoptedIntentions.length;
+  // Dismissal will come from the analytics event stream; no durable domain
+  // record exists for it today, so do not fabricate a count.
+  const dismissed = 0;
+  const timeline = buildTimeline(
+    participant ?? {},
+    surveyResponses,
+    adoptedIntentions
+  );
 
   // SRHI check-in summary: completed = actually submitted. `total` counts every
   // scheduled window (submitted or not); the headline number the admin cares

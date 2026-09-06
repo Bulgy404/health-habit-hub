@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../analytics/analytics_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_icons.dart';
@@ -26,6 +27,7 @@ class SetCueScreen extends ConsumerStatefulWidget {
     required this.config,
     required this.habitType,
     this.initialCue,
+    this.recommendationId,
     super.key,
   });
 
@@ -45,6 +47,9 @@ class SetCueScreen extends ConsumerStatefulWidget {
   /// Optional cue text to prefill the first cue field (e.g. suggested by the
   /// recommender). The user can freely edit or replace it.
   final String? initialCue;
+
+  /// Recommendation that initiated this habit flow, if any.
+  final String? recommendationId;
 
   @override
   ConsumerState<SetCueScreen> createState() => _SetCueScreenState();
@@ -172,12 +177,24 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
 
     setState(() => _error = null);
 
+    final cueSource = isStacked
+        ? 'stacked'
+        : widget.initialCue?.trim().isNotEmpty == true
+        ? 'recommendation'
+        : isPreRated
+        ? 'pre_rated'
+        : 'self_selected';
+    ref.read(analyticsProvider).capture('habit_cue_selected', {
+      'cue_source': cueSource,
+    });
+
     final extra = <String, dynamic>{
       'behaviorKey': widget.behaviorKey,
       'behaviorLabel': widget.behaviorLabel,
       'config': widget.config,
       'habitType': widget.habitType.wire,
       'cues': cues,
+      'recommendationId': ?widget.recommendationId,
       // §7.1 Habit Stacking — anchor reference (when tracked), free-typed
       // anchor text (donated as an anchor), the opt-in to also track the
       // anchor as its own habit, and the creation mode.
@@ -202,8 +219,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     final l10n = AppLocalizations.of(context)!;
     final lang = ref.watch(localeProvider).languageCode;
     final isPreRated = widget.config.cueSource != 'self_selected';
-    final showIntro =
-        widget.config.onboardingEnabled && _hasSeenIntro == false;
+    final showIntro = widget.config.onboardingEnabled && _hasSeenIntro == false;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.setCueTitle)),
@@ -331,8 +347,9 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                     // doesn't show it in an editable-looking field, and
                     // clears any opt-in from a previous free-typed anchor:
                     // an already-tracked anchor never needs re-creating.
-                    _anchorController.text =
-                        active.firstWhere((i) => i.id == id).behaviorLabel;
+                    _anchorController.text = active
+                        .firstWhere((i) => i.id == id)
+                        .behaviorLabel;
                     _alsoTrackAnchor = false;
                   } else {
                     // Back to "None" — drop whatever label the previous
@@ -374,7 +391,8 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
           // Opt-in: only offered for a free-typed anchor that isn't already
           // one of the user's tracked habits — picking from the dropdown
           // above means it's tracked already, nothing to add.
-          if (_stackedOnId == null && _anchorController.text.trim().isNotEmpty) ...[
+          if (_stackedOnId == null &&
+              _anchorController.text.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(
               children: [

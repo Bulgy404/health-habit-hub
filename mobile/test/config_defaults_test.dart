@@ -21,10 +21,21 @@ void main() {
       expect(AppConfig.appBaseUrl, 'http://localhost:3000');
     });
 
-    test('the localhost guard only trips in release, so debug starts normally',
-        () {
-      expect(AppConfig.localhostOverridesInRelease(), isEmpty);
-      expect(AppConfig.productionConfigError(), isNull);
-    });
+    test(
+      'analytics stays disabled until both PostHog values are configured',
+      () {
+        expect(AppConfig.posthogProjectKey, isEmpty);
+        expect(AppConfig.posthogHost, isEmpty);
+        expect(AppConfig.analyticsConfigured, isFalse);
+      },
+    );
+
+    test(
+      'the localhost guard only trips in release, so debug starts normally',
+      () {
+        expect(AppConfig.localhostOverridesInRelease(), isEmpty);
+        expect(AppConfig.productionConfigError(), isNull);
+      },
+    );
   });
 }

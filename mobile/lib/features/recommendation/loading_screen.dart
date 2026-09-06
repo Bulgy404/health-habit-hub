@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../analytics/analytics_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
@@ -123,13 +124,18 @@ class _RecommendationLoadingScreenState
 
   Future<void> _startApiCall() async {
     try {
+      unawaited(
+        ref.read(analyticsProvider).capture('recommendation_requested'),
+      );
       final userId = await ref.read(userIdProvider.future);
       if (userId == null) {
         // No token available right now — surface this like any other
         // failure rather than clearing the session. The session is only
         // ever cleared by an explicit user action (Settings -> Sign out).
         if (mounted) {
-          _error = AppLocalizations.of(context)!.recommendationLoadingGenericError;
+          _error = AppLocalizations.of(
+            context,
+          )!.recommendationLoadingGenericError;
         }
         return;
       }
@@ -140,6 +146,12 @@ class _RecommendationLoadingScreenState
         sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
       );
       _response = response;
+      unawaited(
+        ref.read(analyticsProvider).capture('recommendation_viewed', {
+          'recommendation_id': response.recommendationId,
+          'count': response.recommendations.length,
+        }),
+      );
     } catch (e) {
       if (mounted) _error = _friendlyErrorMessage(e);
     } finally {

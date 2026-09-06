@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import '../analytics/analytics_service.dart';
 import '../features/my_habits/habit_detail_screen.dart';
 import '../features/my_habits/intention_stitch_screen.dart';
 import '../features/my_habits/my_habits_models.dart';
@@ -45,9 +46,11 @@ import 'redirect.dart';
 /// auth state via [userRolesProvider] without relying on BuildContext.
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authNotifierProvider);
+  final analytics = ref.watch(analyticsProvider);
   final router = GoRouter(
     initialLocation: '/onboarding/welcome',
     refreshListenable: authNotifier,
+    observers: [AnalyticsNavigationObserver(analytics)],
     // Redirect guard: admin route protection and onboarding bypass.
     redirect: (context, state) => redirectGuard(
       location: state.matchedLocation,
@@ -59,13 +62,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // must not depend on the network. The slug is written at enrolment and
       // deleted once the server has recorded the acceptance.
       getStudyConsentPending: () async {
-        final slug = await const FlutterSecureStorage()
-            .read(key: kPendingStudyConsentSlugKey);
+        final slug = await const FlutterSecureStorage().read(
+          key: kPendingStudyConsentSlugKey,
+        );
         return slug != null && slug.isNotEmpty;
       },
     ),
     routes: [
       GoRoute(
+        name: 'onboarding_welcome',
         path: '/onboarding/welcome',
         builder: (context, state) => const WelcomeScreen(),
       ),
@@ -76,6 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        name: 'onboarding_consent',
         path: '/onboarding/consent',
         builder: (context, state) => const ConsentScreen(),
       ),
@@ -96,6 +102,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProjectInfoScreen(),
       ),
       GoRoute(
+        name: 'onboarding_passphrase',
         path: '/onboarding/passphrase',
         builder: (context, state) => const PassphraseScreen(),
       ),
@@ -104,10 +111,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RestoreScreen(),
       ),
       GoRoute(
+        name: 'onboarding_profile_setup',
         path: '/onboarding/profile-setup',
         builder: (context, state) => const ProfileSetupScreen(),
       ),
       GoRoute(
+        name: 'onboarding_study_code',
         path: '/onboarding/study-code',
         builder: (context, state) => const StudyCodeScreen(),
       ),
@@ -137,10 +146,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/share',
                 builder: (context, state) => const ShareHabitScreen(),
               ),
-              GoRoute(
-                path: '/donate',
-                redirect: (context, state) => '/share',
-              ),
+              GoRoute(path: '/donate', redirect: (context, state) => '/share'),
             ],
           ),
           StatefulShellBranch(
@@ -159,7 +165,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'new/behavior',
-                    builder: (context, state) => const PickBehaviorScreen(),
+                    builder: (context, state) {
+                      final extra = state.extra as Map<String, dynamic>?;
+                      return PickBehaviorScreen(
+                        recommendationId: extra?['recommendationId'] as String?,
+                      );
+                    },
                   ),
                   GoRoute(
                     path: 'new/cue',
@@ -169,9 +180,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
-                        habitType:
-                            HabitType.fromWire(extra['habitType'] as String?),
+                        habitType: HabitType.fromWire(
+                          extra['habitType'] as String?,
+                        ),
                         initialCue: extra['initialCue'] as String?,
+                        recommendationId: extra['recommendationId'] as String?,
                       );
                     },
                   ),
@@ -183,8 +196,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
-                        habitType:
-                            HabitType.fromWire(extra['habitType'] as String?),
+                        habitType: HabitType.fromWire(
+                          extra['habitType'] as String?,
+                        ),
                         stackedOn: extra['stackedOn'] as String?,
                         creationMode:
                             extra['creationMode'] as String? ?? 'standalone',
@@ -193,6 +207,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                             extra['alsoTrackAnchor'] as bool? ?? false,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
+                        recommendationId: extra['recommendationId'] as String?,
                       );
                     },
                   ),
@@ -204,8 +219,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
-                        habitType:
-                            HabitType.fromWire(extra['habitType'] as String?),
+                        habitType: HabitType.fromWire(
+                          extra['habitType'] as String?,
+                        ),
                         stackedOn: extra['stackedOn'] as String?,
                         creationMode:
                             extra['creationMode'] as String? ?? 'standalone',
@@ -214,8 +230,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                             extra['alsoTrackAnchor'] as bool? ?? false,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
-                        stitchedSentence:
-                            extra['stitchedSentence'] as String?,
+                        stitchedSentence: extra['stitchedSentence'] as String?,
+                        recommendationId: extra['recommendationId'] as String?,
                       );
                     },
                   ),
@@ -236,10 +252,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                           // from providers instead of rendering with zero
                           // questions.
                           return SrhiFormScreen(
-                            intentionId:
-                                state.pathParameters['intentionId']!,
+                            intentionId: state.pathParameters['intentionId']!,
                             weekNumber: int.parse(
-                                state.pathParameters['weekNumber']!),
+                              state.pathParameters['weekNumber']!,
+                            ),
                             behaviorLabel: extra?['behaviorLabel'] as String?,
                             srhiItems: (extra?['srhiItems'] as List<dynamic>?)
                                 ?.cast<SrhiItem>(),

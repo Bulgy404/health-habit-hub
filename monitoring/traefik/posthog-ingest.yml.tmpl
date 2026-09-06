@@ -1,0 +1,40 @@
+http:
+  routers:
+    posthog-ingest:
+      rule: >-
+        Host(`__DOMAIN__`) &&
+        (PathPrefix(`/ingest/i/`) ||
+        PathPrefix(`/ingest/e/`) ||
+        Path(`/ingest/decide`) ||
+        Path(`/ingest/decide/`) ||
+        Path(`/ingest/flags`) ||
+        Path(`/ingest/flags/`) ||
+        Path(`/ingest/batch`) ||
+        Path(`/ingest/batch/`) ||
+        PathPrefix(`/ingest/array/`))
+      entryPoints:
+        - websecure
+      service: posthog-ingest
+      middlewares:
+        - posthog-ingest-strip
+        - posthog-ingest-rate-limit
+      priority: 1000
+      tls:
+        certResolver: letsencrypt
+
+  middlewares:
+    posthog-ingest-strip:
+      stripPrefix:
+        prefixes:
+          - /ingest
+    posthog-ingest-rate-limit:
+      rateLimit:
+        average: __RATE_AVERAGE__
+        burst: __RATE_BURST__
+
+  services:
+    posthog-ingest:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: "__POSTHOG_INTERNAL_URL__"

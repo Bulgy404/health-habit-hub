@@ -11,12 +11,23 @@ import {
 import { logger } from '../utils/logger.js';
 import * as identityClient from '../services/identityLinkClient.js';
 import { identityServiceConfigured } from '../services/identityLinkClient.js';
+import { productAnalytics } from '../services/productAnalyticsService.js';
 
 /** HHV-XXXXX-XXXXX over Crockford base32 (no I/L/O/U) — see identity-service. */
 const IDENTITY_CODE_PATTERN =
   /^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$/;
 
 const log = logger.child({ module: 'studyEnrollRouter' });
+
+function trackEnrollment(userId, result, studyCodeUsed) {
+  productAnalytics.capture({
+    distinctId: String(userId),
+    event: 'enrollment_completed',
+    studyId: result.studyId?.toString(),
+    groupId: result.groupId?.toString(),
+    properties: { study_code_used: studyCodeUsed },
+  });
+}
 
 export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
@@ -132,6 +143,7 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
           return res.status(503).json({
             error: 'Identity service unavailable. Please try again shortly.',
           });
+        trackEnrollment(userId, vResult, true);
         return res.json({
           studyId: vResult.studyId,
           groupId: vResult.groupId,
@@ -154,6 +166,7 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
       if (result.alreadyEnrolled)
         return res.status(409).json({ error: 'Already enrolled in a study' });
 
+      trackEnrollment(userId, result, true);
       res.json({
         studyId: result.studyId,
         groupId: result.groupId,
@@ -210,6 +223,7 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
         return res.status(503).json({ error: 'Default study has no groups' });
       }
 
+      trackEnrollment(userId, result, false);
       res.json({
         studyId: result.studyId,
         groupId: result.groupId,

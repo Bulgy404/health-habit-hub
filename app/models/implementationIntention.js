@@ -7,6 +7,8 @@
  *   enrollmentId       ObjectId   Optional. Reference to enrollment.
  *   studyId            ObjectId   Optional. Reference to study.
  *   groupId            ObjectId   Optional. Reference to group.
+ *   sourceRecommendationId string Optional. UUID of the recommendation that
+ *                                 initiated this habit-creation flow.
  *   behaviorKey        string     Required. Unique behavior identifier.
  *   behaviorLabel      string     Required. Display label for the behavior.
  *   durationMinutes    int        Required. Duration of behavior in minutes.
@@ -95,6 +97,7 @@ export const VALIDATOR = {
       enrollmentId: { bsonType: ['objectId', 'null'] },
       studyId: { bsonType: ['objectId', 'null'] },
       groupId: { bsonType: ['objectId', 'null'] },
+      sourceRecommendationId: { bsonType: ['string', 'null'] },
       behaviorKey: { bsonType: 'string' },
       behaviorLabel: { bsonType: 'string' },
       durationMinutes: { bsonType: 'int' },
@@ -190,6 +193,10 @@ export async function ensureIndexes(db) {
   await col.createIndex(
     { stackedOn: 1 },
     { name: 'intentions_stackedOn', sparse: true }
+  );
+  await col.createIndex(
+    { sourceRecommendationId: 1 },
+    { name: 'intentions_sourceRecommendationId', sparse: true }
   );
 }
 

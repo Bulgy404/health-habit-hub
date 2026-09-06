@@ -411,6 +411,30 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   // §7.4 — habitType echoed back and creationMode defaulted.
   assert.strictEqual(body.habitType, 'build');
   assert.strictEqual(body.creationMode, 'standalone');
+  assert.strictEqual(body.sourceRecommendationId, null);
+});
+
+test('POST /habits/intentions persists a valid recommendation UUID', async () => {
+  const sourceRecommendationId = 'f81d4fae-7dec-4f01-a765-00a0c91e6bf6';
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, sourceRecommendationId },
+    makeToken(['user'], 'recommended-habit-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.sourceRecommendationId, sourceRecommendationId);
+});
+
+test('POST /habits/intentions rejects malformed recommendation lineage', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, sourceRecommendationId: 'not-a-recommendation-uuid' },
+    makeToken(['user'], 'bad-recommendation-id-user')
+  );
+  assert.strictEqual(res.status, 400);
+  const body = await res.json();
+  assert.match(body.error, /UUID v4/);
 });
 
 test('POST /habits/intentions defaults to build when habitType is missing (pre-§7.4 app builds)', async () => {

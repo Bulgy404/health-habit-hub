@@ -2,5 +2,7 @@
   "API_BASE_URL": "https://habit.wiwi.tu-dresden.de/api/v1",
   "KEYCLOAK_URL": "https://habit.wiwi.tu-dresden.de/auth",
   "WS_BASE_URL": "wss://habit.wiwi.tu-dresden.de/ws",
-  "SUPPORT_EMAIL": "digital-health@tu-dresden.de"
+  "SUPPORT_EMAIL": "digital-health@tu-dresden.de",
+  "POSTHOG_PROJECT_KEY": "",
+  "POSTHOG_HOST": ""
 }
