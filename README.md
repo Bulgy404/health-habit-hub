@@ -18,8 +18,6 @@
   </p>
 
   <p>
-    <a href="https://habit.wiwi.tu-dresden.de"><strong>habit.wiwi.tu-dresden.de</strong></a>
-    &nbsp;·&nbsp;
     <a href="https://healthhabithub.de"><strong>healthhabithub.de</strong></a>
     &nbsp;·&nbsp;
     <a href="DOCUMENTATION.md">Docs</a>
