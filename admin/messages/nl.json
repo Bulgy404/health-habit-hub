@@ -1260,7 +1260,7 @@
     "usedByNone": "Aan geen enkele studie gekoppeld",
     "ready": "Klaar om te koppelen",
     "notReady": "Niet klaar",
-    "readyHint": "Een document kan pas aan een studie worden gekoppeld als het gepubliceerd is, in alle talen bestaat en geen ⟦…⟧-tijdelijke aanduidingen meer bevat.",
+    "readyHint": "Een document kan pas aan een studie worden gekoppeld als het in het Engels is gepubliceerd en geen ⟦…⟧-tijdelijke aanduidingen meer bevat. Andere talen zijn optioneel en vallen bij ontbreken automatisch terug op het Engels.",
     "languages": "Talen",
     "source": "Bron",
     "sourceDb": "Hier bewerkt",
@@ -1431,12 +1431,32 @@
       "addFailed": "De toegang kon niet worden verleend.",
       "removeFailed": "De toegang kon niet worden ingetrokken."
     },
+    "tab": {
+      "intro": "Standaard uitgeschakeld. Zet dit alleen aan voor een studie waarvan de ethische goedkeuring vereist dat deelnemers geïdentificeerd kunnen worden — bijvoorbeeld een klinische studie die na een bijwerking iemand moet kunnen contacteren.",
+      "frozenNote": "Er hebben zich al deelnemers ingeschreven, dus de modus en het kenmerkvoorvoegsel zijn vergrendeld. Terugschakelen naar anoniem zou de bestaande identiteitskoppelingen wees maken; het voorvoegsel wijzigen zou de koppeling tussen opgeslagen kenmerken en het uitgevende register verbreken.",
+      "checkboxLabel": "Geverifieerde identiteitsmodus",
+      "confirmLabel": "Ik begrijp dat deze studie identiteiten van deelnemers in een apart register verzamelt, en dat de ethische goedkeuring dit al moet dekken.",
+      "prefixLabel": "Kenmerkvoorvoegsel",
+      "prefixSuffix": "→ kenmerken zien eruit als {example}",
+      "methodsLegend": "Hoe de identiteit wordt geverifieerd",
+      "methodInPerson": "Persoonlijk",
+      "methodEmail": "E-mail",
+      "methodSms": "Sms",
+      "consentSlugLabel": "Slug van het toestemmingsdocument van de studie",
+      "consentHint": "Het document moet in het Engels gepubliceerd zijn voordat het gekoppeld kan worden — anders wordt opslaan geweigerd, omdat een ontbrekend document de deelnemer pas <em>na</em> inschrijving raakt. Andere talen zijn optioneel en vallen bij ontbreken automatisch terug op het Engels. Schrijf en publiceer het onder <link>Toestemmingsdocumenten</link>. Laat leeg voor geen extra toestemming.",
+      "approversLabel": "Vereiste goedkeurders",
+      "approversOption1": "1 — één andere persoon keurt goed",
+      "approversOption2": "2 — twee andere personen keuren goed",
+      "approversHint": "Wie een verzoek indient, kan dit nooit zelf goedkeuren, bij beide instellingen. Twee goedkeurders is strenger maar vereist twee bereikbare personen — overweeg dekking buiten kantooruren voordat u dit kiest.",
+      "revealLabel": "Openbaarmakingsvenster (minuten)",
+      "scopingNote": "Toegang voor onderzoekers wordt bij geverifieerde studies automatisch beperkt, dus een onderzoeker moet expliciet lid zijn om de gegevens van deze studie te zien. Dat is hier niet instelbaar."
+    },
     "config": {
       "save": "Identiteitsinstellingen opslaan",
       "saving": "Bezig met opslaan…",
       "saved": "Opgeslagen.",
       "loadFailed": "De studie kon niet worden geladen.",
-      "consentNotReady": "Het hier genoemde toestemmingsdocument is nog niet klaar om te koppelen. Het moet in alle talen gepubliceerd zijn, in één versie, zonder ⟦…⟧-tijdelijke aanduidingen. Corrigeer het onder Toestemmingsdocumenten en sla opnieuw op. Opslaan is geweigerd omdat een onvolledig document de deelnemer pas raakt nadat die zich al heeft ingeschreven."
+      "consentNotReady": "Het hier genoemde toestemmingsdocument is nog niet klaar om te koppelen. Het moet in het Engels gepubliceerd zijn en mag geen ⟦…⟧-tijdelijke aanduidingen bevatten — andere talen zijn optioneel en vallen bij ontbreken automatisch terug op het Engels, maar moeten, indien geschreven, even volledig zijn. Corrigeer het onder Toestemmingsdocumenten en sla opnieuw op. Opslaan is geweigerd omdat een onvolledig document de deelnemer pas raakt nadat die zich al heeft ingeschreven."
     },
     "requests": {
       "title": "Her-identificatie",

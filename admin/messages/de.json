@@ -1260,7 +1260,7 @@
     "usedByNone": "Keiner Studie zugeordnet",
     "ready": "Einsatzbereit",
     "notReady": "Nicht einsatzbereit",
-    "readyHint": "Ein Dokument kann einer Studie erst zugeordnet werden, wenn es veröffentlicht, in allen Sprachen vorhanden und frei von ⟦…⟧-Platzhaltern ist.",
+    "readyHint": "Ein Dokument kann einer Studie erst zugeordnet werden, wenn es auf Englisch veröffentlicht und frei von ⟦…⟧-Platzhaltern ist. Weitere Sprachen sind optional und fallen bei Fehlen automatisch auf Englisch zurück.",
     "languages": "Sprachen",
     "source": "Quelle",
     "sourceDb": "Hier bearbeitet",
@@ -1431,12 +1431,32 @@
       "addFailed": "Der Zugriff konnte nicht vergeben werden.",
       "removeFailed": "Der Zugriff konnte nicht entzogen werden."
     },
+    "tab": {
+      "intro": "Standardmäßig deaktiviert. Nur aktivieren, wenn das Ethikvotum einer Studie verlangt, dass Teilnehmende identifiziert werden können — etwa bei einer klinischen Studie, die nach einem unerwünschten Ereignis jemanden kontaktieren muss.",
+      "frozenNote": "Es haben sich bereits Teilnehmende eingeschrieben, daher sind Modus und Kennungspräfix gesperrt. Ein Wechsel zu anonym würde jetzt die bestehenden Identitätsverknüpfungen verwaisen lassen; eine Änderung des Präfixes würde die Verbindung zwischen gespeicherten Kennungen und dem ausstellenden Register zerstören.",
+      "checkboxLabel": "Verifizierter Identitätsmodus",
+      "confirmLabel": "Mir ist bewusst, dass diese Studie Identitäten von Teilnehmenden in einem separaten Register erfasst und dass das Ethikvotum dies bereits abdecken muss.",
+      "prefixLabel": "Kennungspräfix",
+      "prefixSuffix": "→ Kennungen sehen aus wie {example}",
+      "methodsLegend": "Wie die Identität verifiziert wird",
+      "methodInPerson": "Persönlich",
+      "methodEmail": "E-Mail",
+      "methodSms": "SMS",
+      "consentSlugLabel": "Slug des Studien-Einwilligungsdokuments",
+      "consentHint": "Das Dokument muss auf Englisch veröffentlicht sein, bevor es zugeordnet werden kann — sonst wird das Speichern verweigert, weil ein fehlendes Dokument die teilnehmende Person erst <em>nach</em> dem Einschluss trifft. Weitere Sprachen sind optional und fallen bei Fehlen automatisch auf Englisch zurück. Verfassen und veröffentlichen unter <link>Einwilligungsdokumente</link>. Leer lassen für keine zusätzliche Einwilligung.",
+      "approversLabel": "Erforderliche Freigebende",
+      "approversOption1": "1 — eine weitere Person gibt frei",
+      "approversOption2": "2 — zwei weitere Personen geben frei",
+      "approversHint": "Wer eine Anfrage stellt, kann sie in keinem Fall selbst freigeben. Zwei Freigebende sind strenger, brauchen aber zwei erreichbare Personen — vor der Wahl an eine Abdeckung außerhalb der Regelarbeitszeit denken.",
+      "revealLabel": "Offenlegungsfenster (Minuten)",
+      "scopingNote": "Der Forschendenzugriff wird bei verifizierten Studien automatisch eingeschränkt, sodass Forschende eine ausdrückliche Mitgliedschaft benötigen, um die Daten dieser Studie zu sehen. Das ist hier nicht konfigurierbar."
+    },
     "config": {
       "save": "Identitätseinstellungen speichern",
       "saving": "Wird gespeichert…",
       "saved": "Gespeichert.",
       "loadFailed": "Die Studie konnte nicht geladen werden.",
-      "consentNotReady": "Das hier genannte Einwilligungsdokument ist noch nicht einsatzbereit. Es muss in allen Sprachen veröffentlicht sein, in einer einheitlichen Version und ohne ⟦…⟧-Platzhalter. Bitte unter „Einwilligungsdokumente“ korrigieren und erneut speichern. Das Speichern wurde abgelehnt, weil ein unvollständiges Dokument die teilnehmende Person erst nach dem Einschluss treffen würde."
+      "consentNotReady": "Das hier genannte Einwilligungsdokument ist noch nicht einsatzbereit. Es muss auf Englisch veröffentlicht sein und darf keine ⟦…⟧-Platzhalter enthalten — weitere Sprachen sind optional und fallen bei Fehlen automatisch auf Englisch zurück, müssen aber, wenn vorhanden, ebenso vollständig sein. Bitte unter „Einwilligungsdokumente“ korrigieren und erneut speichern. Das Speichern wurde abgelehnt, weil ein unvollständiges Dokument die teilnehmende Person erst nach dem Einschluss treffen würde."
     },
     "requests": {
       "title": "Re-Identifizierung",

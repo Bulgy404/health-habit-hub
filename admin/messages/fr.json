@@ -1260,7 +1260,7 @@
     "usedByNone": "Rattaché à aucune étude",
     "ready": "Prêt à être rattaché",
     "notReady": "Pas prêt",
-    "readyHint": "Un document ne peut être rattaché à une étude que s'il est publié, complet dans toutes les langues et sans espaces réservés ⟦…⟧.",
+    "readyHint": "Un document ne peut être rattaché à une étude que s'il est publié en anglais et sans espaces réservés ⟦…⟧. Les autres langues sont facultatives et reviennent automatiquement à l'anglais si elles manquent.",
     "languages": "Langues",
     "source": "Source",
     "sourceDb": "Modifié ici",
@@ -1431,12 +1431,32 @@
       "addFailed": "L'accès n'a pas pu être accordé.",
       "removeFailed": "L'accès n'a pas pu être retiré."
     },
+    "tab": {
+      "intro": "Désactivé par défaut. N'activez ceci que pour une étude dont l'avis éthique exige que les participants puissent être identifiés — par exemple une étude clinique qui doit contacter quelqu'un après un événement indésirable.",
+      "frozenNote": "Des participants sont déjà inscrits, le mode et le préfixe de code sujet sont donc verrouillés. Repasser en anonyme orphelinerait les liens d'identité existants ; modifier le préfixe romprait le lien entre les codes sujets enregistrés et le registre qui les a émis.",
+      "checkboxLabel": "Mode identité vérifiée",
+      "confirmLabel": "Je comprends que cette étude collectera les identités des participants dans un registre séparé, et que l'avis éthique doit déjà le couvrir.",
+      "prefixLabel": "Préfixe de code sujet",
+      "prefixSuffix": "→ les codes ressemblent à {example}",
+      "methodsLegend": "Comment l'identité est vérifiée",
+      "methodInPerson": "En personne",
+      "methodEmail": "E-mail",
+      "methodSms": "SMS",
+      "consentSlugLabel": "Identifiant du document de consentement de l'étude",
+      "consentHint": "Le document doit être publié en anglais avant de pouvoir être rattaché — sinon l'enregistrement est refusé, car un document manquant met le participant en échec <em>après</em> son inclusion. Les autres langues sont facultatives et reviennent automatiquement à l'anglais si elles manquent. Rédigez-le et publiez-le sous <link>Documents de consentement</link>. Laissez vide pour aucun consentement supplémentaire.",
+      "approversLabel": "Approbateurs requis",
+      "approversOption1": "1 — une autre personne approuve",
+      "approversOption2": "2 — deux autres personnes approuvent",
+      "approversHint": "La personne qui soumet une demande ne peut jamais l'approuver, quel que soit le réglage. Deux approbateurs est plus strict mais nécessite deux personnes disponibles — pensez à la couverture en dehors des heures ouvrées avant de choisir cette option.",
+      "revealLabel": "Fenêtre de divulgation (minutes)",
+      "scopingNote": "L'accès des chercheurs est automatiquement limité pour les études vérifiées : un chercheur doit être membre explicite pour voir les données de cette étude. Ce n'est pas configurable ici."
+    },
     "config": {
       "save": "Enregistrer les paramètres d'identité",
       "saving": "Enregistrement…",
       "saved": "Enregistré.",
       "loadFailed": "L'étude n'a pas pu être chargée.",
-      "consentNotReady": "Le document de consentement indiqué ici n'est pas prêt à être rattaché. Il doit être publié dans toutes les langues, dans une seule version, sans espaces réservés ⟦…⟧. Corrigez-le sous Documents de consentement, puis enregistrez à nouveau. L'enregistrement a été refusé parce qu'un document incomplet met le participant en échec après son inclusion."
+      "consentNotReady": "Le document de consentement indiqué ici n'est pas prêt à être rattaché. Il doit être publié en anglais et ne comporter aucun espace réservé ⟦…⟧ — les autres langues sont facultatives et reviennent automatiquement à l'anglais si elles manquent, mais celles que vous avez rédigées doivent être tout aussi complètes. Corrigez-le sous Documents de consentement, puis enregistrez à nouveau. L'enregistrement a été refusé parce qu'un document incomplet met le participant en échec après son inclusion."
     },
     "requests": {
       "title": "Ré-identification",

@@ -5,11 +5,15 @@ import { marked } from 'marked';
 /**
  * Every locale the participant app serves legal documents in.
  *
- * Exported because a study consent document has to exist in ALL of them —
- * `req.lang` decides which file is read, so a document written only in German
- * 404s a Dutch participant *after* they have already enrolled. The admin
- * portal and scripts/checkLegalDocs.mjs both check completeness against this
- * list; neither should keep its own copy of it.
+ * The platform-wide legal documents (privacy, imprint, accessibility) have to
+ * exist in ALL of them — scripts/checkLegalDocs.mjs checks completeness
+ * against this list for those.
+ *
+ * Study consent documents are different: only English is a hard requirement
+ * (see `checkConsentDocumentReadiness` in consentDocumentService.js). A
+ * participant in another language whose consent document was never authored
+ * there is served the English version rather than a 404 — see the fallback
+ * chain in `resolveConsentDocument`.
  */
 export const SUPPORTED_LANGS = Object.freeze(['en', 'de', 'ja', 'fr', 'nl']);
 

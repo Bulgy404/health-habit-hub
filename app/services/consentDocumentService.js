@@ -98,10 +98,25 @@ async function readDbDocument(db, lang, slug) {
 /**
  * Resolve the document a participant should see.
  *
+ * Fallback chain, in this exact order:
+ *
+ *   1. The database override for the requested language.
+ *   2. The database override for English — an admin edit to the English
+ *      wording must reach a participant in an unauthored language too,
+ *      without a redeploy, same as it would for their own language.
+ *   3. The shipped file for the requested language.
+ *   4. The shipped English file.
+ *
+ * English is the only language a consent document is required to have (see
+ * `checkConsentDocumentReadiness`), so it is always the backstop: a language
+ * that has never been authored must still resolve to something readable
+ * rather than 404ing a participant who has already started enrolling.
+ *
  * @param {{db?: import('mongodb').Db, lang: string, slug: string}} args
  * @returns {Promise<{html: string, meta: object, source: 'db'|'file'}|null>}
- *   null when neither source has it — the caller turns that into the 404 that
- *   says "operator error", not the 500 that looks like an outage.
+ *   null when neither source has it in the requested language OR in English —
+ *   the caller turns that into the 404 that says "operator error", not the
+ *   500 that looks like an outage.
  */
 export async function resolveConsentDocument({ db, lang, slug }) {
   if (!isValidSlug(slug) || !SUPPORTED_LANGS.includes(lang)) return null;
@@ -120,9 +135,39 @@ export async function resolveConsentDocument({ db, lang, slug }) {
     };
   }
 
+  if (lang !== 'en') {
+    const enRow = await readDbDocument(db, 'en', slug);
+    if (enRow) {
+      return {
+        html: marked.parse(enRow.body),
+        meta: {
+          version: enRow.version,
+          effectiveDate: enRow.effectiveDate,
+          bindingLanguage: enRow.bindingLanguage ?? null,
+          status: enRow.status,
+        },
+        source: 'db',
+      };
+    }
+  }
+
   const file = await readFileDocument(lang, slug);
-  if (!file) return null;
-  return { html: marked.parse(file.body), meta: file.meta, source: 'file' };
+  if (file) {
+    return { html: marked.parse(file.body), meta: file.meta, source: 'file' };
+  }
+
+  if (lang !== 'en') {
+    const enFile = await readFileDocument('en', slug);
+    if (enFile) {
+      return {
+        html: marked.parse(enFile.body),
+        meta: enFile.meta,
+        source: 'file',
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -201,11 +246,20 @@ export async function checkConsentDocumentReadiness({ db, slug }) {
   const languages = await describeConsentDocument({ db, slug });
   const reasons = [];
 
+  // Only English is a hard requirement — a study can go verified with a
+  // consent document authored in English alone. The other four languages are
+  // optional: their absence must not block enabling verified mode, but if an
+  // admin HAS started one (say a half-written German draft), it is still
+  // checked below like any other present language, so a half-finished
+  // translation can't silently go live just because it's not the required one.
   const missing = languages.filter((l) => l.source === 'missing');
   if (missing.length === SUPPORTED_LANGS.length) {
     reasons.push('document_not_found');
-  } else if (missing.length) {
-    reasons.push(`missing_languages:${missing.map((l) => l.lang).join(',')}`);
+  } else {
+    const english = languages.find((l) => l.lang === 'en');
+    if (english?.source === 'missing') {
+      reasons.push('missing_languages:en');
+    }
   }
 
   const present = languages.filter((l) => l.source !== 'missing');

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { marked } from "marked";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import {
   listConsentDocuments,
@@ -439,7 +440,21 @@ function Editor({
         <div className={styles.detailSection}>
           <span className={styles.detailLabel}>{t("body")}</span>
           {showPreview ? (
-            <pre className={styles.detailText}>{doc.body}</pre>
+            // Rendered as markdown, the same way the backend renders this
+            // exact content for participants (marked.parse in
+            // app/services/consentDocumentService.js) — a raw <pre> read like
+            // a wall of `#`/`*` characters, not the document a participant
+            // will actually see.
+            //
+            // No separate HTML sanitizer is used: this editor is reachable
+            // only by identity-manager/admin roles (see useAdminGuard above),
+            // so `doc.body` is trusted author input, not participant-supplied
+            // text — mirroring the backend's own marked.parse(row.body) call,
+            // which likewise renders this content without a sanitizer.
+            <div
+              className={styles.detailText}
+              dangerouslySetInnerHTML={{ __html: marked.parse(doc.body, { async: false }) }}
+            />
           ) : (
             <textarea
               aria-label={t("body")}

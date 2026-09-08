@@ -162,6 +162,43 @@ describe('consentDocumentService — resolution', () => {
       null
     );
   });
+
+  it('falls back to the English DATABASE override when the requested language has none', async () => {
+    // A slug that has no shipped file at all in any language — the only
+    // thing serving it is a database override in English.
+    const db = makeDb({
+      docs: [dbRow({ slug: 'db-english-only', lang: 'en' })],
+    });
+    const doc = await resolveConsentDocument({
+      db,
+      lang: 'nl',
+      slug: 'db-english-only',
+    });
+    assert.equal(doc.source, 'db');
+    assert.match(doc.html, /Aus der Datenbank/);
+  });
+
+  it('falls back to the shipped English FILE when neither the requested language nor an English override exists in the database', async () => {
+    // `verified-template` ships as a file only in en and de.
+    const doc = await resolveConsentDocument({
+      db: makeDb(),
+      lang: 'nl',
+      slug: 'verified-template',
+    });
+    assert.equal(doc.source, 'file');
+    assert.match(doc.html, /Additional consent/);
+  });
+
+  it('prefers the shipped file in the requested language over falling back to English', async () => {
+    // 'de' has its own shipped file for verified-template — must not fall
+    // back to English when the requested language's own file exists.
+    const doc = await resolveConsentDocument({
+      db: makeDb(),
+      lang: 'de',
+      slug: 'verified-template',
+    });
+    assert.equal(doc.source, 'file');
+  });
 });
 
 describe('consentDocumentService — describe', () => {
@@ -217,16 +254,20 @@ describe('consentDocumentService — readiness', () => {
     assert.deepEqual(r.reasons, ['invalid_slug']);
   });
 
-  it('names the languages still missing, not just "incomplete"', async () => {
+  it('blocks on a missing ENGLISH document even though another language is authored', async () => {
+    // Only 'de' is present here — English itself has never been written.
+    // English is the one hard requirement, so this must still block.
     const r = await checkConsentDocumentReadiness({
       db: makeDb({ docs: [dbRow({ slug: 'partial' })] }),
       slug: 'partial',
     });
-    const missing = r.reasons.find((x) => x.startsWith('missing_languages:'));
-    assert.ok(missing);
-    for (const lang of ['en', 'ja', 'fr', 'nl']) {
-      assert.ok(missing.includes(lang), `${lang} should be listed as missing`);
-    }
+    assert.equal(r.ready, false);
+    assert.ok(r.reasons.includes('missing_languages:en'));
+    // The other, still-unauthored languages (ja, fr, nl) must NOT be named as
+    // blocking reasons — their absence is fine, only English's isn't.
+    assert.ok(
+      !r.reasons.some((x) => x.startsWith('missing_languages:') && x !== 'missing_languages:en')
+    );
   });
 
   it('accepts a document published in every language at one version', async () => {
@@ -239,6 +280,59 @@ describe('consentDocumentService — readiness', () => {
     });
     assert.deepEqual(r.reasons, []);
     assert.equal(r.ready, true);
+  });
+
+  it('is ready with ONLY English authored — the other four languages are optional', async () => {
+    const r = await checkConsentDocumentReadiness({
+      db: makeDb({ docs: [dbRow({ slug: 'english-only', lang: 'en' })] }),
+      slug: 'english-only',
+    });
+    assert.deepEqual(r.reasons, []);
+    assert.equal(r.ready, true);
+  });
+
+  it('still blocks when English itself is a draft, even if other languages are published', async () => {
+    const docs = [
+      dbRow({ slug: 'en-draft', lang: 'en', status: 'draft' }),
+      dbRow({ slug: 'en-draft', lang: 'de', status: 'published' }),
+    ];
+    const r = await checkConsentDocumentReadiness({
+      db: makeDb({ docs }),
+      slug: 'en-draft',
+    });
+    assert.equal(r.ready, false);
+    assert.ok(r.reasons.some((x) => x.startsWith('draft_languages:') && x.includes('en')));
+  });
+
+  it('still blocks when English has placeholders remaining', async () => {
+    const docs = [
+      dbRow({
+        slug: 'en-placeholder',
+        lang: 'en',
+        body: 'A text with ⟦Placeholder⟧ that is long enough for the check.',
+      }),
+    ];
+    const r = await checkConsentDocumentReadiness({
+      db: makeDb({ docs }),
+      slug: 'en-placeholder',
+    });
+    assert.equal(r.ready, false);
+    assert.ok(r.reasons.some((x) => x.startsWith('placeholders_remain:') && x.includes('en')));
+  });
+
+  it('still blocks on a half-written, optional non-English draft when it IS authored', async () => {
+    // English alone would be ready, but a German draft has been started and
+    // must not silently go live just because German isn't the required one.
+    const docs = [
+      dbRow({ slug: 'de-draft', lang: 'en', status: 'published' }),
+      dbRow({ slug: 'de-draft', lang: 'de', status: 'draft' }),
+    ];
+    const r = await checkConsentDocumentReadiness({
+      db: makeDb({ docs }),
+      slug: 'de-draft',
+    });
+    assert.equal(r.ready, false);
+    assert.ok(r.reasons.some((x) => x.startsWith('draft_languages:') && x.includes('de')));
   });
 
   it('refuses when locales sit at different versions — an acceptance record would be ambiguous', async () => {

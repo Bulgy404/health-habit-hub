@@ -402,6 +402,14 @@
   display: flex;
   border-bottom: 1px solid var(--color-border);
   padding: 0 1.5rem;
+  /* Ten tabs (three German labels run 15+ characters) no longer fit a modal's
+     width at once — scroll the row instead of letting buttons wrap or
+     overlap. overscroll-behavior keeps a fast horizontal swipe from bubbling
+     into the page behind the modal. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
 }
 
 .tab {
@@ -416,6 +424,10 @@
   margin-bottom: -1px;
   cursor: pointer;
   font-family: inherit;
+  /* Never shrink or wrap — that's what turned into overlapping text before;
+     the row scrolls instead. */
+  flex-shrink: 0;
+  white-space: nowrap;
   /* Not gated behind (hover: hover) — this transition also carries the
      .tabActive color change below, which is set via className on tab
      click, not :hover, so touch devices still need it. */
@@ -1115,6 +1127,83 @@
 .savedMsg {
   font-size: 0.8rem;
   color: var(--color-success, var(--color-success));
+}
+
+/* ── Identity tab ──────────────────────────────────────────────────────────── */
+
+.identityTab {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.identityIntro {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0 0 0.5rem;
+}
+
+/* Same visual language as .banner/.bannerWarn elsewhere in the admin — a
+   status callout, not just tinted text. */
+.identityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.identityCheckboxRow {
+  margin: 0.5rem 0;
+}
+
+.identityConfirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.identityFieldset {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.identityLegend {
+  padding: 0 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.identityMethods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.identitySuffix {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.identityRevealInput {
+  width: 90px;
 }
 
 /* ── Reminders tab ───────────────────────────────────────────────────────────── */

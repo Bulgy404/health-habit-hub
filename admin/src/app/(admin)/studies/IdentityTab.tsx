@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import styles from "./page.module.css";
 
 /**
  * Verified-identity configuration for a study.
@@ -33,31 +35,27 @@ export interface IdentityTabProps {
 }
 
 export function IdentityTab({ value, hasEnrolments, onChange }: IdentityTabProps) {
+  const t = useTranslations("identity.tab");
   const [confirmVerified, setConfirmVerified] = useState(false);
   const frozen = hasEnrolments;
   const verified = value.mode === "verified";
+  const methodLabels: Record<IdentityConfig["verificationMethods"][number], string> = {
+    in_person: t("methodInPerson"),
+    email: t("methodEmail"),
+    sms: t("methodSms"),
+  };
 
   return (
-    <div style={{ maxWidth: 640 }}>
-      <p style={{ color: "#666" }}>
-        Off by default. Turn this on only for a study whose ethics approval
-        requires participants to be identified — for example a clinical study
-        that must contact someone after an adverse event.
-      </p>
+    <div className={styles.identityTab}>
+      <p className={styles.identityIntro}>{t("intro")}</p>
 
       {frozen && (
-        <p
-          role="note"
-          style={{ border: "1px solid #b26a00", padding: 8, color: "#b26a00" }}
-        >
-          Participants have already enrolled, so the mode and subject-code
-          prefix are locked. Switching to anonymous now would orphan the
-          existing identity links; changing the prefix would break the link
-          between stored subject codes and the register that issued them.
+        <p role="note" className={styles.identityNote}>
+          {t("frozenNote")}
         </p>
       )}
 
-      <label style={{ display: "block", margin: "12px 0" }}>
+      <label className={`${styles.checkboxLabel} ${styles.identityCheckboxRow}`}>
         <input
           type="checkbox"
           checked={verified}
@@ -65,27 +63,30 @@ export function IdentityTab({ value, hasEnrolments, onChange }: IdentityTabProps
           onChange={(e) =>
             onChange({ mode: e.target.checked ? "verified" : "anonymous" })
           }
-        />{" "}
-        Verified identity mode
+        />
+        {t("checkboxLabel")}
       </label>
 
       {!verified && !frozen && (
-        <label style={{ display: "block", marginBottom: 12, fontSize: 13 }}>
+        <label className={styles.identityConfirm}>
           <input
             type="checkbox"
             checked={confirmVerified}
             onChange={(e) => setConfirmVerified(e.target.checked)}
-          />{" "}
-          I understand this study will collect participant identities into a
-          separate register, and that ethics approval must already cover it.
+          />
+          {t("confirmLabel")}
         </label>
       )}
 
       {verified && (
         <>
-          <label style={{ display: "block", margin: "8px 0" }}>
-            Subject-code prefix{" "}
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="identity-prefix">
+              {t("prefixLabel")}
+            </label>
             <input
+              id="identity-prefix"
+              className={styles.input}
               value={value.subjectCodePrefix ?? ""}
               disabled={frozen}
               onChange={(e) =>
@@ -93,54 +94,63 @@ export function IdentityTab({ value, hasEnrolments, onChange }: IdentityTabProps
               }
               placeholder="TUD-DFG01"
             />
-            <span style={{ color: "#888", fontSize: 12 }}>
-              {" "}
-              → codes look like {value.subjectCodePrefix || "TUD-DFG01"}-0042
+            <span className={styles.identitySuffix}>
+              {t("prefixSuffix", {
+                example: `${value.subjectCodePrefix || "TUD-DFG01"}-0042`,
+              })}
             </span>
-          </label>
+          </div>
 
-          <fieldset style={{ margin: "12px 0" }}>
-            <legend>How identity is verified</legend>
-            {(["in_person", "email", "sms"] as const).map((m) => (
-              <label key={m} style={{ marginRight: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={value.verificationMethods.includes(m)}
-                  onChange={(e) =>
-                    onChange({
-                      verificationMethods: e.target.checked
-                        ? [...value.verificationMethods, m]
-                        : value.verificationMethods.filter((x) => x !== m),
-                    })
-                  }
-                />{" "}
-                {m}
-              </label>
-            ))}
+          <fieldset className={styles.identityFieldset}>
+            <legend className={styles.identityLegend}>{t("methodsLegend")}</legend>
+            <div className={styles.identityMethods}>
+              {(["in_person", "email", "sms"] as const).map((m) => (
+                <label key={m} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={value.verificationMethods.includes(m)}
+                    onChange={(e) =>
+                      onChange({
+                        verificationMethods: e.target.checked
+                          ? [...value.verificationMethods, m]
+                          : value.verificationMethods.filter((x) => x !== m),
+                      })
+                    }
+                  />
+                  {methodLabels[m]}
+                </label>
+              ))}
+            </div>
           </fieldset>
 
-          <label style={{ display: "block", margin: "8px 0" }}>
-            Study consent document slug{" "}
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="identity-consent-slug">
+              {t("consentSlugLabel")}
+            </label>
             <input
+              id="identity-consent-slug"
+              className={styles.input}
               value={value.consentDocumentSlug ?? ""}
               onChange={(e) =>
                 onChange({ consentDocumentSlug: e.target.value || null })
               }
               placeholder="dfg-verified"
             />
-          </label>
-          <p style={{ fontSize: 12, color: "#b26a00", margin: "0 0 12px 0" }}>
-            The document must be published in every language before it can be
-            attached — saving is refused otherwise, because an incomplete one
-            fails the participant <em>after</em> they have enrolled. Write and
-            publish it under{" "}
-            <Link href="/consent-documents">Consent Documents</Link>. Leave
-            empty for no extra consent.
+          </div>
+          <p className={styles.hint}>
+            {t.rich("consentHint", {
+              em: (chunks) => <em>{chunks}</em>,
+              link: (chunks) => <Link href="/consent-documents">{chunks}</Link>,
+            })}
           </p>
 
-          <label style={{ display: "block", margin: "8px 0" }}>
-            Approvers required{" "}
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="identity-approvers">
+              {t("approversLabel")}
+            </label>
             <select
+              id="identity-approvers"
+              className={styles.select}
               value={value.reidentificationApprovers}
               onChange={(e) =>
                 onChange({
@@ -148,35 +158,30 @@ export function IdentityTab({ value, hasEnrolments, onChange }: IdentityTabProps
                 })
               }
             >
-              <option value={1}>1 — one other person approves</option>
-              <option value={2}>2 — two other people approve</option>
+              <option value={1}>{t("approversOption1")}</option>
+              <option value={2}>{t("approversOption2")}</option>
             </select>
-          </label>
-          <p style={{ fontSize: 12, color: "#666", margin: "0 0 12px 0" }}>
-            Whoever raises a request can never approve it, at either setting.
-            Two approvers is stricter but needs two people awake — consider
-            out-of-hours cover before choosing it.
-          </p>
+          </div>
+          <p className={styles.hint}>{t("approversHint")}</p>
 
-          <label style={{ display: "block", margin: "8px 0" }}>
-            Reveal window (minutes){" "}
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="identity-reveal-ttl">
+              {t("revealLabel")}
+            </label>
             <input
+              id="identity-reveal-ttl"
               type="number"
               min={5}
               max={1440}
+              className={`${styles.input} ${styles.identityRevealInput}`}
               value={value.revealTtlMinutes}
               onChange={(e) =>
                 onChange({ revealTtlMinutes: Number(e.target.value) })
               }
-              style={{ width: 90 }}
             />
-          </label>
+          </div>
 
-          <p style={{ fontSize: 12, color: "#666" }}>
-            Researcher access is scoped automatically for verified studies, so
-            a researcher must be an explicit member to see this study&apos;s
-            data. That is not configurable here.
-          </p>
+          <p className={styles.hint}>{t("scopingNote")}</p>
         </>
       )}
     </div>
