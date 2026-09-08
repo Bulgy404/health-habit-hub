@@ -17,7 +17,7 @@ sequenceDiagram
     A->>A: Validate name, keys and values
     A->>A: Add study/group, app, platform, locale, schema
     alt analytics configuration is blank
-        A-->>M: No-op; participant flow continues
+        A-->>M: No-op — participant flow continues
     else configured
         A->>T: POST /ingest/batch/
         T->>T: Match ingest allowlist, rate-limit, strip /ingest
