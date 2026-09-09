@@ -3,8 +3,11 @@ import { useT, routes, type Lang } from '../i18n/ui';
 import GrowthShowcase from './GrowthShowcase.astro';
 import Perspective from './Perspective.astro';
 import HabitCluster from './HabitCluster.astro';
+import References from './References.astro';
+import type { RefId } from '../data/references';
 const { lang } = Astro.props as { lang: Lang };
 const t = useT(lang); const R = routes;
+const pageRefs: RefId[] = ['research-practice-gap', 'app-bct-gap', 'context-tailoring', 'hrs-review'];
 const titleHtml = t('home_title').replace(t('home_title_em'), `<em>${t('home_title_em')}</em>`);
 ---
 <header class="hero">
@@ -27,7 +30,7 @@ const titleHtml = t('home_title').replace(t('home_title_em'), `<em>${t('home_tit
   </div>
 </header>
 
-<Perspective lang={lang} />
+<Perspective lang={lang} refOrder={pageRefs} />
 
 <section class="graph-sec">
   <div class="wrap">
@@ -36,7 +39,7 @@ const titleHtml = t('home_title').replace(t('home_title_em'), `<em>${t('home_tit
       <h2 class="sec-title">{t('graph_title')}</h2>
       <p class="sec-sub">{t('graph_sub')}</p>
     </div>
-    <HabitCluster lang={lang} />
+    <HabitCluster lang={lang} refOrder={pageRefs} />
   </div>
 </section>
 
@@ -61,6 +64,8 @@ const titleHtml = t('home_title').replace(t('home_title_em'), `<em>${t('home_tit
     </div>
   </div>
 </section>
+
+<References lang={lang} ids={pageRefs} />
 
 <style>
   .hero{position:relative;overflow:hidden;padding:76px 0 84px}
