@@ -1,0 +1,19 @@
+---
+import { pageRefNumber, type RefId } from '../data/references';
+// `order` is the page's full reference list (see the page's `pageRefs`
+// constant) — footnote numbers are this id's position in it, so every page
+// starts its own footnotes at 1.
+const { ids, order } = Astro.props as { ids: RefId[]; order: RefId[] };
+---
+<sup class="cite">{ids.map((id, i) => (
+  <>
+    {i > 0 && <span aria-hidden="true">,</span>}
+    <a href={`#ref-${id}`}>{pageRefNumber(order, id)}</a>
+  </>
+))}</sup>
+
+<style>
+  .cite{font-size:.68em;font-weight:600;letter-spacing:0;margin-left:1px}
+  .cite a{color:var(--green-dark);text-decoration:none}
+  .cite a:hover{text-decoration:underline}
+</style>

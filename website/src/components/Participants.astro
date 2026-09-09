@@ -2,6 +2,9 @@
 import { useT, links, type Lang } from '../i18n/ui';
 import { Image } from 'astro:assets';
 import AppStoreBadges from './AppStoreBadges.astro';
+import Cite from './Cite.astro';
+import References from './References.astro';
+import type { RefId } from '../data/references';
 import Onboarding from '../assets/device-mockups/Onboarding.png';
 import Habits from '../assets/device-mockups/Habits.png';
 import Graph from '../assets/device-mockups/Graph.png';
@@ -13,13 +16,16 @@ const t = useT(lang);
 // real device screenshots (transparent background, phone frame baked in by
 // the designer) - shown at a uniform size so each screen actually reads,
 // with short copy filling the gaps between them like a continuous grid.
-const shots = [
+// `cite` backs the behaviour-change / habit-formation claim in `p` with real
+// publications, listed in full in the References section below.
+const shots: { img: ImageMetadata; t: string; p: string; cite?: RefId[] }[] = [
   { img: Onboarding, t: t('p_s1_t'), p: t('p_s1_p') },
-  { img: Habits, t: t('p_s2_t'), p: t('p_s2_p') },
+  { img: Habits, t: t('p_s2_t'), p: t('p_s2_p'), cite: ['habit-automaticity', 'jitai', 'just-in-time-fading'] },
   { img: Graph, t: t('p_s3_t'), p: t('p_s3_p') },
-  { img: Recommendations, t: t('p_s4_t'), p: t('p_s4_p') },
-  { img: SRHI, t: t('p_s5_t'), p: t('p_s5_p') },
+  { img: Recommendations, t: t('p_s4_t'), p: t('p_s4_p'), cite: ['bct-taxonomy', 'hrs-review', 'context-tailoring'] },
+  { img: SRHI, t: t('p_s5_t'), p: t('p_s5_p'), cite: ['srhi'] },
 ];
+const pageRefs: RefId[] = ['habit-automaticity', 'jitai', 'just-in-time-fading', 'bct-taxonomy', 'hrs-review', 'context-tailoring', 'srhi'];
 // shuffle once per build so the arrangement feels alive rather than fixed
 function shuffled<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -53,7 +59,7 @@ const bentoShots = shuffled(shots);
             <div class="cell cap-cell reveal">
               <span class="cap-n">{i + 1}</span>
               <h3>{s.t}</h3>
-              <p>{s.p}</p>
+              <p>{s.p}{s.cite && <Cite ids={s.cite} order={pageRefs} />}</p>
             </div>
           )}
         </>
@@ -79,6 +85,8 @@ const bentoShots = shuffled(shots);
     <div class="p-trust-cta"><AppStoreBadges lang={lang} /></div>
   </div>
 </section>
+
+<References lang={lang} ids={pageRefs} />
 
 <style>
   .p-hero{position:relative;overflow:hidden;padding:90px 0 72px}

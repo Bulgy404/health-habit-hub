@@ -95,7 +95,7 @@ const de: Dict = {
   fork_eyebrow: 'Womit fängst du an?',
   fork_title: 'Bist du hier, um mitzumachen oder um zu forschen?',
   fork_sub: 'Beide Wege starten hier. Dahinter wartet genau das, was du brauchst.',
-  fork_p_q: 'Du willst deine Gewohnheiten aufbauen',
+  fork_p_q: 'Du willst deine Gewohnheiten managen',
   fork_p_t: 'Für Teilnehmende',
   fork_p_p: 'Lade die App, verfolge deine Gewohnheiten und behalte jederzeit die Kontrolle über deine Daten. Nebenbei trägst du zur Forschung bei, ganz freiwillig.',
   fork_p_go: 'Zur Teilnahme',
@@ -194,6 +194,11 @@ const de: Dict = {
   pub_online: 'Online lesen',
   pub_soon: 'PDF folgt',
 
+  // scientific footnotes
+  refs_title: 'Quellen',
+  refs_link: 'Zur Quelle',
+  refs_own: 'Eigene Publikation',
+
   soon: 'Bald',
 };
 
@@ -240,7 +245,7 @@ const en: Dict = {
   fork_eyebrow: 'Where do you start?',
   fork_title: 'Are you here to take part, or to do research?',
   fork_sub: 'Both paths start here. What waits behind each is made for you.',
-  fork_p_q: 'You want to build your habits',
+  fork_p_q: 'You want to manage your habits',
   fork_p_t: 'For participants',
   fork_p_p: 'Get the app, track your habits and stay in control of your data. Along the way you contribute to research, entirely by choice.',
   fork_p_go: 'Go to take part',
@@ -334,6 +339,11 @@ const en: Dict = {
   pub_download: 'Download PDF',
   pub_online: 'Read online',
   pub_soon: 'PDF coming soon',
+
+  // scientific footnotes
+  refs_title: 'Sources',
+  refs_link: 'View source',
+  refs_own: 'Our publication',
 
   soon: 'Soon',
 };

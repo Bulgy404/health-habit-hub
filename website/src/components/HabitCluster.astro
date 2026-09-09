@@ -1,6 +1,8 @@
 ---
 import { useT, type Lang } from '../i18n/ui';
-const { lang } = Astro.props as { lang: Lang };
+import Cite from './Cite.astro';
+import type { RefId } from '../data/references';
+const { lang, refOrder } = Astro.props as { lang: Lang; refOrder: RefId[] };
 const t = useT(lang);
 
 const STAGES = [
@@ -45,7 +47,7 @@ const ICONS: Record<string, string> = {
   {STAGES.map((s, i) => (
     <div class="lc reveal" style={`--sc:${s.color}`}>
       <span class="lc-n">{i + 1}</span>
-      <div><h3>{t(`graph_loop_${s.key}_t`)}</h3><p>{t(`graph_loop_${s.key}_p`)}</p></div>
+      <div><h3>{t(`graph_loop_${s.key}_t`)}</h3><p>{t(`graph_loop_${s.key}_p`)}{s.key === '3' && <Cite ids={['context-tailoring', 'hrs-review']} order={refOrder} />}</p></div>
     </div>
   ))}
 </div>

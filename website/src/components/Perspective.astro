@@ -1,6 +1,8 @@
 ---
 import { useT, routes, type Lang } from '../i18n/ui';
-const { lang } = Astro.props as { lang: Lang };
+import Cite from './Cite.astro';
+import type { RefId } from '../data/references';
+const { lang, refOrder } = Astro.props as { lang: Lang; refOrder: RefId[] };
 const t = useT(lang); const R = routes;
 ---
 <section class="persp">
@@ -8,7 +10,7 @@ const t = useT(lang); const R = routes;
     <div class="persp-head reveal">
       <span class="eyebrow">{t('what_eyebrow')}</span>
       <h2 class="sec-title">{t('what_title')}</h2>
-      <p class="sec-sub">{t('what_sub')}</p>
+      <p class="sec-sub">{t('what_sub')}<Cite ids={['research-practice-gap', 'app-bct-gap']} order={refOrder} /></p>
     </div>
 
     <div class="signs">

@@ -2,13 +2,19 @@
 import { useT, links, type Lang } from '../i18n/ui';
 import { Image } from 'astro:assets';
 import ContactForm from './ContactForm.astro';
+import Cite from './Cite.astro';
+import References from './References.astro';
+import type { RefId } from '../data/references';
 import adminPortal from '../assets/mockups/adminPortal-v2.png';
 const { lang } = Astro.props as { lang: Lang };
 const t = useT(lang);
-const caps = [
-  ['r_cap_1_t','r_cap_1_p'],['r_cap_2_t','r_cap_2_p'],['r_cap_3_t','r_cap_3_p'],
+// `cite` backs the behaviour-science claim in each capability with real
+// publications, listed in full in the References section further down.
+const caps: [string, string, RefId[]?][] = [
+  ['r_cap_1_t','r_cap_1_p'],['r_cap_2_t','r_cap_2_p',['srhi']],['r_cap_3_t','r_cap_3_p',['bct-taxonomy','hrs-review','context-tailoring']],
   ['r_cap_4_t','r_cap_4_p'],['r_cap_5_t','r_cap_5_p'],['r_cap_6_t','r_cap_6_p'],
 ];
+const pageRefs: RefId[] = ['srhi', 'bct-taxonomy', 'hrs-review', 'context-tailoring'];
 // ordered as the researcher actually experiences it: set up the study,
 // then a participant joins, signs in and consents, then data flows in
 // TU Dresden is not one more step in the chain, it's the ground everything
@@ -84,10 +90,12 @@ const sec = [
   <div class="wrap">
     <div class="reveal"><span class="eyebrow">{t('r_cap_eyebrow')}</span><h2 class="sec-title">{t('r_cap_title')}</h2></div>
     <div class="cap-grid">
-      {caps.map(([tt,pp]) => (<div class="cap-card reveal"><h3>{t(tt)}</h3><p>{t(pp)}</p></div>))}
+      {caps.map(([tt,pp,cite]) => (<div class="cap-card reveal"><h3>{t(tt)}</h3><p>{t(pp)}{cite && <Cite ids={cite} order={pageRefs} />}</p></div>))}
     </div>
   </div>
 </section>
+
+<References lang={lang} ids={pageRefs} />
 
 <section class="sec">
   <div class="wrap">
