@@ -145,6 +145,48 @@ const donationQuestionnaireSlugSchema = z.string().min(1).max(200).nullable();
  */
 const groupDonationQuestionnaireSlugSchema = z.string().max(200).nullable();
 
+/**
+ * Verified identity mode (docs/identity-mode-plan.md § 4).
+ *
+ * Study-level only — there is deliberately no counterpart in
+ * updateGroupConfigSchema. `.strict()` so a typo'd key is rejected rather than
+ * silently dropped: a study that thinks it is verified but is not would enrol
+ * identified participants with no register behind them.
+ */
+export const identityConfigSchema = z
+  .object({
+    mode: z.enum(['anonymous', 'verified']).optional(),
+    subjectCodePrefix: z
+      .string()
+      .regex(
+        /^[A-Z0-9][A-Z0-9-]{1,31}$/,
+        'must be uppercase alphanumeric with dashes'
+      )
+      .optional()
+      .nullable(),
+    verificationMethods: z
+      .array(z.enum(['in_person', 'email', 'sms']))
+      .min(1)
+      .optional()
+      .nullable(),
+    consentDocumentSlug: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]{0,63}$/)
+      .optional()
+      .nullable(),
+    reidentificationApprovers: z
+      .number()
+      .int()
+      .min(1)
+      .max(2)
+      .optional()
+      .nullable(),
+    revealTtlMinutes: z.number().int().min(5).max(1440).optional().nullable(),
+    auditReads: z.boolean().optional().nullable(),
+    researcherScoping: z.enum(['open', 'scoped']).optional().nullable(),
+  })
+  .strict();
+
 export const createStudySchema = z.object({
   name: shortString,
   description: longString.optional(),
@@ -163,6 +205,7 @@ export const createStudySchema = z.object({
   informationOverloadGuard: informationOverloadGuardSchema.optional(),
   // §7.5 Gamification — study-wide on/off toggle.
   gamificationEnabled: z.boolean().optional(),
+  identity: identityConfigSchema.optional(),
   // Habit-donation input mode + optional post-donation questionnaire.
   donationInputMode: donationInputModeSchema.optional(),
   donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),
@@ -193,6 +236,7 @@ export const updateStudySchema = z
     informationOverloadGuard: informationOverloadGuardSchema.optional(),
     // §7.5 Gamification — study-wide on/off toggle.
     gamificationEnabled: z.boolean().optional(),
+    identity: identityConfigSchema.optional(),
     // Habit-donation input mode + optional post-donation questionnaire.
     donationInputMode: donationInputModeSchema.optional(),
     donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),

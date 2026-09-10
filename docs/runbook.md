@@ -876,6 +876,9 @@ curl -s http://localhost:9091/metrics | grep bullmq_jobs_failed_total
 docker stop hhh-redis
 curl -s 'http://localhost:9090/api/v1/query?query=probe_success{instance="redis:6379"}'
 docker start hhh-redis
+
+# Identity reachability (only present with --profile identity)
+curl -s 'http://localhost:9090/api/v1/query?query=probe_success{job="identity-blackbox-http"}'
 ```
 
 ### Muting alerts during planned maintenance

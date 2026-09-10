@@ -22,7 +22,17 @@ export async function middleware(req: NextRequest) {
   }
 
   const roles: string[] = token.roles ?? [];
-  if (!roles.includes("admin") && !roles.includes("researcher")) {
+  // Identity roles are included so study nurses and monitors can load the
+  // portal shell at all. Without this they cannot reach /identity even with
+  // the correct realm role — per-page guards then decide what each may see.
+  const PORTAL_ROLES = [
+    "admin",
+    "researcher",
+    "identity-manager",
+    "study-nurse",
+    "monitor",
+  ];
+  if (!PORTAL_ROLES.some((r) => roles.includes(r))) {
     return NextResponse.redirect(new URL(`${appBase}/access-denied`));
   }
 

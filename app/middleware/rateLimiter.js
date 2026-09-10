@@ -1,7 +1,7 @@
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 
 function userOrIpKey(req) {
-  return req.user?.sub || ipKeyGenerator(req);
+  return req.user?.sub || ipKeyGenerator(req.ip);
 }
 
 /**

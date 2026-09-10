@@ -39,6 +39,13 @@ INCLUDE_LIGHTRAG=${BACKUP_INCLUDE_LIGHTRAG:-true}
 INCLUDE_AUDIO=${BACKUP_INCLUDE_AUDIO:-true}
 INCLUDE_NEO4J=${BACKUP_INCLUDE_NEO4J:-true}
 INCLUDE_KEYCLOAK=${BACKUP_INCLUDE_KEYCLOAK:-true}
+# Identity register. Defaults OFF: most deployments run no verified-identity
+# study, and the service need not exist at all. Turning it on without the
+# database present would report a spurious failure every night.
+INCLUDE_IDENTITY=${BACKUP_INCLUDE_IDENTITY:-false}
+IDENTITY_DB_HOST=${IDENTITY_DB_HOST:-identity-db}
+IDENTITY_DB_USERNAME=${IDENTITY_DB_USERNAME:-identity}
+IDENTITY_DB_PASSWORD=${IDENTITY_DB_PASSWORD:-}
 
 LOG_FILE="$BACKUP_DIR/backup.log"
 
@@ -424,6 +431,37 @@ if [ "$DELETED_SCHEDULED" -gt 0 ]; then
   log "✓ Deleted $DELETED_SCHEDULED excess scheduled backup(s) beyond the last $SCHEDULED_BACKUP_LIMIT"
 else
   log "  No excess scheduled backups to delete"
+fi
+
+# ── Identity register (verified-identity studies only) ──────────────────────
+# NOTE the asymmetry, and it is deliberate: this dump contains participant
+# names. It is encrypted at rest by the application (see
+# identity-service/src/crypto), so the dump alone is inert — but a dump PLUS
+# the master key file is a total compromise, and both live on this host.
+# Offsite copies of this component therefore need a key the local operator
+# does not hold. See docs/identity-register.md.
+IDENTITY_DB_OK=false
+IDENTITY_DB_SKIPPED=true
+if [ "$INCLUDE_IDENTITY" = "true" ]; then
+  log ""
+  log "Backing up the identity register..."
+  mkdir -p "$BACKUP_DIR/$DATE/identity"
+  if [ -n "$IDENTITY_DB_PASSWORD" ]; then
+    IDENTITY_DB_SKIPPED=false
+    if PGPASSWORD="$IDENTITY_DB_PASSWORD" pg_dump \
+      -h "$IDENTITY_DB_HOST" \
+      -U "$IDENTITY_DB_USERNAME" \
+      -d identity \
+      -F c \
+      -f "$BACKUP_DIR/$DATE/identity/identity-db.dump" 2>/dev/null; then
+      log "✓ Identity register dump completed"
+      IDENTITY_DB_OK=true
+    else
+      log_error "Identity" "pg_dump failed"
+    fi
+  else
+    log "  IDENTITY_DB_PASSWORD not set — skipping identity register"
+  fi
 fi
 
 # ── Optional offsite sync (rclone) ──────────────────────────────────────────

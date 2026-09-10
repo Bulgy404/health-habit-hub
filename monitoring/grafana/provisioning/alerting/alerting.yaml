@@ -49,7 +49,7 @@ groups:
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
-              expr: probe_success{job=~"blackbox-http|blackbox-tcp"}
+              expr: probe_success{job=~"blackbox-http|blackbox-tcp|identity-blackbox-http"}
               instant: true
               refId: A
           - refId: B

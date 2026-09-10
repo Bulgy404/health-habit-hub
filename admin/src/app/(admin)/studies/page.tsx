@@ -14,6 +14,7 @@ import { ActivityTypesManager } from "@/components/activity-types-manager";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
 import { defaultSpring } from "@/lib/motion";
+import { IdentityTabPanel } from "./IdentityTabPanel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -4348,7 +4349,8 @@ type ModalTab =
   | "habit-creation"
   | "reminders"
   | "behavior-change"
-  | "gamification";
+  | "gamification"
+  | "identity";
 
 function StudyModal({
   initial,
@@ -4572,6 +4574,7 @@ function StudyModal({
                 ["reminders", t("modal.tabs.reminders")],
                 ["behavior-change", t("modal.tabs.behaviorChange")],
                 ["gamification", t("modal.tabs.gamification")],
+                ["identity", t("modal.tabs.identity")],
               ] as [ModalTab, string][]
             ).map(([tabKey, tabLabel]) => (
               <button
@@ -4714,6 +4717,14 @@ function StudyModal({
               initial && <RemindersTab study={initial} token={token} />
             ) : activeTab === "behavior-change" ? (
               initial && <BehaviorChangeTab study={initial} token={token} />
+            ) : activeTab === "identity" ? (
+              initial && (
+                <IdentityTabPanel
+                  studyId={initial.id}
+                  participantCount={initial.participantCount}
+                  token={token}
+                />
+              )
             ) : (
               initial && <GamificationTab study={initial} token={token} />
             )}

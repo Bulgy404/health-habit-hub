@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import 'consent_screen.dart' show kPendingStudyConsentSlugKey;
+
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -21,6 +23,55 @@ const String kStudyIdKey = 'study_id';
 
 /// Key for the enrolled group ID.
 const String kGroupIdKey = 'group_id';
+
+/// Study-local subject code, for verified-identity studies only.
+///
+/// A pseudonym — safe to store on the device and to show the participant, so
+/// they can quote it to the study site. It is NOT a credential.
+const String kSubjectCodeKey = 'subject_code';
+
+/// 'verified' when this study identifies its participants, else absent.
+const String kIdentityModeKey = 'identity_mode';
+
+// ---------------------------------------------------------------------------
+// Code format
+// ---------------------------------------------------------------------------
+// Kept at file level rather than inside the State class so it is testable
+// without building a widget tree — and because the client-side format MUST
+// agree with the backend's. A release that predates the backend change would
+// reject valid verified codes with a confusing local error, which is why the
+// widened build has to ship before any HHV code is minted.
+
+/// Anonymous study code: HHH-XXXXX.
+final RegExp _anonymousCodePattern = RegExp(r'^HHH-[A-Z0-9]{5}$');
+
+/// Verified-identity enrolment code: HHV-XXXXX-XXXXX over Crockford base32
+/// (no I, L, O or U — the characters misread off a printed sheet).
+final RegExp _verifiedCodePattern =
+    RegExp(r'^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$');
+
+/// Normalises a code for submission.
+///
+/// Trim and uppercase always. The I/L -> 1 and O -> 0 repair is applied ONLY
+/// to verified (HHV-) codes, whose Crockford alphabet excludes those
+/// characters so the substitution can only rescue a mistyped code.
+///
+/// It must NEVER be applied to anonymous HHH- codes: those are drawn from the
+/// full A-Z0-9 alphabet, so I, L and O are legitimate characters. Repairing
+/// them there corrupts a valid code — about 35% of existing codes contain at
+/// least one — turning a working enrolment into "invalid code".
+String normalizeStudyCode(String input) {
+  final base = input.trim().toUpperCase().replaceAll(RegExp(r'\s+'), '');
+  if (!base.startsWith('HHV')) return base;
+  return base.replaceAll(RegExp('[IL]'), '1').replaceAll('O', '0');
+}
+
+/// Accepts either code format. The backend routes on the prefix; the client
+/// must not reject a valid verified code before it ever gets there.
+bool isValidStudyCode(String code) {
+  final c = normalizeStudyCode(code);
+  return _anonymousCodePattern.hasMatch(c) || _verifiedCodePattern.hasMatch(c);
+}
 
 // ---------------------------------------------------------------------------
 // StudyCodeScreen
@@ -66,15 +117,12 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     }
   }
 
-  /// Validates that the code matches the HHH-XXXXX pattern.
-  bool _isValidCode(String code) {
-    return RegExp(r'^HHH-[A-Z0-9]{5}$').hasMatch(code);
-  }
+  bool _isValidCode(String code) => isValidStudyCode(code);
 
   /// Calls POST /api/v1/onboarding/redeem-code and stores the result.
   Future<void> _onSubmit() async {
     final l10n = AppLocalizations.of(context)!;
-    final code = _codeController.text.trim();
+    final code = normalizeStudyCode(_codeController.text);
     if (!_isValidCode(code)) {
       setState(() => _errorMessage = l10n.studyCodeInvalidFormat);
       return;
@@ -96,11 +144,27 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       final data = response.data ?? {};
       final studyId = data['studyId'] as String? ?? '';
       final groupId = data['groupId'] as String? ?? '';
+      // Present only for verified-identity studies.
+      final subjectCode = data['subjectCode'] as String?;
 
       const storage = FlutterSecureStorage();
       await storage.write(key: kStudyIdKey, value: studyId);
       await storage.write(key: kGroupIdKey, value: groupId);
       await storage.write(key: kStudyEnrolledKey, value: 'true');
+      if (subjectCode != null && subjectCode.isNotEmpty) {
+        await storage.write(key: kSubjectCodeKey, value: subjectCode);
+        await storage.write(key: kIdentityModeKey, value: 'verified');
+      }
+      // A verified study may require its own consent document. It can only be
+      // known now — the study is unknown until the code is redeemed — so the
+      // slug is stored and the router gates on it from here on.
+      final consentSlug = data['identityConsentSlug'] as String?;
+      if (data['identityConsentRequired'] == true &&
+          consentSlug != null &&
+          consentSlug.isNotEmpty) {
+        await storage.write(
+            key: kPendingStudyConsentSlugKey, value: consentSlug);
+      }
 
       if (!mounted) return;
       context.go('/share');
@@ -206,7 +270,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
               enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: l10n.studyCodeLabel,
-                hintText: 'HHH-XXXXX',
+                hintText: 'HHH-XXXXX', // or HHV-XXXXX-XXXXX for verified studies
                 border: const OutlineInputBorder(),
                 errorText: _errorMessage,
                 errorMaxLines: 3,

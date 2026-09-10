@@ -10,6 +10,16 @@
  *   userId          string     Required. Keycloak `sub`.
  *   consentVersion  string     Required. Front-matter version of the accepted
  *                              consent document (e.g. "1.0.0").
+ *   documentSlug    string|null Which consent document this record is for.
+ *                              null (or absent) = the platform-wide document,
+ *                              which is the only one that existed historically.
+ *                              A named slug identifies an additional document,
+ *                              e.g. a study-specific consent that a participant
+ *                              accepts *in addition to* the platform one.
+ *                              Without this field the two are indistinguishable:
+ *                              `consentVersion` is a bare semver, so a second
+ *                              document's "1.0.0" would satisfy a check for the
+ *                              platform document's "1.0.0" and vice versa.
  *   locale          string     Locale the document was read in
  *                              ('en'|'de'|'ja'|'fr'|'nl') or null when unknown.
  *   consentedAt     Date       Required. Acceptance timestamp (server time).
@@ -28,6 +38,10 @@ export const VALIDATOR = {
       consentVersion: {
         bsonType: 'string',
         pattern: '^\\d+\\.\\d+\\.\\d+$',
+      },
+      documentSlug: {
+        bsonType: ['string', 'null'],
+        pattern: '^[a-z0-9][a-z0-9-]{0,63}$',
       },
       locale: {
         bsonType: ['string', 'null'],
@@ -50,5 +64,12 @@ export async function ensureIndexes(db) {
   await col.createIndex(
     { userId: 1, consentedAt: -1 },
     { name: 'consents_userId_consentedAt' }
+  );
+  // "latest consent for this user *for this document*". Kept alongside the
+  // index above rather than replacing it: per-user erasure and the legacy
+  // "latest consent overall" read still want the two-field form.
+  await col.createIndex(
+    { userId: 1, documentSlug: 1, consentedAt: -1 },
+    { name: 'consents_userId_documentSlug_consentedAt' }
   );
 }

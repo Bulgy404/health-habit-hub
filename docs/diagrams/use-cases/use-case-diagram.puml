@@ -16,11 +16,20 @@ actor "Researcher" as R
 actor "Admin" as A
 actor "AI Agent\n(MCP client)" as M
 actor "Backup Scheduler\n(cron)" as B
+actor "Identity Manager\n(role: identity-manager)" as IM
+actor "Study Nurse\n(role: study-nurse)" as SN
+actor "Monitor\n(role: monitor)" as MO
 actor "Keycloak" as KC <<system>>
 actor "LLM Provider" as LLM <<system>>
 actor "FCM" as FCM <<system>>
 
 A --|> R : inherits
+
+' The identity roles are NOT specialisations of Researcher or Admin. A
+' `researcher` holding any of them is refused at runtime — the person analysing
+' the pseudonymous data must not be able to resolve the pseudonyms — and an
+' `admin` may hold `monitor` but never `identity-manager`/`study-nurse`, so an
+' admin can approve a re-identification but never request one.
 
 rectangle "Mobile App (Flutter)" {
   package "Account & Profile" {
@@ -72,6 +81,26 @@ rectangle "Admin Portal (Next.js)" {
   usecase "UC-36 Configure per-group\nstudy design" as UC36
 }
 
+rectangle "Identity Register (separate service, own PostgreSQL)" as IDENTITY {
+  package "Register setup" {
+    usecase "UC-40 Create a study\nregister" as UC40
+    usecase "UC-41 Assign staff to\na register" as UC41
+    usecase "UC-19a Configure verified\nidentity mode" as UC19a
+    usecase "UC-19b Author study\nconsent documents" as UC19b
+    usecase "UC-19c Grant researcher\naccess to a study" as UC19c
+  }
+  package "Enrolment" {
+    usecase "UC-42 Build the roster\n(add / CSV import)" as UC42
+    usecase "UC-43 Issue & deliver an\nenrolment code" as UC43
+    usecase "UC-44 Enrol with a\nverified code" as UC44
+    usecase "UC-45 Accept the study\nconsent" as UC45
+  }
+  package "Governance" {
+    usecase "UC-46 Re-identify a\nparticipant" as UC46
+    usecase "UC-47 Erase a subject\n(Art. 17)" as UC47
+  }
+}
+
 rectangle "System / Integrations" {
   usecase "UC-29 Run daily backup" as UC29
   usecase "UC-30 Query / ingest KB\nvia MCP" as UC30
@@ -119,6 +148,22 @@ A --> UC25
 A --> UC26
 A --> UC28
 
+' --- Identity register (verified studies only) ---
+IM --> UC40
+IM --> UC41
+IM --> UC42
+IM --> UC43
+IM --> UC46
+IM --> UC47
+SN --> UC42
+SN --> UC43
+MO --> UC46
+A  --> UC19a
+A  --> UC19b
+A  --> UC19c
+P  --> UC44
+P  --> UC45
+
 ' --- System actors ---
 M --> UC30
 B --> UC29
@@ -155,5 +200,27 @@ UC12 ..> UC11 : <<extend>>
 UC03 ..> UC06 : <<extend>>\n(post-donation questionnaire,\nif study/group configures one)
 UC08 ..> UC07 : <<extend>>
 UC38 ..> UC09 : <<extend>>
+
+' --- Verified identity ---
+UC44 ..> UC09 : <<extend>>\n(same screen as an anonymous code)
+UC45 ..> UC44 : <<include>>\n(the study — and so the document —\nis unknown until the code is redeemed)
+UC45 ..> UC19b : <<uses>>
+UC46 ..> UC41 : <<include>>\n(assignment, not merely a role)
+UC43 ..> UC42 : <<include>>
+UC40 ..> UC19a : <<include>>\n(prefix must match the study's)
+UC47 ..> UC32 : <<extend>>\n(Art. 17 from the site side;\nUC-32 is the participant's own)
+
+note bottom of IDENTITY
+  Every use case here runs against the identity service's OWN PostgreSQL.
+  Nothing in this package reads MongoDB or Neo4j, and nothing in the research
+  packages reads the register — which is what makes the research data
+  genuinely pseudonymous rather than merely labelled so.
+
+  UC-46 is the only path from a subject code back to a person, and it needs a
+  documented legal basis, a second approver enforced by a database trigger,
+  and a time-limited grant. Every subject/request UUID is resolved back to its
+  register and site before the matching role assignment is checked. There is
+  no bulk reveal.
+end note
 
 @enduml

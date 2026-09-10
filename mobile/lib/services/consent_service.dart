@@ -27,12 +27,23 @@ int compareSemver(String a, String b) {
 /// document (UC-31): true when no consent is recorded server-side or the
 /// recorded version is older than the currently served document version.
 ///
+/// [documentSlug] selects an additional consent document (e.g. a study-specific
+/// one). Leave it null for the platform-wide document. The distinction matters
+/// because `consentVersion` is a bare semver: without a slug, a study
+/// document's "1.0.0" and the platform document's "1.0.0" are indistinguishable,
+/// so accepting one would silently satisfy the check for the other.
+///
 /// Fails open (returns false) on network errors so a flaky connection never
 /// locks participants out — the check re-runs on every app start.
-Future<bool> isReconsentRequired(Dio dio, String locale) async {
+Future<bool> isReconsentRequired(
+  Dio dio,
+  String locale, {
+  String? documentSlug,
+}) async {
   try {
     final docRes = await dio.get<Map<String, dynamic>>(
       '${AppConfig.appBaseUrl}/$locale/consent',
+      queryParameters: {'slug': ?documentSlug},
     );
     final currentVersion =
         (docRes.data?['document'] as Map<String, dynamic>?)?['version']
@@ -41,6 +52,7 @@ Future<bool> isReconsentRequired(Dio dio, String locale) async {
 
     final recRes = await dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/users/me/consent',
+      queryParameters: {'documentSlug': ?documentSlug},
       options: Options(
         validateStatus: (s) => s != null && (s == 200 || s == 404),
       ),

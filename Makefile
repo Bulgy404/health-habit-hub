@@ -3,7 +3,7 @@
 .PHONY: help \
         dev stop seed seed-user verify-keycloak fix-keycloak logs logs-all ios reset \
         monitoring monitoring-stop logs-prometheus logs-grafana \
-        format test test-backend test-flutter test-python test-admin test-alert-email seed-habits \
+        format test test-backend test-identity test-flutter test-python test-admin test-alert-email seed-habits \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
 
@@ -62,7 +62,7 @@ logs-prometheus: ## Tail Prometheus logs
 logs-grafana: ## Tail Grafana logs
 	docker compose -f docker-compose.local.yml logs -f grafana
 
-test: test-backend test-flutter test-python test-admin ## Run all tests
+test: test-backend test-identity test-flutter test-python test-admin ## Run all tests
 
 format: ## Auto-format backend code with Prettier
 	cd app && npx prettier --write .
@@ -78,6 +78,10 @@ test-backend: format ## Backend: lint + unit tests + security audit
 	cd app && npx prettier --check . && npx eslint . && \
 	node --test --test-force-exit "tests/unit/**/*.test.js" "tests/integration/**/*.test.js" && \
 	npm audit --audit-level=critical
+
+test-identity: ## Identity register: unit tests + security audit
+	@echo "==> Identity service"
+	cd identity-service && npm test && npm audit --audit-level=high
 
 test-flutter: ## Flutter: analyze + widget/unit tests
 	cd mobile && flutter analyze lib/ test/ && flutter test

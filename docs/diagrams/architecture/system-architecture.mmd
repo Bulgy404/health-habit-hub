@@ -31,7 +31,7 @@ flowchart TB
 
     %% ------- Data layer -------
     subgraph data["Data Stores"]
-        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts · habit_donations")]
+        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts · habit_donations<br/>study_memberships · study_consent_documents")]
         neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
         lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
         redis[("Redis 7<br/>API-service response cache · BullMQ habitQueue")]
@@ -40,9 +40,15 @@ flowchart TB
     end
 
     %% ------- External -------
+    subgraph identity["Identity register — verified-identity studies only (hhh-identity-edge / hhh-identity-net)"]
+        identitysvc["identity-service<br/>Node + Express<br/>:3002 admin · :3003 internal"]
+        identitydb[("identity-db<br/>PostgreSQL<br/>envelope-encrypted PII")]
+    end
+
     subgraph external["External Services"]
         llm["LLM Provider<br/>(OpenAI-compatible API)"]
         fcm["Firebase Cloud<br/>Messaging (FCM)"]
+        smtp["SMTP relay<br/>enrolment invites · reveal alerts to the DPO"]
     end
 
     %% ------- Monitoring -------
@@ -50,6 +56,7 @@ flowchart TB
         prometheus["Prometheus<br/>metrics · 30d retention"]
         grafana["Grafana<br/>dashboards · own Keycloak OIDC"]
         blackbox["blackbox-exporter<br/>endpoint probes"]
+        identityblackbox["identity-blackbox-exporter<br/>profile-scoped identity probe"]
     end
 
     %% ------- Internal tools (behind oauth2-proxy SSO, admin role) -------
@@ -103,6 +110,7 @@ flowchart TB
     backup -- "tar lightrag-data" --> lightrag
     backup -- "tar audio-recordings" --> backend
     backup -- "partial-export API" --> keycloak
+    backup -- "pg_dump / pg_restore<br/>hhh-identity-net" --> identitydb
     backup -- "docker exec (Keycloak DB dump)" --> dockerproxy
     mongoexpress --> mongo
 
@@ -118,10 +126,26 @@ flowchart TB
     redisinsight --> redis
     lightragui -. "own AUTH_ACCOUNTS login" .-> lightrag
 
+    %% ------- Edges: identity register (optional; absent unless a study is verified) -------
+    traefik -- "/identity (admin portal)" --> identitysvc
+    backend -- "internal :3003<br/>reserve / confirm / release<br/>NO PII crosses this edge" --> identitysvc
+    identitysvc --> identitydb
+    identitysvc -. "JWKS" .-> keycloak
+    identitysvc -. "invite to the address held in the register;<br/>an alert on EVERY reveal" .-> smtp
+    %% Deliberately absent: any edge from identitysvc to mongo or neo4j. The
+    %% register is not on hhh-proxy, so no such route exists — asserted by
+    %% app/tests/unit/identityIsolation.test.js.
+    %%
+    %% Also deliberately absent: any edge from identitysvc to Sentry. Stack
+    %% traces capture local variables, which here would carry patient names
+    %% across the trust boundary.
+
     %% ------- Edges: monitoring -------
     prometheus -. "scrape /metrics" .-> backend
     prometheus -. "scrape /metrics" .-> apiservice
     prometheus -. "probe" .-> blackbox
+    prometheus -. "probe (identity profile)" .-> identityblackbox
+    identityblackbox -. "health probe<br/>hhh-identity-edge" .-> identitysvc
     grafana -. "OIDC SSO" .-> keycloak
     grafana --> prometheus
 
@@ -133,5 +157,7 @@ flowchart TB
     class participant_actor,researcher_actor,agent_actor actor
     class mongo,neo4j,lightrag,redis,postgres store
     class llm,fcm ext
-    class backup,dockerproxy,prometheus,grafana,blackbox ops
+    class backup,dockerproxy,prometheus,grafana,blackbox,identityblackbox ops
     class oauth2proxy,mongoexpress,redisinsight,bullboard,lightragui tool
+    classDef identity fill:#fde2e2,stroke:#b02a37,stroke-width:2px
+    class identitysvc,identitydb identity

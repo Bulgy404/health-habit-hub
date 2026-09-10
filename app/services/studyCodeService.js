@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as CODES } from '../models/studyCode.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
+import { resolveIdentityConfig } from './identityConfig.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import {
   getEnrollment,
@@ -36,7 +37,7 @@ async function scheduleQuestionnaires(
  */
 async function _upsertMongoEnrollment(
   db,
-  { userId, studyId, groupId, studyCodeUsed, enrolledAt }
+  { userId, studyId, groupId, studyCodeUsed, enrolledAt, subjectCode = null }
 ) {
   // groupId is required by the enrollments schema; skip rather than crash
   // the (Neo4j-backed, already-succeeded) enrollment if it's ever missing —
@@ -51,6 +52,10 @@ async function _upsertMongoEnrollment(
           studyId: new ObjectId(studyId),
           groupId: new ObjectId(groupId),
           studyCodeUsed: studyCodeUsed ?? null,
+          // Set only for verified-identity studies. This is the join key
+          // researchers see instead of the raw Keycloak sub, and the only
+          // thing tying an enrolment back to the identity register.
+          subjectCode: subjectCode ?? null,
           enrolledAt,
           droppedOutAt: null,
           cueConfig: null,
@@ -382,6 +387,120 @@ export async function redeemCode({ db, userId, code, neo4jRun }) {
     studyName: study?.name ?? null,
     groupLabel: group?.label ?? null,
   };
+}
+
+/**
+ * Enrol a participant who presented a verified-identity code (HHV-…).
+ *
+ * The three-step protocol exists because the enrolment spans two databases
+ * with no shared transaction. See identity-service/src/services/linkService.js
+ * for the full reasoning; the short version is that reserving first leaves a
+ * recoverable state, whereas redeeming first would burn the code if the Neo4j
+ * enrolment then failed.
+ *
+ *   reserve  → identity register claims the code, returns routing data only
+ *   enrol    → HHH does exactly what it does for an anonymous code
+ *   confirm  → the register records the account link and spends the code
+ *   release  → on ANY failure, hand the code straight back
+ *
+ * Group allocation stays here, in HHH, using the same weighted round-robin as
+ * every other enrolment: the register knows who someone is, not which arm they
+ * belong in, and moving randomisation across the boundary would give it a
+ * reason to know.
+ *
+ * @param {{ db: object, userId: string, code: string, neo4jRun: Function, identityClient: object }} deps
+ */
+export async function redeemIdentityCode({
+  db,
+  userId,
+  code,
+  neo4jRun,
+  identityClient,
+}) {
+  let reservation;
+  try {
+    reservation = await identityClient.reserve(code);
+  } catch (err) {
+    if (err.status === 404) return { notFound: true };
+    return { identityUnavailable: true, error: err.message };
+  }
+
+  const { reservationId, hhhStudyId, subjectCode } = reservation;
+
+  try {
+    let studyOid;
+    try {
+      studyOid = new ObjectId(hhhStudyId);
+    } catch {
+      await identityClient.release(reservationId);
+      return { notFound: true };
+    }
+
+    const study = await db.collection(STUDIES).findOne({ _id: studyOid });
+    if (!study) {
+      await identityClient.release(reservationId);
+      return { notFound: true };
+    }
+
+    const group = await _selectGroupWeighted(db, study);
+
+    const enrollResult = await createEnrollment(neo4jRun, {
+      userId,
+      studyId: hhhStudyId,
+      groupId: group?.id?.toString() ?? null,
+      // The HHV code is 1:1 with a subject, so persisting it in HHH would
+      // create a correlator between the two databases. The subject code is
+      // already stored below and is the intended join key.
+      studyCodeUsed: null,
+      enrolledAt: new Date(),
+    });
+
+    if (enrollResult.alreadyEnrolled) {
+      await identityClient.release(reservationId);
+      return { alreadyEnrolled: true };
+    }
+
+    const enrolledAt = new Date();
+    await _upsertMongoEnrollment(db, {
+      userId,
+      studyId: studyOid,
+      groupId: group?.id ?? null,
+      studyCodeUsed: null,
+      subjectCode,
+      enrolledAt,
+    });
+
+    await identityClient.confirm({
+      reservationId,
+      keycloakSub: userId,
+      hhhGroupId: group?.id?.toString() ?? null,
+    });
+
+    await scheduleQuestionnaires(
+      db,
+      userId,
+      studyOid,
+      group?.id ?? null,
+      enrolledAt
+    );
+
+    const identity = resolveIdentityConfig(study);
+    return {
+      enrolled: true,
+      studyId: hhhStudyId,
+      groupId: group?.id?.toString() ?? null,
+      studyName: study?.name ?? null,
+      groupLabel: group?.label ?? null,
+      subjectCode,
+      identityConsentRequired: Boolean(identity.consentDocumentSlug),
+      identityConsentSlug: identity.consentDocumentSlug,
+    };
+  } catch (err) {
+    // Any failure after reserving hands the code straight back, so the
+    // participant can simply try again rather than needing a replacement.
+    await identityClient.release(reservationId);
+    throw err;
+  }
 }
 
 /**

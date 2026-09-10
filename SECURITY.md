@@ -68,13 +68,46 @@ data we hold. **This is the current model; we are keeping it for now.**
 - **Authorization.** Keycloak OIDC roles (participant/researcher/admin),
   enforced in `app/middleware/` and `admin/src/middleware.ts`.
 
-> **Planned exception — not yet implemented.** An optional, per-study *verified
-> identity* mode is designed (approved 2026-09-03) for clinical studies that
-> must identify participants. It does **not** change the model above: identity
-> data would live in a **separate service and database** with envelope
-> encryption and its own key, while HHH continues to hold only a study-local
-> subject code. Anonymous studies stay unaffected. The "no application-level
-> field encryption" rationale above remains true for the research databases and
-> is deliberately **inverted** for that register. See
-> [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md). Update this
-> section when the first phase ships.
+## Verified Identity Mode (optional, per study)
+
+An **opt-in, per-study** mode for clinical studies that must identify their
+participants. It does **not** change the model above — it adds a second,
+separate one alongside it.
+
+- **Anonymous studies are unaffected.** `identity.mode` is absent on every
+  existing study and defaults to `anonymous`; the code path is never entered,
+  exports are unchanged, and the register need not be deployed at all.
+- **PII never enters the research databases.** Names, dates of birth and
+  contact details live only in a separate service with its own PostgreSQL
+  database, its own credentials and its own key. MongoDB and Neo4j hold a
+  study-local **subject code** (e.g. `TUD-DFG01-0042`) and nothing else.
+- **The "no application-level field encryption" rationale above stays true for
+  the research databases and is deliberately INVERTED for the register.** Every
+  identifying field there is AES-256-GCM encrypted under a per-register data
+  key, with the AAD bound to both the row id and the column name — so
+  ciphertext cannot be moved between rows or between fields by an attacker
+  holding `UPDATE` but not the key.
+- **Keys.** One 32-byte master key, mounted as a `0400` **file** rather than an
+  environment variable (env leaks via `docker inspect`, `/proc/<pid>/environ`
+  and crash dumps). Everything else is HKDF-derived. Key-encryption and
+  blind-index versions rotate independently.
+- **Separation of duties, enforced at runtime.** An account holding
+  `researcher` may never hold an identity role — the person analysing the
+  pseudonymous data cannot resolve the pseudonyms. Re-identification requires a
+  stated legal basis, a second approver (enforced by a database trigger), and a
+  time-limited grant; every reveal is recorded permanently and is never
+  deduplicated. There is no bulk-reveal endpoint and none that accepts a list
+  of subject codes.
+- **Network isolation.** The register shares no Docker network with `mongo` or
+  `neo4j`, asserted by a CI test against `docker-compose.yml`.
+
+**Honest limitation, stated for the DPIA:** these controls give
+**non-repudiation, not prevention**. A Keycloak realm administrator can always
+mint a principal; what is guaranteed is that doing so is visible in an audit
+trail no HHH admin can alter. Blind indexes are deterministic and therefore
+reveal *equality* — that a value is shared between two rows — though not the
+value itself without the pepper.
+
+See [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md) for the design
+and [`docs/identity-register.md`](docs/identity-register.md) for the operator
+runbook.
