@@ -67,7 +67,11 @@ test: test-backend test-identity test-flutter test-python test-admin ## Run all 
 format: ## Auto-format backend code with Prettier
 	cd app && npx prettier --write .
 
-test-backend: format ## Backend: lint + unit tests + security audit
+test-backend: ## Backend: lint + unit tests + security audit
+	# Deliberately does NOT depend on `format`. It used to, which meant the
+	# target rewrote the very drift it then checked for — so a file that was
+	# not Prettier-clean passed locally and failed CI's "Backend – lint &
+	# format" job. Run `make format` yourself when the check below complains.
 	# --test-force-exit: at this file count, node --test's default child-process
 	# reaping intermittently never detects the last file(s) in the (internally
 	# re-sorted, alphabetical) queue as complete, hanging the whole run even
@@ -94,8 +98,11 @@ test-python: ## Python API-service: pytest (prefers API-service/.venv if present
 	PY=$$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3) && \
 	$$PY -m pytest tests/ -v
 
-test-admin: ## Admin: typecheck
-	cd admin && npx tsc --noEmit
+test-admin: ## Admin: typecheck + tests
+	# Mirrors CI's typecheck and test steps. CI additionally runs `npm run
+	# build`; that is left out here because a full Next build is far slower
+	# than the rest of this suite put together — run it before you tag.
+	cd admin && npx tsc --noEmit && npx jest --ci
 
 test-alert-email: ## Send one real test alert email via the configured SMTP relay (manual only, never runs from `make test`)
 	set -a && . ./.env && set +a && python3 scripts/send-test-alert.py

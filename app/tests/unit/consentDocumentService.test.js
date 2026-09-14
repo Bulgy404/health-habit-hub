@@ -266,7 +266,10 @@ describe('consentDocumentService — readiness', () => {
     // The other, still-unauthored languages (ja, fr, nl) must NOT be named as
     // blocking reasons — their absence is fine, only English's isn't.
     assert.ok(
-      !r.reasons.some((x) => x.startsWith('missing_languages:') && x !== 'missing_languages:en')
+      !r.reasons.some(
+        (x) =>
+          x.startsWith('missing_languages:') && x !== 'missing_languages:en'
+      )
     );
   });
 
@@ -301,7 +304,11 @@ describe('consentDocumentService — readiness', () => {
       slug: 'en-draft',
     });
     assert.equal(r.ready, false);
-    assert.ok(r.reasons.some((x) => x.startsWith('draft_languages:') && x.includes('en')));
+    assert.ok(
+      r.reasons.some(
+        (x) => x.startsWith('draft_languages:') && x.includes('en')
+      )
+    );
   });
 
   it('still blocks when English has placeholders remaining', async () => {
@@ -317,7 +324,11 @@ describe('consentDocumentService — readiness', () => {
       slug: 'en-placeholder',
     });
     assert.equal(r.ready, false);
-    assert.ok(r.reasons.some((x) => x.startsWith('placeholders_remain:') && x.includes('en')));
+    assert.ok(
+      r.reasons.some(
+        (x) => x.startsWith('placeholders_remain:') && x.includes('en')
+      )
+    );
   });
 
   it('still blocks on a half-written, optional non-English draft when it IS authored', async () => {
@@ -332,7 +343,11 @@ describe('consentDocumentService — readiness', () => {
       slug: 'de-draft',
     });
     assert.equal(r.ready, false);
-    assert.ok(r.reasons.some((x) => x.startsWith('draft_languages:') && x.includes('de')));
+    assert.ok(
+      r.reasons.some(
+        (x) => x.startsWith('draft_languages:') && x.includes('de')
+      )
+    );
   });
 
   it('refuses when locales sit at different versions — an acceptance record would be ambiguous', async () => {

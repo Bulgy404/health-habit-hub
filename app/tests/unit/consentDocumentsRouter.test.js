@@ -186,8 +186,8 @@ test('saves a language and reports it as a database override afterwards', async 
   assert.strictEqual(doc.fileAvailable, false);
 });
 
-test('a document becomes ready only once every language is published', async () => {
-  for (const lang of ['en', 'de', 'ja', 'fr']) {
+test('a document becomes ready once English is published, whatever the optional languages do', async () => {
+  for (const lang of ['de', 'ja', 'fr']) {
     await fetch(url(`/consent-documents/ready-doc/${lang}`), {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
@@ -195,13 +195,16 @@ test('a document becomes ready only once every language is published', async () 
     });
   }
   let body = await (await fetch(url('/consent-documents/ready-doc'))).json();
-  assert.strictEqual(body.ready, false, 'four of five languages is not ready');
-  assert.ok(body.reasons.some((r) => r === 'missing_languages:nl'));
+  assert.strictEqual(body.ready, false, 'English is the one hard requirement');
+  assert.ok(body.reasons.some((r) => r === 'missing_languages:en'));
+  // nl was never authored either, but its absence is not a blocker — only
+  // English's is, so it must not be named as a reason.
+  assert.ok(!body.reasons.some((r) => r === 'missing_languages:nl'));
 
-  const last = await fetch(url('/consent-documents/ready-doc/nl'), {
+  const last = await fetch(url('/consent-documents/ready-doc/en'), {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(published('nl')),
+    body: JSON.stringify(published('en')),
   });
   assert.strictEqual((await last.json()).ready, true);
 
