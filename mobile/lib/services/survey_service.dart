@@ -9,8 +9,8 @@ import '../config/app_config.dart';
 class SurveyService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
-  /// Creates a [SurveyService] using [dio].
-  SurveyService({required Dio dio}) : _dio = dio;
+  /// Creates a [SurveyService] using [_dio].
+  SurveyService({required this._dio});
 
   final Dio _dio;
 

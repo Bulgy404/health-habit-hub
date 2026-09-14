@@ -78,12 +78,11 @@ class AuthService {
   AuthService({
     FlutterAppAuth? appAuth,
     FlutterSecureStorage? secureStorage,
-    Dio? dio,
+    this._dio,
     this.onLogout,
     this.onLogin,
   })  : _appAuth = appAuth ?? const FlutterAppAuth(),
-        _secureStorage = secureStorage ?? const FlutterSecureStorage(),
-        _dio = dio;
+        _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   /// Triggers the PKCE authorization code flow via Keycloak.
   ///

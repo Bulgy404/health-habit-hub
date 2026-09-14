@@ -134,12 +134,10 @@ Future<void> showForegroundNotification(RemoteMessage message) async {
 ///
 /// Inject with [Riverpod] via [pushNotificationServiceProvider].
 class PushNotificationService {
-  /// Creates a [PushNotificationService] using [dio]. [ref] is kept only to
+  /// Creates a [PushNotificationService] using [_dio]. [_ref] is kept only to
   /// read [packageInfoProvider] at registration time (reusing the app's
   /// single [PackageInfo] fetch rather than requesting it again here).
-  PushNotificationService({required Dio dio, required Ref ref})
-    : _dio = dio,
-      _ref = ref;
+  PushNotificationService({required this._dio, required this._ref});
 
   final Dio _dio;
   final Ref _ref;

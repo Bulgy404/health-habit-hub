@@ -88,7 +88,7 @@ bool _tzReady = false;
 /// habit complete, and re-run [syncReminders] when un-marking one so today's
 /// reminder is restored if its time hasn't passed yet.
 class ReminderSchedulerService {
-  ReminderSchedulerService({required Dio dio}) : _dio = dio;
+  ReminderSchedulerService({required this._dio});
 
   final Dio _dio;
 

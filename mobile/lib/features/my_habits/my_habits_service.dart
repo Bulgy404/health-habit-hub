@@ -13,7 +13,7 @@ import 'my_habits_models.dart';
 /// REST client for the habit intentions and SRHI API endpoints.
 class MyHabitsService {
   /// Creates a [MyHabitsService] using the given Dio [dio] instance.
-  MyHabitsService({required Dio dio}) : _dio = dio;
+  MyHabitsService({required this._dio});
 
   final Dio _dio;
   static const _base = AppConfig.apiBaseUrl;

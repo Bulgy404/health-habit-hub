@@ -7,7 +7,7 @@ import '../models/study_group_config.dart';
 
 /// Fetches the authenticated participant's resolved group config.
 class StudyConfigService {
-  StudyConfigService({required Dio dio}) : _dio = dio;
+  StudyConfigService({required this._dio});
 
   final Dio _dio;
 

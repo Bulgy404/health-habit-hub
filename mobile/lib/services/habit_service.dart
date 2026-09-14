@@ -12,8 +12,8 @@ import '../models/habit_stats.dart'; // HabitStats, MyStats, etc.
 class HabitService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
-  /// Creates a [HabitService] using [dio].
-  HabitService({required Dio dio}) : _dio = dio;
+  /// Creates a [HabitService] using [_dio].
+  HabitService({required this._dio});
 
   final Dio _dio;
 
