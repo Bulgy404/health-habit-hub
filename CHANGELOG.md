@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-14
+
 ### Added
 
 - **Verified Identity Mode** — an optional, per-study capability for clinical studies that must identify their participants, without weakening the platform's anonymity for every other study. `identity.mode` is absent on all existing studies and defaults to `anonymous`, so nothing changes for them and the new service need not be deployed at all.
@@ -679,6 +681,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 
 - G3/G4 ontology indistinguishability: groups 3 and 4 previously shared indistinct URIs, making study-group queries ambiguous; each group now has a unique URI and label in `Ontology.ttl`
 
-[unreleased]: https://github.com/your-org/health-habit-hub/compare/v1.1.0...HEAD
+[unreleased]: https://github.com/your-org/health-habit-hub/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/your-org/health-habit-hub/compare/v1.1.5...v1.2.0
 [1.1.0]: https://github.com/your-org/health-habit-hub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/your-org/health-habit-hub/releases/tag/v1.0.0
