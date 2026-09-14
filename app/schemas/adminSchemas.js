@@ -237,6 +237,15 @@ export const updateStudySchema = z
     // §7.5 Gamification — study-wide on/off toggle.
     gamificationEnabled: z.boolean().optional(),
     identity: identityConfigSchema.optional(),
+    // Which knowledge-base papers may inform this study's recommendations.
+    // null restores "every indexed document", which is the general study's
+    // intent and what every study did before scoping existed. An empty array
+    // is a different instruction — draw on nothing — and is kept distinct.
+    knowledgeBaseFiles: z
+      .array(z.string().min(1).max(300))
+      .max(500)
+      .nullable()
+      .optional(),
     // Habit-donation input mode + optional post-donation questionnaire.
     donationInputMode: donationInputModeSchema.optional(),
     donationQuestionnaireSlug: donationQuestionnaireSlugSchema.optional(),

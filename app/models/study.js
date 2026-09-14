@@ -161,6 +161,14 @@ export const VALIDATOR = {
       // Verified identity mode. Study-level only — there is intentionally no
       // per-group counterpart. See IDENTITY_BSON above.
       identity: IDENTITY_BSON,
+      // Knowledge-base papers this study's recommender may draw on. Absent or
+      // null means every indexed document — the general study's intent, and
+      // what every study did before scoping existed. An empty array means the
+      // opposite (draw on nothing), so the two must not be collapsed.
+      knowledgeBaseFiles: {
+        bsonType: ['array', 'null'],
+        items: { bsonType: 'string' },
+      },
       // Optional: absence is treated as 'freeText' for backward compatibility.
       habitEntryMode: { bsonType: 'string', enum: ['freeText', 'structured'] },
       structuredActivityKeys: {

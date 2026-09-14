@@ -168,6 +168,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       isDefault: s.isDefault,
       isActive: s.isActive,
       recommenderEnabled: s.recommenderEnabled !== false,
+      knowledgeBaseFiles: s.knowledgeBaseFiles ?? null,
       onboardingEnabled: s.onboardingEnabled !== false,
       selfHabitCreationEnabled: s.selfHabitCreationEnabled !== false,
       habitEntryMode:
@@ -342,6 +343,7 @@ export async function getStudy({ db, id }) {
     isDefault: study.isDefault,
     isActive: study.isActive,
     recommenderEnabled: study.recommenderEnabled !== false,
+    knowledgeBaseFiles: study.knowledgeBaseFiles ?? null,
     onboardingEnabled: study.onboardingEnabled !== false,
     selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
     habitEntryMode:
@@ -411,6 +413,11 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
   if (updates.isActive !== undefined) $set.isActive = updates.isActive;
   if (updates.recommenderEnabled !== undefined)
     $set.recommenderEnabled = updates.recommenderEnabled;
+  // null is meaningful here and must reach Mongo: it restores "every indexed
+  // document", where [] means "no documents". Only `undefined` — the field
+  // being absent from the request — leaves the current scope alone.
+  if (updates.knowledgeBaseFiles !== undefined)
+    $set.knowledgeBaseFiles = updates.knowledgeBaseFiles;
   if (updates.onboardingEnabled !== undefined)
     $set.onboardingEnabled = updates.onboardingEnabled;
   if (updates.selfHabitCreationEnabled !== undefined)

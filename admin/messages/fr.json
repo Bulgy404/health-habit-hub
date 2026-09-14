@@ -560,7 +560,12 @@
     "categoryPlaceholder": "p. ex. habit-formation",
     "uploading": "Téléversement…",
     "deleteFileTitle": "Supprimer le fichier ?",
-    "confirmDeleteText": "Vous êtes sur le point de supprimer définitivement <strong>{filename}</strong> de la base de connaissances. Cette action est irréversible."
+    "confirmDeleteText": "Vous êtes sur le point de supprimer définitivement <strong>{filename}</strong> de la base de connaissances. Cette action est irréversible.",
+    "citationColumn": "Citation",
+    "noCitationYet": "Aucune entrée BibLaTeX — cité par nom de fichier, sans lien.",
+    "bibtexLabel": "Entrée BibLaTeX (facultatif)",
+    "bibtexPlaceholder": "@article{key,\n  title = {...},\n  author = {...},\n  date = {2025},\n  doi = {10.xxxx/yyyy}\n}",
+    "bibtexHint": "Collez l’entrée depuis votre gestionnaire de références. La citation et le lien DOI en sont extraits : plus aucun fichier à modifier ensuite."
   },
   "questionnaires": {
     "title": "Questionnaires",
@@ -1206,6 +1211,24 @@
         "empty": "Aucune donnée d'inscription pour le moment.",
         "title": "Taux d'activité hebdomadaire"
       }
+    },
+    "kbScope": {
+      "title": "Publications utilisables par le recommandeur",
+      "hint": "Choisissez les publications de la base de connaissances qui alimentent les recommandations de cette étude. Par défaut toutes sont utilisées, et les nouveaux dépôts sont alors inclus automatiquement.",
+      "defaultStudyHint": "Il s’agit de l’étude générale, qui utilise normalement toutes les publications de la base — y compris celles déposées plus tard.",
+      "useAll": "Utiliser toutes les publications de la base",
+      "usePicked": "N’utiliser que les publications sélectionnées",
+      "filterPlaceholder": "Filtrer par titre ou nom de fichier",
+      "filterLabel": "Filtrer les publications",
+      "selectedCount": "{selected} sur {total} sélectionnées",
+      "loading": "Chargement des publications…",
+      "empty": "Aucune publication n’a encore été déposée dans la base de connaissances.",
+      "noneWarning": "Rien n’est sélectionné : les recommandations de cette étude ne s’appuieront sur aucune publication.",
+      "save": "Enregistrer la sélection",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré.",
+      "loadFailed": "Impossible de charger la base de connaissances.",
+      "saveFailed": "Impossible d’enregistrer la sélection."
     }
   },
   "welcome": {

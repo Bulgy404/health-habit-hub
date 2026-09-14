@@ -49,19 +49,53 @@ def _load_references() -> dict[str, dict[str, Any]]:
 
 _REFERENCES = _load_references()
 
+#: Curated references written by the knowledge tab, one document per KB file.
+#: The JSON above stays as the fallback for papers indexed before the tab could
+#: record a citation; anything in Mongo wins over it.
+REFERENCES_COLLECTION = "kb_references"
 
-def build_citation(filename: str) -> dict[str, str]:
+
+async def load_references(db: Any) -> dict[str, dict[str, Any]]:
+    """Merge the curated Mongo references over the shipped JSON ones.
+
+    Args:
+        db: Motor database handle, or None to use only the shipped file.
+
+    Returns:
+        Mapping of knowledge-base filename to reference metadata.
+    """
+    merged: dict[str, dict[str, Any]] = dict(_REFERENCES)
+    if db is None:
+        return merged
+    try:
+        cursor = db[REFERENCES_COLLECTION].find({})
+        async for doc in cursor:
+            filename = doc.get("filename")
+            if filename:
+                merged[filename] = doc
+    except Exception as exc:  # noqa: BLE001
+        # A citation is a nicety; retrieval must not fail because the reference
+        # store is unreachable. Fall back to whatever the image shipped with.
+        logger.warning("Could not read %s: %s", REFERENCES_COLLECTION, exc)
+    return merged
+
+
+def build_citation(
+    filename: str, references: dict[str, dict[str, Any]] | None = None
+) -> dict[str, str]:
     """Return citation metadata for a knowledge-base document.
 
     Args:
         filename: Document filename as stored in the knowledge base.
+        references: Reference mapping to consult, as returned by
+            :func:`load_references`. Defaults to the shipped JSON alone.
 
     Returns:
         Dict with keys ``filename``, ``title``, ``authors``, ``year``,
         ``url``, and ``citation`` (a preformatted display string such as
         "Wood and Rünger (2016) — Psychology of Habit").
     """
-    ref = _REFERENCES.get(filename, {})
+    ref = (_REFERENCES if references is None else references).get(filename, {})
     match = _ZOTERO_RE.match(filename)
     if match:
         authors = ref.get("authors", match.group("authors").strip())

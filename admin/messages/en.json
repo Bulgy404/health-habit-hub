@@ -560,7 +560,12 @@
     "categoryPlaceholder": "e.g. habit-formation",
     "uploading": "Uploading…",
     "deleteFileTitle": "Delete file?",
-    "confirmDeleteText": "You are about to permanently delete <strong>{filename}</strong> from the knowledge base. This action cannot be undone."
+    "confirmDeleteText": "You are about to permanently delete <strong>{filename}</strong> from the knowledge base. This action cannot be undone.",
+    "citationColumn": "Citation",
+    "noCitationYet": "No BibLaTeX entry — cited by filename, with no link.",
+    "bibtexLabel": "BibLaTeX entry (optional)",
+    "bibtexPlaceholder": "@article{key,\n  title = {...},\n  author = {...},\n  date = {2025},\n  doi = {10.xxxx/yyyy}\n}",
+    "bibtexHint": "Paste the entry from your reference manager. The citation and DOI link are taken from it, so there is no separate file to edit afterwards."
   },
   "questionnaires": {
     "title": "Questionnaires",
@@ -1206,6 +1211,24 @@
       "summaryOn": "On",
       "summaryOff": "Off",
       "summaryPerGroup": "Per group ({on}/{total} on)"
+    },
+    "kbScope": {
+      "title": "Papers the recommender may use",
+      "hint": "Choose which knowledge-base papers inform recommendations for this study. Using every paper is the default and keeps new uploads included automatically.",
+      "defaultStudyHint": "This is the general study, which normally draws on every paper in the knowledge base — including ones uploaded later.",
+      "useAll": "Use every paper in the knowledge base",
+      "usePicked": "Use only the papers I pick",
+      "filterPlaceholder": "Filter by title or filename",
+      "filterLabel": "Filter papers",
+      "selectedCount": "{selected} of {total} selected",
+      "loading": "Loading papers…",
+      "empty": "No papers have been uploaded to the knowledge base yet.",
+      "noneWarning": "Nothing is selected, so this study's recommendations will draw on no papers at all.",
+      "save": "Save selection",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "loadFailed": "Could not load the knowledge base.",
+      "saveFailed": "Could not save the selection."
     }
   },
   "welcome": {

@@ -824,3 +824,82 @@ test('listStudyParticipants groupId filter interacts correctly with pagination',
   assert.equal(result.participants.length, 1);
   assert.equal(result.participants[0].userId, 'a');
 });
+
+// ── knowledgeBaseFiles (per-study recommender scope) ─────────────────────────
+
+/** A study document with only the fields updateStudy needs to exist. */
+async function studyWithScope(scope) {
+  const { ObjectId } = await import('../../models/survey.js');
+  const id = new ObjectId();
+  const doc = {
+    _id: id,
+    name: 'S',
+    description: null,
+    isDefault: false,
+    isActive: true,
+    groups: [],
+    questionnaires: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  if (scope !== undefined) doc.knowledgeBaseFiles = scope;
+  return { id, db: makeDb({ studies: [doc] }) };
+}
+
+test('updateStudy: scoping a study to a subset of papers stores exactly those', async () => {
+  const { id, db } = await studyWithScope(undefined);
+  await updateStudy({
+    db,
+    id: id.toString(),
+    updates: { knowledgeBaseFiles: ['wood-2016.pdf', 'gardner-2012.pdf'] },
+  });
+  const study = await getStudy({ db, id: id.toString() });
+  assert.deepStrictEqual(study.knowledgeBaseFiles, [
+    'wood-2016.pdf',
+    'gardner-2012.pdf',
+  ]);
+});
+
+test('updateStudy: null restores the whole knowledge base, [] is not the same thing', async () => {
+  // The general study wants every indexed paper, and that is what an absent or
+  // null value has always meant. An empty array is the opposite instruction —
+  // draw on nothing — so the two must survive the round trip distinctly.
+  const { id, db } = await studyWithScope(['only-this.pdf']);
+  await updateStudy({
+    db,
+    id: id.toString(),
+    updates: { knowledgeBaseFiles: null },
+  });
+  assert.strictEqual(
+    (await getStudy({ db, id: id.toString() })).knowledgeBaseFiles,
+    null
+  );
+
+  await updateStudy({
+    db,
+    id: id.toString(),
+    updates: { knowledgeBaseFiles: [] },
+  });
+  assert.deepStrictEqual(
+    (await getStudy({ db, id: id.toString() })).knowledgeBaseFiles,
+    []
+  );
+});
+
+test('updateStudy: an unrelated update leaves the scope alone', async () => {
+  const { id, db } = await studyWithScope(['keep-me.pdf']);
+  await updateStudy({ db, id: id.toString(), updates: { name: 'Renamed' } });
+  const study = await getStudy({ db, id: id.toString() });
+  assert.deepStrictEqual(study.knowledgeBaseFiles, ['keep-me.pdf']);
+  assert.strictEqual(study.name, 'Renamed');
+});
+
+test('a study that never had a scope reports null, not an empty list', async () => {
+  const { id, db } = await studyWithScope(undefined);
+  const study = await getStudy({ db, id: id.toString() });
+  assert.strictEqual(
+    study.knowledgeBaseFiles,
+    null,
+    'an empty list would silently cut a legacy study off from every paper'
+  );
+});

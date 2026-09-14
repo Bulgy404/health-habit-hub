@@ -68,6 +68,12 @@ export interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
+  /**
+   * Knowledge-base papers the recommender may draw on for this study.
+   * null = every indexed document (the default, and what the general study
+   * wants); [] = none. The two are deliberately not interchangeable.
+   */
+  knowledgeBaseFiles: string[] | null;
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
   /** Study-wide — applies to every group. Off (default) = free-text habit entry. */

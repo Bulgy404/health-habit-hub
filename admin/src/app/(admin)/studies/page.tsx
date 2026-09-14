@@ -15,6 +15,7 @@ import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
 import { defaultSpring } from "@/lib/motion";
 import { IdentityTabPanel } from "./IdentityTabPanel";
+import { KnowledgeScopePanel } from "./KnowledgeScopePanel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,12 @@ interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
+  /**
+   * Knowledge-base papers the recommender may draw on for this study.
+   * null = every indexed document (the default, and what the general study
+   * wants); [] = none. The two are deliberately not interchangeable.
+   */
+  knowledgeBaseFiles: string[] | null;
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
   /** Study-wide — applies to every group. Off (default) = free-text habit entry. */
@@ -2490,6 +2497,13 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           </button>
         </div>
       </div>
+
+      <KnowledgeScopePanel
+        studyId={study.id}
+        token={token}
+        initialFiles={study.knowledgeBaseFiles}
+        isDefaultStudy={study.isDefault}
+      />
 
       <div className={styles.reminderTypeSection} data-testid="habit-creation-section-onboarding">
         <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.onboardingLabel")}</p>

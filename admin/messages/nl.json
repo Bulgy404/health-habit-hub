@@ -560,7 +560,12 @@
     "categoryPlaceholder": "bijv. habit-formation",
     "uploading": "Bezig met uploaden…",
     "deleteFileTitle": "Bestand verwijderen?",
-    "confirmDeleteText": "U staat op het punt <strong>{filename}</strong> permanent uit de kennisbank te verwijderen. Deze actie kan niet ongedaan worden gemaakt."
+    "confirmDeleteText": "U staat op het punt <strong>{filename}</strong> permanent uit de kennisbank te verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+    "citationColumn": "Citatie",
+    "noCitationYet": "Geen BibLaTeX-vermelding — geciteerd op bestandsnaam, zonder link.",
+    "bibtexLabel": "BibLaTeX-vermelding (optioneel)",
+    "bibtexPlaceholder": "@article{key,\n  title = {...},\n  author = {...},\n  date = {2025},\n  doi = {10.xxxx/yyyy}\n}",
+    "bibtexHint": "Plak de vermelding uit je referentiebeheer. De citatie en DOI-link worden daaruit overgenomen, dus er hoeft geen apart bestand meer bewerkt te worden."
   },
   "questionnaires": {
     "title": "Vragenlijsten",
@@ -1206,6 +1211,24 @@
         "empty": "Nog geen inschrijvingsgegevens.",
         "title": "Wekelijkse actieve ratio"
       }
+    },
+    "kbScope": {
+      "title": "Publicaties die de recommender mag gebruiken",
+      "hint": "Kies welke publicaties uit de kennisbank de aanbevelingen voor deze studie voeden. Standaard worden alle publicaties gebruikt, waardoor nieuwe uploads automatisch meetellen.",
+      "defaultStudyHint": "Dit is de algemene studie, die normaal alle publicaties in de kennisbank gebruikt — ook later geüploade.",
+      "useAll": "Alle publicaties in de kennisbank gebruiken",
+      "usePicked": "Alleen geselecteerde publicaties gebruiken",
+      "filterPlaceholder": "Filteren op titel of bestandsnaam",
+      "filterLabel": "Publicaties filteren",
+      "selectedCount": "{selected} van {total} geselecteerd",
+      "loading": "Publicaties laden…",
+      "empty": "Er zijn nog geen publicaties naar de kennisbank geüpload.",
+      "noneWarning": "Er is niets geselecteerd, dus de aanbevelingen van deze studie putten uit geen enkele publicatie.",
+      "save": "Selectie opslaan",
+      "saving": "Opslaan…",
+      "saved": "Opgeslagen.",
+      "loadFailed": "De kennisbank kon niet worden geladen.",
+      "saveFailed": "De selectie kon niet worden opgeslagen."
     }
   },
   "welcome": {

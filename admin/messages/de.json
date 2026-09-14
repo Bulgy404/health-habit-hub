@@ -560,7 +560,12 @@
     "categoryPlaceholder": "z. B. habit-formation",
     "uploading": "Wird hochgeladen…",
     "deleteFileTitle": "Datei löschen?",
-    "confirmDeleteText": "Sie sind dabei, <strong>{filename}</strong> dauerhaft aus der Wissensdatenbank zu löschen. Diese Aktion kann nicht rückgängig gemacht werden."
+    "confirmDeleteText": "Sie sind dabei, <strong>{filename}</strong> dauerhaft aus der Wissensdatenbank zu löschen. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "citationColumn": "Zitation",
+    "noCitationYet": "Kein BibLaTeX-Eintrag — wird mit Dateinamen und ohne Link zitiert.",
+    "bibtexLabel": "BibLaTeX-Eintrag (optional)",
+    "bibtexPlaceholder": "@article{key,\n  title = {...},\n  author = {...},\n  date = {2025},\n  doi = {10.xxxx/yyyy}\n}",
+    "bibtexHint": "Eintrag aus der Literaturverwaltung einfügen. Zitation und DOI-Link werden daraus übernommen, eine separate Datei muss nicht mehr bearbeitet werden."
   },
   "questionnaires": {
     "title": "Fragebögen",
@@ -1206,6 +1211,24 @@
       "summaryOn": "An",
       "summaryOff": "Aus",
       "summaryPerGroup": "Pro Gruppe ({on}/{total} an)"
+    },
+    "kbScope": {
+      "title": "Publikationen für den Recommender",
+      "hint": "Wählen Sie, welche Publikationen aus der Wissensbasis die Empfehlungen dieser Studie speisen. Standard ist die Nutzung aller Publikationen; neue Uploads sind dann automatisch enthalten.",
+      "defaultStudyHint": "Dies ist die allgemeine Studie, die üblicherweise alle Publikationen der Wissensbasis nutzt — auch später hochgeladene.",
+      "useAll": "Alle Publikationen der Wissensbasis nutzen",
+      "usePicked": "Nur ausgewählte Publikationen nutzen",
+      "filterPlaceholder": "Nach Titel oder Dateiname filtern",
+      "filterLabel": "Publikationen filtern",
+      "selectedCount": "{selected} von {total} ausgewählt",
+      "loading": "Publikationen werden geladen…",
+      "empty": "Es wurden noch keine Publikationen in die Wissensbasis hochgeladen.",
+      "noneWarning": "Nichts ausgewählt — die Empfehlungen dieser Studie greifen dann auf keine Publikation zu.",
+      "save": "Auswahl speichern",
+      "saving": "Wird gespeichert…",
+      "saved": "Gespeichert.",
+      "loadFailed": "Die Wissensbasis konnte nicht geladen werden.",
+      "saveFailed": "Die Auswahl konnte nicht gespeichert werden."
     }
   },
   "welcome": {

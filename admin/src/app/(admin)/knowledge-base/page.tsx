@@ -48,6 +48,7 @@ function UploadModal({
   const t = useTranslations("knowledgeBase");
   const tc = useTranslations("common");
   const [category, setCategory] = useState("general");
+  const [bibtex, setBibtex] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -69,6 +70,9 @@ function UploadModal({
       const form = new FormData();
       form.append("file", file);
       form.append("category", category.trim() || "general");
+      // Optional: a paper indexed without one still works, it just cites as a
+      // bare filename with no link until an entry is supplied.
+      if (bibtex.trim()) form.append("bibtex", bibtex.trim());
 
       const res = await fetch(API_BASE, {
         method: "POST",
@@ -77,7 +81,10 @@ function UploadModal({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+        // A rejected BibLaTeX paste arrives as FastAPI's `detail`, and saying
+        // what was wrong with it is the whole point of rejecting it.
+        const problem = body as { error?: string; detail?: string };
+        throw new Error(problem.detail ?? problem.error ?? `HTTP ${res.status}`);
       }
       onUploaded();
     } catch (err) {
@@ -113,6 +120,22 @@ function UploadModal({
               onChange={(e) => setCategory(e.target.value)}
               placeholder={t("categoryPlaceholder")}
             />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="kb-bibtex">
+              {t("bibtexLabel")}
+            </label>
+            <textarea
+              id="kb-bibtex"
+              className={styles.bibtexInput}
+              rows={8}
+              value={bibtex}
+              onChange={(e) => setBibtex(e.target.value)}
+              placeholder={t("bibtexPlaceholder")}
+              spellCheck={false}
+            />
+            <p className={styles.hint}>{t("bibtexHint")}</p>
           </div>
         </div>
 
@@ -253,6 +276,7 @@ export default function KnowledgeBasePage() {
             <thead>
               <tr>
                 <th>{t("filenameColumn")}</th>
+                <th>{t("citationColumn")}</th>
                 <th>{t("sizeColumn")}</th>
                 <th>{t("summaryColumn")}</th>
                 <th>{t("uploadDateColumn")}</th>
@@ -262,7 +286,7 @@ export default function KnowledgeBasePage() {
             <tbody>
               {Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className={sharedStyles.skeletonRow}>
-                  {Array.from({ length: 5 }).map((__, j) => (
+                  {Array.from({ length: 6 }).map((__, j) => (
                     <td key={j}>
                       <span className={sharedStyles.skeletonBar} style={{ width: "80%" }} />
                     </td>
@@ -294,6 +318,7 @@ export default function KnowledgeBasePage() {
                 <thead>
                   <tr>
                     <th>{t("filenameColumn")}</th>
+                    <th>{t("citationColumn")}</th>
                     <th>{t("sizeColumn")}</th>
                     <th>{t("summaryColumn")}</th>
                     <th>{t("uploadDateColumn")}</th>
@@ -305,6 +330,23 @@ export default function KnowledgeBasePage() {
                     <tr key={entry.filename}>
                       <td>
                         <span className={styles.filenameCell}>{entry.filename}</span>
+                      </td>
+                      <td className={styles.citationCell}>
+                        {entry.url ? (
+                          <a
+                            className={styles.citationLink}
+                            href={entry.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {entry.citation}
+                          </a>
+                        ) : (
+                          entry.citation
+                        )}
+                        {!entry.has_reference && (
+                          <div className={styles.hint}>{t("noCitationYet")}</div>
+                        )}
                       </td>
                       <td>{fmtBytes(entry.file_size)}</td>
                       <td>
