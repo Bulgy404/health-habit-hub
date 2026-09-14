@@ -187,7 +187,7 @@ SPEC CHECKSUMS:
   FirebaseCoreInternal: 3b310521b34a51ce3a6c605e4618b9aef8f6c112
   FirebaseInstallations: bd8e80f51d4c8bdc6c872011dede0b800c5b49ea
   FirebaseMessaging: 313d69fe6529c8846813d1660b65d7d38bc16954
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_appauth: 53aecd8e5a88b27c0457bf06aa755d3b43625e85
   flutter_local_notifications: 643a3eda1ce1c0599413ca31672536d423dee214
   flutter_secure_storage_darwin: 46e401699982ee74142909676535e0f6a7321e58

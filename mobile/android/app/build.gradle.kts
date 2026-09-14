@@ -27,14 +27,15 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "de.felixreinsch.healthhabithub"
-    // Pinned instead of flutter.compileSdkVersion (currently resolves to 37):
-    // Android SDK 37 introduced a new minor-version naming scheme
-    // (android-37.0, android-37.1, ... — no plain "android-37" package
-    // exists), which this Flutter version's bundled default doesn't yet
-    // account for, so Gradle fails to resolve the compile target at all.
-    // Revisit once a newer Flutter release's compileSdkVersion default
-    // matches the new naming scheme.
-    compileSdk = 36
+    // Still pinned rather than flutter.compileSdkVersion. SDK 37 uses a
+    // minor-version naming scheme (android-37.0, android-37.1 — there is no
+    // plain "android-37" package), so the target has to name the minor
+    // explicitly. AGP 9 understands compileSdkMinor; AGP 8 did not, which is
+    // why this sat at 36 until the toolchain moved.
+    // flutter_secure_storage compiles against 37 and warned on every build
+    // while this was 36.
+    compileSdk = 37
+    compileSdkMinor = 0
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -44,10 +45,6 @@ android {
         // natively available below Android 8/API 26) — see its own example
         // app's build.gradle for the same two lines.
         isCoreLibraryDesugaringEnabled = true
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -85,6 +82,16 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+}
+
+// jvmTarget moved out of android{}: AGP 9 removed the kotlinOptions block,
+// and the Kotlin plugin now owns this through its own extension. Kept at 17 to
+// match compileOptions above — the two must agree or the Kotlin and Java halves
+// of the app target different bytecode levels.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
