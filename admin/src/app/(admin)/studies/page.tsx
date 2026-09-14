@@ -2498,12 +2498,6 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         </div>
       </div>
 
-      <KnowledgeScopePanel
-        studyId={study.id}
-        token={token}
-        initialFiles={study.knowledgeBaseFiles}
-        isDefaultStudy={study.isDefault}
-      />
 
       <div className={styles.reminderTypeSection} data-testid="habit-creation-section-onboarding">
         <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.onboardingLabel")}</p>
@@ -4361,6 +4355,7 @@ type ModalTab =
   | "participants"
   | "cue-config"
   | "habit-creation"
+  | "knowledge"
   | "reminders"
   | "behavior-change"
   | "gamification"
@@ -4585,6 +4580,7 @@ function StudyModal({
                 ["participants", t("modal.tabs.participants")],
                 ["cue-config", t("modal.tabs.cueConfig")],
                 ["habit-creation", t("modal.tabs.habitCreation")],
+                ["knowledge", t("modal.tabs.knowledge")],
                 ["reminders", t("modal.tabs.reminders")],
                 ["behavior-change", t("modal.tabs.behaviorChange")],
                 ["gamification", t("modal.tabs.gamification")],
@@ -4727,6 +4723,15 @@ function StudyModal({
               initial && <CueConfigTab study={initial} token={token} />
             ) : activeTab === "habit-creation" ? (
               initial && <HabitCreationTab study={initial} token={token} />
+            ) : activeTab === "knowledge" ? (
+              initial && (
+                <KnowledgeScopePanel
+                  studyId={initial.id}
+                  token={token}
+                  initialFiles={initial.knowledgeBaseFiles}
+                  isDefaultStudy={initial.isDefault}
+                />
+              )
             ) : activeTab === "reminders" ? (
               initial && <RemindersTab study={initial} token={token} />
             ) : activeTab === "behavior-change" ? (

@@ -261,3 +261,62 @@ describe("StudiesPage", () => {
     );
   });
 });
+
+describe("StudiesPage — Knowledge tab", () => {
+  const study = {
+    ...mockStudy,
+    knowledgeBaseFiles: null as string[] | null,
+  };
+
+  it("the per-study paper selection has its own tab, not a corner of Habit Creation", async () => {
+    // It used to live under the recommender toggle inside Habit Creation,
+    // which is internally consistent and not where anyone looks for "which
+    // papers feed the recommender".
+    const user = userEvent.setup();
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue([study]),
+      } as unknown as Response)
+      .mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      } as unknown as Response);
+
+    render(<StudiesPage />);
+    await user.click(await screen.findByText("Study A"));
+
+    const knowledgeTab = await screen.findByRole("button", { name: /^knowledge$/i });
+    await user.click(knowledgeTab);
+
+    expect(
+      await screen.findByRole("heading", { name: /papers the recommender may use/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: /use every paper/i }),
+    ).toBeChecked();
+  });
+
+  it("Habit Creation no longer carries the paper selection", async () => {
+    const user = userEvent.setup();
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue([study]),
+      } as unknown as Response)
+      .mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue([]),
+      } as unknown as Response);
+
+    render(<StudiesPage />);
+    await user.click(await screen.findByText("Study A"));
+    await user.click(await screen.findByRole("button", { name: /^habit creation$/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: /papers the recommender may use/i }),
+      ).toBeNull();
+    });
+  });
+});
