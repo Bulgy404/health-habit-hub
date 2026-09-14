@@ -25,6 +25,12 @@ export const VALIDATOR = {
       studyId: { bsonType: 'objectId' },
       groupId: { bsonType: 'objectId' },
       studyCodeUsed: { bsonType: ['string', 'null'] },
+      // Verified-identity studies only. The study-local pseudonym issued by
+      // the identity register (e.g. TUD-DFG01-0042) — the join key researchers
+      // see instead of the raw Keycloak sub. NOT unique: a participant who
+      // loses their passphrase gets a new account under the same subject code,
+      // so exports must not assume one row per subject.
+      subjectCode: { bsonType: ['string', 'null'] },
       enrolledAt: { bsonType: 'date' },
       lastActiveAt: { bsonType: ['date', 'null'] },
       droppedOutAt: { bsonType: ['date', 'null'] },
@@ -59,6 +65,12 @@ export async function ensureIndexes(db) {
   );
   // Index for fetching all enrollments belonging to a study.
   await col.createIndex({ studyId: 1 }, { name: 'enrollments_studyId' });
+  // Verified-identity exports resolve subject codes per study. Sparse: only
+  // verified studies populate it.
+  await col.createIndex(
+    { studyId: 1, subjectCode: 1 },
+    { name: 'enrollments_studyId_subjectCode', sparse: true }
+  );
   // Index for filtering dropouts.
   await col.createIndex(
     { droppedOutAt: 1 },

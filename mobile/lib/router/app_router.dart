@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/my_habits/habit_detail_screen.dart';
@@ -30,6 +31,7 @@ import '../screens/onboarding/passphrase_screen.dart';
 import '../screens/onboarding/profile_setup_screen.dart';
 import '../screens/onboarding/restore_screen.dart';
 import '../screens/onboarding/study_code_screen.dart';
+import '../screens/onboarding/study_consent_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/project_info_screen.dart';
@@ -53,6 +55,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       getUserRoles: () => ref.read(userRolesProvider.future),
       getIsOnboardingComplete: isOnboardingComplete,
       getRecommenderEnabled: () async => ref.read(recommenderEnabledProvider),
+      // A LOCAL read, deliberately: this guard runs on every navigation and
+      // must not depend on the network. The slug is written at enrolment and
+      // deleted once the server has recorded the acceptance.
+      getStudyConsentPending: () async {
+        final slug = await const FlutterSecureStorage()
+            .read(key: kPendingStudyConsentSlugKey);
+        return slug != null && slug.isNotEmpty;
+      },
     ),
     routes: [
       GoRoute(
@@ -68,6 +78,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/consent',
         builder: (context, state) => const ConsentScreen(),
+      ),
+      GoRoute(
+        // Verified-identity studies only. Reached via the router's consent
+        // gate after enrolment, never as a step in the onboarding chain — the
+        // study, and therefore the document, is unknown until the code is
+        // redeemed.
+        path: '/onboarding/study-consent',
+        builder: (context, state) => const StudyConsentScreen(),
       ),
       GoRoute(
         path: '/consent-update',

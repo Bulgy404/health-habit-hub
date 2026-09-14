@@ -1,0 +1,68 @@
+%% UC-44 — Enrol with a verified code (+ UC-45, the study consent that follows)
+%%
+%% The whole point of the reserve/confirm/release shape is that this flow spans
+%% TWO databases with no shared transaction: the register's PostgreSQL and
+%% HHH's Mongo/Neo4j. A single-phase redeem would mark the code used and then
+%% lose the Neo4j write, burning the code and forcing a nurse to issue a
+%% replacement. Reserving first leaves a state that is recoverable from either
+%% side.
+%%
+%% Note what does NOT cross the boundary: no name, no date of birth, no email.
+%% The internal API has no route that returns one.
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (studyEnrollRouter)
+    participant I as identity-service (:3003 internal)
+    participant PG as identity-db (PostgreSQL)
+    participant M as MongoDB
+    participant N as Neo4j
+
+    P->>F: Enter HHV-XXXXX-XXXXX
+    Note over F: normalizeStudyCode maps I/L→1 and O→0<br/>ONLY for HHV- codes. Those letters are legal<br/>in anonymous HHH- codes, and mapping them<br/>there would break about a third of them.
+    F->>B: POST /api/v1/study/enroll { code }
+    B->>B: resolveIdentityConfig(study)<br/>absent ⇒ anonymous
+
+    alt anonymous study (unchanged path)
+        B->>M: redeem study code
+        B->>N: MERGE (:User)-[:ENROLLED_IN]->(:Study)
+        B-->>F: 200 { studyId, groupId }
+    else verified study
+        B->>I: POST /internal/v1/codes/reserve { code }<br/>x-service-auth-token
+        I->>PG: lookup by HMAC digest, mark reserved
+        PG-->>I: subjectCode, reservationId, expiresAt
+        I-->>B: { reservationId, hhhStudyId, subjectCode, expiresAt }
+        Note over I,B: Returns a CODE and nothing else.<br/>No name has crossed this edge.
+
+        B->>N: MERGE (:User)-[:ENROLLED_IN]->(:Study)
+        alt Neo4j write succeeded
+            B->>M: upsert enrollment { subjectCode, studyCodeUsed: null }
+            B->>I: POST /internal/v1/codes/confirm { reservationId, keycloakSub, hhhGroupId }
+            I->>PG: encrypt sub, insert link, mark code redeemed
+            Note over PG: partial unique index on<br/>superseded_at IS NULL ⇒ one live link.<br/>A replacement code supersedes the old one<br/>rather than creating a second subject.
+            B-->>F: 200 { studyId, groupId, subjectCode }
+        else Neo4j or Mongo write failed
+            B->>I: POST /internal/v1/codes/release { reservationId }
+            I->>PG: back to 'issued'
+            B-->>F: 500 — the code is still usable
+            Note over I,PG: If the backend dies before releasing,<br/>the sweeper reclaims it within<br/>IDENTITY_RESERVATION_TTL_MINUTES (default 10).
+        end
+    end
+
+    %% ---- UC-45: the study consent that can only happen now ----
+    F->>B: GET /api/v1/onboarding/enrollment
+    B-->>F: { studyConsentPending: true, documentSlug }
+    Note over F: The study — and therefore which consent<br/>document to show — is unknown until the code<br/>is redeemed. That is why this is a router gate<br/>after enrolment, not a sixth onboarding screen.
+    F->>B: GET /api/v1/consent?slug=<slug>&lang=<lang>
+    B->>M: study_consent_documents (slug, lang)
+    alt a row exists
+        M-->>B: edited in the admin portal
+    else no row
+        B->>B: fall back to app/language/<lang>/consent-<slug>.md
+    end
+    B-->>F: rendered HTML + { version, effectiveDate }
+    P->>F: Accept
+    F->>B: POST /api/v1/consent { version, documentSlug, locale }
+    B->>M: append to consents
+    Note over B,M: documentSlug distinguishes this from the platform<br/>consent: consentVersion is a bare semver, so a study's<br/>1.0.0 would otherwise satisfy a check for the platform's.

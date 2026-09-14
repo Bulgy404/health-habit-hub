@@ -2,7 +2,22 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { marked } from 'marked';
 
-const ALLOWED_LANGS = new Set(['en', 'de', 'ja', 'fr', 'nl']);
+/**
+ * Every locale the participant app serves legal documents in.
+ *
+ * The platform-wide legal documents (privacy, imprint, accessibility) have to
+ * exist in ALL of them — scripts/checkLegalDocs.mjs checks completeness
+ * against this list for those.
+ *
+ * Study consent documents are different: only English is a hard requirement
+ * (see `checkConsentDocumentReadiness` in consentDocumentService.js). A
+ * participant in another language whose consent document was never authored
+ * there is served the English version rather than a 404 — see the fallback
+ * chain in `resolveConsentDocument`.
+ */
+export const SUPPORTED_LANGS = Object.freeze(['en', 'de', 'ja', 'fr', 'nl']);
+
+const ALLOWED_LANGS = new Set(SUPPORTED_LANGS);
 const ALLOWED_NAMES = new Set([
   'accessibility',
   'imprint',
@@ -46,8 +61,23 @@ export function parseFrontMatter(raw) {
  *   HTML and document metadata (version, effectiveDate, bindingLanguage).
  * @throws {Error} If lang or name is not in the allow-list.
  */
+/**
+ * Study-specific consent documents, e.g. `consent-dfg-verified`.
+ *
+ * These cannot be enumerated in ALLOWED_NAMES because a slug is chosen per
+ * study at configuration time. The pattern is strict — lowercase alphanumerics
+ * and dashes only — so a slug can never contain `/`, `.` or `..` and therefore
+ * cannot escape the language directory, which is the only thing the allow-list
+ * was protecting against here.
+ */
+export const STUDY_CONSENT_NAME = /^consent-[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** The slug alone, without the `consent-` prefix. Shared with the API layer. */
+export const STUDY_CONSENT_SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
 export async function loadMarkdown(lang, name) {
-  if (!ALLOWED_LANGS.has(lang) || !ALLOWED_NAMES.has(name)) {
+  const nameAllowed = ALLOWED_NAMES.has(name) || STUDY_CONSENT_NAME.test(name);
+  if (!ALLOWED_LANGS.has(lang) || !nameAllowed) {
     throw new Error(`Invalid markdown request: lang=${lang} name=${name}`);
   }
   const filePath = path.join('language', lang, `${name}.md`);

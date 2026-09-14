@@ -1,21 +1,21 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
-import { rateLimit } from 'express-rate-limit';
 import { config } from '../utils/config.js';
 import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
 import { logger } from '../utils/logger.js';
 import { requireServiceToken } from '../middleware/requireServiceToken.js';
+import { serviceRateLimiter } from '../middleware/rateLimiter.js';
 
 const log = logger.child({ module: 'userProfileRouter' });
 
-const serviceRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// This route used to carry its own ad-hoc limiter — 60 a minute, keyed on the
+// library's default, which is the caller's IP. Stacked under the mount-level
+// limiter that made two controls with different windows and different keys
+// guarding one route, where the tighter of the two silently decided the real
+// ceiling. It now shares the single service limiter, so the budget for
+// internal traffic is stated in exactly one place.
 
 const VALID_FIELD_TYPES = new Set(['text', 'number', 'date', 'select']);
 

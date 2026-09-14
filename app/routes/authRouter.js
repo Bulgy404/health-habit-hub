@@ -23,7 +23,7 @@ export function createAuthRouter() {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator(req) {
-      return ipKeyGenerator(req);
+      return ipKeyGenerator(req.ip);
     },
   });
 

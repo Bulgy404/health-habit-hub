@@ -19,7 +19,7 @@ const onboardRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator(req) {
-    return ipKeyGenerator(req);
+    return ipKeyGenerator(req.ip);
   },
   handler(_req, res) {
     res

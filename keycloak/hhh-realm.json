@@ -26,7 +26,7 @@
     "realm": [
       {
         "name": "user",
-        "description": "App user role — habit donation via mobile app",
+        "description": "App user role \u2014 habit donation via mobile app",
         "composite": false,
         "clientRole": false,
         "containerId": "hhh"
@@ -44,6 +44,27 @@
         "composite": false,
         "clientRole": false,
         "containerId": "hhh"
+      },
+      {
+        "name": "identity-manager",
+        "description": "Identity register administration: roster, codes, and raising re-identification requests. MUST NOT be combined with `researcher`, and an `admin` may not hold it.",
+        "composite": false,
+        "clientRole": false,
+        "attributes": {}
+      },
+      {
+        "name": "study-nurse",
+        "description": "Site-level roster access: read assigned subjects, print code sheets, mark in-person verification. MUST NOT be combined with `researcher`.",
+        "composite": false,
+        "clientRole": false,
+        "attributes": {}
+      },
+      {
+        "name": "monitor",
+        "description": "Read subject codes, verification status and audit logs; approve re-identification requests. Never sees plaintext PII outside an approved reveal.",
+        "composite": false,
+        "clientRole": false,
+        "attributes": {}
       }
     ]
   },
@@ -65,7 +86,9 @@
         "hhh://*",
         "http://localhost:*"
       ],
-      "webOrigins": ["http://localhost:*"],
+      "webOrigins": [
+        "http://localhost:*"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -87,7 +110,7 @@
     {
       "clientId": "hhh-ropc",
       "name": "HHH Server-side ROPC",
-      "description": "Confidential server-side client used by the Express backend to mint token pairs for participants (onboarding, credential rotation, passphrase restore) via the OAuth password grant. Never exposed to the mobile app — hhh-flutter has direct grants disabled.",
+      "description": "Confidential server-side client used by the Express backend to mint token pairs for participants (onboarding, credential rotation, passphrase restore) via the OAuth password grant. Never exposed to the mobile app \u2014 hhh-flutter has direct grants disabled.",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "CHANGE_THIS_KEYCLOAK_ROPC_SECRET",
@@ -204,7 +227,10 @@
         "http://localhost:3002/login/generic_oauth",
         "https://${DOMAIN}/grafana/login/generic_oauth"
       ],
-      "webOrigins": ["http://grafana.localhost", "https://${DOMAIN}"],
+      "webOrigins": [
+        "http://grafana.localhost",
+        "https://${DOMAIN}"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -242,7 +268,7 @@
     {
       "clientId": "oauth2-proxy",
       "name": "oauth2-proxy",
-      "description": "Confidential OIDC client for oauth2-proxy — SSO gate in front of the internal tools (Prometheus, Bull Board, RedisInsight, Neo4j Browser, mongo-express). Access is restricted to the realm 'admin' role by oauth2-proxy's --allowed-role.",
+      "description": "Confidential OIDC client for oauth2-proxy \u2014 SSO gate in front of the internal tools (Prometheus, Bull Board, RedisInsight, Neo4j Browser, mongo-express). Access is restricted to the realm 'admin' role by oauth2-proxy's --allowed-role.",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "oauth2-proxy-secret-change-me",
@@ -256,7 +282,9 @@
         "http://localhost/oauth2/callback",
         "https://${DOMAIN}/oauth2/callback"
       ],
-      "webOrigins": ["https://${DOMAIN}"],
+      "webOrigins": [
+        "https://${DOMAIN}"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -292,6 +320,9 @@
       ]
     }
   ],
-  "defaultRoles": ["offline_access", "uma_authorization"],
+  "defaultRoles": [
+    "offline_access",
+    "uma_authorization"
+  ],
   "users": []
 }

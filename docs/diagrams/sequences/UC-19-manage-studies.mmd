@@ -15,7 +15,7 @@ sequenceDiagram
     AP->>B: POST or PUT /api/v1/admin/studies/:id (groups[].cueConfig, endDate, endOfStudyNotification {title, body})
     B->>M: upsert(studies) - validator enforces group index 1..4
     B-->>AP: 200
-    R->>AP: Open Reminders tab; set habit/questionnaire/endOfStudy/studyUpdate mode + time, study-wide and per group
+    R->>AP: Open Reminders tab — set habit/questionnaire/endOfStudy/studyUpdate mode + time, study-wide and per group
     AP->>B: PUT /api/v1/admin/studies/:id {reminders} and PATCH .../groups/:groupId/config {reminders}
     B->>M: upsert(studies) - reminders resolved per-group-then-study via reminderConfigService
     B-->>AP: 200
@@ -23,9 +23,9 @@ sequenceDiagram
     AP->>B: POST /api/v1/admin/studies/:id/codes {groupId, maxRedemptions, expiresAt}
     B->>M: insert(study_codes)
     B-->>AP: 201 codes (distributed to participants out-of-band)
-    R->>AP: Open Schedule tab; click "Today" or a calendar day to add a questionnaire assignment
+    R->>AP: Open Schedule tab — click "Today" or a calendar day to add a questionnaire assignment
     AP->>B: POST /api/v1/admin/studies/:id/questionnaire-assignments {questionnaireId, groupId, cadence}
-    B->>M: insert(questionnaire_assignments); regenerate questionnaire_windows for enrolled participants
+    B->>M: insert(questionnaire_assignments), then regenerate questionnaire_windows for enrolled participants
     B-->>AP: 200 - calendar shows real windows + dashed "projected" preview for not-yet-enrolled scopes
     Note over F,B: On next app open:
     F->>B: GET /api/v1/questionnaires/due

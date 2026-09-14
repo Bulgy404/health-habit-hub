@@ -14,6 +14,8 @@ import { ActivityTypesManager } from "@/components/activity-types-manager";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
 import { defaultSpring } from "@/lib/motion";
+import { IdentityTabPanel } from "./IdentityTabPanel";
+import { KnowledgeScopePanel } from "./KnowledgeScopePanel";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,6 +89,12 @@ interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
+  /**
+   * Knowledge-base papers the recommender may draw on for this study.
+   * null = every indexed document (the default, and what the general study
+   * wants); [] = none. The two are deliberately not interchangeable.
+   */
+  knowledgeBaseFiles: string[] | null;
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
   /** Study-wide — applies to every group. Off (default) = free-text habit entry. */
@@ -2490,6 +2498,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         </div>
       </div>
 
+
       <div className={styles.reminderTypeSection} data-testid="habit-creation-section-onboarding">
         <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.onboardingLabel")}</p>
         <span className={styles.hint}>{t("habitCreationTab.onboardingHint")}</span>
@@ -4346,9 +4355,11 @@ type ModalTab =
   | "participants"
   | "cue-config"
   | "habit-creation"
+  | "knowledge"
   | "reminders"
   | "behavior-change"
-  | "gamification";
+  | "gamification"
+  | "identity";
 
 function StudyModal({
   initial,
@@ -4569,9 +4580,11 @@ function StudyModal({
                 ["participants", t("modal.tabs.participants")],
                 ["cue-config", t("modal.tabs.cueConfig")],
                 ["habit-creation", t("modal.tabs.habitCreation")],
+                ["knowledge", t("modal.tabs.knowledge")],
                 ["reminders", t("modal.tabs.reminders")],
                 ["behavior-change", t("modal.tabs.behaviorChange")],
                 ["gamification", t("modal.tabs.gamification")],
+                ["identity", t("modal.tabs.identity")],
               ] as [ModalTab, string][]
             ).map(([tabKey, tabLabel]) => (
               <button
@@ -4710,10 +4723,27 @@ function StudyModal({
               initial && <CueConfigTab study={initial} token={token} />
             ) : activeTab === "habit-creation" ? (
               initial && <HabitCreationTab study={initial} token={token} />
+            ) : activeTab === "knowledge" ? (
+              initial && (
+                <KnowledgeScopePanel
+                  studyId={initial.id}
+                  token={token}
+                  initialFiles={initial.knowledgeBaseFiles}
+                  isDefaultStudy={initial.isDefault}
+                />
+              )
             ) : activeTab === "reminders" ? (
               initial && <RemindersTab study={initial} token={token} />
             ) : activeTab === "behavior-change" ? (
               initial && <BehaviorChangeTab study={initial} token={token} />
+            ) : activeTab === "identity" ? (
+              initial && (
+                <IdentityTabPanel
+                  studyId={initial.id}
+                  participantCount={initial.participantCount}
+                  token={token}
+                />
+              )
             ) : (
               initial && <GamificationTab study={initial} token={token} />
             )}

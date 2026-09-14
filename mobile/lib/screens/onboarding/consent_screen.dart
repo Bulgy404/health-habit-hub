@@ -18,6 +18,14 @@ const String kConsentVersionKey = 'consent_version';
 const String kConsentLocaleKey = 'consent_locale';
 const String kConsentAcceptedAtKey = 'consent_accepted_at';
 
+/// Slug of a study-specific consent document the participant still owes.
+///
+/// Written at enrolment for verified-identity studies and cleared on
+/// acceptance. Its presence is what the router's study-consent gate checks —
+/// deliberately a local read, because that guard runs on every navigation and
+/// must not depend on the network.
+const String kPendingStudyConsentSlugKey = 'pending_study_consent_slug';
+
 /// Study information & informed-consent screen (HabConnect IC).
 ///
 /// Shown as a mandatory onboarding step BEFORE account creation
@@ -31,10 +39,15 @@ class ConsentScreen extends ConsumerStatefulWidget {
   /// With [isUpdate] true the screen runs in re-consent mode for already
   /// registered participants after a consent-document version bump (UC-31):
   /// acceptance is posted to the backend immediately, declining signs out.
-  const ConsentScreen({this.isUpdate = false, super.key});
+  const ConsentScreen({this.isUpdate = false, this.documentSlug, super.key});
 
   /// Whether this is a re-consent prompt for an existing account.
   final bool isUpdate;
+
+  /// When set, renders an ADDITIONAL study-specific consent document rather
+  /// than the platform one — a participant in a verified-identity study
+  /// accepts both, not one instead of the other.
+  final String? documentSlug;
 
   @override
   ConsumerState<ConsentScreen> createState() => _ConsentScreenState();
@@ -65,6 +78,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     try {
       final response = await dio.get<Map<String, dynamic>>(
         '${AppConfig.appBaseUrl}/$locale/consent',
+        queryParameters: {'slug': ?widget.documentSlug},
         options: Options(
           validateStatus: (status) => status != null && status < 500,
         ),
@@ -114,6 +128,32 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       value: DateTime.now().toIso8601String(),
     );
     if (!mounted) return;
+
+    // Study-specific consent: record it against its slug so it cannot be
+    // confused with the platform document — both are bare semvers, so a
+    // study's "1.0.0" would otherwise satisfy a check for the platform's.
+    if (widget.documentSlug != null) {
+      try {
+        await ref.read(dioProvider).post<Map<String, dynamic>>(
+          '${AppConfig.apiBaseUrl}/users/me/consent',
+          data: {
+            'consentVersion': _documentVersion,
+            'locale': locale,
+            'documentSlug': widget.documentSlug,
+          },
+        );
+        // Only clear the gate once the server has it. If this throws we stay
+        // pending and the participant is asked again — the safe direction for
+        // a consent record.
+        await storage.delete(key: kPendingStudyConsentSlugKey);
+      } catch (_) {
+        // Left pending deliberately; retried on the next navigation.
+      }
+      if (!mounted) return;
+      context.go('/share');
+      return;
+    }
+
     if (widget.isUpdate) {
       // Already authenticated — record the new version server-side now.
       try {

@@ -217,6 +217,29 @@ export function createKeycloakAdminClient({
     },
 
     /**
+     * Fetches one realm user by id, or null when nobody has that id.
+     *
+     * Exists so a study membership can be refused for an id that belongs to no
+     * account. Without it a mistyped `sub` produces a row that renders in the
+     * members table like any other grant while gating access for nobody —
+     * failing open in appearance and closed in fact, which is the hardest kind
+     * of access-control error to notice.
+     *
+     * @param {string} userId
+     * @returns {Promise<{id: string, username: string, email?: string}|null>}
+     */
+    async getUser(userId) {
+      const token = await getAdminToken();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`Keycloak getUser failed: ${res.status}`);
+      return res.json();
+    },
+
+    /**
      * Removes [roleName] (realm role) from [userId] — the inverse of
      * `assignRole`.
      * @param {string} userId

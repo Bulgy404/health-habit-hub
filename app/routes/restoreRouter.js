@@ -42,10 +42,10 @@ export function createRestoreRouter({ db } = {}) {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator(req) {
-      return ipKeyGenerator(req);
+      return ipKeyGenerator(req.ip);
     },
     handler(req, res) {
-      recordAttempt({ ip: ipKeyGenerator(req), outcome: 'rate_limited' });
+      recordAttempt({ ip: ipKeyGenerator(req.ip), outcome: 'rate_limited' });
       res
         .status(429)
         .json({ error: 'Too many requests, please try again later.' });
@@ -53,7 +53,7 @@ export function createRestoreRouter({ db } = {}) {
   });
 
   router.post('/', restoreRateLimiter, async (req, res) => {
-    const ip = ipKeyGenerator(req);
+    const ip = ipKeyGenerator(req.ip);
     const phrase = req.body?.phrase;
     const credentials = credentialsFromRecoveryPhrase(phrase);
     if (!credentials) {

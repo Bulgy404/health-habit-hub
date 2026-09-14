@@ -52,6 +52,13 @@ jobs:
         working-directory: app
         run: node scripts/checkLegalDocs.mjs
 
+      # Rendering every diagram here would mean a headless Chromium for
+      # mermaid-cli. This catches the failure that actually happened instead:
+      # two sequence diagrams sat unrenderable for months because of a
+      # semicolon in an arrow message, and nothing noticed.
+      - name: Diagram consistency
+        run: node scripts/checkDiagrams.mjs
+
       - name: OpenAPI spec drift
         working-directory: app
         run: |
@@ -64,6 +71,77 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # 2. BACKEND – unit tests + coverage (no services)
   # ─────────────────────────────────────────────────────────────────────────────
+  identity-service-tests:
+    name: Identity service – tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    # Postgres is here for tests/e2e.routes.test.js only. Everything else uses
+    # hand-rolled SQL-shaped fakes, matching the backend's unit-test style —
+    # but fakes cannot falsify a four-eyes TRIGGER, a partial unique index, or
+    # a RETURNING-based counter under a concurrent second read, and those are
+    # precisely the controls this service leans on.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: identity_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: identity-service/package-lock.json
+
+      - name: Install
+        working-directory: identity-service
+        run: npm ci
+
+      - name: Format check
+        working-directory: identity-service
+        run: npm run format:check
+
+      - name: Lint
+        working-directory: identity-service
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: identity-service
+        env:
+          IDENTITY_TEST_DB_URL: postgres://postgres:test@localhost:5432/identity_test
+        run: npm test
+
+      # The end-to-end suite skips itself when IDENTITY_TEST_DB_URL is unset,
+      # which is right for a developer without Postgres and wrong for CI: a
+      # silent skip here would quietly lose the only coverage of the whole
+      # chain. Fail the job instead if it did not actually run.
+      - name: Assert the end-to-end chain actually ran
+        working-directory: identity-service
+        env:
+          IDENTITY_TEST_DB_URL: postgres://postgres:test@localhost:5432/identity_test
+        run: |
+          node --test tests/e2e.routes.test.js 2>&1 | tee e2e.log
+          if grep -q "IDENTITY_TEST_DB_URL is not set" e2e.log; then
+            echo "::error::The end-to-end suite skipped itself in CI — Postgres was not reachable";
+            exit 1;
+          fi
+
+      - name: Dependency audit
+        working-directory: identity-service
+        run: npm audit --audit-level=high
+
   backend-unit:
     name: Backend – unit tests
     runs-on: ubuntu-latest

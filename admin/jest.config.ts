@@ -27,8 +27,11 @@ const config: Config = {
     ],
   },
   testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
-  // Don't transform node_modules except for specific ESM packages
-  transformIgnorePatterns: ["/node_modules/"],
+  // Don't transform node_modules except for specific ESM packages. `marked`
+  // ships ESM only, so babel-jest has to be allowed to reach it — otherwise
+  // any suite that pulls in the consent-document renderer dies on
+  // "Unexpected token 'export'" before a single assertion runs.
+  transformIgnorePatterns: ["/node_modules/(?!marked/)"],
 };
 
 export default config;

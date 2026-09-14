@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, apiUrl } from "@/lib/api";
 
-interface KbEntry {
+export interface KbEntry {
   filename: string;
   category: string;
   file_size: number;
   has_summary: boolean;
   upload_date: string;
+  /** Display citation — from the curated BibLaTeX entry, or the filename. */
+  citation: string;
+  /** DOI or publisher link. Empty when nothing was curated; never guessed. */
+  url: string;
+  /** Whether a BibLaTeX entry exists, so the list can flag the ones missing one. */
+  has_reference: boolean;
 }
 
 const API_BASE = apiUrl("/kb");

@@ -47,7 +47,7 @@ from routers.extract_profile import _fetch_all_questionnaire_responses
 from routers.extract_profile import _fetch_user_profile
 from routers.retrieve import RetrieveRequest
 from routers.retrieve import SourceItem
-from routers.retrieve import retrieve as _retrieve
+from routers.retrieve import perform_retrieve as _retrieve
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +264,43 @@ def _parse_llm_response(
         return []
 
 
+async def _fetch_knowledge_scope(
+    user_id: str, db: AsyncIOMotorDatabase
+) -> Optional[list[str]]:
+    """Which knowledge-base papers may inform this participant's study.
+
+    Returns ``None`` for "every indexed document", which is both the general
+    study's intent and what every study got before scoping existed — an absent
+    or null ``knowledgeBaseFiles`` is not the same as an empty one, and the
+    difference decides whether a study reads everything or nothing.
+
+    Resolved here from the enrolment rather than passed in by the caller: the
+    mobile client sends a goal, not a study, and threading a study id through
+    the backend proxy would put a research-design decision in the hands of the
+    app.
+    """
+    try:
+        enrollment = await db["enrollments"].find_one(
+            {"userId": user_id}, {"studyId": 1, "_id": 0}
+        )
+        if not enrollment or not enrollment.get("studyId"):
+            return None
+        study = await db["studies"].find_one(
+            {"_id": enrollment["studyId"]}, {"knowledgeBaseFiles": 1, "_id": 0}
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Falling back to the whole knowledge base is the safe direction: a
+        # participant gets the recommendations they would have got yesterday,
+        # rather than none at all.
+        logger.warning("could not resolve knowledge scope for %s: %s", user_id, exc)
+        return None
+
+    if not study:
+        return None
+    files = study.get("knowledgeBaseFiles")
+    return None if files is None else [str(f) for f in files]
+
+
 async def _fetch_previous_titles(
     user_id: str, db: AsyncIOMotorDatabase, max_sets: int = 5, max_titles: int = 15
 ) -> list[str]:
@@ -456,9 +493,15 @@ async def recommend(
     all_candidate_uuids = [str(h["uuid"]) for h in candidate_pool[:20]]
     annotated_uuids = [str(h["uuid"]) for h in annotated_raw if h.get("uuid")]
 
+    allowed_files = await _fetch_knowledge_scope(body.user_id, db)
     bcio_by_uuid, retrieve_resp = await asyncio.gather(
         _fetch_bcio_concepts(list(dict.fromkeys(all_candidate_uuids + annotated_uuids)), driver),
-        _retrieve(RetrieveRequest(rag_query=profile.rag_query)),
+        _retrieve(
+            RetrieveRequest(
+                rag_query=profile.rag_query, allowed_files=allowed_files
+            ),
+            db,
+        ),
     )
 
     # --- Build prompt ---

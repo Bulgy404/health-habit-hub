@@ -9,6 +9,7 @@ import {
   recoveryPhrasesEnabled,
 } from '../utils/recoveryPhrase.js';
 import { logger } from '../utils/logger.js';
+import { revokeLink as revokeIdentityLink } from '../services/identityLinkClient.js';
 
 const log = logger.child({ module: 'usersRouter' });
 
@@ -83,14 +84,28 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
     }
   });
 
-  // GET /api/v1/users/me/consent – latest recorded consent for the caller
+  // GET /api/v1/users/me/consent – latest recorded consent for the caller.
+  //
+  // ?documentSlug=<slug> selects an additional consent document (e.g. a
+  // study-specific one). Omitting it means the platform-wide document —
+  // deliberately NOT "whichever record is newest". Once a second document
+  // exists, "latest overall" would let a study consent satisfy the app's
+  // platform re-consent check, and vice versa.
+  //
+  // Legacy records predate the field entirely; Mongo's `null` equality also
+  // matches missing fields, so they resolve as platform consents unchanged.
   router.get('/me/consent', async (req, res) => {
     try {
       const database = await getDb();
       const userId = String(req.user.sub);
+      const slug = req.query.documentSlug;
+      const filter = {
+        userId,
+        documentSlug: slug ? String(slug) : null,
+      };
       const doc = await database
         .collection('consents')
-        .find({ userId })
+        .find(filter)
         .sort({ consentedAt: -1 })
         .limit(1)
         .toArray();
@@ -108,15 +123,27 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   // document (append-only audit trail; one record per accepted version).
   router.post('/me/consent', async (req, res) => {
     try {
-      const { consentVersion, locale } = req.body || {};
+      const { consentVersion, locale, documentSlug } = req.body || {};
       if (!consentVersion || typeof consentVersion !== 'string') {
         return res.status(400).json({ error: 'consentVersion is required' });
+      }
+      // Matches the collection validator's pattern. Rejected rather than
+      // coerced: a typo'd slug would silently record consent against a
+      // document nothing ever reads back, which is the worst outcome for an
+      // append-only legal audit trail.
+      if (
+        documentSlug != null &&
+        (typeof documentSlug !== 'string' ||
+          !/^[a-z0-9][a-z0-9-]{0,63}$/.test(documentSlug))
+      ) {
+        return res.status(400).json({ error: 'Invalid documentSlug' });
       }
       const database = await getDb();
       const userId = String(req.user.sub);
       const record = {
         userId,
         consentVersion: String(consentVersion),
+        documentSlug: documentSlug ?? null,
         locale: typeof locale === 'string' ? locale : null,
         consentedAt: new Date(),
       };
@@ -152,6 +179,15 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   // GET /api/v1/users/me/export – GDPR Art. 20 data portability.
   // Returns every document linked to the caller across all participant
   // collections as a single JSON download (same scope as account deletion).
+  //
+  // The identity register is deliberately NOT included. A participant in a
+  // verified study can hold identifying data there, but this endpoint is
+  // authenticated only by the participant's own token — and that token proves
+  // control of an account, not of an identity. Returning a name here would let
+  // anyone who obtained a session read the person behind it, bypassing the
+  // approval workflow entirely. Such requests go through the study site, which
+  // holds the register; the response below says so rather than silently
+  // omitting it.
   router.get('/me/export', async (req, res) => {
     try {
       const database = await getDb();
@@ -173,6 +209,13 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
         note:
           'Donated habits are stored anonymously in the habit graph and are ' +
           'not attributable to this account (see the informed-consent document).',
+        // Named rather than silently omitted: an Art. 20 response that leaves
+        // out a category without saying so is itself a compliance problem.
+        identityRegisterNote:
+          'If you take part in a study that verifies participant identity, ' +
+          'your name and contact details are held separately by the study ' +
+          'site, not by this app, and are not included here. Request them ' +
+          'from the study team.',
         data,
       };
 
@@ -276,6 +319,12 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       const database = await getDb();
       const userId = String(req.user.sub);
 
+      // Art. 17 now spans two systems. Sever the identity register's ability
+      // to resolve this account to a person, before anything else — a
+      // deletion that leaves a live link behind is the compliance failure.
+      // Never throws: see revokeLink's contract.
+      const linkRevocation = await revokeIdentityLink(userId);
+
       // Stop push notifications to this account's devices.
       const tokensResult = await database
         .collection('deviceTokens')
@@ -304,7 +353,14 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       }
 
       log.info(
-        { userId, deviceTokensDeleted: tokensResult?.deletedCount ?? 0 },
+        {
+          userId,
+          deviceTokensDeleted: tokensResult?.deletedCount ?? 0,
+          // Surfaced so a failed revocation is greppable and can be
+          // reconciled by an identity-manager erasing the subject directly.
+          identityLinkRevoked: linkRevocation?.revoked ?? false,
+          identityLinkRevocationFailed: linkRevocation?.failed ?? false,
+        },
         '[usersRouter] account identity removed (contributed data retained anonymously)'
       );
       res.status(200).json({ ok: true, identityRemoved: true });

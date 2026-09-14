@@ -382,3 +382,44 @@
   font-size: 0.85rem;
   margin-bottom: 1rem;
 }
+
+/* A pasted BibLaTeX entry is code, not prose: monospaced so a stray brace or a
+   missing comma is visible, and resizable because entries with an abstract run
+   far longer than the eight rows that fit comfortably. */
+.bibtexInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  outline: none;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.bibtexInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(69, 183, 0, 0.1);
+}
+
+.hint {
+  margin: 0.375rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.citationCell {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.citationLink {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.citationLink:hover {
+  text-decoration: underline;
+}

@@ -386,6 +386,57 @@ For routine filesystem maintenance — the btrfs free-space trap on `/`, snapper
 limits, and reclaiming Docker build cache — see
 [docs/runbook.md § 14 Filesystem Maintenance](docs/runbook.md#14-filesystem-maintenance).
 
+### 8. Identity Register (verified-identity studies only)
+
+**Skip this entirely unless a study needs identified participants.** Every
+study defaults to anonymous mode; with none configured, the register is never
+called and need not be deployed.
+
+The register runs behind a Compose **profile**, so it is opt-in:
+
+```bash
+docker compose --profile identity up -d
+```
+
+Before the first start, create the master key on the host — a **file**, not an
+environment variable, because env vars leak through `docker inspect`,
+`/proc/<pid>/environ` and crash dumps (the service refuses to start with an
+inline key when `NODE_ENV=production`):
+
+```bash
+openssl rand -base64 32 | sudo tee "$HHH_DATA_DIR/identity-master-key" >/dev/null
+sudo chmod 0400 "$HHH_DATA_DIR/identity-master-key"
+```
+
+> **Losing this key means subject codes can never be resolved to people
+> again.** The pseudonymous research data is unaffected and stays fully
+> analysable — that asymmetry is deliberate. Keep a copy in a password manager
+> and a sealed printed copy in a safe.
+
+Set the variables documented in `.env.example` under *Identity register*, and
+on the `hhh-app` side `IDENTITY_SERVICE_URL` plus `IDENTITY_SERVICE_SECRET`.
+
+**Network isolation is part of the design, not incidental.** `identity-service`
+is deliberately **not** on `hhh-proxy` — that network is flat and every service
+joins it, so being on it would give the register a route to MongoDB and Neo4j.
+It sits on `hhh-identity-edge` (Traefik, Keycloak, the HHH backend) and the
+private `hhh-identity-net` (its own database). A CI test
+(`app/tests/unit/identityIsolation.test.js`) asserts this against
+`docker-compose.yml`, because it is the cheapest security control here and the
+easiest to undo with one line.
+
+Only port **3002** (admin portal) is routed by Traefik. The internal enrolment
+API on **3003** has no Traefik label and is unreachable from outside the Docker
+network.
+
+Backups are **off by default** (`BACKUP_INCLUDE_IDENTITY=false`). Enable only
+where a verified study actually runs, and read the warning in
+[`docs/identity-register.md`](docs/identity-register.md#backups): field
+encryption makes a stolen dump inert on its own, but a dump *plus* the key file
+is a total compromise, and by default both live on this host.
+
+Full operator guide: [`docs/identity-register.md`](docs/identity-register.md).
+
 ---
 
 ## Portainer Deployment Steps

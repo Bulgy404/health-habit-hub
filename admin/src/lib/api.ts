@@ -88,8 +88,16 @@ function refreshSessionToken(): Promise<string | null> {
  * access token: on a 401 it refreshes the session once and retries with the
  * fresh token. The `Authorization` header is applied here (not by callers) so
  * the retry can swap in the new bearer.
+ *
+ * Exported for the few callers that need the raw `Response` because the error
+ * body carries structured detail {@link apiFetch} flattens into a message —
+ * the consent-document editor, whose 400 lists which validations failed.
  */
-async function fetchWithRefresh(url: string, token: string, opts: RequestInit): Promise<Response> {
+export async function fetchWithRefresh(
+  url: string,
+  token: string,
+  opts: RequestInit
+): Promise<Response> {
   const send = (bearer: string) =>
     fetch(url, {
       ...opts,
@@ -135,8 +143,9 @@ export async function apiFetch<T = any>(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const { error, details } = body as {
+    const { error, message: detailMessage, details } = body as {
       error?: string;
+      message?: string;
       details?: { path: string; message: string }[];
     };
     // The validate() middleware returns a generic "Validation failed" error
@@ -145,7 +154,14 @@ export async function apiFetch<T = any>(
     const detailText = details?.length
       ? details.map((d) => (d.path ? `${d.path}: ${d.message}` : d.message)).join("; ")
       : undefined;
-    const message = [error ?? `HTTP ${res.status}`, detailText].filter(Boolean).join(" — ");
+    // Prefer the API's own prose when it sent any. Several endpoints answer a
+    // refusal with a terse `error` code plus a `message` explaining what to do
+    // about it — "last_manager" versus "This is the only identity-manager for
+    // the register; assign another before removing this one". Dropping the
+    // second one turns a helpful refusal into a puzzle.
+    const message = [detailMessage ?? error ?? `HTTP ${res.status}`, detailText]
+      .filter(Boolean)
+      .join(" — ");
     throw new Error(message);
   }
   return res.json() as Promise<T>;
