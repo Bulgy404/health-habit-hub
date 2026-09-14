@@ -95,19 +95,13 @@ class _ReadThrowingStorage extends MockFlutterSecureStorage {
 
 class _StubFlutterAppAuth extends FlutterAppAuth {
   final AuthorizationTokenResponse? _response;
-  final Exception? _error;
 
-  const _StubFlutterAppAuth({
-    AuthorizationTokenResponse? response,
-    Exception? error,
-  })  : _response = response,
-        _error = error;
+  const _StubFlutterAppAuth({this._response});
 
   @override
   Future<AuthorizationTokenResponse> authorizeAndExchangeCode(
     AuthorizationTokenRequest request,
   ) async {
-    if (_error != null) throw _error;
     return _response!;
   }
 }

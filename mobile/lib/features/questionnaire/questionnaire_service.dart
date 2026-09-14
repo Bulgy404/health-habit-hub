@@ -13,8 +13,8 @@ import 'questionnaire_models.dart';
 class QuestionnaireService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
-  /// Creates a [QuestionnaireService] using the given Dio [dio] instance.
-  QuestionnaireService({required Dio dio}) : _dio = dio;
+  /// Creates a [QuestionnaireService] using the given Dio [_dio] instance.
+  QuestionnaireService({required this._dio});
 
   final Dio _dio;
 

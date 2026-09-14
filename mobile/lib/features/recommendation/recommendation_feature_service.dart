@@ -14,8 +14,8 @@ class RecommendationFeatureService {
 
   final Dio _dio;
 
-  /// Creates a [RecommendationFeatureService] using [dio].
-  RecommendationFeatureService({required Dio dio}) : _dio = dio;
+  /// Creates a [RecommendationFeatureService] using [_dio].
+  RecommendationFeatureService({required this._dio});
 
   /// Calls POST /api/v1/recommend/generate which proxies to the Python
   /// recommender's POST /api/v1/llm/recommend endpoint.

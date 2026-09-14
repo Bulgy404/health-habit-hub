@@ -20,7 +20,7 @@ const _base = 'http://localhost:3000/api/v1';
 class _StubAuthService extends AuthService {
   final String? _token;
 
-  _StubAuthService({String? token}) : _token = token;
+  _StubAuthService({this._token});
 
   @override
   Future<String?> getAccessToken() async => _token;
