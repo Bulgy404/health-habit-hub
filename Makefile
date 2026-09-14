@@ -82,6 +82,12 @@ test-backend: ## Backend: lint + unit tests + security audit
 	cd app && npx prettier --check . && npx eslint . && \
 	node --test --test-force-exit "tests/unit/**/*.test.js" "tests/integration/**/*.test.js" && \
 	npm audit --audit-level=critical
+	# The committed OpenAPI spec is generated from the @swagger blocks in the
+	# routers, so adding or changing an endpoint makes it stale. CI fails on the
+	# drift; checking it here means finding out before the push rather than after.
+	cd app && node ../scripts/generate-spec.js && \
+	git diff --exit-code ../docs/api/openapi.yaml || \
+	( echo "docs/api/openapi.yaml is stale — it has just been regenerated, commit the result"; exit 1 )
 
 test-identity: ## Identity register: unit tests + security audit
 	@echo "==> Identity service"
