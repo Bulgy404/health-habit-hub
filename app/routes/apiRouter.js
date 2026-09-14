@@ -4,7 +4,10 @@ import neo4j from 'neo4j-driver';
 import swaggerUi from 'swagger-ui-express';
 import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
-import { apiRateLimiter } from '../middleware/rateLimiter.js';
+import {
+  apiRateLimiter,
+  serviceRateLimiter,
+} from '../middleware/rateLimiter.js';
 import { sanitizeBody } from '../middleware/inputSanitizer.js';
 import { maintenanceModeGuard } from '../middleware/maintenanceMode.js';
 import { makeGetDb } from '../utils/getDb.js';
@@ -212,17 +215,20 @@ export function createApiRouter({
   // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);
 
-  // Service-to-service: user profile (no JWT required, uses X-Service-Auth-Token)
+  // Service-to-service: user profile (no JWT required, uses X-Service-Auth-Token).
+  // serviceRateLimiter, not apiRateLimiter: with no JWT the general limiter
+  // keys on IP, and one container's address would put every participant's
+  // recommendations in a single 100-per-15-minute bucket.
   router.use(
     '/user-profile',
-    apiRateLimiter,
+    serviceRateLimiter,
     createUserProfileServiceRouter({ db })
   );
 
   // Service-to-service: questionnaire responses (no JWT required, uses X-Service-Auth-Token)
   router.use(
     '/questionnaire-responses',
-    apiRateLimiter,
+    serviceRateLimiter,
     createQuestionnaireResponsesServiceRouter({ db, neo4jRun: runNeo4j })
   );
 

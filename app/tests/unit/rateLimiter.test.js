@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import express from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { apiRateLimiter } from '../../middleware/rateLimiter.js';
+import {
+  apiRateLimiter,
+  serviceRateLimiter,
+} from '../../middleware/rateLimiter.js';
 
 /**
  * These test that the limiters LIMIT, which sounds too obvious to be worth
@@ -41,17 +44,22 @@ async function hammer(limiter, n, { headers = {} } = {}) {
 
   let allowed = 0;
   let limited = 0;
+  // The budget left after the last call, so a test can tell whether two
+  // callers drew on the same bucket without draining it to find out.
+  let lastRemaining = null;
   try {
     for (let i = 0; i < n; i++) {
       const res = await fetch(`${base}/x`, { headers });
       if (res.status === 200) allowed += 1;
       else if (res.status === 429) limited += 1;
+      const remaining = res.headers.get('ratelimit-remaining');
+      if (remaining !== null) lastRemaining = Number(remaining);
     }
   } finally {
     server.closeAllConnections();
     await new Promise((r) => server.close(r));
   }
-  return { allowed, limited };
+  return { allowed, limited, lastRemaining };
 }
 
 describe('rate limiting actually limits', () => {
@@ -106,5 +114,41 @@ describe('rate limiting actually limits', () => {
       server.closeAllConnections();
       await new Promise((r) => server.close(r));
     }
+  });
+  test('the service limiter does not put the whole deployment in one IP bucket', async () => {
+    // API-service makes roughly three of these calls per recommendation from a
+    // single container. Under the IP-keyed general limiter that was 100 per 15
+    // minutes for every participant combined — about 33 recommendations a
+    // quarter hour — which is a throughput cap wearing an abuse budget's
+    // clothes.
+    serviceRateLimiter.resetKey('internal-service');
+    const { allowed, limited } = await hammer(serviceRateLimiter, 150);
+    assert.equal(limited, 0, 'traffic the general limiter would have rejected');
+    assert.equal(allowed, 150);
+  });
+
+  test('the service limiter keys on the service, not on the caller address', async () => {
+    // A container's address is an accident of networking: a restart, a second
+    // replica or a NAT would silently hand the caller a fresh budget, so the
+    // backstop has to count every internal call together.
+    serviceRateLimiter.resetKey('internal-service');
+    const first = await hammer(serviceRateLimiter, 1, {
+      headers: { 'x-forwarded-for': '10.0.0.1' },
+    });
+    const second = await hammer(serviceRateLimiter, 1, {
+      headers: { 'x-forwarded-for': '10.0.0.99' },
+    });
+    assert.equal(first.allowed, 1);
+    assert.equal(second.allowed, 1);
+    assert.ok(
+      second.lastRemaining < first.lastRemaining,
+      `a different address must not reset the budget (${first.lastRemaining} -> ${second.lastRemaining})`
+    );
+  });
+
+  test('the service limiter still stops a runaway loop', async () => {
+    serviceRateLimiter.resetKey('internal-service');
+    const { limited } = await hammer(serviceRateLimiter, 620);
+    assert.ok(limited > 0, 'a loop past the ceiling must be cut off');
   });
 });
