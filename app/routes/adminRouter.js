@@ -1058,7 +1058,7 @@ export function createAdminRouter({
 
   router.use('/', createConsentDocumentsRouter({ db }));
 
-  router.use('/', createStudyMembersRouter({ db }));
+  router.use('/', createStudyMembersRouter({ db, keycloak: kcAdmin }));
 
   router.use('/', createRestoreAttemptsRouter({ db }));
 

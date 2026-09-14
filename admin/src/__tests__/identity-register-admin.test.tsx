@@ -239,47 +239,84 @@ describe("RosterImport", () => {
   });
 });
 
+/**
+ * Routes by URL, because the panel now talks to three endpoints: the member
+ * list, the realm user search behind the picker, and the per-researcher
+ * "what else can they reach" lookup.
+ */
+function mockMembersApi({
+  members = [],
+  enforced = true,
+  total,
+  users = [],
+  memberships = [],
+}: {
+  members?: unknown[];
+  enforced?: boolean;
+  total?: number;
+  users?: unknown[];
+  memberships?: unknown[];
+}) {
+  return jest.fn().mockImplementation(async (url: string) => {
+    const body = url.includes("/admin/team/search")
+      ? { users }
+      : url.includes("/admin/study-memberships")
+        ? { userId: "sub-1", total: memberships.length, memberships }
+        : {
+            enforced,
+            total: total ?? members.length,
+            limit: 25,
+            skip: 0,
+            members,
+          };
+    return { ok: true, status: 200, json: async () => body } as unknown as Response;
+  });
+}
+
+const RITA = {
+  id: "m1",
+  userId: "sub-1",
+  username: "rita",
+  role: "researcher" as const,
+  scope: "export" as const,
+  createdAt: "2026-09-01T00:00:00.000Z",
+  createdBy: "admin-1",
+};
+
 describe("StudyMembersPanel", () => {
   it("says membership is enforced on a scoped study", async () => {
-    global.fetch = mockJson({ enforced: true, members: [] });
+    global.fetch = mockMembersApi({ enforced: true });
     render(<StudyMembersPanel studyId="s1" token="t" />);
     expect(await screen.findByText(/the researcher role alone grants nothing/)).toBeInTheDocument();
   });
 
   it("warns that entries have no effect yet on an open study", async () => {
-    global.fetch = mockJson({ enforced: false, members: [] });
+    global.fetch = mockMembersApi({ enforced: false });
     render(<StudyMembersPanel studyId="s1" token="t" />);
     expect(await screen.findByText(/entries here have no effect yet/)).toBeInTheDocument();
   });
 
   it("spells out the read/export distinction rather than showing a bare enum", async () => {
-    global.fetch = mockJson({
-      enforced: true,
-      members: [
-        {
-          id: "m1",
-          userId: "sub-1",
-          username: "rita",
-          role: "researcher",
-          scope: "export",
-          createdAt: "2026-09-01T00:00:00.000Z",
-          createdBy: "admin-1",
-        },
-      ],
-    });
+    global.fetch = mockMembersApi({ members: [RITA] });
     render(<StudyMembersPanel studyId="s1" token="t" />);
     expect(await screen.findByText("read + export")).toBeInTheDocument();
     expect(screen.getByText("rita")).toBeInTheDocument();
   });
 
-  it("posts the new member to the study's member endpoint", async () => {
-    const fetchMock = mockJson({ enforced: true, members: [] });
+  it("grants access to someone picked from the realm, not to a typed-in id", async () => {
+    // The id never comes from the keyboard, so a mistyped sub cannot become a
+    // grant that renders like any other and gates nothing.
+    const fetchMock = mockMembersApi({
+      users: [{ id: "sub-9", username: "raj", email: "raj@tu-dresden.de" }],
+    });
     global.fetch = fetchMock;
     render(<StudyMembersPanel studyId="s1" token="t" />);
     await screen.findByText(/No researchers have been given access/);
 
-    await userEvent.type(screen.getByLabelText("Keycloak subject"), "sub-9");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.type(screen.getByLabelText("Find a researcher"), "raj");
+    const option = await screen.findByRole("button", { name: /raj/ });
+    await userEvent.click(option);
+    await userEvent.click(screen.getByRole("button", { name: /Add selected/ }));
 
     await waitFor(() => {
       const post = fetchMock.mock.calls.find(
@@ -288,10 +325,78 @@ describe("StudyMembersPanel", () => {
       expect(post).toBeDefined();
       expect(post![0]).toContain("/admin/studies/s1/members");
       expect(JSON.parse((post![1] as RequestInit).body as string)).toMatchObject({
-        userId: "sub-9",
-        role: "researcher",
-        scope: "read",
+        members: [{ userId: "sub-9", role: "researcher", scope: "read" }],
       });
     });
+  });
+
+  it("does not revoke access on a single click — it asks first", async () => {
+    const fetchMock = mockMembersApi({ members: [RITA] });
+    global.fetch = fetchMock;
+    render(<StudyMembersPanel studyId="s1" token="t" />);
+    await screen.findByText("rita");
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect(await screen.findByText("Remove access?")).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(
+        ([, init]) => (init as RequestInit | undefined)?.method === "DELETE"
+      )
+    ).toBe(false);
+
+    const dialogRemove = screen.getAllByRole("button", { name: "Remove" }).at(-1)!;
+    await userEvent.click(dialogRemove);
+
+    await waitFor(() => {
+      const del = fetchMock.mock.calls.find(
+        ([, init]) => (init as RequestInit | undefined)?.method === "DELETE"
+      );
+      expect(del).toBeDefined();
+      expect(del![0]).toContain("/admin/studies/s1/members/sub-1");
+    });
+  });
+
+  it("cancelling the confirmation leaves the membership alone", async () => {
+    const fetchMock = mockMembersApi({ members: [RITA] });
+    global.fetch = fetchMock;
+    render(<StudyMembersPanel studyId="s1" token="t" />);
+    await screen.findByText("rita");
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+
+    expect(
+      fetchMock.mock.calls.some(
+        ([, init]) => (init as RequestInit | undefined)?.method === "DELETE"
+      )
+    ).toBe(false);
+  });
+
+  it("pages the list instead of rendering every member at once", async () => {
+    global.fetch = mockMembersApi({ members: [RITA], total: 240 });
+    render(<StudyMembersPanel studyId="s1" token="t" />);
+    expect(await screen.findByText(/240 researchers/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  });
+
+  it("shows what else a researcher can reach without opening every study", async () => {
+    global.fetch = mockMembersApi({
+      members: [RITA],
+      memberships: [
+        {
+          ...RITA,
+          studyId: "s2",
+          studyName: "Sleep cohort",
+          role: "lead",
+          scope: "export",
+        },
+      ],
+    });
+    render(<StudyMembersPanel studyId="s1" token="t" />);
+    await screen.findByText("rita");
+
+    await userEvent.click(screen.getByRole("button", { name: "Other studies" }));
+    expect(await screen.findByText(/Sleep cohort/)).toBeInTheDocument();
   });
 });

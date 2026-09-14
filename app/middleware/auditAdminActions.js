@@ -44,8 +44,12 @@ export function createAuditAdminActionsMiddleware({ getDb }) {
             resourceId: res.locals.auditResourceId ?? null,
             statusCode: res.statusCode,
             result: res.statusCode < 400 ? 'succeeded' : 'failed',
-            detail:
-              res.statusCode >= 400 ? (res.locals.auditDetail ?? null) : null,
+            // Recorded whatever the outcome. It used to be kept only on
+            // failures, which meant a SUCCESSFUL grant logged the study it
+            // touched but never who was granted access or at what scope — the
+            // one fact the entry exists to preserve. Handlers that set nothing
+            // are unaffected: this stays null for them, exactly as before.
+            detail: res.locals.auditDetail ?? null,
             createdAt: new Date(),
           });
         } catch (err) {
