@@ -9,19 +9,39 @@
 
 ## Table of Contents
 
+**Part I — Orientation**
+
 1. [Project Overview](#1-project-overview)
 2. [Architecture](#2-architecture)
 3. [Repository Structure](#3-repository-structure)
 4. [Tech Stack](#4-tech-stack)
-5. [Environment Variables](#5-environment-variables)
-6. [Local Development](#6-local-development)
-7. [Production Deployment](#7-production-deployment)
-8. [Admin Application](#8-admin-application)
-9. [Testing](#9-testing)
-10. [API Reference](#10-api-reference)
-11. [Security](#11-security)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Behavioral Principle Features](#13-behavioral-principle-features)
+
+**Part II — Design Decisions**
+
+5. [Design Decisions](#5-design-decisions)
+
+**Part III — Features**
+
+6. [Behavioral Principle Features](#6-behavioral-principle-features)
+7. [Verified Identity Mode](#7-verified-identity-mode)
+8. [Knowledge Base and the Recommender](#8-knowledge-base-and-the-recommender)
+9. [Admin Application](#9-admin-application)
+
+**Part IV — Security**
+
+10. [Security](#10-security)
+
+**Part V — Running It**
+
+11. [Environment Variables](#11-environment-variables)
+12. [Local Development](#12-local-development)
+13. [Testing](#13-testing)
+14. [Server Deployment](#14-server-deployment)
+15. [Mobile Release — iOS and Android](#15-mobile-release--ios-and-android)
+16. [API Reference](#16-api-reference)
+17. [Troubleshooting](#17-troubleshooting)
+
+---
 
 ---
 
@@ -41,7 +61,12 @@
 > | [`docs/analytics-posthog-plan.md`](docs/analytics-posthog-plan.md) | Design for product analytics via self-hosted PostHog (event taxonomy, funnels, recommendation lineage) — **approved, not yet implemented** |
 > | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention, and the spring-based motion vocabulary (`AppSpring`, `PressableScale`, reduced-motion handling) |
 
+---
+
+# Part I — Orientation
+
 ## 1. Project Overview
+
 
 Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresden (Chair of Business Informatics, esp. Health Informatics). It enables participants to donate, explore, and receive recommendations about health habits in the context of a longitudinal research study.
 
@@ -58,6 +83,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 ---
 
 ## 2. Architecture
+
 
 > **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-39, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
 
@@ -131,6 +157,7 @@ All 22 containers, grouped by role. Container names are prefixed `hhh-`
 ---
 
 ## 3. Repository Structure
+
 
 ```
 health-habit-hub/
@@ -253,6 +280,7 @@ health-habit-hub/
 
 ## 4. Tech Stack
 
+
 ### Backend (`app/`)
 
 | Component         | Technology                                                   |
@@ -323,602 +351,161 @@ health-habit-hub/
 
 ---
 
-## 5. Environment Variables
+# Part II — Design Decisions
 
-All variables are defined in `stack.env`. In production, override sensitive values in Portainer's environment variables section — never commit real secrets to Git.
+## 5. Design Decisions
 
-### Domain & TLS
+Every entry here records a decision that cost something to make and would cost
+more to reverse. The pattern to watch for: several of these look like
+over-engineering until you notice what the simpler version fails at.
 
-| Variable                 | Default                    | Description                                       |
-| ------------------------ | -------------------------- | ------------------------------------------------- |
-| `DOMAIN`                 | `habit.wiwi.tu-dresden.de` | Production domain name                            |
-| `SERVER_IP`              | `141.76.16.16`             | Server IP address                                 |
-| `ACME_EMAIL`             | —                          | Email for Let's Encrypt certificate notifications |
+### Two databases for research data, and a third for identities
 
-### Application
+MongoDB holds documents (participants, studies, consents, questionnaire
+responses); Neo4j holds the habit graph, where the questions are about
+relationships between habits, cues and behaviours rather than about single
+records. That split is ordinary.
 
-| Variable        | Default      | Description                                        |
-| --------------- | ------------ | -------------------------------------------------- |
-| `APP_BASE_PATH` | `/`          | URL base path for the Node.js app                  |
-| `NODE_ENV`      | `production` | Node.js environment (`development` / `production`) |
+The third is not. `identity-service` runs on **PostgreSQL**, and the engine
+choice is the control. A register living in Mongo alongside the research data
+could be swept into a `mongodump`, or picked up by `studyExportService`'s
+collection loop, by nothing more than a mis-set connection string. A different
+engine makes that a code change rather than a configuration mistake.
 
-### Keycloak
+`identity-service` also shares **no Docker network** with `mongo` or `neo4j` —
+asserted by a CI test against `docker-compose.yml`, because it is the cheapest
+security control available here and the easiest to undo by accident.
 
-| Variable                          | Default       | Description                                                      |
-| --------------------------------- | ------------- | ---------------------------------------------------------------- |
-| `KEYCLOAK_ADMIN`                  | `admin`       | Keycloak admin console username                                  |
-| `KEYCLOAK_ADMIN_PASSWORD`         | —             | Keycloak admin console password **(change in Portainer)**        |
-| `KC_DB_USERNAME`                  | `keycloak`    | PostgreSQL username for Keycloak (production)                    |
-| `KC_DB_PASSWORD`                  | —             | PostgreSQL password for Keycloak **(change in Portainer)**       |
-| `KEYCLOAK_REALM`                  | `hhh`         | Keycloak realm name                                              |
-| `KEYCLOAK_CLIENT_ID`              | `hhh-flutter` | Public PKCE client used by the Flutter app                       |
-| `KEYCLOAK_ADMIN_CLIENT_ID`        | `hhh-backend` | Confidential service-account client for Node.js backend          |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET`    | —             | Secret for `hhh-backend` client **(change in Portainer)**        |
-| `NEXTAUTH_SECRET`                 | —             | Secret for NextAuth.js session signing **(change in Portainer)** |
-| `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` | —             | Secret for `hhh-admin` client **(change in Portainer)**          |
-| `KEYCLOAK_ROPC_CLIENT_SECRET`     | —             | Secret for `hhh-ropc` client (server-side passphrase auth)       |
+### The master key is a file, and the university holds it
 
-### Internal-tool SSO & LightRAG
+`IDENTITY_MASTER_KEY_FILE` is mounted `0400`, never an environment variable.
+Env vars leak through `docker inspect`, `/proc/<pid>/environ` and crash dumps;
+the service refuses to start with an inline key when `NODE_ENV=production`.
 
-The internal admin/debug tools use Keycloak SSO via `oauth2-proxy`; LightRAG uses
-its own login. There are **no** per-tool htpasswd/basic-auth variables anymore
-(the former `INTERNAL_TOOLS_TRAEFIK_AUTH`, per-tool `*_TRAEFIK_AUTH`,
-`MONGO_EXPRESS_*`, and `TRAEFIK_DASHBOARD_AUTH` were removed).
+Who holds it is a legal decision, not an operational one. TU Dresden holding
+the key means TU *can* re-identify, which makes this **Art. 26 joint
+controllership** rather than Art. 28 processing. Moving the key elsewhere to
+make operations easier would change the legal basis of the whole arrangement.
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `OAUTH2_PROXY_CLIENT_SECRET` | — | Secret for the `oauth2-proxy` Keycloak client (injected by `keycloak-init`) **(change in Portainer)** |
-| `OAUTH2_PROXY_COOKIE_SECRET` | — | Signs the SSO session cookie; **must be 16/24/32 chars** (`openssl rand -base64 24`) **(change in Portainer)** |
-| `GRAFANA_CLIENT_SECRET` | — | Secret for the `grafana` Keycloak OIDC client **(change in Portainer)** |
-| `LIGHTRAG_API_KEY` | — | Bearer token for the LightRAG REST API (internal callers) |
-| `LIGHTRAG_AUTH_PASSWORD` | — | Password for LightRAG's own WebUI login (user `admin`) **(change in Portainer)** |
-| `LIGHTRAG_TOKEN_SECRET` | — | Signs LightRAG's login JWTs (`openssl rand -hex 32`) **(change in Portainer)** |
-| `ENABLE_QUEUE_DASHBOARD` | `true` | Mounts Bull Board at `/queues` in production (SSO-gated) |
+Losing it means subject codes can never be resolved to people again. The
+pseudonymous research data is unaffected and stays fully analysable — that
+asymmetry is deliberate.
 
-### MongoDB
+### No searchable index over names
 
-| Variable                            | Default    | Description                                      |
-| ----------------------------------- | ---------- | ------------------------------------------------ |
-| `MONGO_HOST`                        | `mongo`    | MongoDB service hostname                         |
-| `MONGO_PORT`                        | `27017`    | MongoDB port                                     |
-| `MONGO_USER`                        | `admin`    | MongoDB admin username                           |
-| `MONGO_PASSWORD`                    | —          | MongoDB admin password **(change in Portainer)** |
-| `MONGO_DB`                          | `surveyjs` | Default database name                            |
-| `MONGO_AUTH_SOURCE`                 | `admin`    | Authentication database                          |
-| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `30000`    | Connection timeout                               |
-| `MONGO_SOCKET_TIMEOUT_MS`           | `30000`    | Socket timeout                                   |
+Exact-match lookups use keyed blind indexes. There is deliberately **no**
+n-gram or prefix index over names: at clinical-study scale an index over German
+surnames is trivially frequency-analysable, which would hand an attacker with
+read access to the index most of what the encryption was protecting. Nurse
+search decrypts a bounded roster in memory instead, and the roster query is
+bounded so a caller cannot pull the whole register.
 
-### Neo4j
+### Enrolment reserves before it confirms
 
-| Variable         | Default             | Description                              |
-| ---------------- | ------------------- | ---------------------------------------- |
-| `NEO4J_URI`      | `bolt://neo4j:7687` | Neo4j Bolt connection URI                |
-| `NEO4J_USER`     | `neo4j`             | Neo4j username                           |
-| `NEO4J_PASSWORD` | —                   | Neo4j password **(change in Portainer)** |
-| `GRAPH_BACKEND`  | `neo4j`             | Graph backend selector                   |
+Verified enrolment spans two databases with no shared transaction. A
+single-phase redeem would burn the code if the Neo4j enrolment then failed,
+which means a nurse has to issue a replacement and the participant is standing
+there while it happens. Reserve / confirm / release leaves a recoverable state
+instead, and a sweeper reclaims reservations abandoned mid-protocol.
 
-### Apache Fuseki _(retired — no longer in docker-compose.yml; variables kept for historical reference)_
+No personal data crosses the boundary in either direction — the internal API
+has no route that returns a name.
 
-| Variable         | Default  | Description                                     |
-| ---------------- | -------- | ----------------------------------------------- |
-| `FUSEKI_PATH`    | `fuseki` | Fuseki dataset name                             |
-| `DB_HOST`        | `fuseki` | Fuseki hostname                                 |
-| `DB_PORT`        | `3030`   | Fuseki port                                     |
-| `DB_USER`        | `admin`  | Fuseki admin username                           |
-| `DB_PASSWORD`    | —        | Fuseki admin password **(change in Portainer)** |
-| `DB_PATH`        | `hhh`    | Fuseki dataset path                             |
-| `ADMIN_PASSWORD` | —        | Fuseki admin password (used in container env)   |
+### Four eyes is a database trigger
 
-### Python API Service
+Re-identification needs a stated legal basis, a substantive reason, a second
+approver and a time-limited grant. The second approver is enforced by a
+**PostgreSQL trigger**, not by application code, and reveal counting uses a
+`RETURNING` clause so two concurrent views cannot report the same number.
 
-| Variable                            | Default                       | Description                                                                                   |
-| ----------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| `RECOMMENDER_URL`                   | `http://recommender:8000`     | Internal URL for the Python FastAPI service                                                   |
-| `API_SERVICE_SECRET`                | —                             | Shared secret between Node.js backend and Python API service **(change in Portainer)**        |
-| `LLM_API_KEY`                       | —                             | API key for the LLM provider **(required, set in Portainer)**                                 |
-| `LLM_API_BASE`                      | OpenAI                        | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`)                                 |
-| `LLM_MODEL`                         | `alias-huge`                  | Model name or alias for general LLM calls                                                     |
-| `LLM_RECOMMEND_MODEL`               | — (falls back to `LLM_MODEL`) | Model used only for the final recommendation-writing call (e.g. `alias-ha`)                   |
-| `LLM_TEMPERATURE`                   | `0.2`                         | LLM sampling temperature (0.0 = deterministic)                                                |
-| `LLM_TIMEOUT_S`                     | `120`                         | Per-attempt timeout for LLM calls                                                             |
-| `LLM_MAX_RETRIES`                   | `0`                           | OpenAI-client retries (0 = fail fast, avoids proxy 504s)                                      |
-| `RECOMMEND_MAX_CONTEXT_CHARS`       | `0` (unlimited)               | Cap on the LightRAG context in the recommendation prompt (latency lever; `.env` sets `30000`) |
-| `LLM_RECOMMEND_MAX_TOKENS`          | `0` (model default)           | Completion-length cap for the recommendation call (`.env` sets `2000`)                        |
-| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `5000`                        | MongoDB server-selection/connect timeout in the API-service                                   |
-| `MONGO_SOCKET_TIMEOUT_MS`           | `5000`                        | MongoDB socket timeout in the API-service                                                     |
+This is why the service's end-to-end test runs against a real PostgreSQL. Every
+other test uses hand-rolled SQL-shaped fakes, which is the house style — but a
+fake cannot falsify a trigger, a partial unique index, or a `RETURNING` counter
+under a concurrent second read, and those three are precisely the controls this
+feature rests on.
 
-### LibreTranslate
+### The analyst cannot resolve the pseudonyms
 
-| Variable            | Default    | Description                        |
-| ------------------- | ---------- | ---------------------------------- |
-| `LT_LOAD_ONLY`      | `de,en,ja` | Language pairs to load             |
-| `LT_REQ_LIMIT`      | `0`        | Request rate limit (0 = unlimited) |
-| `LT_DEBUG`          | `false`    | Enable debug logging               |
-| `LT_DISABLE_WEB_UI` | `false`    | Disable LibreTranslate web UI      |
+`researcher` is refused at runtime alongside any of `identity-manager`,
+`study-nurse` or `monitor`. Holding both would let the person analysing
+pseudonymous data resolve the pseudonyms, which is the separation the whole
+design exists to maintain.
 
-### Email & Notifications
+Admin separation of duties is documented as **non-repudiation, not
+prevention**: an admin may approve but is denied requesting, and a Keycloak
+realm admin can always mint a principal. Running two accounts makes the trail
+legible; it does not make the bypass impossible, and claiming otherwise would
+be worse than stating the limit.
 
-| Variable        | Default                      | Description                                                                                                            |
-| --------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `SMTP_HOST`     | —                            | Generic SMTP relay/provider host (any provider works)                                                                  |
-| `SMTP_PORT`     | `587`                        | `587` for STARTTLS, `465` for implicit TLS                                                                             |
-| `SMTP_USER`     | —                            | SMTP username                                                                                                          |
-| `SMTP_PASS`     | —                            | SMTP password                                                                                                          |
-| `SMTP_FROM`     | `noreply@wiwi.tu-dresden.de` | Sender address                                                                                                         |
-| `SMTP_STARTTLS` | `true`                       | Set `false` only when `SMTP_PORT=465`                                                                                  |
-| `ALERT_EMAIL`   | —                            | Recipient for critical alerts (backup, LLM outages, BullMQ failures, service reachability/5xx — see `docs/runbook.md`) |
+### Anonymous is the default, and absence means anonymous
 
-### Backup
+`identity.mode` is absent on every existing study and defaults to `anonymous`.
+Verified identity mode changes nothing for them, and `identity-service` need not
+be deployed at all — it sits behind a Compose profile.
 
-| Variable                | Default   | Description                                                                                                                                                                                                          |
-| ----------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BACKUP_RETENTION_DAYS` | `14`      | Days to retain backup archives (time-based; applies to all backups). Also caps daily automatic (scheduled-trigger) backups by count, using the same number — manual/uploaded backups are unaffected by the count cap |
-| `ALERT_EMAIL`           | —         | Email address for backup alert notifications                                                                                                                                                                         |
-| `BACKUP_EMAIL`          | —         | Email address for backup reports                                                                                                                                                                                     |
-| `ALERT_WEBHOOK_URL`     | _(empty)_ | Optional Slack/Discord/Teams webhook URL                                                                                                                                                                             |
+The same principle governs the recommender's per-study paper scope: an absent or
+null `knowledgeBaseFiles` means *every* indexed paper, and an empty array means
+*none*. Collapsing the two would silently cut every existing study off from the
+knowledge base, and storing "everything" as a list of today's filenames would
+mean a paper uploaded next month never reaches an existing study.
 
-## 6. Local Development
+### Sessions last 180 idle days, and the passphrase is never cached
 
-For full setup instructions (prerequisites, first-run steps, seed data, and common workflows), see:
+This is a habit tracker opened a few times a day, not a continuously-used app.
+Keycloak's 30-minute idle default logged participants out after every ordinary
+gap, so the mobile token flow requests `offline_access` and the realm sets a
+180-day **rolling** idle window with no maximum session age.
 
-- **[`docs/guides/local-dev.md`](docs/guides/local-dev.md)** — complete local development guide
-- **[`docs/guides/developer-onboarding.md`](docs/guides/developer-onboarding.md)** — new developer onboarding
+Caching the recovery passphrase on-device to re-authenticate silently was
+deliberately not implemented. The passphrase is the account's root credential —
+it alone can mint a fresh token pair from scratch. A refresh token has a bounded
+lifetime and can be revoked individually; a cached master credential replayed
+automatically has no natural expiry and turns a lost device into a permanent
+skeleton key. An earlier version of the app did exactly this and it was removed.
 
-### Prerequisites
+### A study cannot be configured to fail its participants
 
-- Docker Engine 20.10+ and Docker Compose v2
-- Flutter SDK (for mobile development)
-- Python 3.11+ (for API-service development)
-- Node.js 22 (for backend/admin development)
-- A `.env` file created from `stack.env` with local values
+`PUT /admin/studies/:id` returns `409 consent_document_not_ready` unless the
+named consent document is published in English, free of `⟦…⟧` placeholders, and
+at one version across every locale it does have.
 
-### Make Targets
+Previously the failure surfaced as a 404 to the participant **after** they had
+enrolled — the worst possible moment, and invisible to the person who could fix
+it. Refusing the configuration moves the error to someone who can act on it.
 
-All common tasks are available via `make`:
+### Rate limits are keyed by what the caller is
 
-```bash
-make help          # Show all available targets
-make dev           # Start all local services (docker-compose.local.yml up -d)
-make stop          # Stop all local services
-make seed          # Seed MongoDB, Neo4j, and Keycloak with dev data
-make logs          # Tail app (Node.js backend) logs
-make logs-all      # Tail all service logs
-make ios           # Run Flutter app on iPhone Simulator
-make reset         # Stop, wipe volumes, restart, and re-seed (full reset)
-make test          # Run all test suites (backend + Flutter + Python + admin)
-make test-backend  # Backend: prettier check + ESLint + Jest unit tests + npm audit
-make test-flutter  # Flutter: flutter analyze + flutter test
-make test-python   # Python API-service: pytest
-make test-admin    # Admin: TypeScript typecheck (tsc --noEmit)
-```
+Per-participant limits key on the Keycloak `sub`. The internal service routes
+key on a constant service identity instead, because every call arrives from one
+container and a container's address is an accident of networking — a restart, a
+second replica or a NAT would silently hand the caller a fresh budget.
 
-### Local Service URLs
+They are also budgeted differently on purpose. Participant limits are an abuse
+control. The service limit is a runaway-loop backstop: these callers already
+authenticate with a shared secret, so an abuse budget was the wrong instrument,
+and setting one too low turned into a throughput cap on recommendations for the
+whole deployment.
 
-After `make dev`, services are available at:
+### The Android compile target is pinned deliberately
 
-| Service                | URL                                                 |
-| ---------------------- | --------------------------------------------------- |
-| Node.js backend        | http://app.localhost or http://localhost:3000       |
-| Keycloak admin console | http://keycloak.localhost or http://localhost:8080  |
-| Next.js admin app      | http://admin.localhost or http://localhost:3001     |
-| Neo4j browser          | http://neo4j.localhost or http://localhost:7474     |
-| LibreTranslate         | http://translate.localhost or http://localhost:5001 |
-| Python API service     | http://localhost:8001                               |
-| Traefik dashboard      | http://localhost:8888                               |
+`compileSdk` is set explicitly rather than following `flutter.compileSdkVersion`.
+SDK 37 uses a minor-version naming scheme — the SDK offers `android-37.0`,
+`37.1` and `37.2`, and no plain `android-37` — so the target must name the
+minor, which only AGP 9 understands. Anyone raising or lowering this should read
+the comment in `mobile/android/app/build.gradle.kts` first; the failure mode is
+Gradle being unable to resolve the compile target at all.
+
+`android.builtInKotlin` stays `false` for a reason recorded next to the flag:
+AGP 9 refuses to have both its built-in Kotlin and the Kotlin Gradle Plugin, and
+five plugins in the dependency tree still apply KGP themselves. Flutter warns
+about this on every build; it is not fixable here until those plugins migrate.
 
 ---
 
-## 7. Production Deployment
+# Part III — Features
 
-For the full deployment procedure, see:
+## 6. Behavioral Principle Features
 
-- **[`DEPLOYMENT.md`](DEPLOYMENT.md)** — step-by-step production deployment guide
-- **[`docs/runbook.md`](docs/runbook.md)** — operational runbook (restarts, backups, incident response)
-
-### Approach
-
-Production runs on a single server managed via **Portainer** connected to the Git repository. The stack is defined in `docker-compose.yml`.
-
-Key differences from local:
-
-- Traefik performs TLS termination with automatic Let's Encrypt certificate renewal
-- Keycloak uses a dedicated PostgreSQL container (not `dev-file` mode)
-- All passwords and secrets are injected via Portainer's environment variables (not from `stack.env` in Git)
-- The backup service isn't real cron — it's a sleep loop (`sleep 120`, then `sleep 86400` between runs) that drifts on container restart — storing archives in the `backups/` volume. Scheduled (automatic) backups are additionally capped by count, using the same `BACKUP_RETENTION_DAYS` value as the time-based retention, so the admin panel's backup list doesn't grow unbounded.
-- The backup container never mounts the Docker socket directly — it talks to a scoped `docker-socket-proxy` sidecar instead (see `docs/runbook.md`)
-
-### Deployment Steps (summary)
-
-1. Connect Portainer to the Git repository
-2. Configure all environment variables in Portainer (override `stack.env` defaults with real secrets)
-3. Deploy the `docker-compose.yml` stack via Portainer UI
-4. On first deploy, the `keycloak-init` one-shot container sets `sslRequired=external`, configures client secrets, and grants the backend service account `realm-admin`
-
-### Mobile App Release (iOS)
-
-Backend/admin changes ship instantly on deploy — the mobile app binary does not, since it needs Apple's review. Releasing an update:
-
-- **[`mobile/RELEASING.md`](mobile/RELEASING.md)** — one-time Apple Developer / App Store Connect setup, and the release checklist
-
-Pushing a `mobile-v*` tag (e.g. `mobile-v1.0.1`) triggers `.github/workflows/mobile-release.yml`, which builds the app via `fastlane` (`mobile/fastlane/Fastfile`) and uploads it to TestFlight automatically. Submitting a tested TestFlight build for public App Store review is a separate, manually-triggered step (Actions tab → **Mobile Release** → **Run workflow** → lane `release`) — deliberately not automatic, so a bad tag can't reach real users without a human checking it first. Note this is a different tag prefix from the backend's `v*` used by `release.yml`, so the two pipelines never collide.
-
----
-
-## 8. Admin Application
-
-The Next.js 15 / React 18 admin application (`admin/`) provides a web dashboard for researchers and study administrators. Its UI is built with MUI (Material UI) v7 + Emotion for shared components and CSS Modules for bespoke styling.
-
-### Access
-
-| Environment | URL                                               |
-| ----------- | ------------------------------------------------- |
-| Local       | http://admin.localhost (or http://localhost:3001) |
-| Production  | https://admin.habit.wiwi.tu-dresden.de            |
-
-### Keycloak Roles Required
-
-Access to the admin application requires one of the following Keycloak realm roles in the `hhh` realm:
-
-- `admin` — full access
-- `researcher` — full access (same permissions as admin within the dashboard)
-
-Users without these roles see the `/access-denied` page. The Next.js edge middleware (`src/middleware.ts`) enforces authentication on all admin routes. Server components and API routes additionally check for the required role via the NextAuth session.
-
-### Features
-
-- **Participant management** — list, create, and manage study participants; each row shows that participant's registered devices (a participant can have several) — click to see each device's platform, model, and app version. Separately, a "Revoke Access" action force-signs-out the participant everywhere by revoking every Keycloak session they have — independent of the device list, since a device registration and a login session aren't reliably the same thing
-- **Donation review** — click a habit donation to see its voice transcript, play back or download the recorded audio, its donation-form self-report answers, and any linked post-donation questionnaire response
-- **Questionnaire authoring** — create and publish questionnaires
-- **Study configuration** — manage study groups, per-group cue config, and enrollment codes
-- **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s _Community Signals_ section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment
-- **Restore-attempts monitoring** — security view over every passphrase-based account-recovery attempt (success/failure/rate-limited), with IPs flagged for repeated non-success attempts
-- **Backups** — last-backup status per component, on-demand trigger, and restore from an existing or uploaded archive
-- **Audit log** — paginated log of admin actions
-- **Knowledge base** — view and manage the habit knowledge base
-- **Questionnaire scheduling** — assign questionnaires to a study/group on a cadence, and optionally flag one to **deliver on habit creation** (Studies → Schedule); see below
-- **Data export** — export questionnaire response and study analytics data
-
-### Questionnaire Scheduling & Check-in Delivery
-
-Researchers assign questionnaires to a study (all groups) or a specific group on a **cadence**
-(recurring interval, or fixed weeks/days after enrollment) in **Studies → Questionnaires**. Each
-questionnaire *definition* has a `scope` — `study` (default) or `habit` — which decides what an
-assignment's cadence anchors to, not a separate per-assignment flag:
-
-![Questionnaire delivery flow: scope 'study' windows anchor to enrollment via generateWindowsForUser; scope 'habit' windows anchor to each habit's creation via generateHabitCreationWindows and stay invisible until a relevant habit exists; SRHI is a separate, unconditional system entirely outside this scheduling model](docs/assets/architecture/questionnaire-scope-flow.svg)
-
-- **`scope: 'study'`** — windows anchor to **enrollment**, generated per participant
-  (`generateWindowsForUser`, back-filled for already-enrolled participants whenever an
-  assignment is created/changed). This is SLIQ/RAND-36 and any other general study questionnaire.
-- **`scope: 'habit'`** — windows anchor to **each habit's creation time** (+~5s) instead,
-  generated per habit (`generateHabitCreationWindows`, called from `POST /habits/intentions`) —
-  never back-filled for habits that already existed when the assignment was created. A habit-scoped
-  questionnaire is invisible to a participant (Profile list, Share tab "Today's tasks") until they've
-  actually created a relevant habit — see `docs/data-model.md` → `questionnaires` /
-  `questionnaire_windows` for the exact visibility rule.
-
-Submitting a response marks the next open window complete. Completion is shown as
-**completed / total** per questionnaire (the count reflects *submitted* windows, not merely
-scheduled ones) in the study's Questionnaires tab, and per-occurrence with an exact timestamp
-(`t("doneOn")`) in a participant's Progress modal.
-
-**Completed questionnaires can't be resubmitted, and the Flutter app reflects this.** A
-questionnaire is only fillable while it has an open `questionnaire_windows` entry due now
-(`getQuestionnaireCompletionStatus`, `app/services/questionnaireScheduleService.js`) — once that
-window closes, the participant's Profile → Health Questionnaires list greys the item out
-(non-interactive, `Completed on {date}`) instead of the usual green, tappable button, and it stays
-that way until the *next* cadence occurrence's window opens (windows for the full cadence are
-pre-generated upfront, so "available again" isn't a manual admin action — it's just the next
-occurrence's `scheduledFor` arriving). This is enforced server-side too, not just hidden in the
-UI: `POST /questionnaire-responses` rejects a submission with `409` if the slug has ever had a
-window but none is currently open-and-due — a stale cached list on the client can't bypass it. A
-questionnaire with no window at all (legacy/ad-hoc, outside the assignment system) stays
-always-open, unchanged. Relevant code: `app/routes/participantRouter.js`, `app/routes/questionnaireResponsesRouter.js`,
-`mobile/lib/screens/profile_screen.dart` (`_QuestionnaireTile`).
-
-**SRHI (the weekly habit-strength check-in) is not part of this system at all.** It used to be a
-`scope: 'habit'` library questionnaire like any other, toggled on per study via an assignment —
-but that meant every participant-facing endpoint had to remember to exclude it (it has its own
-dedicated slider UI in My Habits, not the generic radio-button questionnaire renderer), and it
-was easy to miss one spot, which is exactly how it once became reachable/fillable from the
-Profile questionnaire list before a participant had even created a habit. SRHI is now
-**unconditional**: every `POST /habits/intentions` call fires
-`srhiService.generateWindows` directly — 4 weekly `srhi_responses` rows, week 1 = creation day —
-with no `questionnaires` library entry, no `questionnaire_assignments` row, and no admin toggle.
-Item text (a 12-item, 1–7 slider scale) is hardcoded in `app/utils/srhi.js`, served via
-`GET /me/habit-config` as `srhiItems`. A fire-and-forget FCM push (~5 s later) nudges the
-participant to complete it, deep-linking straight into My Habits (`data: { type: "srhi", screen:
-"habits", intentionId }`); the check-in is also visible in-app immediately. Any environment that
-seeded the old SRHI library entry/assignment gets it cleaned up automatically on boot
-(`retireLegacySrhiLibraryEntry`, idempotent, see `app/services/defaultStudySeedService.js`).
-
-The participant's Progress view in the admin panel surfaces created habits (from
-`implementation_intentions`) and an **SRHI check-ins** summary (`completed / scheduled` + latest
-score) — sourced directly from `srhi_responses`, independent of the scheduling system above.
-Relevant code: `app/routes/intentionsRouter.js`, `app/services/srhiService.js`,
-`app/services/questionnaireScheduleService.js` (`generateWindowsForUser`,
-`generateHabitCreationWindows`, `resolveHabitScopeAssignments`).
-
-### Test Suite
-
-The admin application includes a Jest + React Testing Library suite at `admin/src/__tests__/`:
-
-```
-admin/src/__tests__/
-├── __mocks__/          # Module mocks (next/navigation, etc.)
-├── apiFetch.test.ts    # API fetch helper tests
-├── auth.test.ts        # Auth utility tests
-├── middleware.test.ts  # Next.js middleware route guard tests
-├── knowledge-base.test.tsx
-├── questionnaires.test.tsx
-└── studies.test.tsx
-```
-
-Run with: `make test-admin` (TypeScript typecheck) or `cd admin && npx jest` for the full test suite.
-
----
-
-## 9. Testing
-
-### Test Suites
-
-| Suite      | Command             | What it tests                                                                                                     |
-| ---------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Backend    | `make test-backend` | Prettier formatting, ESLint linting, Jest unit tests for all routes and middleware, `npm audit` for critical CVEs |
-| Flutter    | `make test-flutter` | `flutter analyze` static analysis + Flutter widget/unit tests                                                     |
-| Python API | `make test-python`  | pytest for all API-service routers                                                                                |
-| Admin      | `make test-admin`   | TypeScript typecheck (`tsc --noEmit`)                                                                             |
-| All        | `make test`         | Runs all four suites sequentially                                                                                 |
-
-### Backend Tests (`app/tests/`)
-
-Located at `app/tests/unit/**/*.test.js`. Run using Node.js built-in test runner:
-
-```bash
-cd app
-node --test "tests/unit/**/*.test.js"
-```
-
-### Flutter Tests (`mobile/test/`)
-
-```bash
-cd mobile
-flutter test
-```
-
-### Python Tests (`API-service/tests/`)
-
-```bash
-cd API-service
-python3 -m pytest tests/ -v
-```
-
-### Admin Tests (`admin/src/__tests__/`)
-
-```bash
-cd admin
-npx jest
-# or for typecheck only:
-npx tsc --noEmit
-```
-
----
-
-## 10. API Reference
-
-The full OpenAPI 3.1 specification is at **[`docs/api/openapi.yaml`](docs/api/openapi.yaml)**.
-
-A Postman collection is available at **[`docs/api/hhh-postman-collection.json`](docs/api/hhh-postman-collection.json)**.
-
-The interactive Swagger UI is served by the running backend at `/api/v1/docs`. The raw spec JSON is at `/api/v1/docs/openapi.json`.
-
-### Key Endpoints
-
-| Method                | Path                                                  | Auth                    | Description                                                                         |
-| --------------------- | ----------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
-| `GET`                 | `/api/v1/health`                                      | None                    | Health check for all downstream services                                            |
-| `GET`                 | `/api/v1/docs`                                        | None                    | Swagger UI                                                                          |
-| `POST`                | `/api/v1/onboard`                                     | None (rate limited)     | Anonymous self-registration (creates Keycloak user)                                 |
-| `GET`                 | `/api/v1/surveys`                                     | JWT (participant+)      | List available surveys                                                              |
-| `POST`                | `/api/v1/habits`                                      | JWT (participant+)      | Donate a habit                                                                      |
-| `GET`                 | `/api/v1/habits`                                      | JWT (participant+)      | Retrieve donated habits                                                             |
-| `GET`                 | `/api/v1/recommendations`                             | JWT (participant+)      | Get cached recommendations                                                          |
-| `POST`                | `/api/v1/recommend`                                   | JWT (participant+)      | Request live AI recommendation                                                      |
-| `GET`                 | `/api/v1/profile`                                     | JWT (participant+)      | Get user profile                                                                    |
-| `PUT`                 | `/api/v1/profile`                                     | JWT (participant+)      | Update user profile                                                                 |
-| `GET`                 | `/api/v1/questionnaires`                              | JWT (participant+)      | List questionnaires                                                                 |
-| `POST`                | `/api/v1/questionnaire-responses`                     | JWT (participant+)      | Submit questionnaire response (links the answer to the next open scheduled window)  |
-| `POST`                | `/api/v1/onboarding/redeem-code`                      | JWT (participant)       | Redeem a study enrollment code (first-time onboarding)                              |
-| `POST`                | `/api/v1/onboarding/skip-code`                        | JWT (participant)       | Enroll in the default study (round-robin group), no code                            |
-| `GET`                 | `/api/v1/onboarding/enrollment`                       | JWT (participant)       | Current study/group, for the account screen                                         |
-| `POST`                | `/api/v1/onboarding/switch-study`                     | JWT (participant)       | Move to a different study via code, without touching already-donated data           |
-| `POST`                | `/api/v1/onboarding/leave-study`                      | JWT (participant)       | Move back to the default study ("leave study")                                      |
-| `GET/POST/PUT/DELETE` | `/api/v1/admin/studies/:id/questionnaire-assignments` | JWT (admin, researcher) | Assign a questionnaire to a study/group on a cadence; list assignments + completion |
-| `GET`                 | `/api/v1/admin/participants/:id/responses`            | JWT (admin, researcher) | A participant's questionnaire answers (for the admin answer viewer)                 |
-| `GET`                 | `/api/v1/admin/comments`                              | JWT (admin, researcher) | Paginated comment moderation list; `?status=flagged` for the review queue           |
-| `POST`                | `/api/v1/admin/comments/:id/approve`                  | JWT (admin, researcher) | Publish a flagged comment                                                           |
-| `DELETE`              | `/api/v1/admin/comments/:id`                          | JWT (admin, researcher) | Delete/reject a comment                                                             |
-| `GET/POST`            | `/api/v1/admin/*`                                     | JWT (admin, researcher) | Admin operations (participants, studies, exports)                                   |
-| `GET/POST`            | `/api/v1/kb/*`                                        | JWT (admin, researcher) | Knowledge base management                                                           |
-
-### Python API Service Endpoints
-
-All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE_SECRET`). Every route below is mounted under `/api/v1`, and each router's own path additionally starts with `/llm` — i.e. the full path for the first row is `POST /api/v1/llm/classify-habit` (`API-service/main.py`, `routers/classify_habit.py`).
-
-| Method       | Path (under `/api/v1`)         | Description                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET`        | `/health`                      | Service health check                                                                                                                                                                                                                                                                                                                                                           |
-| `POST`       | `/llm/classify-habit`          | Classify whether a sentence is a habit                                                                                                                                                                                                                                                                                                                                         |
-| `POST`       | `/llm/classify-context`        | Classify habit context dimensions                                                                                                                                                                                                                                                                                                                                              |
-| `POST`       | `/llm/map-bcio`                | Map habit context to BCIO ontology concepts                                                                                                                                                                                                                                                                                                                                    |
-| `POST`       | `/llm/embed-batch`             | Batch-embed a habit + its contexts/mappings into the vector index                                                                                                                                                                                                                                                                                                              |
-| `POST`       | `/llm/extract-habits`          | Extract habits from free text                                                                                                                                                                                                                                                                                                                                                  |
-| `POST`       | `/llm/extract-profile`         | Extract user profile from text                                                                                                                                                                                                                                                                                                                                                 |
-| `POST`       | `/llm/translate-lang`          | Machine-translate a sentence to a target app language                                                                                                                                                                                                                                                                                                                          |
-| `POST`       | `/llm/refine-translation-lang` | LLM-refine a raw machine translation                                                                                                                                                                                                                                                                                                                                           |
-| `POST`       | `/llm/translate-term`          | Translate/localise a single term (e.g. a new BCIO concept label)                                                                                                                                                                                                                                                                                                               |
-| `POST`       | `/llm/stitch-intention`        | Compose an if-then implementation intention from its parts                                                                                                                                                                                                                                                                                                                     |
-| `POST`       | `/llm/retrieve`                | Retrieve relevant knowledge base entries                                                                                                                                                                                                                                                                                                                                       |
-| `GET`/`POST` | `/kb`                          | List / ingest knowledge base entries                                                                                                                                                                                                                                                                                                                                           |
-| `POST`       | `/llm/recommend`               | Generate habit recommendations — guarded goal input (prompt-injection screen + LLM refusal backstop → `422` with user-facing reason); response items carry `title · body · rationale · suggested_cue · sources` (paper citations with optional DOI links from `API-service/data/references.json`); graph provenance (`selected_habit_uuids`) is logged/stored server-side only |
-
----
-
-## 11. Security
-
-### Legal Documents (imprint, privacy, accessibility)
-
-The user-facing legal documents live as Markdown in `app/language/{en,de,ja}/` and are served at `/:lng/{imprint,privacy,accessibility}` (rendered to HTML server-side; the Flutter app fetches and displays them). Each file carries YAML front matter:
-
-```yaml
----
-version: 1.0.0
-effectiveDate: 2026-03-15
-bindingLanguage: de
----
-```
-
-Rules:
-
-- **Bump `version` and `effectiveDate` in _all three_ locales together** when the content changes — CI (`node scripts/checkLegalDocs.mjs`, also `npm run check:legal`) fails if locales diverge.
-- The metadata is returned in the API response (`document` field) and shown as a footer in the app; non-German locales display a note that the German version is authoritative.
-- Git history of these files is the GDPR audit trail for which policy version was active when.
-- Never machine-translate these documents; translations require professional/legal review.
-
-### Authentication Model
-
-![Authentication model: Flutter authenticates to the backend with a Bearer JWT; the backend talks to Keycloak on the participant's behalf via ROPC (passphrase) and via client credentials for admin ops; the admin Next.js app uses NextAuth OIDC; internal tools sit behind oauth2-proxy SSO; the backend calls the Python recommender with a shared secret header, not OAuth at all](docs/assets/architecture/auth-relationships.svg)
-
-- **Flutter app ↔ Keycloak:** the app never talks to Keycloak directly. It authenticates via a 24-word recovery passphrase against the Node.js backend (`/onboard` for new accounts, `/restore` for an existing account on a new device, `/users/me/rotate-credentials` to rotate the passphrase), which exchanges it for a Keycloak token pair server-side — see **Session & Token Lifetime** below. A PKCE authorization code flow via the public client `hhh-flutter` also exists in the mobile codebase (`AuthService.login()`, no client secret required or stored on device) but has no current call site.
-- **Flutter app ↔ Node.js backend:** Bearer JWT in the `Authorization` header. The backend validates JWTs against Keycloak's JWKS endpoint.
-- **Node.js backend ↔ Keycloak (admin operations):** Confidential service-account client `hhh-backend` with client credentials grant.
-- **Node.js backend ↔ Keycloak (passphrase auth):** Confidential client `hhh-ropc` with the resource-owner-password-credentials (ROPC) grant, kept behind a server-held secret so the ROPC capability isn't available to anyone who extracts the public `hhh-flutter` client ID from the app (`hhh-flutter` has `directAccessGrantsEnabled: false` for exactly this reason).
-- **Next.js admin ↔ Keycloak:** Confidential client `hhh-admin` via NextAuth.js. Session is maintained server-side; access tokens are not exposed to the browser.
-- **Node.js backend ↔ Python API service:** Shared secret (`API_SERVICE_SECRET`) sent as an HTTP header. The Python service refuses all requests without a valid secret.
-- **Internal tools ↔ Keycloak SSO:** Prometheus, Bull Board (`/queues`), RedisInsight, the Neo4j Browser **UI** (`/neo4j`) and mongo-express (`/mongo`) sit behind `oauth2-proxy` as a Traefik forward-auth gate. You log in with your normal Keycloak account and only accounts holding the realm **`admin`** role pass (participants with `user` are denied). No per-tool passwords or htpasswd hashes exist anymore. See [Internal-tool access (SSO)](#internal-tool-access-sso) below.
-
-### Internal-tool access (SSO)
-
-The internal admin/debug tools are gated by **Keycloak SSO** via `oauth2-proxy`,
-which runs as a Traefik forward-auth backend. Design notes and per-tool auth:
-
-| Path | Tool | Auth |
-| --- | --- | --- |
-| `/prometheus` | Prometheus | Keycloak SSO (admin role) |
-| `/queues` | Bull Board | Keycloak SSO (admin role) |
-| `/redisinsight` | RedisInsight | Keycloak SSO (admin role) |
-| `/mongo` | mongo-express | Keycloak SSO (admin role); own basic-auth disabled (`ME_CONFIG_BASICAUTH=false`) |
-| `/neo4j` | Neo4j Browser **UI** | Keycloak SSO (admin role) |
-| bolt :7687 | Neo4j **query channel** | Neo4j's own username/password (raw TCP — can't be SSO-gated) |
-| `/lightrag` | LightRAG WebUI | LightRAG's **own** login (`AUTH_ACCOUNTS`) — no OIDC, so not on the SSO |
-| `/grafana` | Grafana | Grafana's own Keycloak OIDC (separate `grafana` client, role-mapped) |
-
-Implementation details:
-
-- The `sso-auth` Traefik middleware forwards each request to `oauth2-proxy`'s
-  **root** (not `/oauth2/auth`) — the root returns a **302 to Keycloak** for
-  unauthenticated requests, which Traefik propagates as a real browser redirect.
-  (The Traefik `errors`-middleware approach can't do this on v3: it keeps the 401
-  status, so the browser never redirects.)
-- oauth2-proxy identifies users by **`preferred_username`**
-  (`OAUTH2_PROXY_OIDC_EMAIL_CLAIM`), because Keycloak accounts here often have no
-  email and it otherwise 500s the callback with "could not enrich oidc session".
-- The `oauth2-proxy` Keycloak client is created/repaired by `keycloak-init` on
-  every deploy (no realm-volume recreation needed).
-- **LightRAG is deliberately off the SSO** — it can't do OIDC, and layering the
-  Traefik gate in front of its own login caused an endless sign-in loop. Its
-  `AUTH_ACCOUNTS`/`TOKEN_SECRET` login is a proper per-user gate and closes the
-  otherwise-open Guest-access hole.
-- **Neo4j Browser** connection: bolt :7687 is blocked by the TU perimeter
-  firewall; use the SSH-tunnel method in [docs/runbook.md](docs/runbook.md)
-  ("Connecting to Neo4j Browser").
-
-### Session & Token Lifetime
-
-All Keycloak token-minting call sites for the mobile app (`app/services/keycloakRopcClient.js`, used by `/onboard`, `/restore`, and `/users/me/rotate-credentials`; and the currently-unused PKCE `AuthService.login()` in `mobile/lib/services/auth_service.dart`) request the `offline_access` OAuth scope, which changes which Keycloak session settings govern the resulting refresh token:
-
-| Setting | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
-| --- | --- | --- |
-| SSO session idle / max (regular tokens, no `offline_access`) | 30 min / 10 h | unchanged (not used by the mobile app) |
-| `offlineSessionIdleTimeout` | 30 days | **180 days** |
-| `offlineSessionMaxLifespanEnabled` | `false` (no cap) | `false` (no cap) |
-
-Without `offline_access`, refresh tokens are bound to the regular SSO session — a 30-minute idle default was logging participants out after every ordinary gap between app opens, since this is a habit tracker checked a few times a day rather than continuously.
-
-**This is a rolling window, not a fixed expiry.** Every successful token refresh (automatic whenever the app is opened and the short-lived access token needs renewing) resets the 180-day idle clock, and there is no maximum session age at all (`offlineSessionMaxLifespanEnabled: false`). A participant only needs to open the app once every 180 days to stay signed in indefinitely — this is the same mechanism ("always signed in") apps like WhatsApp rely on: a long-lived, revocable, silently-renewed token, not a short-lived one requiring manual re-entry.
-
-Explicit sign-out (Settings → Sign out, or account deletion) still fully revokes the session via Keycloak's `/protocol/openid-connect/revoke` endpoint (RFC 7009) regardless of token type — offline tokens are not exempt from revocation.
-
-**Deliberately not implemented:** caching the recovery passphrase on-device to silently re-authenticate after a token dies. The passphrase is the account's root credential — it alone can mint a fresh token pair from scratch via `/restore`. A stored refresh token has a bounded lifetime and can be revoked individually; a cached master credential replayed automatically has no natural expiry and turns a lost/stolen device into a permanent skeleton key. `AuthService`'s `_passwordKey` constant documents that an earlier version of the app did exactly this (ROPC replay of a stored raw password) and it was removed.
-
-If the study protocol needs a hard cap on session age (e.g. for consent-renewal or data-minimization reasons) rather than "stays signed in as long as it's used within 180 days," set `offlineSessionMaxLifespanEnabled: true` and `offlineSessionMaxLifespan` (seconds) in `keycloak/hhh-realm.json` and the `keycloak-init` bootstrap step in both compose files.
-
-### Roles
-
-The realm (`keycloak/hhh-realm.json`) defines three roles: `user`, `researcher`, `admin`.
-
-| Role         | Granted to              | Access                                                    |
-| ------------ | ----------------------- | --------------------------------------------------------- |
-| `user`       | Study participants      | Own data only — surveys, habits, recommendations, profile |
-| `researcher` | Research staff          | All participant data (read), admin APIs, knowledge base   |
-| `admin`      | Platform administrators | Full access including user management; internal-tool SSO  |
-
-### Password Storage
-
-Participant passwords (outside Keycloak, e.g. token card PINs) are stored as **bcrypt hashes**. Keycloak manages the primary identity credential.
-
-### Security Headers
-
-The `securityHeaders` middleware (applied to all responses in `app.js`) sets standard security headers including `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, and `Strict-Transport-Security`.
-
-### Additional Protections
-
-- **IDOR protection** on recommendation feedback endpoints — server-side ownership checks ensure a participant can only modify their own records
-- **Input sanitization** middleware (`sanitizeBody`) applied before authentication on all `/api/v1` routes
-- **Rate limiting** (`apiRateLimiter`) applied per authenticated user on all protected routes
-- **WebView navigation lock** in the Flutter app — the in-app WebView is restricted to the app origin to prevent navigation hijacking
-- **`API_SERVICE_SECRET` startup warning** — the Node.js backend logs a warning at startup if `API_SERVICE_SECRET` is not set
-
----
-
-## 12. Troubleshooting
-
-For the full operational runbook (service restart procedures, database access, backup restore, incident response), see **[`docs/runbook.md`](docs/runbook.md)**.
-
-### Top 3 Common Issues
-
-#### 1. Keycloak token validation fails (`401 Unauthorized` from the backend)
-
-**Symptoms:** Flutter app receives 401 errors; logs show JWKS fetch failure or issuer mismatch.
-
-**Causes and fixes:**
-
-- The backend's `KEYCLOAK_URL` must match the issuer in the JWT. In local development, the backend container uses `http://keycloak:8080` (Docker internal hostname) while the browser uses `http://localhost:8080`. If tokens were issued via `localhost` but validated against `keycloak`, issuer verification fails.
-- Ensure `KEYCLOAK_ISSUER` in `admin/.env` (or compose environment) uses the **internal** Docker hostname (`http://keycloak:8080/realms/hhh`), and `KEYCLOAK_BROWSER_URL` uses `http://localhost:8080` for browser redirects.
-- After a `make reset`, allow 60–90 seconds for Keycloak to fully start before the app connects.
-
-#### 2. Python API service returns `403 Forbidden`
-
-**Symptoms:** Habit classification or recommendation requests fail; logs show `Invalid or missing API service secret`.
-
-**Causes and fixes:**
-
-- The `API_SERVICE_SECRET` in the Node.js backend environment must exactly match the value in the Python service environment.
-- Verify both are set identically in `.env` (local) or Portainer (production).
-- The Python service will **refuse to start** (`RuntimeError`) if `API_SERVICE_SECRET` is not set at all — check the `recommender` container logs.
-
-#### 3. MongoDB connection timeout on startup
-
-**Symptoms:** The `app` container restarts repeatedly; logs show `MongoServerSelectionError` or connection timeout.
-
-**Causes and fixes:**
-
-- The `app` service starts before MongoDB is ready to accept connections. Docker healthchecks are configured, but `depends_on` only guarantees container start, not readiness.
-- Run `make logs-all` to watch all containers. Wait for the `mongo` container to show `Waiting for connections` before the app will connect successfully.
-- If the problem persists, run `make reset` to wipe and restart all volumes with a clean state.
-- Ensure `MONGO_USER`, `MONGO_PASSWORD`, and `MONGO_AUTH_SOURCE` in `.env` match the values used when the MongoDB volume was first initialized. Changing credentials after volume creation requires wiping the volume.
-
-## 13. Behavioral Principle Features
 
 This app's habit-formation mechanics are grounded in a specific research
 foundation: Stark et al. (2023, *Building Habits in the Digital Age*) derived 13
@@ -930,40 +517,40 @@ further studies (Stawarz et al. 2016; Pinder et al. 2016; Zhu et al. 2024;
 Schwarzer et al. 2018), arriving at 18 distinct principles across the four
 stages of habit formation (Decision → Action → Repetition → Automaticity).
 
-§13.0 below catalogs all 18 and states plainly whether each is implemented and
-where. §13.1–§13.5 document the five that were *added* to close the gaps that
+§6.0 below catalogs all 18 and states plainly whether each is implemented and
+where. §6.1–§6.5 document the five that were *added* to close the gaps that
 catalog identified — those five share this section's conventions: the nullable
 study→group config-override pattern (like `recommenderEnabled`), the Mongo
 (event/state) vs. Neo4j (structural/graph) split, transparent
 recomputed-on-read scoring (like `reminderPlanService`), and admin-tunable
-thresholds via `admin_settings`. §13.6 documents a later addition, flexible
+thresholds via `admin_settings`. §6.6 documents a later addition, flexible
 habit cadence, which extends principle 7 (Flexible Habit Management) rather
 than closing a new catalog gap, but otherwise follows the same conventions.
-§13.7 covers the resulting data/research signals; §13.8 is the full
+§6.7 covers the resulting data/research signals; §6.8 is the full
 scoring-algorithm reference for §7.3 and §7.5.
 
-### 13.0 All 18 design principles
+### 6.0 All 18 design principles
 
 | # | Design principle | Stage | Status | Where |
 |---|---|---|---|---|
 | 1 | **Information Provision** — educational content on a habit's benefits, to support the initial decision | Decision | ✅ Fulfilled | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline); the Share screen's always-visible "Why share?" card explains the research rationale for donating a habit, linking to the full project-info page (`project_info_screen.dart`) |
 | 2 | **Implementation Intention** — the if-then plan binding a behavior to a context | Decision | ✅ Fulfilled | The core habit-creation flow (`intentionStatement`) — the app's organizing concept, not a bolt-on |
 | 3 | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision | ✅ Fulfilled | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`) |
-| 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §13.4 |
-| 5 | **Habit Distinction** — build- and quit-habits need different handling | Decision | ✅ Fulfilled (§7.4) | `habitType` — see §13.1 |
-| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.8 §A) |
-| 7 | **Flexible Habit Management** — pause/skip without penalty, plus choosing a cadence that fits the habit (§7.6) | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action; `implementation_intentions.cadence` (daily vs. an N-times-a-week target) — see §13.6 |
+| 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §6.4 |
+| 5 | **Habit Distinction** — build- and quit-habits need different handling | Decision | ✅ Fulfilled (§7.4) | `habitType` — see §6.1 |
+| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§6.8 §A) |
+| 7 | **Flexible Habit Management** — pause/skip without penalty, plus choosing a cadence that fits the habit (§7.6) | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action; `implementation_intentions.cadence` (daily vs. an N-times-a-week target) — see §6.6 |
 | 8 | **Personalization** — goals/reminders/interface adapt to the individual | all 4 stages | ✅ Fulfilled | Cue config, reminder time, locale, habit-entry mode — all resolved per study/group in `habitConfigService.resolveHabitConfig()` |
 | 9 | **Self-Comparison** — compare against your own history | Action–Repetition | ✅ Fulfilled | SRHI trajectory/sparkline, daily-log contribution graph |
 | 10 | **Social Interaction** — compare with other users | Action–Repetition | ✅ Fulfilled, by design | Anonymized community bubble graph + reactions — see the note below |
-| 11 | **Social Sharing** — share achievements with others | Action–Repetition | ✅ Fulfilled, by design | Anonymous habit donation (not named-friend sharing) + share XP/badge (§13.2/§13.5) |
-| 12 | **Praise Messages** — motivational text on completion | Action–Repetition | ✅ Fulfilled (§7.5) | Rotating praise copy tied to a badge/tier-up — see §13.5 |
-| 13 | **Praise Rewards** — virtual rewards for achievements | Action–Repetition | ✅ Fulfilled (§7.5) | Badges — see §13.5 |
-| 14 | **Challenges and Levels** — difficulty tiers to sustain engagement | Action–Repetition | ✅ Fulfilled (§7.5) | XP/level curve + per-habit traffic light — see §13.5 |
-| 15 | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition | ✅ Fulfilled (§7.2) | Rotating "when {cue}, {behavior}" templates — see §13.3 |
-| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.8 §A |
-| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.8 §A |
-| 18 | **Habit Stacking** — anchor a new habit to an already-automatic one | Automaticity | ✅ Fulfilled (§7.1) | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §13.2 |
+| 11 | **Social Sharing** — share achievements with others | Action–Repetition | ✅ Fulfilled, by design | Anonymous habit donation (not named-friend sharing) + share XP/badge (§6.2/§6.5) |
+| 12 | **Praise Messages** — motivational text on completion | Action–Repetition | ✅ Fulfilled (§7.5) | Rotating praise copy tied to a badge/tier-up — see §6.5 |
+| 13 | **Praise Rewards** — virtual rewards for achievements | Action–Repetition | ✅ Fulfilled (§7.5) | Badges — see §6.5 |
+| 14 | **Challenges and Levels** — difficulty tiers to sustain engagement | Action–Repetition | ✅ Fulfilled (§7.5) | XP/level curve + per-habit traffic light — see §6.5 |
+| 15 | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition | ✅ Fulfilled (§7.2) | Rotating "when {cue}, {behavior}" templates — see §6.3 |
+| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §6.8 §A |
+| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§6.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §6.8 §A |
+| 18 | **Habit Stacking** — anchor a new habit to an already-automatic one | Automaticity | ✅ Fulfilled (§7.1) | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §6.2 |
 
 **All 18 are implemented.** Principles 1–3, 6–11, and 16–17 predate the §7 work
 (they were already part of the app); 4, 5, 12–15, and 18 were the gaps §7 closed.
@@ -977,7 +564,7 @@ survey (Reinsch et al. 2026) separately found these two principles rated lowest
 of all 18 by end users, which is a point in favor of this design, not against
 it.
 
-### 13.1 Habit Distinction — build vs. quit (§7.4)
+### 6.1 Habit Distinction — build vs. quit (§7.4)
 
 Every implementation intention carries a required `habitType` of `'build'`
 (forming a new behaviour) or `'quit'` (breaking an existing one). It is chosen
@@ -997,7 +584,7 @@ research covariate for every other analysis in this plan.
   border on `my_habits_screen`); the Explore bubble graph has an All/Build/Quit
   filter chip.
 
-### 13.2 Habit Stacking (§7.1)
+### 6.2 Habit Stacking (§7.1)
 
 Attach a new habit to an existing "anchor" habit so the anchor becomes its cue
 ("After I [anchor], I will [new behaviour]").
@@ -1022,7 +609,7 @@ Attach a new habit to an existing "anchor" habit so the anchor becomes its cue
   edge can form). Stacked habits render nested beneath their anchor with a
   staircase connector on `my_habits_screen`.
 
-### 13.3 Implementation Intention Reminder (§7.2)
+### 6.3 Implementation Intention Reminder (§7.2)
 
 Reminders can spell out the plan ("when {cue}, {behavior}") instead of a generic
 nudge.
@@ -1039,7 +626,7 @@ nudge.
   in the cue/behavior; falls back to the generic body in `generic` mode or when
   cue/behavior are missing.
 
-### 13.4 Information Overload guard (§7.3, depends on §7.4)
+### 6.4 Information Overload guard (§7.3, depends on §7.4)
 
 Focus a participant's limited attention on strengthening current habits before
 adding new ones of the *same type*. The cap is not fixed — it grows as existing
@@ -1054,7 +641,7 @@ habits become automatic.
   already reached `unlock_tier` — the reminder-frequency tier from the Fading
   Reminders signal (`computeReminderPlan`), reused rather than a new metric.
   `unlock_tier: 'off'` is a hard cap of 1 per type. **Exact rule and tier
-  thresholds: [§13.8](#138-scoring-algorithms--full-reference).**
+  thresholds: [§6.8](#68-scoring-algorithms--full-reference).**
   - **Habit stacking (§7.1) is exempt**: `createIntention` skips the guard
     entirely when `creationMode === 'stacked'`. A stacked habit anchors to one
     already tracked rather than demanding fresh, separate attention, so it
@@ -1073,7 +660,7 @@ habits become automatic.
   toggle in Settings, shown only when the guard is enabled and opt-out is
   permitted.
 
-### 13.5 Gamification — badges, levels, praise (§7.5)
+### 6.5 Gamification — badges, levels, praise (§7.5)
 
 Praise Rewards, Challenges & Levels, and Praise Messages combined into one
 system: badges are the reward, tier progress is the "level," and praise text is
@@ -1091,7 +678,7 @@ milestones, not the market's fire-on-every-log pattern.
   a standard curve `xpForLevel(n) = round(base·(n−1)^exp)`. All weights/curve
   params are `admin_settings` keys (`gamification_*`), making them an
   experimental factor. **Exact formulas, defaults, and a worked example:
-  [§13.8](#138-scoring-algorithms--full-reference).**
+  [§6.8](#68-scoring-algorithms--full-reference).**
 - **Badges** (tied to meaningful states, not arbitrary counts): *First Step*
   (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
   streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
@@ -1099,7 +686,7 @@ milestones, not the market's fire-on-every-log pattern.
   *First Share* (shared/donated a habit for the first time), *Community
   Contributor* (shares/donates habits for several consecutive weeks — see
   "Sharing" below). Exact trigger predicates:
-  [§13.8](#138-scoring-algorithms--full-reference).
+  [§6.8](#68-scoring-algorithms--full-reference).
 
   ![The nine badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
 
@@ -1134,7 +721,7 @@ milestones, not the market's fire-on-every-log pattern.
   card. A badge/tier-up fires a one-time local praise notification drawing a
   rotating praise line per badge (same anti-repetition principle as §7.2).
 
-#### 13.5.1 Badge revocation — "get back on track"
+#### 6.5.1 Badge revocation — "get back on track"
 
 `BUILDING_MOMENTUM`, `STEADY_HABIT`, `SECOND_NATURE`, and `QUIT_CHAMPION` are
 **revocable** (`REVOCABLE_BADGES` in `gamificationService.js`): if a tier or
@@ -1154,7 +741,7 @@ main place this actually gets checked is the app-start sync
 happen days or weeks after habit creation, so checking only right after
 creating a habit (the other call site) would almost never catch one.
 
-#### 13.5.2 Automaticity-graduation flow (SRHI-gated)
+#### 6.5.2 Automaticity-graduation flow (SRHI-gated)
 
 A habit that reaches full automaticity (`off` tier) and then goes quiet is
 ambiguous: silence could mean it lapsed, or it could mean the participant no
@@ -1173,7 +760,7 @@ habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
           Habit Graduate badge awarded (never revoked)
       score <  graduationScoreThreshold
         → nothing new happens here — the *existing* recovery rule (tier
-          snaps to 'daily') and badge revocation (§13.5.1) already handle
+          snaps to 'daily') and badge revocation (§6.5.1) already handle
           "this was actually a lapse" on the next read
 ```
 
@@ -1205,13 +792,13 @@ habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
   "Graduated habits" section (rather than hiding them) with a **Reactivate**
   button (`PATCH /habits/intentions/:id/status` → `'active'`).
 - **Interaction with §7 Fading Features caveat:** this closes the gap noted in
-  §13.0 row 17 for habits that actually graduate — SRHI stops recurring
+  §6.0 row 17 for habits that actually graduate — SRHI stops recurring
   entirely once a habit's status leaves `'active'` (`topUpSrhiWindows` only
   tops up active habits). The caveat still applies to habits that are merely
   lapsed (still `'active'`, not yet graduated or recovered), where SRHI
   continues by design.
 
-### 13.6 Weekly-Frequency Habits (§7.6)
+### 6.6 Weekly-Frequency Habits (§7.6)
 
 Some habits are naturally weekly, not daily — "work out 3 times a week," not
 "work out every day." Before this feature, every adherence, streak, and
@@ -1224,7 +811,7 @@ every habit that doesn't opt in.
 > **Naming note.** `implementation_intentions.cadence` here is unrelated to
 > the pre-existing `questionnaire_assignments.cadence` field, which schedules
 > recurring SRHI check-ins — same word, different collection, no shared code
-> path. It's also distinct from `reminderPlanService`'s `frequency` tiers (§13.8
+> path. It's also distinct from `reminderPlanService`'s `frequency` tiers (§6.8
 > §A, the reminder-fading traffic light): `frequency` is how often the *app
 > pings*, `cadence` is what the participant *committed to*. Mobile copy always
 > says "How often?" / "N times a week," never "frequency," since both concepts
@@ -1239,7 +826,7 @@ every habit that doesn't opt in.
   byte-identical to an explicit `{type:'daily'}` for every downstream
   calculation.
 - **Algorithm** (`reminderPlanService.js`): the shared autonomy-score formula
-  (§13.8 §A) is untouched — cadence only changes which numbers feed it. For a
+  (§6.8 §A) is untouched — cadence only changes which numbers feed it. For a
   weekly-cadence habit, `weeklyAdherenceRate` replaces the 14-day daily
   adherence window with `enactedCount / (targetPerWeek · weeklyAdherenceWindowWeeks)`
   over the last `weeklyAdherenceWindowWeeks` (2) **completed** weeks (the
@@ -1253,11 +840,11 @@ every habit that doesn't opt in.
   detection get weekly equivalents: `weeklyRecoveryTriggered` (the most
   recently *completed* week missed target → snap straight back to `daily`
   reminders, replacing the 7-day-adherence check) and `consecutiveMissedWeeks`
-  (replacing `daysSinceLastEnactedLog` in §13.5.2's graduation-silence check,
+  (replacing `daysSinceLastEnactedLog` in §6.5.2's graduation-silence check,
   threshold `graduationSilenceWeeks`, default 2).
 - **Gamification** (§7.5): `computeHabitGamification` dispatches the same way
   — `weeklyStreakMilestones: {4: 50, 8: 120, 12: 300}` (weeks) alongside the
-  existing daily `streakMilestones` (§13.8 §B), and *Steady Habit* retriggers
+  existing daily `streakMilestones` (§6.8 §B), and *Steady Habit* retriggers
   at `currentStreakWeeks ≥ 8` instead of 14 days. The response gains a new
   `streakUnit: 'days'|'weeks'` field alongside the existing `streakDays`
   value, so a weekly habit's streak count isn't ambiguous on the wire.
@@ -1306,7 +893,7 @@ demands. Both nonetheless reach full automaticity (`off`) on the same day,
 71, once adherence and streak have both saturated for each — the lag shows up
 mid-course, not as a lower ceiling for weekly-cadence habits.
 
-### 13.7 Data & research analysis plan (§8)
+### 6.7 Data & research analysis plan (§8)
 
 All signals are additive to the existing Mongo/Neo4j split:
 
@@ -1316,9 +903,9 @@ All signals are additive to the existing Mongo/Neo4j split:
 | Stacking | `stackedOn`, `creationMode` | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
 | Reminder mode | `reminderContentMode` resolved per plan | — |
 | Overload gating | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out | — |
-| Gamification | `earnedBadges` per habit (added *and removed*, §13.5.1); `user_gamification.earnedBadges` for user-scoped badges | — |
+| Gamification | `earnedBadges` per habit (added *and removed*, §6.5.1); `user_gamification.earnedBadges` for user-scoped badges | — |
 | Sharing | (read-only from Neo4j; no Mongo write) | `Habit.created_at` per donated habit → share XP and streak |
-| Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§13.5.2) | — |
+| Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§6.5.2) | — |
 
 Because the stacking relationship and habit type live on the graph, a
 researcher-facing view (an admin analytics panel, or a documented Cypher query
@@ -1326,7 +913,7 @@ for Neo4j Browser/Bloom) can show the stacking network directly, and a
 build/quit filter on the community bubble graph is a one-property `WHERE` clause
 (`WHERE h.habit_type = 'quit'`).
 
-### 13.8 Scoring algorithms — full reference
+### 6.8 Scoring algorithms — full reference
 
 Both §7.3 (Information Overload) and §7.5 (Gamification) are driven by scores
 rather than by hand-set flags, and every constant below is a pre-registerable
@@ -1468,20 +1055,20 @@ farmed by volume.
 | Badge | `badgeKey` | Exact condition | Scope | Revocable? |
 | --- | --- | --- | --- | --- |
 | First Step | `first_step` | Always (the habit exists) | per habit | No |
-| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit | Yes (§13.5.1) |
-| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit | Yes (§13.5.1) |
-| Second Nature | `second_nature` | `frequency === 'off'` | per habit | Yes (§13.5.1) |
+| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit | Yes (§6.5.1) |
+| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit | Yes (§6.5.1) |
+| Second Nature | `second_nature` | `frequency === 'off'` | per habit | Yes (§6.5.1) |
 | Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit | No |
-| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit | Yes (§13.5.1) |
+| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit | Yes (§6.5.1) |
 | First Share | `first_share` | `shareCount ≥ 1` (the very first share/donation) | per user | No |
 | Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user | No |
-| Habit Graduate | `habit_graduate` | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§13.5.2) | per habit | No |
+| Habit Graduate | `habit_graduate` | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§6.5.2) | per habit | No |
 
 Per-habit badges persist on `implementation_intentions.earnedBadges`; the
 user-scoped First Share and Community Contributor persist on
 `user_gamification.earnedBadges` instead, since neither is tied to any one
 tracked intention. "Revocable" badges
-are removed (`$pull`) when their predicate stops holding, per §13.5.1 — every
+are removed (`$pull`) when their predicate stops holding, per §6.5.1 — every
 other badge records a historical fact and is never revoked.
 
 #### E. Information Overload unlock rule (§7.3)
@@ -1536,3 +1123,1106 @@ explain what has to happen.
   `reminder_*`, `information_overload_unlock_tier`, and `reminder_ii_templates`
   keys have **no admin-portal UI** — set them directly in the `admin_settings`
   collection (see [`docs/testing-section7-features.md`](docs/testing-section7-features.md) §1b).
+
+---
+
+## 7. Verified Identity Mode
+
+An **opt-in, per-study** capability for clinical studies that must identify
+their participants — without weakening anonymity for every other study. Absent
+on all existing studies, and the service need not be deployed at all.
+
+Operator and study-site procedures live in
+[`docs/identity-register.md`](docs/identity-register.md); the original design
+rationale is in [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md). This
+section is the orientation.
+
+### What it changes, and what it does not
+
+| | Anonymous study (the default) | Verified study |
+| --- | --- | --- |
+| Enrolment code | `HHH-XXXXX` | `HHV-XXXXX-XXXXX` (replaces it — one code, not two) |
+| Identifying data | none stored anywhere | in `identity-service` only, encrypted |
+| Keycloak `sub` | the research pseudonym | still the research pseudonym |
+| Researcher CSV export | raw Keycloak sub | study-local subject code; sub withheld entirely |
+| Researcher access | the `researcher` role suffices | must also be named on the study |
+
+Anonymous studies are **byte-identical to before**. Mongo and Neo4j never hold a
+name, a date of birth or an email for a verified participant either; HHH stores
+only the subject code, e.g. `TUD-DFG01-0042`.
+
+### How the data is protected
+
+- **AES-256-GCM per field**, under a per-register data key, with the AAD bound
+  to **both the row id and the column name** — so ciphertext cannot be moved
+  between rows or between fields by an attacker holding `UPDATE` but not the key.
+- **One 32-byte master key**, mounted as a `0400` file. Everything else is
+  HKDF-derived. Key-encryption and blind-index versions rotate **independently**,
+  so a routine KEK rotation never triggers the expensive re-index
+  (`npm run rotate-kek` in `identity-service/`).
+- **Keyed blind indexes** for exact-match lookup; no searchable name index (see
+  [Design Decisions](#5-design-decisions)).
+- **Its own database, its own network, its own SMTP, its own backup** under a
+  university-held key.
+
+### Roles
+
+Global realm roles, created once at deploy. Per-study access is data, not roles.
+
+| Role | May |
+| --- | --- |
+| `identity-manager` | create the register, manage the roster, approve re-identification |
+| `study-nurse` | enrol participants, search the roster, verify documents |
+| `monitor` | read the audit trail |
+
+`researcher` is refused at runtime alongside any of these.
+
+### Re-identification
+
+Requires a stated legal basis, a substantive reason, a second approver enforced
+by a database trigger, and a time-limited grant. Every reveal is recorded and
+never deduplicated. There is **no bulk-reveal endpoint**, and none that accepts a
+list of subject codes.
+
+The audit log records *that* a name was disclosed, to whom, and under what
+basis — without recording the name.
+
+### Erasure
+
+An Art. 17 erasure deletes the person outright from the register, leaving only
+an audit entry. The pseudonymous research data is unaffected: the study keeps
+its analysable data, and the link to a person is gone permanently.
+
+### Per-study researcher access
+
+On a verified study the `researcher` realm role is **not sufficient** — a
+researcher must be named on the study. Managed in the admin portal under
+**Study → Identity → Researcher access**.
+
+- `read` opens the study; `export` additionally downloads the study bundle,
+  because downloading a bundle is materially more than viewing a page.
+- `lead` is a label for the person running the study, not a capability. It does
+  not let them manage the member list: deciding who may read data adjacent to
+  identifiable participants is an operator decision.
+- People are picked from existing Keycloak accounts and the server verifies each
+  id against the realm. A mistyped `sub` is refused rather than stored — it
+  would otherwise render like any other grant while gating access for nobody.
+- Admins always pass. Anonymous studies are unaffected: scoping is enforced only
+  where `identity.researcherScoping === 'scoped'`, which verified studies force
+  on and everything else leaves open.
+
+Every grant and revocation records **who** was affected and **at what scope** in
+the admin audit log, not merely which study was touched.
+
+### Study consent documents
+
+A verified study asks for an additional consent after the participant redeems
+their code. That text is authored in the admin portal under **Consent
+Documents**, backed by `study_consent_documents` in Mongo, which *overrides* the
+Markdown file shipped in the image. Deleting the row falls back to the file, and
+the portal shows which of the two is live per language.
+
+English is the hard requirement. Other languages are optional and fall back to
+English where missing — but any that *have* been started are checked like the
+required one, so a half-finished translation cannot go live unnoticed.
+
+---
+
+## 8. Knowledge Base and the Recommender
+
+The recommender grounds its suggestions in a corpus of behaviour-change papers,
+indexed in **LightRAG** (hybrid graph + vector retrieval). The admin portal's
+**Knowledge Base** page is the library; each study chooses which of those papers
+may inform its own recommendations.
+
+### Uploading a paper
+
+**Knowledge Base → Upload document.** Accepts `.pdf`, `.txt`, `.md`, plus an
+optional **BibLaTeX entry** pasted straight from a reference manager:
+
+```bibtex
+@article{woodPsychologyHabit2016,
+  title  = {Psychology of Habit},
+  author = {Wood, Wendy and Rünger, Dennis},
+  date   = {2016},
+  doi    = {10.1146/annurev-psych-122414-033417}
+}
+```
+
+The citation and its DOI link are taken from that entry, so there is no second
+file to edit afterwards. Three details worth knowing:
+
+- A **malformed entry is refused before the document is indexed** — a bad paste
+  costs a correction, rather than leaving a paper in LightRAG that appears to
+  have failed to upload.
+- A **missing DOI is never guessed.** No link beats a wrong link on a citation.
+- The entry's `file` field — which points at the uploader's local Zotero
+  directory — is dropped rather than stored.
+
+Papers indexed before this existed still work; they cite by filename with no
+link, and the list flags them so they can be given an entry.
+
+Without a curated entry, citations fall back to parsing the Zotero filename
+convention `Authors - Year - Title.pdf`, with `API-service/data/references.json`
+as the legacy lookup.
+
+### Choosing which papers a study uses
+
+**Study → Knowledge.** Two choices:
+
+- **Use every paper** (the default) — including papers uploaded later. Stored as
+  `null`, not as a list of today's filenames, precisely so future uploads are
+  included automatically. This is what the general study wants.
+- **Use only the papers I pick** — an explicit allow-list.
+
+An empty selection is a coherent but rarely intended instruction: the study's
+recommendations draw on nothing. The UI says so plainly rather than silently
+accepting it.
+
+The scope is resolved from the participant's enrolment, not sent by the app —
+the mobile client asks for recommendations for a goal, and which study they are
+in is not a decision the client should be making.
+
+### How scoping actually works, and its limit
+
+LightRAG has no document filter at query time: `/query` takes keywords and token
+budgets, nothing that names a file. `workspace` is server-level configuration,
+so per-study workspaces would mean one LightRAG container per study.
+
+Instead, a scoped study retrieves through `/query/data`, which returns entities,
+relationships and chunks each tagged with a `file_path`, and the filtering
+happens after retrieval. Unscoped studies keep the original `/query` call
+untouched — that prompt is what every recommendation to date has been grounded
+on, and there is no reason to re-derive it.
+
+**The limit, stated plainly:** an entity description in LightRAG is synthesised
+across every document that mentions it. A kept entity can therefore still carry
+phrasing shaped by a paper outside the study's list. Chunks and citations are
+exact; the graph layer is close but not hermetic. If a study needs provable
+isolation — a regulator asking you to demonstrate that paper X never informed
+study Y — that requires a separate LightRAG instance per study, which is a much
+larger operational change.
+
+---
+
+## 9. Admin Application
+
+
+The Next.js 15 / React 18 admin application (`admin/`) provides a web dashboard for researchers and study administrators. Its UI is built with MUI (Material UI) v7 + Emotion for shared components and CSS Modules for bespoke styling.
+
+### Access
+
+| Environment | URL                                               |
+| ----------- | ------------------------------------------------- |
+| Local       | http://admin.localhost (or http://localhost:3001) |
+| Production  | https://admin.habit.wiwi.tu-dresden.de            |
+
+### Keycloak Roles Required
+
+Access to the admin application requires one of the following Keycloak realm roles in the `hhh` realm:
+
+- `admin` — full access
+- `researcher` — full access (same permissions as admin within the dashboard)
+
+Users without these roles see the `/access-denied` page. The Next.js edge middleware (`src/middleware.ts`) enforces authentication on all admin routes. Server components and API routes additionally check for the required role via the NextAuth session.
+
+### Features
+
+- **Participant management** — list, create, and manage study participants; each row shows that participant's registered devices (a participant can have several) — click to see each device's platform, model, and app version. Separately, a "Revoke Access" action force-signs-out the participant everywhere by revoking every Keycloak session they have — independent of the device list, since a device registration and a login session aren't reliably the same thing
+- **Donation review** — click a habit donation to see its voice transcript, play back or download the recorded audio, its donation-form self-report answers, and any linked post-donation questionnaire response
+- **Questionnaire authoring** — create and publish questionnaires
+- **Study configuration** — manage study groups, per-group cue config, and enrollment codes
+- **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s _Community Signals_ section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment
+- **Restore-attempts monitoring** — security view over every passphrase-based account-recovery attempt (success/failure/rate-limited), with IPs flagged for repeated non-success attempts
+- **Backups** — last-backup status per component, on-demand trigger, and restore from an existing or uploaded archive
+- **Audit log** — paginated log of admin actions
+- **Knowledge base** — view and manage the habit knowledge base
+- **Questionnaire scheduling** — assign questionnaires to a study/group on a cadence, and optionally flag one to **deliver on habit creation** (Studies → Schedule); see below
+- **Data export** — export questionnaire response and study analytics data
+
+### Questionnaire Scheduling & Check-in Delivery
+
+Researchers assign questionnaires to a study (all groups) or a specific group on a **cadence**
+(recurring interval, or fixed weeks/days after enrollment) in **Studies → Questionnaires**. Each
+questionnaire *definition* has a `scope` — `study` (default) or `habit` — which decides what an
+assignment's cadence anchors to, not a separate per-assignment flag:
+
+![Questionnaire delivery flow: scope 'study' windows anchor to enrollment via generateWindowsForUser; scope 'habit' windows anchor to each habit's creation via generateHabitCreationWindows and stay invisible until a relevant habit exists; SRHI is a separate, unconditional system entirely outside this scheduling model](docs/assets/architecture/questionnaire-scope-flow.svg)
+
+- **`scope: 'study'`** — windows anchor to **enrollment**, generated per participant
+  (`generateWindowsForUser`, back-filled for already-enrolled participants whenever an
+  assignment is created/changed). This is SLIQ/RAND-36 and any other general study questionnaire.
+- **`scope: 'habit'`** — windows anchor to **each habit's creation time** (+~5s) instead,
+  generated per habit (`generateHabitCreationWindows`, called from `POST /habits/intentions`) —
+  never back-filled for habits that already existed when the assignment was created. A habit-scoped
+  questionnaire is invisible to a participant (Profile list, Share tab "Today's tasks") until they've
+  actually created a relevant habit — see `docs/data-model.md` → `questionnaires` /
+  `questionnaire_windows` for the exact visibility rule.
+
+Submitting a response marks the next open window complete. Completion is shown as
+**completed / total** per questionnaire (the count reflects *submitted* windows, not merely
+scheduled ones) in the study's Questionnaires tab, and per-occurrence with an exact timestamp
+(`t("doneOn")`) in a participant's Progress modal.
+
+**Completed questionnaires can't be resubmitted, and the Flutter app reflects this.** A
+questionnaire is only fillable while it has an open `questionnaire_windows` entry due now
+(`getQuestionnaireCompletionStatus`, `app/services/questionnaireScheduleService.js`) — once that
+window closes, the participant's Profile → Health Questionnaires list greys the item out
+(non-interactive, `Completed on {date}`) instead of the usual green, tappable button, and it stays
+that way until the *next* cadence occurrence's window opens (windows for the full cadence are
+pre-generated upfront, so "available again" isn't a manual admin action — it's just the next
+occurrence's `scheduledFor` arriving). This is enforced server-side too, not just hidden in the
+UI: `POST /questionnaire-responses` rejects a submission with `409` if the slug has ever had a
+window but none is currently open-and-due — a stale cached list on the client can't bypass it. A
+questionnaire with no window at all (legacy/ad-hoc, outside the assignment system) stays
+always-open, unchanged. Relevant code: `app/routes/participantRouter.js`, `app/routes/questionnaireResponsesRouter.js`,
+`mobile/lib/screens/profile_screen.dart` (`_QuestionnaireTile`).
+
+**SRHI (the weekly habit-strength check-in) is not part of this system at all.** It used to be a
+`scope: 'habit'` library questionnaire like any other, toggled on per study via an assignment —
+but that meant every participant-facing endpoint had to remember to exclude it (it has its own
+dedicated slider UI in My Habits, not the generic radio-button questionnaire renderer), and it
+was easy to miss one spot, which is exactly how it once became reachable/fillable from the
+Profile questionnaire list before a participant had even created a habit. SRHI is now
+**unconditional**: every `POST /habits/intentions` call fires
+`srhiService.generateWindows` directly — 4 weekly `srhi_responses` rows, week 1 = creation day —
+with no `questionnaires` library entry, no `questionnaire_assignments` row, and no admin toggle.
+Item text (a 12-item, 1–7 slider scale) is hardcoded in `app/utils/srhi.js`, served via
+`GET /me/habit-config` as `srhiItems`. A fire-and-forget FCM push (~5 s later) nudges the
+participant to complete it, deep-linking straight into My Habits (`data: { type: "srhi", screen:
+"habits", intentionId }`); the check-in is also visible in-app immediately. Any environment that
+seeded the old SRHI library entry/assignment gets it cleaned up automatically on boot
+(`retireLegacySrhiLibraryEntry`, idempotent, see `app/services/defaultStudySeedService.js`).
+
+The participant's Progress view in the admin panel surfaces created habits (from
+`implementation_intentions`) and an **SRHI check-ins** summary (`completed / scheduled` + latest
+score) — sourced directly from `srhi_responses`, independent of the scheduling system above.
+Relevant code: `app/routes/intentionsRouter.js`, `app/services/srhiService.js`,
+`app/services/questionnaireScheduleService.js` (`generateWindowsForUser`,
+`generateHabitCreationWindows`, `resolveHabitScopeAssignments`).
+
+### Test Suite
+
+The admin application includes a Jest + React Testing Library suite at `admin/src/__tests__/`:
+
+```
+admin/src/__tests__/
+├── __mocks__/          # Module mocks (next/navigation, etc.)
+├── apiFetch.test.ts    # API fetch helper tests
+├── auth.test.ts        # Auth utility tests
+├── middleware.test.ts  # Next.js middleware route guard tests
+├── knowledge-base.test.tsx
+├── questionnaires.test.tsx
+└── studies.test.tsx
+```
+
+Run with: `make test-admin` (TypeScript typecheck) or `cd admin && npx jest` for the full test suite.
+
+---
+
+# Part IV — Security
+
+## 10. Security
+
+
+### Legal Documents (imprint, privacy, accessibility)
+
+The user-facing legal documents live as Markdown in `app/language/{en,de,ja}/` and are served at `/:lng/{imprint,privacy,accessibility}` (rendered to HTML server-side; the Flutter app fetches and displays them). Each file carries YAML front matter:
+
+```yaml
+---
+version: 1.0.0
+effectiveDate: 2026-03-15
+bindingLanguage: de
+---
+```
+
+Rules:
+
+- **Bump `version` and `effectiveDate` in _all three_ locales together** when the content changes — CI (`node scripts/checkLegalDocs.mjs`, also `npm run check:legal`) fails if locales diverge.
+- The metadata is returned in the API response (`document` field) and shown as a footer in the app; non-German locales display a note that the German version is authoritative.
+- Git history of these files is the GDPR audit trail for which policy version was active when.
+- Never machine-translate these documents; translations require professional/legal review.
+
+### Authentication Model
+
+![Authentication model: Flutter authenticates to the backend with a Bearer JWT; the backend talks to Keycloak on the participant's behalf via ROPC (passphrase) and via client credentials for admin ops; the admin Next.js app uses NextAuth OIDC; internal tools sit behind oauth2-proxy SSO; the backend calls the Python recommender with a shared secret header, not OAuth at all](docs/assets/architecture/auth-relationships.svg)
+
+- **Flutter app ↔ Keycloak:** the app never talks to Keycloak directly. It authenticates via a 24-word recovery passphrase against the Node.js backend (`/onboard` for new accounts, `/restore` for an existing account on a new device, `/users/me/rotate-credentials` to rotate the passphrase), which exchanges it for a Keycloak token pair server-side — see **Session & Token Lifetime** below. A PKCE authorization code flow via the public client `hhh-flutter` also exists in the mobile codebase (`AuthService.login()`, no client secret required or stored on device) but has no current call site.
+- **Flutter app ↔ Node.js backend:** Bearer JWT in the `Authorization` header. The backend validates JWTs against Keycloak's JWKS endpoint.
+- **Node.js backend ↔ Keycloak (admin operations):** Confidential service-account client `hhh-backend` with client credentials grant.
+- **Node.js backend ↔ Keycloak (passphrase auth):** Confidential client `hhh-ropc` with the resource-owner-password-credentials (ROPC) grant, kept behind a server-held secret so the ROPC capability isn't available to anyone who extracts the public `hhh-flutter` client ID from the app (`hhh-flutter` has `directAccessGrantsEnabled: false` for exactly this reason).
+- **Next.js admin ↔ Keycloak:** Confidential client `hhh-admin` via NextAuth.js. Session is maintained server-side; access tokens are not exposed to the browser.
+- **Node.js backend ↔ Python API service:** Shared secret (`API_SERVICE_SECRET`) sent as an HTTP header. The Python service refuses all requests without a valid secret.
+- **Internal tools ↔ Keycloak SSO:** Prometheus, Bull Board (`/queues`), RedisInsight, the Neo4j Browser **UI** (`/neo4j`) and mongo-express (`/mongo`) sit behind `oauth2-proxy` as a Traefik forward-auth gate. You log in with your normal Keycloak account and only accounts holding the realm **`admin`** role pass (participants with `user` are denied). No per-tool passwords or htpasswd hashes exist anymore. See [Internal-tool access (SSO)](#internal-tool-access-sso) below.
+
+### Internal-tool access (SSO)
+
+The internal admin/debug tools are gated by **Keycloak SSO** via `oauth2-proxy`,
+which runs as a Traefik forward-auth backend. Design notes and per-tool auth:
+
+| Path | Tool | Auth |
+| --- | --- | --- |
+| `/prometheus` | Prometheus | Keycloak SSO (admin role) |
+| `/queues` | Bull Board | Keycloak SSO (admin role) |
+| `/redisinsight` | RedisInsight | Keycloak SSO (admin role) |
+| `/mongo` | mongo-express | Keycloak SSO (admin role); own basic-auth disabled (`ME_CONFIG_BASICAUTH=false`) |
+| `/neo4j` | Neo4j Browser **UI** | Keycloak SSO (admin role) |
+| bolt :7687 | Neo4j **query channel** | Neo4j's own username/password (raw TCP — can't be SSO-gated) |
+| `/lightrag` | LightRAG WebUI | LightRAG's **own** login (`AUTH_ACCOUNTS`) — no OIDC, so not on the SSO |
+| `/grafana` | Grafana | Grafana's own Keycloak OIDC (separate `grafana` client, role-mapped) |
+
+Implementation details:
+
+- The `sso-auth` Traefik middleware forwards each request to `oauth2-proxy`'s
+  **root** (not `/oauth2/auth`) — the root returns a **302 to Keycloak** for
+  unauthenticated requests, which Traefik propagates as a real browser redirect.
+  (The Traefik `errors`-middleware approach can't do this on v3: it keeps the 401
+  status, so the browser never redirects.)
+- oauth2-proxy identifies users by **`preferred_username`**
+  (`OAUTH2_PROXY_OIDC_EMAIL_CLAIM`), because Keycloak accounts here often have no
+  email and it otherwise 500s the callback with "could not enrich oidc session".
+- The `oauth2-proxy` Keycloak client is created/repaired by `keycloak-init` on
+  every deploy (no realm-volume recreation needed).
+- **LightRAG is deliberately off the SSO** — it can't do OIDC, and layering the
+  Traefik gate in front of its own login caused an endless sign-in loop. Its
+  `AUTH_ACCOUNTS`/`TOKEN_SECRET` login is a proper per-user gate and closes the
+  otherwise-open Guest-access hole.
+- **Neo4j Browser** connection: bolt :7687 is blocked by the TU perimeter
+  firewall; use the SSH-tunnel method in [docs/runbook.md](docs/runbook.md)
+  ("Connecting to Neo4j Browser").
+
+### Session & Token Lifetime
+
+All Keycloak token-minting call sites for the mobile app (`app/services/keycloakRopcClient.js`, used by `/onboard`, `/restore`, and `/users/me/rotate-credentials`; and the currently-unused PKCE `AuthService.login()` in `mobile/lib/services/auth_service.dart`) request the `offline_access` OAuth scope, which changes which Keycloak session settings govern the resulting refresh token:
+
+| Setting | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
+| --- | --- | --- |
+| SSO session idle / max (regular tokens, no `offline_access`) | 30 min / 10 h | unchanged (not used by the mobile app) |
+| `offlineSessionIdleTimeout` | 30 days | **180 days** |
+| `offlineSessionMaxLifespanEnabled` | `false` (no cap) | `false` (no cap) |
+
+Without `offline_access`, refresh tokens are bound to the regular SSO session — a 30-minute idle default was logging participants out after every ordinary gap between app opens, since this is a habit tracker checked a few times a day rather than continuously.
+
+**This is a rolling window, not a fixed expiry.** Every successful token refresh (automatic whenever the app is opened and the short-lived access token needs renewing) resets the 180-day idle clock, and there is no maximum session age at all (`offlineSessionMaxLifespanEnabled: false`). A participant only needs to open the app once every 180 days to stay signed in indefinitely — this is the same mechanism ("always signed in") apps like WhatsApp rely on: a long-lived, revocable, silently-renewed token, not a short-lived one requiring manual re-entry.
+
+Explicit sign-out (Settings → Sign out, or account deletion) still fully revokes the session via Keycloak's `/protocol/openid-connect/revoke` endpoint (RFC 7009) regardless of token type — offline tokens are not exempt from revocation.
+
+**Deliberately not implemented:** caching the recovery passphrase on-device to silently re-authenticate after a token dies. The passphrase is the account's root credential — it alone can mint a fresh token pair from scratch via `/restore`. A stored refresh token has a bounded lifetime and can be revoked individually; a cached master credential replayed automatically has no natural expiry and turns a lost/stolen device into a permanent skeleton key. `AuthService`'s `_passwordKey` constant documents that an earlier version of the app did exactly this (ROPC replay of a stored raw password) and it was removed.
+
+If the study protocol needs a hard cap on session age (e.g. for consent-renewal or data-minimization reasons) rather than "stays signed in as long as it's used within 180 days," set `offlineSessionMaxLifespanEnabled: true` and `offlineSessionMaxLifespan` (seconds) in `keycloak/hhh-realm.json` and the `keycloak-init` bootstrap step in both compose files.
+
+### Roles
+
+The realm (`keycloak/hhh-realm.json`) defines three roles: `user`, `researcher`, `admin`.
+
+| Role         | Granted to              | Access                                                    |
+| ------------ | ----------------------- | --------------------------------------------------------- |
+| `user`       | Study participants      | Own data only — surveys, habits, recommendations, profile |
+| `researcher` | Research staff          | All participant data (read), admin APIs, knowledge base   |
+| `admin`      | Platform administrators | Full access including user management; internal-tool SSO  |
+
+### Password Storage
+
+Participant passwords (outside Keycloak, e.g. token card PINs) are stored as **bcrypt hashes**. Keycloak manages the primary identity credential.
+
+### Security Headers
+
+The `securityHeaders` middleware (applied to all responses in `app.js`) sets standard security headers including `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, and `Strict-Transport-Security`.
+
+### Additional Protections
+
+- **IDOR protection** on recommendation feedback endpoints — server-side ownership checks ensure a participant can only modify their own records
+- **Input sanitization** middleware (`sanitizeBody`) applied before authentication on all `/api/v1` routes
+- **Rate limiting** — three limiters keyed by caller type; see [Rate limiting](#rate-limiting) below
+- **WebView navigation lock** in the Flutter app — the in-app WebView is restricted to the app origin to prevent navigation hijacking
+- **`API_SERVICE_SECRET` startup warning** — the Node.js backend logs a warning at startup if `API_SERVICE_SECRET` is not set
+
+### Identity Register (verified studies)
+
+Full treatment in [Verified Identity Mode](#7-verified-identity-mode). The
+security-relevant summary:
+
+- Separate service, separate **PostgreSQL** database, separate network — sharing
+  none with `mongo` or `neo4j`, asserted by a CI test against
+  `docker-compose.yml`.
+- **AES-256-GCM** per field under a per-register data key, AAD bound to both the
+  row id and the column name.
+- One 32-byte master key mounted `0400`; the service refuses to start with an
+  inline key when `NODE_ENV=production`. Everything else HKDF-derived, with
+  key-encryption and blind-index versions rotating independently.
+- **Keyed blind indexes** for exact match; no searchable name index.
+- Re-identification requires a legal basis, a reason, a **second approver
+  enforced by a database trigger**, and a time-limited grant. No bulk-reveal
+  endpoint exists.
+- `researcher` is refused at runtime alongside `identity-manager`,
+  `study-nurse` or `monitor`.
+
+### Per-study researcher scoping
+
+The `researcher` realm role historically granted access to **every** study and
+every export, with no way to narrow it. On a study where
+`identity.researcherScoping === 'scoped'` — which verified studies force on and
+everything else leaves open — a researcher must additionally be named on the
+study in `study_memberships`, enforced by the `requireStudyAccess` middleware.
+
+- `read` opens the study; `export` additionally downloads the bundle.
+- Grantee ids are verified against Keycloak before the membership is written, so
+  a mistyped `sub` is refused rather than stored as a grant that gates nobody.
+- The member list is admin-only. `lead` is a label, not a capability.
+
+Rolled out deliberately narrowly: turning scoping on globally would have broken
+every existing researcher on the day it shipped. It applies exactly where
+identity data exists.
+
+### Admin audit log
+
+Every mutating admin request is recorded to `admin_audit_log` by the
+`auditAdminActions` middleware: actor, method, action, resource, status, and
+timestamp. The write is fire-and-forget on `res.on('finish')` — a failing audit
+write is logged but never affects a response that has already been sent.
+
+Handlers may set `res.locals.auditDetail` to record **what** changed, and this is
+retained regardless of outcome. It previously survived only on failures, which
+meant a *successful* study-membership grant recorded the study it touched but
+neither who received access nor at what scope — the one fact the entry exists to
+preserve. Grants and revocations now both name the person and the scope.
+
+### Rate limiting
+
+Three limiters, keyed by what the caller actually is:
+
+| Limiter | Applies to | Key | Budget |
+| --- | --- | --- | --- |
+| `apiRateLimiter` | authenticated `/api/v1` routes | Keycloak `sub` | 100 / 15 min |
+| `serviceRateLimiter` | `/user-profile`, `/questionnaire-responses` | constant service identity | 600 / min |
+| `habitShareLimiter` | habit donation | `sub` | 200 / hour |
+
+Admin System-health polling is exempt from the general limiter — a background
+dashboard widget would otherwise exhaust the abuse budget and 429 the portal.
+
+Two things worth knowing. **Every IP-keyed limiter in the backend was silently
+inert** until recently: `ipKeyGenerator` takes an IP *string*, every call site
+passed the whole request object, and the result was a distinct bucket per
+request — no error, no warning. The endpoints that relied on it were the
+pre-auth, credential-adjacent ones (`POST /onboard`, `POST /restore`) where the
+limit *is* the control. `app/tests/unit/rateLimiter.test.js` now drives real
+requests rather than asserting the key looks plausible, because a plausible-
+looking key was exactly the failure.
+
+Second, the internal service routes are mounted **before** authentication, so
+under the general limiter they keyed on IP — and every call arrives from one
+container. That put the entire deployment's recommendations under a single
+100-per-15-minute budget. They now use a service-keyed backstop instead; see
+[Design Decisions](#5-design-decisions).
+
+### Consent document readiness gate
+
+`PUT /admin/studies/:id` returns `409 consent_document_not_ready` unless the
+named study consent document is published in English, free of `⟦…⟧`
+placeholders, and at a single version across every locale that exists. The same
+completeness rules are enforced over the shipped files in CI by
+`scripts/checkLegalDocs.mjs`.
+
+This moves a failure that previously surfaced as a 404 to the participant *after
+enrolment* onto the person configuring the study.
+
+---
+
+# Part V — Running It
+
+## 11. Environment Variables
+
+
+All variables are defined in `stack.env`. In production, override sensitive values in Portainer's environment variables section — never commit real secrets to Git.
+
+### Domain & TLS
+
+| Variable                 | Default                    | Description                                       |
+| ------------------------ | -------------------------- | ------------------------------------------------- |
+| `DOMAIN`                 | `habit.wiwi.tu-dresden.de` | Production domain name                            |
+| `SERVER_IP`              | `141.76.16.16`             | Server IP address                                 |
+| `ACME_EMAIL`             | —                          | Email for Let's Encrypt certificate notifications |
+
+### Application
+
+| Variable        | Default      | Description                                        |
+| --------------- | ------------ | -------------------------------------------------- |
+| `APP_BASE_PATH` | `/`          | URL base path for the Node.js app                  |
+| `NODE_ENV`      | `production` | Node.js environment (`development` / `production`) |
+
+### Keycloak
+
+| Variable                          | Default       | Description                                                      |
+| --------------------------------- | ------------- | ---------------------------------------------------------------- |
+| `KEYCLOAK_ADMIN`                  | `admin`       | Keycloak admin console username                                  |
+| `KEYCLOAK_ADMIN_PASSWORD`         | —             | Keycloak admin console password **(change in Portainer)**        |
+| `KC_DB_USERNAME`                  | `keycloak`    | PostgreSQL username for Keycloak (production)                    |
+| `KC_DB_PASSWORD`                  | —             | PostgreSQL password for Keycloak **(change in Portainer)**       |
+| `KEYCLOAK_REALM`                  | `hhh`         | Keycloak realm name                                              |
+| `KEYCLOAK_CLIENT_ID`              | `hhh-flutter` | Public PKCE client used by the Flutter app                       |
+| `KEYCLOAK_ADMIN_CLIENT_ID`        | `hhh-backend` | Confidential service-account client for Node.js backend          |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET`    | —             | Secret for `hhh-backend` client **(change in Portainer)**        |
+| `NEXTAUTH_SECRET`                 | —             | Secret for NextAuth.js session signing **(change in Portainer)** |
+| `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` | —             | Secret for `hhh-admin` client **(change in Portainer)**          |
+| `KEYCLOAK_ROPC_CLIENT_SECRET`     | —             | Secret for `hhh-ropc` client (server-side passphrase auth)       |
+
+### Internal-tool SSO & LightRAG
+
+The internal admin/debug tools use Keycloak SSO via `oauth2-proxy`; LightRAG uses
+its own login. There are **no** per-tool htpasswd/basic-auth variables anymore
+(the former `INTERNAL_TOOLS_TRAEFIK_AUTH`, per-tool `*_TRAEFIK_AUTH`,
+`MONGO_EXPRESS_*`, and `TRAEFIK_DASHBOARD_AUTH` were removed).
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `OAUTH2_PROXY_CLIENT_SECRET` | — | Secret for the `oauth2-proxy` Keycloak client (injected by `keycloak-init`) **(change in Portainer)** |
+| `OAUTH2_PROXY_COOKIE_SECRET` | — | Signs the SSO session cookie; **must be 16/24/32 chars** (`openssl rand -base64 24`) **(change in Portainer)** |
+| `GRAFANA_CLIENT_SECRET` | — | Secret for the `grafana` Keycloak OIDC client **(change in Portainer)** |
+| `LIGHTRAG_API_KEY` | — | Bearer token for the LightRAG REST API (internal callers) |
+| `LIGHTRAG_AUTH_PASSWORD` | — | Password for LightRAG's own WebUI login (user `admin`) **(change in Portainer)** |
+| `LIGHTRAG_TOKEN_SECRET` | — | Signs LightRAG's login JWTs (`openssl rand -hex 32`) **(change in Portainer)** |
+| `ENABLE_QUEUE_DASHBOARD` | `true` | Mounts Bull Board at `/queues` in production (SSO-gated) |
+
+### MongoDB
+
+| Variable                            | Default    | Description                                      |
+| ----------------------------------- | ---------- | ------------------------------------------------ |
+| `MONGO_HOST`                        | `mongo`    | MongoDB service hostname                         |
+| `MONGO_PORT`                        | `27017`    | MongoDB port                                     |
+| `MONGO_USER`                        | `admin`    | MongoDB admin username                           |
+| `MONGO_PASSWORD`                    | —          | MongoDB admin password **(change in Portainer)** |
+| `MONGO_DB`                          | `surveyjs` | Default database name                            |
+| `MONGO_AUTH_SOURCE`                 | `admin`    | Authentication database                          |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `30000`    | Connection timeout                               |
+| `MONGO_SOCKET_TIMEOUT_MS`           | `30000`    | Socket timeout                                   |
+
+### Neo4j
+
+| Variable         | Default             | Description                              |
+| ---------------- | ------------------- | ---------------------------------------- |
+| `NEO4J_URI`      | `bolt://neo4j:7687` | Neo4j Bolt connection URI                |
+| `NEO4J_USER`     | `neo4j`             | Neo4j username                           |
+| `NEO4J_PASSWORD` | —                   | Neo4j password **(change in Portainer)** |
+| `GRAPH_BACKEND`  | `neo4j`             | Graph backend selector                   |
+
+### Apache Fuseki _(retired — no longer in docker-compose.yml; variables kept for historical reference)_
+
+| Variable         | Default  | Description                                     |
+| ---------------- | -------- | ----------------------------------------------- |
+| `FUSEKI_PATH`    | `fuseki` | Fuseki dataset name                             |
+| `DB_HOST`        | `fuseki` | Fuseki hostname                                 |
+| `DB_PORT`        | `3030`   | Fuseki port                                     |
+| `DB_USER`        | `admin`  | Fuseki admin username                           |
+| `DB_PASSWORD`    | —        | Fuseki admin password **(change in Portainer)** |
+| `DB_PATH`        | `hhh`    | Fuseki dataset path                             |
+| `ADMIN_PASSWORD` | —        | Fuseki admin password (used in container env)   |
+
+### Python API Service
+
+| Variable                            | Default                       | Description                                                                                   |
+| ----------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `RECOMMENDER_URL`                   | `http://recommender:8000`     | Internal URL for the Python FastAPI service                                                   |
+| `API_SERVICE_SECRET`                | —                             | Shared secret between Node.js backend and Python API service **(change in Portainer)**        |
+| `LLM_API_KEY`                       | —                             | API key for the LLM provider **(required, set in Portainer)**                                 |
+| `LLM_API_BASE`                      | OpenAI                        | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`)                                 |
+| `LLM_MODEL`                         | `alias-huge`                  | Model name or alias for general LLM calls                                                     |
+| `LLM_RECOMMEND_MODEL`               | — (falls back to `LLM_MODEL`) | Model used only for the final recommendation-writing call (e.g. `alias-ha`)                   |
+| `LLM_TEMPERATURE`                   | `0.2`                         | LLM sampling temperature (0.0 = deterministic)                                                |
+| `LLM_TIMEOUT_S`                     | `120`                         | Per-attempt timeout for LLM calls                                                             |
+| `LLM_MAX_RETRIES`                   | `0`                           | OpenAI-client retries (0 = fail fast, avoids proxy 504s)                                      |
+| `RECOMMEND_MAX_CONTEXT_CHARS`       | `0` (unlimited)               | Cap on the LightRAG context in the recommendation prompt (latency lever; `.env` sets `30000`) |
+| `LLM_RECOMMEND_MAX_TOKENS`          | `0` (model default)           | Completion-length cap for the recommendation call (`.env` sets `2000`)                        |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `5000`                        | MongoDB server-selection/connect timeout in the API-service                                   |
+| `MONGO_SOCKET_TIMEOUT_MS`           | `5000`                        | MongoDB socket timeout in the API-service                                                     |
+
+### LibreTranslate
+
+| Variable            | Default    | Description                        |
+| ------------------- | ---------- | ---------------------------------- |
+| `LT_LOAD_ONLY`      | `de,en,ja` | Language pairs to load             |
+| `LT_REQ_LIMIT`      | `0`        | Request rate limit (0 = unlimited) |
+| `LT_DEBUG`          | `false`    | Enable debug logging               |
+| `LT_DISABLE_WEB_UI` | `false`    | Disable LibreTranslate web UI      |
+
+### Email & Notifications
+
+| Variable        | Default                      | Description                                                                                                            |
+| --------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `SMTP_HOST`     | —                            | Generic SMTP relay/provider host (any provider works)                                                                  |
+| `SMTP_PORT`     | `587`                        | `587` for STARTTLS, `465` for implicit TLS                                                                             |
+| `SMTP_USER`     | —                            | SMTP username                                                                                                          |
+| `SMTP_PASS`     | —                            | SMTP password                                                                                                          |
+| `SMTP_FROM`     | `noreply@wiwi.tu-dresden.de` | Sender address                                                                                                         |
+| `SMTP_STARTTLS` | `true`                       | Set `false` only when `SMTP_PORT=465`                                                                                  |
+| `ALERT_EMAIL`   | —                            | Recipient for critical alerts (backup, LLM outages, BullMQ failures, service reachability/5xx — see `docs/runbook.md`) |
+
+### Backup
+
+| Variable                | Default   | Description                                                                                                                                                                                                          |
+| ----------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BACKUP_RETENTION_DAYS` | `14`      | Days to retain backup archives (time-based; applies to all backups). Also caps daily automatic (scheduled-trigger) backups by count, using the same number — manual/uploaded backups are unaffected by the count cap |
+| `ALERT_EMAIL`           | —         | Email address for backup alert notifications                                                                                                                                                                         |
+| `BACKUP_EMAIL`          | —         | Email address for backup reports                                                                                                                                                                                     |
+| `ALERT_WEBHOOK_URL`     | _(empty)_ | Optional Slack/Discord/Teams webhook URL                                                                                                                                                                             |
+
+---
+
+## 12. Local Development
+
+
+For full setup instructions (prerequisites, first-run steps, seed data, and common workflows), see:
+
+- **[`docs/guides/local-dev.md`](docs/guides/local-dev.md)** — complete local development guide
+- **[`docs/guides/developer-onboarding.md`](docs/guides/developer-onboarding.md)** — new developer onboarding
+
+### Prerequisites
+
+- Docker Engine 20.10+ and Docker Compose v2
+- Flutter SDK (for mobile development)
+- Python 3.11+ (for API-service development)
+- Node.js 22 (for backend/admin development)
+- A `.env` file created from `stack.env` with local values
+
+### Make Targets
+
+All common tasks are available via `make`:
+
+```bash
+make help          # Show all available targets
+make dev           # Start all local services (docker-compose.local.yml up -d)
+make stop          # Stop all local services
+make seed          # Seed MongoDB, Neo4j, and Keycloak with dev data
+make logs          # Tail app (Node.js backend) logs
+make logs-all      # Tail all service logs
+make ios           # Run Flutter app on iPhone Simulator
+make reset         # Stop, wipe volumes, restart, and re-seed (full reset)
+make test          # Run all test suites (backend + Flutter + Python + admin)
+make test-backend  # Backend: prettier check + ESLint + Jest unit tests + npm audit
+make test-flutter  # Flutter: flutter analyze + flutter test
+make test-python   # Python API-service: pytest
+make test-admin    # Admin: TypeScript typecheck (tsc --noEmit)
+```
+
+### Local Service URLs
+
+After `make dev`, services are available at:
+
+| Service                | URL                                                 |
+| ---------------------- | --------------------------------------------------- |
+| Node.js backend        | http://app.localhost or http://localhost:3000       |
+| Keycloak admin console | http://keycloak.localhost or http://localhost:8080  |
+| Next.js admin app      | http://admin.localhost or http://localhost:3001     |
+| Neo4j browser          | http://neo4j.localhost or http://localhost:7474     |
+| LibreTranslate         | http://translate.localhost or http://localhost:5001 |
+| Python API service     | http://localhost:8001                               |
+| Traefik dashboard      | http://localhost:8888                               |
+
+---
+
+## 13. Testing
+
+
+### Test Suites
+
+| Suite      | Command             | What it tests                                                                                                     |
+| ---------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Backend    | `make test-backend` | Prettier formatting, ESLint linting, Jest unit tests for all routes and middleware, `npm audit` for critical CVEs |
+| Flutter    | `make test-flutter` | `flutter analyze` static analysis + Flutter widget/unit tests                                                     |
+| Python API | `make test-python`  | pytest for all API-service routers                                                                                |
+| Admin      | `make test-admin`   | TypeScript typecheck (`tsc --noEmit`)                                                                             |
+| All        | `make test`         | Runs all four suites sequentially                                                                                 |
+
+### Backend Tests (`app/tests/`)
+
+Located at `app/tests/unit/**/*.test.js`. Run using Node.js built-in test runner:
+
+```bash
+cd app
+node --test "tests/unit/**/*.test.js"
+```
+
+### Flutter Tests (`mobile/test/`)
+
+```bash
+cd mobile
+flutter test
+```
+
+### Python Tests (`API-service/tests/`)
+
+```bash
+cd API-service
+python3 -m pytest tests/ -v
+```
+
+### Admin Tests (`admin/src/__tests__/`)
+
+```bash
+cd admin
+npx jest
+# or for typecheck only:
+npx tsc --noEmit
+```
+
+---
+
+## 14. Server Deployment
+
+
+For the full deployment procedure, see:
+
+- **[`DEPLOYMENT.md`](DEPLOYMENT.md)** — step-by-step production deployment guide
+- **[`docs/runbook.md`](docs/runbook.md)** — operational runbook (restarts, backups, incident response)
+
+### Approach
+
+Production runs on a single server managed via **Portainer** connected to the Git repository. The stack is defined in `docker-compose.yml`.
+
+Key differences from local:
+
+- Traefik performs TLS termination with automatic Let's Encrypt certificate renewal
+- Keycloak uses a dedicated PostgreSQL container (not `dev-file` mode)
+- All passwords and secrets are injected via Portainer's environment variables (not from `stack.env` in Git)
+- The backup service isn't real cron — it's a sleep loop (`sleep 120`, then `sleep 86400` between runs) that drifts on container restart — storing archives in the `backups/` volume. Scheduled (automatic) backups are additionally capped by count, using the same `BACKUP_RETENTION_DAYS` value as the time-based retention, so the admin panel's backup list doesn't grow unbounded.
+- The backup container never mounts the Docker socket directly — it talks to a scoped `docker-socket-proxy` sidecar instead (see `docs/runbook.md`)
+
+### Deployment Steps (summary)
+
+1. Connect Portainer to the Git repository
+2. Configure all environment variables in Portainer (override `stack.env` defaults with real secrets)
+3. Deploy the `docker-compose.yml` stack via Portainer UI
+4. On first deploy, the `keycloak-init` one-shot container sets `sslRequired=external`, configures client secrets, and grants the backend service account `realm-admin`
+### Mobile App Release
+
+Backend and admin changes ship instantly on deploy; the mobile binary does not.
+The full procedure for both platforms — commands, signing, store upload, and the
+emulator/simulator caveats — is in
+[Mobile Release — iOS and Android](#15-mobile-release--ios-and-android).
+
+---
+
+## 15. Mobile Release — iOS and Android
+
+Backend and admin changes ship the moment the stack redeploys. The mobile binary
+does not — it goes through Apple's review and Google's track promotion. This
+section is the concrete procedure for both.
+
+One-time Apple Developer / App Store Connect setup is in
+[`mobile/RELEASING.md`](mobile/RELEASING.md).
+
+### Toolchain requirements
+
+| | Minimum | Why |
+| --- | --- | --- |
+| Flutter | **3.44.0** | `record` 7.1.1 requires it |
+| Dart | **3.12.0** | same |
+| JDK | 17+ (Android Studio's bundled JDK is used) | AGP 9 |
+| Xcode | current stable | iOS archive |
+
+```bash
+flutter --version    # must report >= 3.44.0
+```
+
+Nothing in the repo pins a Flutter version — no `.fvmrc`, and CI uses
+`channel: stable` unpinned. Two machines on different Flutter versions will
+resolve this project differently, and CI will not warn you. If your IDE and your
+terminal disagree, check the IDE's `dart.flutterSdkPath`.
+
+### One version drives both platforms
+
+`mobile/pubspec.yaml` is the single source:
+
+```yaml
+version: 1.2.0+4
+#        ^^^^^ ^
+#        name  build number
+```
+
+- **Android** — `versionName` and `versionCode`, read by `app/build.gradle.kts`
+  from `local.properties`, which Flutter writes on every build.
+- **iOS** — `CFBundleShortVersionString` and `CFBundleVersion` resolve from
+  `$(FLUTTER_BUILD_NAME)` and `$(FLUTTER_BUILD_NUMBER)` in `Info.plist`.
+
+`MARKETING_VERSION` in `ios/Runner.xcodeproj/project.pbxproj` is **not** what
+ships and can be ignored.
+
+Bump it, and confirm what Gradle was actually told:
+
+```bash
+grep -E "flutter.version(Code|Name)" mobile/android/local.properties
+```
+
+> **Build numbers must strictly increase, per store.** Play rejects a
+> `versionCode` that does not exceed the highest already on the track. TestFlight
+> rejects a `CFBundleVersion` that does not exceed what is already uploaded for
+> that version. The repo does not track either, so check the console before you
+> build — or use the fastlane `beta` lane for iOS, which sets the build number to
+> `latest_testflight_build_number + 1` for exactly this reason.
+
+### Production configuration
+
+`mobile/dart_defines_prod.json` holds the production endpoints. In **release
+mode** `AppConfig` already defaults to them; passing the file is belt-and-braces
+and makes the build auditable. In **debug mode** it defaults to `localhost`, so
+the file is **mandatory** when pointing a debug build at production.
+
+```bash
+cat mobile/dart_defines_prod.json
+```
+
+---
+
+### Android
+
+There is **no Android release pipeline in this repository.** The bundle is built
+locally and uploaded by hand.
+
+#### Build the app bundle
+
+```bash
+cd mobile && flutter build appbundle --release
+```
+
+Wait for `✓ Built build/app/outputs/bundle/release/app-release.aab`. Interrupting
+it produces nothing — check the timestamp if you are unsure:
+
+```bash
+stat -f "%Sm  %z bytes" -t "%Y-%m-%d %H:%M" mobile/build/app/outputs/bundle/release/app-release.aab
+```
+
+Signing comes from `mobile/android/key.properties` (git-ignored). Without it the
+build falls back to **debug signing**, which still runs locally but is **not
+valid for Play distribution**.
+
+Two warnings are expected and harmless — they concern plugins in the dependency
+tree that still apply the Kotlin Gradle Plugin, which AGP 9 cannot combine with
+its built-in Kotlin. They do not affect the artifact.
+
+#### Upload
+
+Play Console → **Test and release → Testing → Closed testing** → your track →
+**Create new release** → upload the `.aab`.
+
+Use Production only once production access has been granted.
+
+#### Run a release build on an emulator
+
+Unlike iOS, Android *can* run a true release build on an emulator — worth doing
+before upload, since neither `flutter analyze` nor the widget tests exercise an
+AOT build on a real Android runtime.
+
+One-time, if no AVD exists:
+
+```bash
+~/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager "system-images;android-36;google_apis;arm64-v8a" "platforms;android-36"
+```
+
+```bash
+~/Library/Android/sdk/cmdline-tools/latest/bin/avdmanager create avd -n hhh-test -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_7
+```
+
+Then, each time:
+
+```bash
+~/Library/Android/sdk/emulator/emulator -avd hhh-test &
+```
+
+```bash
+cd mobile && flutter run --release --dart-define-from-file=dart_defines_prod.json
+```
+
+`google_apis` (rather than the bare image) is required because the app uses
+Firebase Cloud Messaging, which needs Google Play services. `--release` means no
+hot reload — that is the trade for testing what actually ships.
+
+---
+
+### iOS
+
+#### The supported path: fastlane via GitHub Actions
+
+`.github/workflows/mobile-release.yml` is **`workflow_dispatch` only**. Pushing a
+`mobile-v*` tag triggers **nothing** — the tag is a bookkeeping convention, not a
+release trigger.
+
+1. Merge the version bump to `main` and let CI pass.
+2. Actions → **Mobile Release** → **Run workflow** → lane **`beta`**.
+   Builds, signs, and uploads to TestFlight. The build number is set to
+   `latest_testflight_build_number + 1` automatically.
+3. Test it through TestFlight.
+4. Actions → **Mobile Release** → **Run workflow** → lane **`release`**.
+   Submits the build you just tested for App Store review — it does **not** build
+   a new one.
+
+Step 4 is deliberately manual, so a bad build cannot reach real users without a
+human deciding.
+
+#### The manual path: archiving in Xcode
+
+Use when you need to see what Xcode is doing. Note it bypasses the automatic
+build-number handling, so check TestFlight first.
+
+Generate the release framework and write the Xcode config:
+
+```bash
+cd mobile && flutter build ios --release --dart-define-from-file=dart_defines_prod.json
+```
+
+Open the **workspace**, not the project — CocoaPods is in use and `.xcodeproj`
+will not link:
+
+```bash
+open mobile/ios/Runner.xcworkspace
+```
+
+In Xcode: scheme **Runner**, destination **Any iOS Device (arm64)** (Archive is
+greyed out on a simulator destination) → **Product → Archive** → in the
+Organizer, **Distribute App → App Store Connect → Upload**.
+
+Signing is `CODE_SIGN_STYLE = Automatic`, so Xcode manages certificates; the
+Apple ID needs to be present under Xcode → Settings → Accounts.
+
+Verify what got baked in:
+
+```bash
+grep -E "FLUTTER_BUILD_(NAME|NUMBER)" mobile/ios/Flutter/Generated.xcconfig
+```
+
+#### You cannot run a release build on the iOS Simulator
+
+Flutter refuses both:
+
+```
+flutter build ios --simulator --release   →  Release mode is not supported for simulators.
+flutter build ios --simulator --profile   →  Profile mode is not supported for simulators.
+```
+
+Debug is the only mode the Simulator supports. The closest available check is a
+debug build pointed at production — note the defines are **mandatory** here, or
+it silently talks to `localhost`:
+
+```bash
+cd mobile && flutter run -d "iPhone 17 Pro" --dart-define-from-file=dart_defines_prod.json
+```
+
+That does **not** verify AOT compilation, release-only tree-shaking, code
+signing, or the production-config guard in
+`AppConfig.localhostOverridesInRelease()`, which is release-only by design. For
+those, TestFlight on a real device is the only path.
+
+---
+
+### Release checklist
+
+1. `flutter --version` reports ≥ 3.44.0
+2. Bump `version:` in `mobile/pubspec.yaml`; build number exceeds both stores
+3. Move the `[Unreleased]` CHANGELOG entry under the new version
+4. `make test` green
+5. Commit, push, CI green
+6. Android: `flutter build appbundle --release` → upload to the closed track
+7. iOS: Actions → Mobile Release → lane `beta` → test via TestFlight
+8. iOS: Actions → Mobile Release → lane `release` when satisfied
+
+---
+
+## 16. API Reference
+
+
+The full OpenAPI 3.1 specification is at **[`docs/api/openapi.yaml`](docs/api/openapi.yaml)**.
+
+A Postman collection is available at **[`docs/api/hhh-postman-collection.json`](docs/api/hhh-postman-collection.json)**.
+
+The interactive Swagger UI is served by the running backend at `/api/v1/docs`. The raw spec JSON is at `/api/v1/docs/openapi.json`.
+
+### Key Endpoints
+
+| Method                | Path                                                  | Auth                    | Description                                                                         |
+| --------------------- | ----------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `GET`                 | `/api/v1/health`                                      | None                    | Health check for all downstream services                                            |
+| `GET`                 | `/api/v1/docs`                                        | None                    | Swagger UI                                                                          |
+| `POST`                | `/api/v1/onboard`                                     | None (rate limited)     | Anonymous self-registration (creates Keycloak user)                                 |
+| `GET`                 | `/api/v1/surveys`                                     | JWT (participant+)      | List available surveys                                                              |
+| `POST`                | `/api/v1/habits`                                      | JWT (participant+)      | Donate a habit                                                                      |
+| `GET`                 | `/api/v1/habits`                                      | JWT (participant+)      | Retrieve donated habits                                                             |
+| `GET`                 | `/api/v1/recommendations`                             | JWT (participant+)      | Get cached recommendations                                                          |
+| `POST`                | `/api/v1/recommend`                                   | JWT (participant+)      | Request live AI recommendation                                                      |
+| `GET`                 | `/api/v1/profile`                                     | JWT (participant+)      | Get user profile                                                                    |
+| `PUT`                 | `/api/v1/profile`                                     | JWT (participant+)      | Update user profile                                                                 |
+| `GET`                 | `/api/v1/questionnaires`                              | JWT (participant+)      | List questionnaires                                                                 |
+| `POST`                | `/api/v1/questionnaire-responses`                     | JWT (participant+)      | Submit questionnaire response (links the answer to the next open scheduled window)  |
+| `POST`                | `/api/v1/onboarding/redeem-code`                      | JWT (participant)       | Redeem a study enrollment code (first-time onboarding)                              |
+| `POST`                | `/api/v1/onboarding/skip-code`                        | JWT (participant)       | Enroll in the default study (round-robin group), no code                            |
+| `GET`                 | `/api/v1/onboarding/enrollment`                       | JWT (participant)       | Current study/group, for the account screen                                         |
+| `POST`                | `/api/v1/onboarding/switch-study`                     | JWT (participant)       | Move to a different study via code, without touching already-donated data           |
+| `POST`                | `/api/v1/onboarding/leave-study`                      | JWT (participant)       | Move back to the default study ("leave study")                                      |
+| `GET/POST/PUT/DELETE` | `/api/v1/admin/studies/:id/questionnaire-assignments` | JWT (admin, researcher) | Assign a questionnaire to a study/group on a cadence; list assignments + completion |
+| `GET`                 | `/api/v1/admin/participants/:id/responses`            | JWT (admin, researcher) | A participant's questionnaire answers (for the admin answer viewer)                 |
+| `GET`                 | `/api/v1/admin/comments`                              | JWT (admin, researcher) | Paginated comment moderation list; `?status=flagged` for the review queue           |
+| `POST`                | `/api/v1/admin/comments/:id/approve`                  | JWT (admin, researcher) | Publish a flagged comment                                                           |
+| `DELETE`              | `/api/v1/admin/comments/:id`                          | JWT (admin, researcher) | Delete/reject a comment                                                             |
+| `GET/POST`            | `/api/v1/admin/*`                                     | JWT (admin, researcher) | Admin operations (participants, studies, exports)                                   |
+| `GET/POST`            | `/api/v1/kb/*`                                        | JWT (admin, researcher) | Knowledge base management                                                           |
+
+### Python API Service Endpoints
+
+All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE_SECRET`). Every route below is mounted under `/api/v1`, and each router's own path additionally starts with `/llm` — i.e. the full path for the first row is `POST /api/v1/llm/classify-habit` (`API-service/main.py`, `routers/classify_habit.py`).
+
+| Method       | Path (under `/api/v1`)         | Description                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`        | `/health`                      | Service health check                                                                                                                                                                                                                                                                                                                                                           |
+| `POST`       | `/llm/classify-habit`          | Classify whether a sentence is a habit                                                                                                                                                                                                                                                                                                                                         |
+| `POST`       | `/llm/classify-context`        | Classify habit context dimensions                                                                                                                                                                                                                                                                                                                                              |
+| `POST`       | `/llm/map-bcio`                | Map habit context to BCIO ontology concepts                                                                                                                                                                                                                                                                                                                                    |
+| `POST`       | `/llm/embed-batch`             | Batch-embed a habit + its contexts/mappings into the vector index                                                                                                                                                                                                                                                                                                              |
+| `POST`       | `/llm/extract-habits`          | Extract habits from free text                                                                                                                                                                                                                                                                                                                                                  |
+| `POST`       | `/llm/extract-profile`         | Extract user profile from text                                                                                                                                                                                                                                                                                                                                                 |
+| `POST`       | `/llm/translate-lang`          | Machine-translate a sentence to a target app language                                                                                                                                                                                                                                                                                                                          |
+| `POST`       | `/llm/refine-translation-lang` | LLM-refine a raw machine translation                                                                                                                                                                                                                                                                                                                                           |
+| `POST`       | `/llm/translate-term`          | Translate/localise a single term (e.g. a new BCIO concept label)                                                                                                                                                                                                                                                                                                               |
+| `POST`       | `/llm/stitch-intention`        | Compose an if-then implementation intention from its parts                                                                                                                                                                                                                                                                                                                     |
+| `POST`       | `/llm/retrieve`                | Retrieve relevant knowledge base entries                                                                                                                                                                                                                                                                                                                                       |
+| `GET`/`POST` | `/kb`                          | List / ingest knowledge base entries                                                                                                                                                                                                                                                                                                                                           |
+| `POST`       | `/llm/recommend`               | Generate habit recommendations — guarded goal input (prompt-injection screen + LLM refusal backstop → `422` with user-facing reason); response items carry `title · body · rationale · suggested_cue · sources` (paper citations with optional DOI links from `API-service/data/references.json`); graph provenance (`selected_habit_uuids`) is logged/stored server-side only |
+
+---
+
+## 17. Troubleshooting
+
+
+For the full operational runbook (service restart procedures, database access, backup restore, incident response), see **[`docs/runbook.md`](docs/runbook.md)**.
+
+### Top 3 Common Issues
+
+#### 1. Keycloak token validation fails (`401 Unauthorized` from the backend)
+
+**Symptoms:** Flutter app receives 401 errors; logs show JWKS fetch failure or issuer mismatch.
+
+**Causes and fixes:**
+
+- The backend's `KEYCLOAK_URL` must match the issuer in the JWT. In local development, the backend container uses `http://keycloak:8080` (Docker internal hostname) while the browser uses `http://localhost:8080`. If tokens were issued via `localhost` but validated against `keycloak`, issuer verification fails.
+- Ensure `KEYCLOAK_ISSUER` in `admin/.env` (or compose environment) uses the **internal** Docker hostname (`http://keycloak:8080/realms/hhh`), and `KEYCLOAK_BROWSER_URL` uses `http://localhost:8080` for browser redirects.
+- After a `make reset`, allow 60–90 seconds for Keycloak to fully start before the app connects.
+
+#### 2. Python API service returns `403 Forbidden`
+
+**Symptoms:** Habit classification or recommendation requests fail; logs show `Invalid or missing API service secret`.
+
+**Causes and fixes:**
+
+- The `API_SERVICE_SECRET` in the Node.js backend environment must exactly match the value in the Python service environment.
+- Verify both are set identically in `.env` (local) or Portainer (production).
+- The Python service will **refuse to start** (`RuntimeError`) if `API_SERVICE_SECRET` is not set at all — check the `recommender` container logs.
+
+#### 3. MongoDB connection timeout on startup
+
+**Symptoms:** The `app` container restarts repeatedly; logs show `MongoServerSelectionError` or connection timeout.
+
+**Causes and fixes:**
+
+- The `app` service starts before MongoDB is ready to accept connections. Docker healthchecks are configured, but `depends_on` only guarantees container start, not readiness.
+- Run `make logs-all` to watch all containers. Wait for the `mongo` container to show `Waiting for connections` before the app will connect successfully.
+- If the problem persists, run `make reset` to wipe and restart all volumes with a clean state.
+- Ensure `MONGO_USER`, `MONGO_PASSWORD`, and `MONGO_AUTH_SOURCE` in `.env` match the values used when the MongoDB volume was first initialized. Changing credentials after volume creation requires wiping the volume.
+
+---

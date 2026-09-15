@@ -111,3 +111,57 @@ value itself without the pepper.
 See [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md) for the design
 and [`docs/identity-register.md`](docs/identity-register.md) for the operator
 runbook.
+
+## Scoped researcher access
+
+The `researcher` realm role historically granted access to **every** study and
+every export, with no way to narrow it. Where a study sets
+`identity.researcherScoping = 'scoped'` — which verified studies force on, and
+which everything else leaves open — the role alone is no longer sufficient: the
+researcher must additionally be named on that study, enforced by the
+`requireStudyAccess` middleware.
+
+- Access separates **reading** a study from **exporting** it, because
+  downloading a bundle is materially more than viewing a page.
+- Grantee ids are verified against Keycloak before a membership is written. A
+  mistyped subject id is refused rather than stored — it would otherwise appear
+  in the member list as a live grant while gating access for nobody, which is
+  the hardest kind of access-control error to notice.
+- The member list is administered by admins only. The `lead` label is not a
+  capability: deciding who may read data adjacent to identifiable participants
+  is an operator decision.
+
+Rolled out deliberately narrowly. Enabling scoping globally would have revoked
+every existing researcher's access on the day it shipped; it applies exactly
+where identity data exists.
+
+## Audit trail
+
+Every mutating admin request is recorded to `admin_audit_log` — actor, action,
+resource, status, timestamp — by middleware rather than by individual handlers,
+so a route cannot silently opt out. The write cannot affect the response: it
+happens after the response is sent, and a failure is logged and dropped.
+
+Access-control changes additionally record **who** was affected and **at what
+scope**, not merely which study was touched. This was not originally true —
+detail was retained only on failed requests, so a *successful* grant recorded
+the study but neither the recipient nor their level of access, which is the one
+fact such an entry exists to preserve.
+
+## Rate limiting
+
+Limits are keyed by what the caller is: participant requests by their Keycloak
+subject, internal service-to-service calls by a constant service identity.
+
+The internal routes are budgeted as a runaway-loop backstop rather than an abuse
+control, because those callers already authenticate with a shared secret. They
+are also mounted before authentication, so an IP-derived key would place every
+participant's recommendations in a single bucket — one container, one address.
+
+**Disclosed for completeness:** every IP-keyed limiter in the backend was
+silently inert for a period. `ipKeyGenerator` expects an IP string and every
+call site passed the whole request object, which yielded a unique bucket per
+request — no error and no warning. The affected endpoints were the pre-auth,
+credential-adjacent ones (`POST /onboard`, `POST /restore`), where the limit
+*is* the control against walking the account space. Fixed, and the tests now
+drive real requests rather than asserting that the key looks plausible.
