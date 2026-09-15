@@ -16,16 +16,16 @@ German, matching the app's own strings (`mobile/lib/l10n/app_de.arb`).
 App Store Connect → *Promotional Text* (max 170 characters). Updatable without
 a new build, unlike the description.
 
-### English (141)
+### English (151)
 
 ```
-Build habits that last — and help behavioural science understand how. A research app from TU Dresden. No name, no email, no tracking profile.
+Manage your habits, and contribute to research along the way. Measured with instruments from published behavioural science. No name, no email required.
 ```
 
-### German (150)
+### German (145)
 
 ```
-Gewohnheiten aufbauen, die bleiben – und der Verhaltensforschung helfen zu verstehen, wie. Eine Forschungs-App der TU Dresden. Ohne Name, ohne E-Mail.
+Gewohnheiten managen und ganz nebenbei zur Forschung beitragen. Gemessen mit Instrumenten aus der Verhaltenswissenschaft. Ohne Name, ohne E-Mail.
 ```
 
 ---
@@ -34,16 +34,16 @@ Gewohnheiten aufbauen, die bleiben – und der Verhaltensforschung helfen zu ver
 
 Google Play Console → *Short description* (max 80 characters).
 
-### English (73)
+### English (69)
 
 ```
-Habit tracking that feeds real behavioural research. Anonymous by design.
+Manage your habits and contribute to behavioural research. Anonymous.
 ```
 
-### German (70)
+### German (67)
 
 ```
-Gewohnheiten tracken und Forschung unterstützen. Anonym von Grund auf.
+Gewohnheiten managen und zur Verhaltensforschung beitragen. Anonym.
 ```
 
 ---
@@ -53,18 +53,18 @@ Gewohnheiten tracken und Forschung unterstützen. Anonym von Grund auf.
 Both stores, max 4000 characters. Google Play renders no Markdown — the plain
 line breaks below are intentional.
 
-### English (1995)
+### English (2008)
 
 ```
-Health Habit Hub is a habit tracker built by the Digital Health research group at TU Dresden. You use it to build everyday habits. Researchers use what you choose to share to understand how habits actually form.
+Health Habit Hub is a habit tracker built by the Digital Health research group at TU Dresden. You use it to manage your everyday habits. Researchers use what you choose to share to understand how habits actually form.
 
 Both halves are real, and we would rather say so plainly than dress one up as the other.
 
 WHAT YOU GET
 
-• Track daily habits and see your streaks and progress over time
+• Track your daily habits and see, at a glance, how consistent you have been
 • Measure how automatic a habit has become, using the Self-Report Habit Index — the same instrument used in published research
-• Build new habits on top of existing ones (habit stacking) and tie them to a specific cue and moment
+• Attach a new habit to one you already have (habit stacking), tied to a specific cue and moment
 • Personalised suggestions, generated from a curated library of peer-reviewed behavioural-science papers rather than generic advice
 • Reminders at the times you choose, worded to support the intention you set
 
@@ -85,18 +85,18 @@ Health Habit Hub supports "HabConnect — from Habit to Health" and related work
 This app does not diagnose, treat, or give medical advice. If something about your health concerns you, speak to a doctor.
 ```
 
-### German (2323)
+### German (2314)
 
 ```
-Health Habit Hub ist ein Gewohnheits-Tracker der Forschungsgruppe Digital Health an der TU Dresden. Du nutzt ihn, um Alltagsgewohnheiten aufzubauen. Die Forschung nutzt das, was du freiwillig teilst, um zu verstehen, wie Gewohnheiten wirklich entstehen.
+Health Habit Hub ist ein Gewohnheits-Tracker der Forschungsgruppe Digital Health an der TU Dresden. Du nutzt ihn, um deine Gewohnheiten zu managen. Die Forschung nutzt das, was du freiwillig teilst, um zu verstehen, wie Gewohnheiten wirklich entstehen.
 
 Beides stimmt – und wir sagen das lieber deutlich, als das eine als das andere auszugeben.
 
 WAS DIE APP KANN
 
-• Tägliche Gewohnheiten festhalten und den eigenen Fortschritt über die Zeit sehen
+• Tägliche Gewohnheiten festhalten und auf einen Blick sehen, wie konsequent du warst
 • Messen, wie automatisch eine Gewohnheit geworden ist – mit dem Self-Report Habit Index, dem Instrument aus der publizierten Forschung
-• Neue Gewohnheiten an bestehende koppeln (Habit Stacking) und mit einem konkreten Auslöser und Moment verbinden
+• Eine neue Gewohnheit an eine bestehende koppeln (Habit Stacking), mit konkretem Auslöser und Moment
 • Persönliche Vorschläge, erzeugt aus einer kuratierten Sammlung begutachteter verhaltenswissenschaftlicher Fachartikel – kein allgemeiner Ratgeber-Text
 • Erinnerungen zu den Zeiten, die du wählst, formuliert passend zu deinem Vorsatz
 
@@ -119,7 +119,47 @@ Diese App stellt keine Diagnosen, behandelt nicht und gibt keine medizinischen R
 
 ---
 
-## 4. Release notes — 1.2.0
+## 4. Keywords
+
+App Store Connect → *Keywords* (max 100 characters, comma-separated).
+
+**Do not waste characters on spaces after commas, and do not repeat the app
+name.** Apple indexes the title and subtitle separately, so "health", "habit"
+and "hub" are already covered and would be dead weight here.
+
+**Google Play has no keywords field.** Its ranking reads the title, short
+description and full description, so the terms below are worked into the
+description text instead — which is why the full description says "behavioural
+science", "Self-Report Habit Index" and "reminders" in plain prose rather than
+gesturing at them.
+
+### English (97)
+
+```
+routine,tracker,behaviour,science,research,wellbeing,streak,reminder,daily,goals,psychology,study
+```
+
+### German (97)
+
+```
+Routine,Tracker,Verhalten,Wissenschaft,Forschung,Wohlbefinden,Erinnerung,Ziele,Alltag,Psychologie
+```
+
+Notes on the choices:
+
+- **`research`, `science`, `study`, `psychology`** are deliberate. The
+  scientific framing is the differentiator against the hundreds of consumer
+  habit trackers, and people looking for a study app search these words.
+- **`streak`, `reminder`, `routine`, `tracker`** cover the ordinary
+  habit-tracker vocabulary people actually type.
+- Both British and American spellings of *behaviour* cannot fit; Apple's
+  matching handles common variants, and the store locale here is primarily
+  UK/EU English.
+- Avoid competitor names — App Store review rejects listings that use them.
+
+---
+
+## 5. Release notes — 1.2.0
 
 Google Play → *What's new* (max 500 characters). App Store → *What's New in
 This Version* (max 4000; the same text is fine).
@@ -158,7 +198,7 @@ Dazu Verbesserungen bei Sicherheit und Stabilität.
 
 ---
 
-## 5. Notes for whoever updates this
+## 6. Notes for whoever updates this
 
 - **Legal URLs** the stores require are listed in
   [`DOCUMENTATION.md` §15](../../DOCUMENTATION.md#15-mobile-release--ios-and-android)
@@ -169,3 +209,9 @@ Dazu Verbesserungen bei Sicherheit und Stabilität.
   hard: most entries there are backend or admin-portal changes that no
   participant will ever notice, and listing them reads as padding.
 - Keep the German informal (**du**). The app's own strings do.
+- **The voice here follows the marketing site**, `website/src/i18n/ui.ts` — the
+  framing is *manage* / *track* your habits ("Gewohnheiten managen",
+  "Verfolge deine Gewohnheiten"), not *build* them. If the site's wording
+  changes, change it here too rather than letting the two drift.
+- Keywords are an App Store field only. On Google Play the same terms have to
+  appear in the description prose, so check both when adding one.
