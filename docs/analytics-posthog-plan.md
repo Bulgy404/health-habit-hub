@@ -1,9 +1,12 @@
 <!--
-  Design document — APPROVED, REPOSITORY SETUP COMPLETE (as of 2026-09-05).
-  Status: the deployable/configurable repository work described in the status
-  table is implemented on branch `monitoring`. No VM has been deployed or
-  contacted. Live-only activation and governance work remains deliberately
-  pending until the future VM and PostHog project exist.
+  Design document — APPROVED, VM PROVISIONED, DEPLOYMENT BLOCKED ON RAM
+  (as of 2026-09-16).
+  Status: the repository work is on `main` (analytics-vm/). The VM exists and
+  has been deployed to once, as a measurement: the stack started but exhausted
+  memory during first-run migrations. See "Provisioned spec" below. An increase
+  to 32 GB has been requested from ZIH; nothing runs until that lands.
+  Live-only activation and governance work remains pending on the PostHog
+  project existing.
   Phase 0 (recommendation lineage fix, disk/memory alerting) is independently
   valuable and can ship without the rest.
   See also: docs/identity-mode-plan.md, docs/runbook.md, DEPLOYMENT.md.
@@ -11,12 +14,12 @@
 
 # Product Analytics — self-hosted PostHog on a dedicated TU-internal VM
 
-## Implementation status (2026-09-05)
+## Implementation status (updated 2026-09-16)
 
-The repository is ready to be cloned onto an as-yet-unknown VM and configured
-without changing source code. Empty PostHog variables leave every integration
-inert, so this branch is safe to deploy to the existing stack before the
-analytics VM exists.
+The repository work is on `main` (`analytics-vm/`). Empty PostHog variables leave
+every integration inert, so `main` is safe to deploy to the existing stack while
+the analytics VM is not yet running. The VM now exists; deployment is blocked on
+the RAM increase described under [Provisioned spec](#provisioned-spec-2026-09-16--and-where-it-differs).
 
 | Area                       | Repository status                       | Evidence / remaining live action                                                                                                                                                                                                                                                                                          |
 | -------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -34,8 +37,8 @@ The following tasks cannot be truthfully completed in this repository because
 they require the future infrastructure or an administrator's live-project
 decision:
 
-1. provision the VM, mount ext4 at `/data`, and set Docker's data root;
-2. add the private firewall rules after both VM addresses are known;
+1. ~~provision the VM, mount ext4 at `/data`, and set Docker's data root~~ — **done 2026-09-16** (`habitvmmonitoring`, `172.26.52.166`); note that setting `data-root` alone is insufficient on Docker 29+, see the correction above;
+2. ~~add the private firewall rules after both VM addresses are known~~ — **done**: TCP from `habitvm` (`141.76.16.16`) for ingest, and from the Portainer host `wisedev` (`141.76.19.8`) for the agent on 9001;
 3. create the PostHog project/accounts, copy its write-only project key, enable
    2FA, and set one-year raw-event retention in PostHog;
 4. configure `.env`, the production Dart defines, and the `habitvm` stack
@@ -79,7 +82,7 @@ Plus one research-validity concern that is not a product question: **per-arm app
 
 ### Hosting — a dedicated, TU-internal VM
 
-**PostHog runs on its own VM, not on `habitvm`** (decided 2026-09-04, VM requested).
+**PostHog runs on its own VM, not on `habitvm`** (decided 2026-09-04; VM `habitvmmonitoring` provisioned 2026-09-16 at `172.26.52.166`).
 
 Sizing it separately was measurement-driven. `habitvm` has **15 GiB RAM with 3.6 GiB used by 23 containers** and 8 vCPU — PostHog would fit in the ~10 GiB available, but PostHog's documented recommendation is a _dedicated_ 4 vCPU / 16 GB / >30 GB box, and a shared host means ClickHouse competing for page cache with Neo4j's 2560-dimension vector indexes and Mongo's working set. A separate VM removes that contention entirely and, more importantly, means **analytics can never OOM the study platform**.
 
@@ -94,7 +97,28 @@ Requested spec:
 | IP / reachability | **private, TU-internal**     | See below                                                                                                                                                              |
 | OS                | Match `habitvm`'s Ubuntu LTS | One runbook, one patching routine                                                                                                                                      |
 
-**Set `/etc/docker/daemon.json` to `{"data-root": "/data/docker"}` before installing anything.** This is the single change that keeps the 50 GiB system disk from filling — it is what saved `habitvm`, where the 20 GiB root would otherwise have been overwhelmed by images and volumes.
+**Set `/etc/docker/daemon.json` to `{"data-root": "/data/docker"}` before installing anything.** This is the single change that keeps the 50 GiB system disk from filling — it is what saved `habitvm`, where the 20 GiB root would otherwise have been overwhelmed by images and volumes. **On Docker 29+ this is necessary but not sufficient** — see the correction below.
+
+### Provisioned spec (2026-09-16) — and where it differs
+
+|                   | Requested  | Delivered                                                   |
+| ----------------- | ---------- | ----------------------------------------------------------- |
+| vCPU              | 4          | **8** (over-delivered)                                       |
+| RAM               | 16 GB      | **12 GB** — below spec, and the current blocker              |
+| Systemfestplatte  | 50 GiB     | 50 GiB, split 20 G `/` + 10 G `/var` + 5 G swap              |
+| Datenfestplatte   | 200 GiB    | **500 GB**, delivered raw; partitioned and formatted ext4 at `/data` |
+| Filesystem (root) | ext4       | **btrfs**, with snapper timeline snapshots                   |
+| OS                | Ubuntu LTS | Ubuntu 24.04.5 LTS                                           |
+
+Three consequences, all accepted or resolved:
+
+- **The btrfs root could not be avoided** without a rebuild. Accepted, because `/data` — where everything heavy lives — is ext4 as specified. Snapper was capped to the limits in [runbook § 14](runbook.md#14-filesystem-maintenance) before any buildup occurred.
+- **`/var` is a separate 10 GB volume**, which `habitvm` does not have. It fills independently of `/` and belongs in the routine check.
+- **The RAM shortfall is the open blocker.** A deployment was run on 2026-09-16 purely to measure it: 37 containers idled at 8.9 GiB of 11.6 GiB usable, then first-run migrations exhausted memory — **30 OOM kills**, including `systemd` and `sd-pam`, which left the host unreachable over SSH, at a load average of 505. An increase to **32 GB** has been requested from ZIH. `analytics-vm/manage.sh doctor` gates on 16 GB and would have refused to start; do not bypass it.
+
+### Correction — `data-root` is not sufficient on Docker 29+
+
+Docker 29 defaults to the containerd image store, whose layers live under `/var/lib/containerd` — a path `data-root` does **not** govern. On the first pull this filled the 10 GB `/var` volume to 100% while `/data/docker` held 206 MB. Point containerd at the data disk as well. The same correction applies to `habitvm` the next time Docker is upgraded there. Full detail, with the Docker address-pool collision against the VM's own subnet and the `umask 077` permission trap, is in [`analytics-vm/README.md`](../analytics-vm/README.md).
 
 ### Reachability — TU-internal, ingest reverse-proxied through `habitvm`
 

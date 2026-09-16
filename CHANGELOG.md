@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Analytics VM (`habitvmmonitoring`) provisioned and prepared: ext4 data disk at
+  `/data`, Docker with relocated image storage, pinned address pools, snapper
+  capped, and the Portainer agent attached to the existing Portainer server.
+- PostHog link in the admin portal's **System & Links** page, admin-only and
+  configurable via `NEXT_PUBLIC_POSTHOG_URL` (defaults to the VM's private
+  address on port 8000, reachable from the TU network or VPN only).
+- `analytics-vm/README.md` now records the host traps found during the first
+  deployment: `data-root` is insufficient on Docker 29+, the VM subnet collides
+  with Docker's default address pool, and root's `umask` is `077`.
+
+### Changed
+
+- Merged the long-lived `monitoring` branch into `main`, bringing the
+  ingest-only Traefik route, the event registry, `productAnalyticsService` and
+  the `analytics-vm/` deployment package.
+- `docs/analytics-posthog-plan.md` updated with the provisioned spec versus the
+  requested one, and the measured memory exhaustion that blocks deployment.
+
+### Removed
+
+- Duplicate `posthog/` deployment directory, superseded by `analytics-vm/`,
+  which pins images by digest and gates on preconditions.
+
+### Known issues
+
+- The analytics VM was provisioned with 12 GB RAM against a 16 GB requirement.
+  First-run migrations exhausted memory (30 OOM kills). An increase to 32 GB has
+  been requested; the stack is stopped until then.
+
 ## [1.2.0] - 2026-09-14
 
 ### Added

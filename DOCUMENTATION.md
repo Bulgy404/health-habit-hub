@@ -58,7 +58,8 @@
 > | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
 > | [`docs/identity-mode-plan.md`](docs/identity-mode-plan.md) | Design for optional per-study verified-identity mode (clinical studies) |
 > | [`docs/identity-register.md`](docs/identity-register.md) | Operator & study-site runbook for verified-identity studies: roles, roster, codes, re-identification, erasure |
-> | [`docs/analytics-posthog-plan.md`](docs/analytics-posthog-plan.md) | Implementation status and activation plan for optional self-hosted PostHog on a dedicated private VM; repository setup is complete and remains inert until the future VM is configured |
+> | [`docs/analytics-posthog-plan.md`](docs/analytics-posthog-plan.md) | Implementation status and activation plan for optional self-hosted PostHog on a dedicated private VM; the VM exists and deployment is blocked on a RAM increase, and every integration stays inert while the PostHog variables are blank |
+> | [`analytics-vm/README.md`](analytics-vm/README.md) | Operating the analytics VM: `manage.sh`, digest pinning, backups, and the host traps found on `habitvmmonitoring` |
 > | [`docs/app-store/store-listing.md`](docs/app-store/store-listing.md) | Store listing copy (EN/DE): promotional text, descriptions, release notes, with character counts |
 > | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention, and the spring-based motion vocabulary (`AppSpring`, `PressableScale`, reduced-motion handling) |
 
@@ -258,6 +259,15 @@ health-habit-hub/
 │   └── extension.sh                # Neo4j startup extension
 │
 ├── backup-service/                 # Automated backup scripts + Dockerfile
+│
+├── monitoring/                     # Prometheus, Grafana provisioning, blackbox,
+│                                   # and the optional PostHog ingest Traefik template
+│
+├── analytics-vm/                   # Self-hosted PostHog deployment for the separate
+│   ├── manage.sh                   # analytics VM (habitvmmonitoring) — not habitvm
+│   ├── docker-compose.override.yml # Digest pins, private ports, resource limits
+│   ├── templates/compose/          # Entrypoints deploy-hobby generates upstream
+│   └── systemd/                    # Backup timer + service
 │
 ├── docs/
 │   ├── api/
