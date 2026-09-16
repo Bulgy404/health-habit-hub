@@ -79,8 +79,7 @@ final class AnalyticsContext {
 /// Privacy boundary for analytics. Unknown events, unknown keys, free-form
 /// values and unsupported property types are rejected before reaching the SDK.
 class AnalyticsService {
-  AnalyticsService._({required AnalyticsContext context, this.sink})
-    : _context = context;
+  AnalyticsService._(this._context, {this.sink});
 
   AnalyticsService.disabled()
     : sink = null,
@@ -92,13 +91,13 @@ class AnalyticsService {
 
   /// Test seam for verifying callers without initialising the native SDK.
   AnalyticsService.withSink(
-    AnalyticsSink this.sink, {
-    AnalyticsContext context = const AnalyticsContext(
+    AnalyticsSink this.sink, [
+    this._context = const AnalyticsContext(
       appVersion: '1.0.0',
       platform: 'unknown',
       locale: 'en',
     ),
-  }) : _context = context;
+  ]);
 
   final AnalyticsSink? sink;
   AnalyticsContext _context;
@@ -272,8 +271,8 @@ Future<AnalyticsService> createConfiguredAnalyticsService() async {
   try {
     await Posthog().setup(config).timeout(_analyticsOperationTimeout);
     return AnalyticsService._(
+      context,
       sink: const PostHogAnalyticsSink(),
-      context: context,
     );
   } catch (_) {
     return AnalyticsService.disabled();
