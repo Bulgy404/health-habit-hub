@@ -24,8 +24,14 @@ mkdir -p /data/posthog && cd /data/posthog
 git clone --depth 1 https://github.com/PostHog/posthog.git
 ```
 
-`POSTHOG_REPO_DIR` defaults to `/data/posthog/posthog`. Override it in Portainer
-if the clone lives elsewhere. **There is no `config-sync` equivalent here** — this
+`POSTHOG_REPO_DIR` defaults to `/data/posthog` — the **parent** of the clone, not
+the clone itself. Upstream's `deploy-hobby` copies the compose files one level
+above the checkout, so `./posthog/docker/...` paths point into it while `./share`,
+`./compose`, `./products` and `./docker/postgres-init-scripts` resolve to sibling
+directories that do not exist in a stock install either. Those four are created
+empty (they mount onto `/share`, `/compose`, `/products` and
+`/docker-entrypoint-initdb.d`, none of which shadow application code). Override
+the variable only if the clone's parent is elsewhere. **There is no `config-sync` equivalent here** — this
 clone does not self-update. Refresh it by hand before an upgrade:
 
 ```bash

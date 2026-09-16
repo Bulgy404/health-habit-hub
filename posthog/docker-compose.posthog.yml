@@ -141,37 +141,37 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/posthog/idl
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/posthog/idl
       target: /idl
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/clickhouse/docker-entrypoint-initdb.d
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/clickhouse/docker-entrypoint-initdb.d
       target: /docker-entrypoint-initdb.d
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/clickhouse/config.xml
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/clickhouse/config.xml
       target: /etc/clickhouse-server/config.xml
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/clickhouse/config.d/default.xml
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/clickhouse/config.d/default.xml
       target: /etc/clickhouse-server/config.d/default.xml
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/clickhouse/users.xml
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/clickhouse/users.xml
       target: /etc/clickhouse-server/users.xml
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/clickhouse/user_defined_function.xml
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/clickhouse/user_defined_function.xml
       target: /etc/clickhouse-server/user_defined_function.xml
       type: bind
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/posthog/user_scripts
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/posthog/user_scripts
       target: /var/lib/clickhouse/user_scripts
       type: bind
     - source: clickhouse-data
@@ -224,7 +224,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/share
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/share
       target: /share
       type: bind
   cymbal-resolution:
@@ -280,13 +280,13 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/docker/postgres-init-scripts
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/docker/postgres-init-scripts
       target: /docker-entrypoint-initdb.d
       type: bind
     - bind:
         create_host_path: true
       read_only: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/products
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/products
       target: /products
       type: bind
     - source: postgres-data
@@ -365,7 +365,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/share
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/share
       target: /share
       type: bind
   hypercache-server:
@@ -643,7 +643,7 @@ services:
     - bind:
         create_host_path: true
       read_only: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/kafka/topics.txt
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/kafka/topics.txt
       target: /topics.txt
       type: bind
   livestream:
@@ -665,7 +665,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/livestream/configs-hobby.yml
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/livestream/configs-hobby.yml
       target: /configs/configs.yml
       type: bind
   objectstorage:
@@ -816,7 +816,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/share
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/share
       target: /share
       type: bind
   property-defs-rs:
@@ -1059,7 +1059,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/posthog/docker/temporal/dynamicconfig
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/posthog/docker/temporal/dynamicconfig
       target: /etc/temporal/config/dynamicconfig
       type: bind
   temporal-admin-tools:
@@ -1163,7 +1163,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/compose
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/compose
       target: /compose
       type: bind
   temporal-ui:
@@ -1300,7 +1300,7 @@ services:
     volumes:
     - bind:
         create_host_path: true
-      source: ${POSTHOG_REPO_DIR:-/data/posthog/posthog}/compose
+      source: ${POSTHOG_REPO_DIR:-/data/posthog}/compose
       target: /compose
       type: bind
   worker:
