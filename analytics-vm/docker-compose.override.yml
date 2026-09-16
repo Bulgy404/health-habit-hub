@@ -48,7 +48,12 @@ services:
     mem_limit: 4096m
 
   kafka:
-    mem_limit: 1024m
+    # Upstream runs Redpanda with `--memory=3G --reserve-memory=500M`, and
+    # seastar refuses to start if the cgroup gives it less: "insufficient
+    # physical memory: needed 3221225472 available 500000000". 1024m was below
+    # that floor, so kafka restart-looped and every dependant stayed Created.
+    # 4096m leaves headroom above the 3G seastar demands.
+    mem_limit: 4096m
 
   kafka-init:
     mem_limit: 256m
