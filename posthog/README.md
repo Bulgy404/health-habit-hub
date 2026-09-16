@@ -38,6 +38,30 @@ clone does not self-update. Refresh it by hand before an upgrade:
 cd /data/posthog/posthog && git pull
 ```
 
+### File permissions — required, and easy to miss
+
+This VM's root account has a **`077` umask**, so anything created there is
+`drwx------` and unreadable by containers, which run as non-root (Postgres is
+uid 70). Symptom: Postgres restart-loops with
+
+```
+ls: can't open '/docker-entrypoint-initdb.d/': Permission denied
+```
+
+and the stack deploy aborts with `dependency failed to start: container
+posthog-db-1 is unhealthy`. After creating or refreshing anything under
+`/data/posthog`:
+
+```bash
+chmod -R go+rX /data/posthog
+chmod 600 /data/posthog/posthog/.env   # re-tighten, it holds POSTHOG_SECRET
+```
+
+Capital `X` adds execute to directories only, never to regular files. Grant both
+`group` and `other` — several images run as a non-root uid whose group is `0`, and
+Linux checks the first matching class, so `other`-only permissions are ignored.
+Re-run this after every `git pull` in the checkout.
+
 ### Docker storage — the containerd trap
 
 Setting `data-root` is **not sufficient on Docker 29+**. The default containerd
