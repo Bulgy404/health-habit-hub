@@ -56,9 +56,11 @@ const TOOLS: ToolLink[] = [
   {
     // TU-internal only: the analytics VM has a private IP and is deliberately
     // not published. Reachable from the TU network or VPN, never the internet.
+    // Port 8000 is POSTHOG_HTTP_PORT from analytics-vm/.env.example — the stack
+    // binds PostHog directly, there is no port-80 reverse proxy on that host.
     name: "PostHog",
     descriptionKey: "posthog",
-    url: env(process.env.NEXT_PUBLIC_POSTHOG_URL, "http://172.26.52.166"),
+    url: env(process.env.NEXT_PUBLIC_POSTHOG_URL, "http://172.26.52.166:8000"),
     Icon: PieChart,
   },
   {
