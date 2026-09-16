@@ -63,6 +63,12 @@ services:
     mem_limit: 256m
 
   objectstorage:
+    # MinIO withdrew its images from Docker Hub — `docker pull minio/minio` now
+    # fails with "repository does not exist" for every tag, which aborts the
+    # whole `compose pull`. quay.io is MinIO's own registry and carries the
+    # identical tag the pinned upstream revision asks for; digest recorded
+    # 2026-09-16.
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
     ports: !override []
     mem_limit: 512m
 
@@ -155,7 +161,10 @@ services:
       - /:/host/root:ro,rslave
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    # v0.60.5 was never published — `docker manifest inspect` returns "not
+    # found" and it aborted the whole pull. v0.52.1 is the current release on
+    # gcr.io; digest recorded 2026-09-16.
+    image: gcr.io/cadvisor/cadvisor:v0.52.1@sha256:f40e65878e25c2e78ea037f73a449527a0fb994e303dc3e34cb6b187b4b91435
     container_name: hhh-analytics-cadvisor
     restart: always
     mem_limit: 256m
