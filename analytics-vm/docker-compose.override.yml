@@ -24,7 +24,11 @@ services:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
       OPT_OUT_CAPTURE: 'true'
-    mem_limit: 1024m
+    # Django plus `bin/migrate`, which runs migrate_clickhouse. At 1024m the
+    # migration was OOM-killed by the cgroup (oomkilled=true) while the host
+    # still had 16 GiB free, so web restart-looped without ever finishing
+    # setup. Migrations are the peak; steady state sits well below this.
+    mem_limit: 3072m
 
   worker:
     environment:
@@ -48,7 +52,12 @@ services:
     mem_limit: 4096m
 
   kafka:
-    mem_limit: 1024m
+    # Upstream runs Redpanda with `--memory=3G --reserve-memory=500M`, and
+    # seastar refuses to start if the cgroup gives it less: "insufficient
+    # physical memory: needed 3221225472 available 500000000". 1024m was below
+    # that floor, so kafka restart-looped and every dependant stayed Created.
+    # 4096m leaves headroom above the 3G seastar demands.
+    mem_limit: 4096m
 
   kafka-init:
     mem_limit: 256m
@@ -63,6 +72,12 @@ services:
     mem_limit: 256m
 
   objectstorage:
+    # MinIO withdrew its images from Docker Hub — `docker pull minio/minio` now
+    # fails with "repository does not exist" for every tag, which aborts the
+    # whole `compose pull`. quay.io is MinIO's own registry and carries the
+    # identical tag the pinned upstream revision asks for; digest recorded
+    # 2026-09-16.
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
     ports: !override []
     mem_limit: 512m
 
@@ -155,7 +170,10 @@ services:
       - /:/host/root:ro,rslave
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    # v0.60.5 was never published — `docker manifest inspect` returns "not
+    # found" and it aborted the whole pull. v0.52.1 is the current release on
+    # gcr.io; digest recorded 2026-09-16.
+    image: gcr.io/cadvisor/cadvisor:v0.52.1@sha256:f40e65878e25c2e78ea037f73a449527a0fb994e303dc3e34cb6b187b4b91435
     container_name: hhh-analytics-cadvisor
     restart: always
     mem_limit: 256m

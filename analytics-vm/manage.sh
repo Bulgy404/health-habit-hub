@@ -128,6 +128,18 @@ prepare_runtime() {
   fi
 
   printf '{"revision":"%s"}\n' "$actual_revision" > "$runtime_dir/upstream-lock.json"
+
+  # Containers run as non-root (Postgres is uid 70, ClickHouse uid 101), but the
+  # ZIH VM images ship root with a 077 umask, so everything created above is
+  # drwx------ and every bind mount fails. The symptom is indirect: Postgres
+  # restart-loops on "can't open '/docker-entrypoint-initdb.d/'" and the deploy
+  # reports only "container is unhealthy". Capital X adds execute to directories
+  # only; group *and* other are granted because several images run as a non-root
+  # uid whose group is 0, and Linux checks the first matching class.
+  chmod -R go+rX "$runtime_dir"
+  # The path above runtime/ must be traversable too, or the mounts still fail.
+  chmod go+rX "$script_dir"
+
   printf 'Prepared PostHog %s in %s\n' "$actual_revision" "$runtime_dir"
 }
 
