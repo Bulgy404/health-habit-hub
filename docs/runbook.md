@@ -845,7 +845,7 @@ echo "ERROR: Services not healthy after 60s" && exit 1
 
 All critical-alert emails go to `ALERT_EMAIL` via generic SMTP (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`/`SMTP_STARTTLS` — set once in `.env`/Portainer, works with any relay/provider). Two independent delivery paths share these same credentials:
 
-![Critical alerts flow: backup runs and LLM-unavailable events fire directly from application code via alerting.py/send_smtp_mail(); BullMQ job failures, service-down, and 5xx-spike events are metric-driven through Grafana's unified alerting; both paths send to the same ALERT_EMAIL using the same SMTP credentials](docs/assets/architecture/critical-alerts-flow.svg)
+![Critical alerts flow: backup runs and LLM-unavailable events fire directly from application code via alerting.py/send_smtp_mail(); BullMQ job failures, service-down, and 5xx-spike events are metric-driven through Grafana's unified alerting; both paths send to the same ALERT_EMAIL using the same SMTP credentials](assets/architecture/critical-alerts-flow.svg)
 
 | Alert                   | Fires when                                                                                                              | Sent from                                                                                      | Debounce                                                                                                       |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
