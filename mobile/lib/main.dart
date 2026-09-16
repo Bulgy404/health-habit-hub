@@ -1,12 +1,15 @@
 /// App entry point — Firebase init + optional Sentry + Riverpod scope.
 library;
 
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'analytics/analytics_service.dart';
 import 'app.dart';
 import 'config/app_config.dart';
 import 'firebase_options.dart';
@@ -48,26 +51,33 @@ Future<void> main() async {
     // Firebase not configured — push notifications unavailable.
   }
 
+  final analytics = await createConfiguredAnalyticsService();
+  unawaited(analytics.capture('app_opened'));
+
+  Widget buildApp() => ProviderScope(
+    overrides: [analyticsProvider.overrideWithValue(analytics)],
+    child: const HhhApp(),
+  );
+
   if (_sentryDsn.isEmpty) {
-    runApp(const ProviderScope(child: HhhApp()));
+    runApp(buildApp());
     return;
   }
 
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = _sentryDsn;
-      // Privacy: never attach PII, screenshots, or view hierarchies —
-      // participants are anonymous and must stay that way in crash reports.
-      options.sendDefaultPii = false;
-      options.attachScreenshot = false;
-      // ignore: experimental_member_use
-      options.attachViewHierarchy = false;
-      options.tracesSampleRate = 0;
-      options.environment =
-          const String.fromEnvironment('APP_ENV', defaultValue: 'production');
-    },
-    appRunner: () => runApp(const ProviderScope(child: HhhApp())),
-  );
+  await SentryFlutter.init((options) {
+    options.dsn = _sentryDsn;
+    // Privacy: never attach PII, screenshots, or view hierarchies —
+    // participants are anonymous and must stay that way in crash reports.
+    options.sendDefaultPii = false;
+    options.attachScreenshot = false;
+    // ignore: experimental_member_use
+    options.attachViewHierarchy = false;
+    options.tracesSampleRate = 0;
+    options.environment = const String.fromEnvironment(
+      'APP_ENV',
+      defaultValue: 'production',
+    );
+  }, appRunner: () => runApp(buildApp()));
 }
 
 /// Shown instead of the app when a release build is missing its
@@ -92,8 +102,11 @@ class _ConfigErrorApp extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
-                      color: Color(0xFFFFB300), size: 48),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFFFB300),
+                    size: 48,
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     'Configuration error',

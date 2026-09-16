@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/analytics_service.dart';
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -98,10 +99,7 @@ Uint8List _wordsToBytes(List<String> words, int byteCount) {
 List<String> passphraseFromCredentials(String username, String password) {
   final uuidBytes = _hexToBytes(username.replaceAll('-', ''));
   final passBytes = _hexToBytes(password);
-  return [
-    ..._bytesToWords(uuidBytes, 12),
-    ..._bytesToWords(passBytes, 12),
-  ];
+  return [..._bytesToWords(uuidBytes, 12), ..._bytesToWords(passBytes, 12)];
 }
 
 /// Decodes a 24-word passphrase back into `(username UUID, password hex)`.
@@ -112,7 +110,8 @@ List<String> passphraseFromCredentials(String username, String password) {
   final uuidBytes = _wordsToBytes(words.sublist(0, 12), 16);
   final passBytes = _wordsToBytes(words.sublist(12), 16);
   final hex = _bytesToHex(uuidBytes);
-  final uuid = '${hex.substring(0, 8)}-'
+  final uuid =
+      '${hex.substring(0, 8)}-'
       '${hex.substring(8, 12)}-'
       '${hex.substring(12, 16)}-'
       '${hex.substring(16, 20)}-'
@@ -182,9 +181,9 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
   Future<void> _fetchCredentials() async {
     setState(() => _state = _ScreenState.loading);
     try {
-      final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
-        '${AppConfig.apiBaseUrl}/onboard',
-      );
+      final response = await ref
+          .read(dioProvider)
+          .post<Map<String, dynamic>>('${AppConfig.apiBaseUrl}/onboard');
       if (!mounted) return;
       final data = response.data!;
       final username = data['username'] as String;
@@ -236,6 +235,10 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
     // user-scoped providers explicitly, otherwise the new account would
     // start out showing whatever data was last loaded for a previous one.
     invalidateUserScopedProvidersFromWidget(ref);
+    final userId = await ref.read(authServiceProvider).getUserIdFromToken();
+    if (userId != null) {
+      await ref.read(analyticsProvider).identify(userId);
+    }
     if (!mounted) return;
     context.go('/onboarding/profile-setup');
   }
@@ -248,14 +251,15 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
       final consentVersion = await storage.read(key: 'consent_version');
       if (consentVersion == null) return;
       final consentLocale = await storage.read(key: 'consent_locale');
-      await ref.read(dioProvider).post<Map<String, dynamic>>(
-        '${AppConfig.apiBaseUrl}/users/me/consent',
-        data: {
-          'consentVersion': consentVersion,
-          'locale': ?consentLocale,
-        },
-        options: Options(headers: {'Authorization': 'Bearer $_accessToken'}),
-      );
+      await ref
+          .read(dioProvider)
+          .post<Map<String, dynamic>>(
+            '${AppConfig.apiBaseUrl}/users/me/consent',
+            data: {'consentVersion': consentVersion, 'locale': ?consentLocale},
+            options: Options(
+              headers: {'Authorization': 'Bearer $_accessToken'},
+            ),
+          );
     } catch (_) {
       // Offline or transient server error — consent acceptance remains
       // recorded locally in secure storage as the audit anchor.
@@ -275,27 +279,26 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
       appBar: AppBar(title: const Text('Recovery Passphrase')),
       body: switch (_state) {
         _ScreenState.loading => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          child: CircularProgressIndicator(),
+        ),
         _ScreenState.error => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline,
-                      size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(_errorMessage, textAlign: TextAlign.center),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _fetchCredentials,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(_errorMessage, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _fetchCredentials,
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
           ),
+        ),
         _ScreenState.success => _buildSuccess(),
       },
     );
@@ -330,12 +333,20 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_amber_rounded, color: Color(0xFFB45309), size: 18),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFB45309),
+                  size: 18,
+                ),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Write these 24 words down: the only way to recover your account if you lose your phone.',
-                    style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(
+                      color: Color(0xFF92400E),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -359,17 +370,26 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 20, height: 20,
+                  width: 20,
+                  height: 20,
                   decoration: BoxDecoration(
-                    color: _confirmed ? context.appColors.primary : Colors.transparent,
+                    color: _confirmed
+                        ? context.appColors.primary
+                        : Colors.transparent,
                     border: Border.all(
-                      color: _confirmed ? context.appColors.primary : const Color(0xFFD1D5DB),
+                      color: _confirmed
+                          ? context.appColors.primary
+                          : const Color(0xFFD1D5DB),
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: _confirmed
-                      ? const Icon(AppIcons.selected, size: 14, color: Colors.white)
+                      ? const Icon(
+                          AppIcons.selected,
+                          size: 14,
+                          color: Colors.white,
+                        )
                       : null,
                 ),
                 const SizedBox(width: 10),

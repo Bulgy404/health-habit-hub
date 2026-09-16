@@ -56,6 +56,23 @@ abstract final class AppConfig {
     defaultValue: kReleaseMode ? _prodWsBaseUrl : _localhostWsBaseUrl,
   );
 
+  /// Write-only PostHog project key. Empty keeps analytics completely off.
+  /// Set together with [posthogHost] after the private analytics VM and its
+  /// project have been created.
+  static const posthogProjectKey = String.fromEnvironment(
+    'POSTHOG_PROJECT_KEY',
+  );
+
+  /// Public ingest proxy URL on habitvm, ending in `/ingest`.
+  /// Never point a mobile build at the analytics VM's private address.
+  static const posthogHost = String.fromEnvironment('POSTHOG_HOST');
+
+  /// Analytics is deliberately fail-closed: partial configuration sends no
+  /// telemetry. The SDK integration can use this seam without environment-
+  /// specific conditionals elsewhere in the app.
+  static bool get analyticsConfigured =>
+      posthogProjectKey.isNotEmpty && posthogHost.isNotEmpty;
+
   /// Contact address shown on the Help & Support screen.
   static const supportEmail = String.fromEnvironment(
     'SUPPORT_EMAIL',

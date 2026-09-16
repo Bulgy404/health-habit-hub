@@ -72,6 +72,40 @@ test('createIntention: creates with status active', async () => {
   assert.ok(result.id);
 });
 
+test('createIntention: persists and serializes recommendation lineage', async () => {
+  const db = makeDb();
+  const recommendationId = 'f81d4fae-7dec-4f01-a765-00a0c91e6bf6';
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'walking',
+    behaviorLabel: 'Walking',
+    durationMinutes: 20,
+    cues: [{ text: 'After dinner', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After dinner, I will walk.',
+    sourceRecommendationId: recommendationId,
+    cueConfig: { maxHabits: null },
+  });
+
+  assert.equal(result.sourceRecommendationId, recommendationId);
+});
+
+test('createIntention: defaults recommendation lineage to null', async () => {
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'walking',
+    behaviorLabel: 'Walking',
+    durationMinutes: 20,
+    cues: [{ text: 'After dinner', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After dinner, I will walk.',
+    cueConfig: { maxHabits: null },
+  });
+
+  assert.equal(result.sourceRecommendationId, null);
+});
+
 test('createIntention: enforces maxHabits=1', async () => {
   const existing = {
     _id: new ObjectId(),

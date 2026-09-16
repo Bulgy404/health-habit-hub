@@ -9,8 +9,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'analytics/analytics_service.dart';
 import 'l10n/app_localizations.dart';
+import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
+import 'providers/study_config_provider.dart';
 import 'providers/theme_provider.dart';
 import 'router/app_router.dart';
 import 'theme/app_colors.dart';
@@ -258,9 +261,7 @@ ThemeData _buildDarkTheme() {
       color: kDarkSurface,
       elevation: 1,
       shadowColor: const Color(0x40000000),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: kDarkSurface,
@@ -289,12 +290,54 @@ ThemeData _buildDarkTheme() {
 ///
 /// Reads [routerProvider], [themeModeProvider], and [localeProvider] from
 /// Riverpod and wires them into [MaterialApp.router].
-class HhhApp extends ConsumerWidget {
+class HhhApp extends ConsumerStatefulWidget {
   /// Creates the root application widget.
   const HhhApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HhhApp> createState() => _HhhAppState();
+}
+
+class _HhhAppState extends ConsumerState<HhhApp> {
+  @override
+  void initState() {
+    super.initState();
+    final analytics = ref.read(analyticsProvider);
+    if (!analytics.enabled) return;
+
+    ref.listenManual(localeProvider, (previous, next) {
+      analytics.setLocale(next.languageCode);
+    }, fireImmediately: true);
+
+    ref.listenManual(userIdProvider, (previous, next) {
+      next.whenData((userId) {
+        if (userId == null) {
+          analytics.reset();
+          return;
+        }
+        final study = ref.read(studyConfigProvider).value;
+        analytics.identify(
+          userId,
+          studyId: study?.studyId,
+          groupId: study?.groupId,
+        );
+      });
+    }, fireImmediately: true);
+    ref.listenManual(studyConfigProvider, (previous, next) {
+      next.whenData((study) {
+        final userId = ref.read(userIdProvider).value;
+        if (userId == null) return;
+        analytics.identify(
+          userId,
+          studyId: study?.studyId,
+          groupId: study?.groupId,
+        );
+      });
+    }, fireImmediately: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // ── State reads ───────────────────────────────────────────────────────────
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);

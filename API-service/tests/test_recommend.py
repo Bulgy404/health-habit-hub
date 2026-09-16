@@ -124,6 +124,7 @@ async def test_recommend_returns_valid_response():
             )
 
     assert resp.status_code == 200
+    assert resp.headers["x-hhh-recommendation-cache"] == "miss"
     data = resp.json()
     assert "recommendation_id" in data
     assert data["goal"] == "improve fitness"
@@ -269,6 +270,7 @@ async def test_recommend_cache_hit_skips_pipeline():
 
     assert resp.status_code == 200
     assert resp.json()["recommendation_id"] == "cached-id-123"
+    assert resp.headers["x-hhh-recommendation-cache"] == "hit"
     mock_search.assert_not_called()
     mock_llm.assert_not_called()
 
