@@ -1110,6 +1110,10 @@ services:
         NEXT_PUBLIC_REDIS_INSIGHT_URL: https://${DOMAIN}/redisinsight
         NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser/
         NEXT_PUBLIC_BULL_BOARD_URL: https://${DOMAIN}/queues
+        # PostHog runs on the separate TU-internal analytics VM, so this is a
+        # private address and port, not a path under ${DOMAIN}. The admin UI is
+        # never proxied through the public domain — see analytics-vm/README.md.
+        NEXT_PUBLIC_POSTHOG_URL: ${NEXT_PUBLIC_POSTHOG_URL:-http://172.26.52.166:8000}
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -1139,6 +1143,7 @@ services:
       - NEXT_PUBLIC_PROMETHEUS_URL=https://${DOMAIN}/prometheus
       - NEXT_PUBLIC_REDIS_INSIGHT_URL=https://${DOMAIN}/redisinsight
       - NEXT_PUBLIC_NEO4J_BROWSER_URL=https://${DOMAIN}/neo4j/browser/
+      - NEXT_PUBLIC_POSTHOG_URL=${NEXT_PUBLIC_POSTHOG_URL:-http://172.26.52.166:8000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
