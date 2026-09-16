@@ -1383,6 +1383,35 @@ all HHH runtime data). The layout is documented in
 [DEPLOYMENT.md § 7](../DEPLOYMENT.md#7-server-storage-layout). Databases live on
 `/data`; the 20 GB root holds only the OS and the config clone.
 
+### Applies to both hosts
+
+Since 2026-09-16 there are **two** machines, and this section applies to both.
+`habitvmmonitoring` (the PostHog analytics VM, `172.26.52.166`) was provisioned
+with the **same btrfs root and the same snapper defaults** as `habitvm`, so the
+free-space trap below will recur there identically if left alone.
+
+| | `habitvm` | `habitvmmonitoring` |
+|---|---|---|
+| Address | `141.76.16.16` (public) | `172.26.52.166/22` (TU-internal only) |
+| `/` | btrfs, 20 GB | btrfs, 20 GB |
+| `/var` | on `main`, btrfs | **separate 10 GB btrfs volume** |
+| `/data` | ext4, 1 TB | ext4, 492 GB (`/dev/sdb`, label `hhh-data`) |
+| Docker `data-root` | `/data/docker` | `/data/docker` |
+| Admin access | `ssh habitvm`, sudo by password | `ssh root@habitvmmonitoring` (key-only) |
+
+Two differences worth remembering. `habitvmmonitoring` has a **separate 10 GB
+`/var`** — journald, apt and the Checkmk agent live there, and it fills
+independently of `/`, so include it in the routine check. And its root account
+is reachable **by SSH key directly** (`PermitRootLogin prohibit-password`),
+because ZIH provisioned the box with no password on the `service` account.
+
+Its snapper limits were capped on 2026-09-16 to the values under
+[Prevention](#prevention--cap-snapper) below, at which point `/` had 5.98 GiB
+unallocated. Docker's address pools there are also pinned in
+`/etc/docker/daemon.json` to `172.17`–`172.23`, because the host's own subnet
+(`172.26.52.0/22`) falls inside Docker's default `172.17.0.0/12` pool and a
+bridge allocated there would blackhole the machine's own default gateway.
+
 ### The btrfs free-space trap on `/`
 
 **`df` is misleading on btrfs, and the number that actually matters is
