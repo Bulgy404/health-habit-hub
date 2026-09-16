@@ -24,7 +24,11 @@ services:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
       OPT_OUT_CAPTURE: 'true'
-    mem_limit: 1024m
+    # Django plus `bin/migrate`, which runs migrate_clickhouse. At 1024m the
+    # migration was OOM-killed by the cgroup (oomkilled=true) while the host
+    # still had 16 GiB free, so web restart-looped without ever finishing
+    # setup. Migrations are the peak; steady state sits well below this.
+    mem_limit: 3072m
 
   worker:
     environment:

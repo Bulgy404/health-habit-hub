@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
-./compose/wait
+/compose/wait
 ./bin/migrate
 ./bin/docker-server
