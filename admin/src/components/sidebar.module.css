@@ -120,6 +120,27 @@
      background now comes from .navActivePill, not this rule), so that part
      is gated. */
   transition: color var(--dur-fast) var(--ease-standard);
+  /* German compounds overflow the 240px sidebar as one unbreakable word:
+     "Einwilligungsdokumente" measures 164.2px in the 160px the label gets
+     after padding, icon and gap. The text spilled past the link box while
+     .navActivePill — inset:0 of that box — stayed behind it, so the active
+     item looked half-highlighted.
+
+     `overflow-wrap: anywhere` is load-bearing and `break-word` is NOT a
+     substitute: break-word permits a break but does not reduce the text's
+     min-content width, so the flex item refuses to shrink and the measurement
+     is unchanged at 164.2px. `anywhere` does reduce it, wrapping to two lines
+     and 156.1px, and the link grows taller so the pill grows with it.
+     hyphens:auto is kept for locales where it gives a nicer break point;
+     it made no measurable difference to this particular word. */
+  min-width: 0;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+/* Keep the icon at its intrinsic size when the label wraps to a second line. */
+.navLink > svg {
+  flex-shrink: 0;
 }
 
 @media (hover: hover) and (pointer: fine) {
