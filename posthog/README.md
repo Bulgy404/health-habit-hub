@@ -24,6 +24,28 @@ mkdir -p /data/posthog && cd /data/posthog
 git clone --depth 1 https://github.com/PostHog/posthog.git
 ```
 
+### The generated `compose/` entrypoints
+
+`web` and `temporal-django-worker` run `/compose/start` and
+`/compose/temporal-django-worker`. **These scripts are not in PostHog's repo** —
+upstream's `deploy-hobby` writes them at install time, so a Git-deployed stack can
+never produce them. Without them the deploy fails with:
+
+```
+exec: "/compose/start": stat /compose/start: no such file or directory
+```
+
+Copies are kept in `posthog/compose/` here. Place them next to the clone:
+
+```bash
+mkdir -p /data/posthog/compose
+# copy start, temporal-django-worker and wait from posthog/compose/ in this repo
+chmod 755 /data/posthog/compose/*
+```
+
+Re-check these after a PostHog upgrade — if upstream changes what `deploy-hobby`
+writes, these copies go stale silently.
+
 `POSTHOG_REPO_DIR` defaults to `/data/posthog` — the **parent** of the clone, not
 the clone itself. Upstream's `deploy-hobby` copies the compose files one level
 above the checkout, so `./posthog/docker/...` paths point into it while `./share`,
