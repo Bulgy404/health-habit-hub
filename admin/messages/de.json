@@ -124,6 +124,7 @@
     "descriptions": {
       "keycloak": "Nutzer, Rollen und Sitzungen in der Keycloak-Konsole verwalten",
       "grafana": "Dashboards & Metrik-Visualisierung",
+      "posthog": "Produktanalyse — Funnels, Retention & Event-Stream (TU-Netz oder VPN erforderlich)",
       "prometheus": "Rohmetriken, Ziele & Alarmierung",
       "neo4jBrowser": "Graphdaten — Nutzer, Gewohnheiten, Studien, Spenden",
       "mongoExpress": "MongoDB-Sammlungen — Teilnehmende, Antworten, Protokolle",

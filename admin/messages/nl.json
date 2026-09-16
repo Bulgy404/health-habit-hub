@@ -78,6 +78,7 @@
     "descriptions": {
       "keycloak": "Gebruikers, rollen en sessies beheren in de Keycloak-console",
       "grafana": "Dashboards & visualisatie van meetgegevens",
+      "posthog": "Productanalyse — funnels, retentie & event-stream (TU-netwerk of VPN vereist)",
       "prometheus": "Ruwe meetgegevens, targets & alarmering",
       "neo4jBrowser": "Grafiekgegevens — gebruikers, gewoontes, studies, donaties",
       "mongoExpress": "MongoDB-collecties — deelnemers, antwoorden, logs",
