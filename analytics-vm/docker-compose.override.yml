@@ -24,11 +24,14 @@ services:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
       OPT_OUT_CAPTURE: 'true'
-    # Django plus `bin/migrate`, which runs migrate_clickhouse. At 1024m the
-    # migration was OOM-killed by the cgroup (oomkilled=true) while the host
-    # still had 16 GiB free, so web restart-looped without ever finishing
-    # setup. Migrations are the peak; steady state sits well below this.
-    mem_limit: 3072m
+    # NGINX Unit runs a hardcoded 4 Python app processes (the image's
+    # /docker-entrypoint.d config sets "processes": 4; there is no env var for
+    # it), measured at roughly 1062 + 750 + 437 + 432 MB RSS. 1024m killed the
+    # migrate_clickhouse step outright; 3072m got through migrations but the
+    # app processes kept being SIGKILLed afterwards — 58 signal-9 events, still
+    # climbing at 6 per 75s, with the container pinned at 85% of its cap while
+    # the host had 14 GiB free.
+    mem_limit: 5120m
 
   worker:
     environment:
