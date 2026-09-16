@@ -1472,7 +1472,10 @@ because ZIH provisioned the box with no password on the `service` account.
 
 Its snapper limits were capped on 2026-09-16 to the values under
 [Prevention](#prevention--cap-snapper) below, at which point `/` had 5.98 GiB
-unallocated. Docker's address pools there are also pinned in
+unallocated. The PostHog deployment itself lives in
+[`analytics-vm/`](../analytics-vm/README.md), whose README carries the
+host-specific traps found on this machine (containerd storage, umask, address
+pools, RAM). Docker's address pools there are also pinned in
 `/etc/docker/daemon.json` to `172.17`–`172.23`, because the host's own subnet
 (`172.26.52.0/22`) falls inside Docker's default `172.17.0.0/12` pool and a
 bridge allocated there would blackhole the machine's own default gateway.

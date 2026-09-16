@@ -67,6 +67,63 @@ openssl rand -hex 16  # ENCRYPTION_SALT_KEYS
 Keep `.env` and the Docker volumes out of Git and in the VM backup. Never rotate
 `POSTHOG_SECRET` or `ENCRYPTION_SALT_KEYS` on a running deployment.
 
+## Host findings from habitvmmonitoring (2026-09-16)
+
+Measured on the provisioned VM. Each of these broke a deployment attempt.
+
+### `data-root` alone is not enough on Docker 29+
+
+Docker 29 defaults to the containerd image store, and image layers live under
+`/var/lib/containerd`, which **`data-root` does not govern**. Setting
+`data-root` to `/data/docker` and pulling filled the 10 GB `/var` volume to 100%
+while `/data/docker` held 206 MB. Point containerd at the data disk too, then
+verify after any Docker upgrade:
+
+```bash
+df -h /var /data && readlink -f /var/lib/containerd
+```
+
+### Pin Docker's address pools
+
+The VM's own subnet is `172.26.52.0/22`, which falls **inside** Docker's default
+`172.17.0.0/12` pool. A bridge allocated there blackholes the host's own default
+gateway. Pin them in `/etc/docker/daemon.json`:
+
+```json
+{ "default-address-pools": [
+  { "base": "172.17.0.0/16", "size": 24 },
+  { "base": "172.18.0.0/15", "size": 24 },
+  { "base": "172.20.0.0/14", "size": 24 }
+] }
+```
+
+A default bridge that comes up as `/24` rather than `/16` confirms it took.
+
+### Root's umask is 077 on ZIH VMs
+
+Everything created as root is `drwx------`, and containers run as non-root
+(Postgres is uid 70). Symptom: Postgres restart-loops on
+`ls: can't open '/docker-entrypoint-initdb.d/': Permission denied`, surfacing
+only as "container is unhealthy". After creating or refreshing anything the
+stack bind-mounts:
+
+```bash
+chmod -R go+rX <path>
+chmod 600 <path>/.env   # re-tighten, it holds POSTHOG_SECRET
+```
+
+Capital `X` adds execute to directories only. Grant `group` **and** `other` —
+several images run as a non-root uid whose group is `0`, and Linux checks the
+first matching class.
+
+### The 16 GB check in `doctor` is not conservative
+
+The VM was provisioned with **12 GB** (11.6 GiB usable), below `doctor`'s
+threshold. Started anyway for measurement: 37 containers idled at 8.9 GiB, then
+first-run migrations exhausted memory — **30 OOM kills** (including `systemd`
+and `sd-pam`, which made the host unreachable by SSH) and a load average of 505.
+An increase to 32 GB has been requested. Do not bypass `doctor` on this point.
+
 ## Connect habitvm after the address is known
 
 Set these in the main stack environment and redeploy only the main stack:

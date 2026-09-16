@@ -252,7 +252,7 @@ describe("SystemPage", () => {
     expect(hrefs).toEqual([
       "http://localhost:8080/admin/master/console/#/hhh",
       "http://grafana.localhost",
-      "http://172.26.52.166",
+      "http://172.26.52.166:8000",
       "http://localhost:9090",
       "http://localhost:3000/queues",
       "http://localhost:5540",
