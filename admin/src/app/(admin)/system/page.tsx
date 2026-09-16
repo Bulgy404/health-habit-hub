@@ -19,6 +19,7 @@ import {
   ListChecks,
   Layers,
   KeyRound,
+  PieChart,
   type LucideIcon,
 } from "lucide-react";
 import { API_BASE_URL, apiUrl, apiFetch } from "@/lib/api";
@@ -51,6 +52,14 @@ const TOOLS: ToolLink[] = [
     descriptionKey: "grafana",
     url: env(process.env.NEXT_PUBLIC_GRAFANA_URL, "http://grafana.localhost"),
     Icon: BarChart3,
+  },
+  {
+    // TU-internal only: the analytics VM has a private IP and is deliberately
+    // not published. Reachable from the TU network or VPN, never the internet.
+    name: "PostHog",
+    descriptionKey: "posthog",
+    url: env(process.env.NEXT_PUBLIC_POSTHOG_URL, "http://172.26.52.166"),
+    Icon: PieChart,
   },
   {
     name: "Prometheus",
