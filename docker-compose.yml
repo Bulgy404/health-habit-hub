@@ -1348,7 +1348,11 @@ services:
   # access to the host cgroups and Docker metadata; it has no published port and
   # is reachable only by Prometheus on hhh-proxy.
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    # v0.60.5 was never published — the tag resolves to "not found" and, because
+    # one bad image aborts the whole pull, it blocks redeploying the entire
+    # stack. v0.52.1 is the current release on gcr.io; digest recorded
+    # 2026-09-16. Same fix as analytics-vm/docker-compose.override.yml.
+    image: gcr.io/cadvisor/cadvisor:v0.52.1@sha256:f40e65878e25c2e78ea037f73a449527a0fb994e303dc3e34cb6b187b4b91435
     container_name: hhh-cadvisor
     restart: always
     mem_limit: 256m
