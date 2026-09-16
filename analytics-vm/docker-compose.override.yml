@@ -1,0 +1,195 @@
+# Health Habit Hub security/resource overrides for PostHog's official hobby
+# Compose stack. This file is always loaded after the pinned upstream files by
+# manage.sh. `!override` requires Docker Compose 2.24.4 or newer.
+
+x-node-service-limits: &node-service-limits
+  mem_limit: 768m
+
+x-small-service-limits: &small-service-limits
+  mem_limit: 384m
+
+services:
+  # The only PostHog application port reachable from another host. Caddy uses
+  # plain HTTP on the private network; habitvm terminates public TLS and exposes
+  # only the ingest allowlist. Never set POSTHOG_BIND_ADDRESS to a public bind.
+  proxy:
+    ports: !override
+      - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:${POSTHOG_HTTP_PORT:-8000}:80'
+    environment:
+      CADDY_TLS_BLOCK: ''
+      CADDY_HOST: ':80'
+    mem_limit: 256m
+
+  web:
+    environment:
+      SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
+      OPT_OUT_CAPTURE: 'true'
+    mem_limit: 1024m
+
+  worker:
+    environment:
+      SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
+    mem_limit: 1024m
+
+  temporal-django-worker:
+    environment:
+      SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
+    mem_limit: 768m
+
+  asyncmigrationscheck:
+    environment:
+      SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
+    mem_limit: 512m
+
+  db:
+    mem_limit: 1536m
+
+  clickhouse:
+    mem_limit: 4096m
+
+  kafka:
+    mem_limit: 1024m
+
+  kafka-init:
+    mem_limit: 256m
+
+  zookeeper:
+    mem_limit: 512m
+
+  redis7:
+    mem_limit: 384m
+
+  valkey:
+    mem_limit: 256m
+
+  objectstorage:
+    ports: !override []
+    mem_limit: 512m
+
+  seaweedfs:
+    ports: !override []
+    mem_limit: 512m
+
+  temporal:
+    ports: !override []
+    mem_limit: 512m
+
+  temporal-ui:
+    ports: !override []
+    mem_limit: 256m
+
+  elasticsearch:
+    mem_limit: 1024m
+
+  browserless:
+    mem_limit: 768m
+
+  plugins:
+    <<: *node-service-limits
+  ingestion-general:
+    <<: *node-service-limits
+  ingestion-sessionreplay:
+    <<: *small-service-limits
+  recording-api:
+    <<: *small-service-limits
+  ingestion-error-tracking:
+    <<: *small-service-limits
+  ingestion-logs:
+    <<: *small-service-limits
+  ingestion-traces:
+    <<: *small-service-limits
+
+  capture:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/capture:master@sha256:7869522e4b65cf618a85af3d1dd04854c3b31dd9304af5ce8716020223ed30da
+  capture-logs:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/capture-logs:master@sha256:e152db09a4bab345e5bd938b744cbcc2145105e374ebec26f8d7464da64657e0
+  replay-capture:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/capture:master@sha256:7869522e4b65cf618a85af3d1dd04854c3b31dd9304af5ce8716020223ed30da
+  property-defs-rs:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/property-defs-rs:master@sha256:6a3e9808b333fd6885665ee7677ade961cefba792254be276571128724890234
+  livestream:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/livestream:master@sha256:6926f340b72d609e43cee5aa8b75a85cfdc77d182e610dafafdd81d3b2ab53f5
+  personhog-replica:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/personhog-replica:master@sha256:e9a73dfacd5e0fb84919dc2aa58b2010e586a9e17b28a37620d6bdf65cc43776
+  personhog-router:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/personhog-router:master@sha256:cb5a8f0652a3b4860f9ec73080b75d1bdcd4014e1417dccad19b79a13578931a
+  feature-flags:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/feature-flags:master@sha256:3d9671d9856b7316b2d73ccc3dc3188266c54b79209f27f7453918ac42d74a37
+  hypercache-server:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/hypercache-server:master@sha256:e9009448fb256c2ea37d0df3bced559656330c6c0bc9678e9b4ec1d5facfb1ac
+  cymbal:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/cymbal:master@sha256:7a7ddc13690f87777b2dc7e3f66c4677a14f060470268d2f33141a1fb7edf2cc
+  cymbal-resolution:
+    <<: *small-service-limits
+    image: ghcr.io/posthog/posthog/cymbal:master@sha256:7a7ddc13690f87777b2dc7e3f66c4677a14f060470268d2f33141a1fb7edf2cc
+  temporal-admin-tools:
+    <<: *small-service-limits
+
+  # Exporters are part of the analytics-VM package but do not publish to all
+  # interfaces. The habitvm firewall should be the only allowed source.
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.12.1
+    container_name: hhh-analytics-node-exporter
+    restart: always
+    mem_limit: 128m
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/host/root
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|run/docker/netns/.+)($|/)
+    ports:
+      - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:9100:9100'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    container_name: hhh-analytics-cadvisor
+    restart: always
+    mem_limit: 256m
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    ports:
+      - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:8080:8080'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
+  # One-shot operational helper. It shares ClickHouse's data mounts so
+  # clickhouse-backup can create a consistent snapshot, but it is never part
+  # of the normal `up` service set because the `ops` profile is opt-in.
+  clickhouse-backup:
+    image: altinity/clickhouse-backup:2.7.0@sha256:2714c3df5137e93b23a3e45054c95183e1e0abce21e688e9274cd82c8ea56225
+    profiles: [ops]
+    restart: 'no'
+    mem_limit: 512m
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USERNAME: '${CLICKHOUSE_USER:-default}'
+      CLICKHOUSE_PASSWORD: '${CLICKHOUSE_PASSWORD:-}'
+      REMOTE_STORAGE: none
+      BACKUPS_TO_KEEP_LOCAL: 2
+    volumes_from:
+      - clickhouse
+    volumes:
+      - '${ANALYTICS_BACKUP_DIR:-/data/posthog-backups}:/backup-output'
+    depends_on:
+      clickhouse:
+        condition: service_healthy

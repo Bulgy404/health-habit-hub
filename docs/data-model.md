@@ -140,21 +140,21 @@ graph.
 (:QuestionnaireResponse)-[:HAS_ANSWER {value, rawValue}]->(:QuestionnaireItem)
 ```
 
-| Node / edge | Notes |
-| --- | --- |
-| `Questionnaire` | One per definition, keyed by `slug` (constraint `questionnaire_slug`). `title`/`version` mirror MongoDB. |
-| `QuestionnaireItem` | One per question. Keyed by a synthetic `uid = "<slug>::<itemId>"` (constraint `questionnaire_item_uid`) — a single-property key because composite/NODE KEY constraints are Enterprise-only. `adhoc: true` marks an answer key that wasn't in the definition. |
+| Node / edge             | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Questionnaire`         | One per definition, keyed by `slug` (constraint `questionnaire_slug`). `title`/`version` mirror MongoDB.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `QuestionnaireItem`     | One per question. Keyed by a synthetic `uid = "<slug>::<itemId>"` (constraint `questionnaire_item_uid`) — a single-property key because composite/NODE KEY constraints are Enterprise-only. `adhoc: true` marks an answer key that wasn't in the definition.                                                                                                                                                                                                                                                                                                                                        |
 | `QuestionnaireResponse` | **One node per completion**, so repeated fills form a time series. `responseId` is the MongoDB `form_responses._id` (constraint `questionnaire_response_id`), which makes the sync idempotent on retry. For **recurring** questionnaires, `occurrence` (1, 2, 3 …) and `scheduledFor` come from the closed `questionnaire_windows` document, so a series can be analysed **by study week** rather than only by calendar date. Both are `null` for ad-hoc submissions that had no open window. Because `submittedAt` stays the real fill time, comparing it to `scheduledFor` identifies late fills. |
-| `HAS_ANSWER` | `value` is the numeric score when the answer parses as a number, else `null`; `rawValue` always keeps the original answer, so free-text and multi-select are preserved. |
+| `HAS_ANSWER`            | `value` is the numeric score when the answer parses as a number, else `null`; `rawValue` always keeps the original answer, so free-text and multi-select are preserved.                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 **Who writes what**
 
-| Writer | Responsibility |
-| --- | --- |
-| `services/enrollmentNeo4j.js:syncStudy` | `Study` node + `HAS_QUESTIONNAIRE` edges (driven by assignment changes via `questionnaireScheduleService.syncStudyQuestionnaireGraph`) |
-| `db/questionnaireQueries.js:syncQuestionnaireDefinition` | `Questionnaire` + its `QuestionnaireItem` nodes; prunes items dropped from the definition |
-| `db/questionnaireQueries.js:createQuestionnaireResponse` | `QuestionnaireResponse` + `SUBMITTED` / `FOR_QUESTIONNAIRE` / `HAS_ANSWER` |
-| `services/questionnaireGraphSync.js` | Startup reconcile of all definitions, plus per-questionnaire sync from the admin CRUD handlers (so admin-created questionnaires appear immediately) |
+| Writer                                                   | Responsibility                                                                                                                                      |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `services/enrollmentNeo4j.js:syncStudy`                  | `Study` node + `HAS_QUESTIONNAIRE` edges (driven by assignment changes via `questionnaireScheduleService.syncStudyQuestionnaireGraph`)              |
+| `db/questionnaireQueries.js:syncQuestionnaireDefinition` | `Questionnaire` + its `QuestionnaireItem` nodes; prunes items dropped from the definition                                                           |
+| `db/questionnaireQueries.js:createQuestionnaireResponse` | `QuestionnaireResponse` + `SUBMITTED` / `FOR_QUESTIONNAIRE` / `HAS_ANSWER`                                                                          |
+| `services/questionnaireGraphSync.js`                     | Startup reconcile of all definitions, plus per-questionnaire sync from the admin CRUD handlers (so admin-created questionnaires appear immediately) |
 
 Graph writes are **best-effort and non-blocking** — a Neo4j outage never fails a
 participant's submission, and the startup reconcile self-heals drift.
@@ -656,39 +656,39 @@ collections with no direct foreign-key relationships shown here).
 
 ### 3.1 Collections Overview
 
-| Collection                    | Primary Purpose                                                                                                                                                                             | Soft-Delete?                 |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `participants`                | Admin-created participant accounts                                                                                                                                                          | Yes (`deletedAt`)            |
-| `profiles`                    | Participant profile questionnaire answers                                                                                                                                                   | No                           |
-| `surveys`                     | Survey definitions (created by admin)                                                                                                                                                       | No                           |
-| `survey_responses`            | Completed survey answers                                                                                                                                                                    | No                           |
-| `habit_donations`             | Habit donation log (denormalized from Neo4j)                                                                                                                                                | No                           |
-| `habit_annotations`           | Anonymous crowd annotations (helpful / iDoThis)                                                                                                                                             | No                           |
-| `admin_settings`              | Key-value platform configuration                                                                                                                                                            | No                           |
-| `recommendations_log`         | Accepted/dismissed recommendation events (legacy)                                                                                                                                           | No                           |
-| `users`                       | Per-user preferences (preferredLanguage)                                                                                                                                                    | No                           |
-| `deviceTokens`                | FCM push-token registrations — one document per participant device                                                                                                                          | No                           |
-| `questionnaires`              | Questionnaire definitions (slug, title, questions)                                                                                                                                          | No                           |
-| `form_responses`              | Questionnaire form submissions (answers) from participants                                                                                                                                  | No                           |
-| `studies`                     | Research studies: groups, feature toggles, end date + end-of-study notification                                                                                                             | Yes (`isActive`/`deletedAt`) |
-| `questionnaire_assignments`   | Questionnaire assigned to a study (all groups) or a specific group, with a cadence                                                                                                          | No                           |
-| `questionnaire_windows`       | Per-participant scheduled questionnaire occurrences + completion state                                                                                                                      | No                           |
-| `enrollments`                 | Read-side mirror of each participant's _current_ study/group (source of truth is Neo4j `ENROLLED_IN`); powers dropout export, admin stats, notification targeting, questionnaire scheduling | No                           |
-| `recommendations`             | Recommendation records from the Python recommender                                                                                                                                          | No                           |
-| `recommendation_feedback`     | Free-text feedback on individual recommendations                                                                                                                                            | No                           |
-| `habits`                      | Non-habit submissions saved for manual review                                                                                                                                               | No                           |
-| `implementation_intentions`   | Habit plans created by DFG study participants                                                                                                                                               | No                           |
-| `daily_behavior_logs`         | Per-intention daily enactment logs                                                                                                                                                          | No                           |
-| `srhi_responses`              | Weekly SRHI habit-strength measurements                                                                                                                                                     | No                           |
-| `cue_pools`                   | Pre-rated contextual cues for study conditions                                                                                                                                              | No                           |
-| `notification_campaigns`      | Researcher-composed push notification campaigns                                                                                                                                             | No                           |
-| `consents`                    | Informed-consent acceptances (append-only audit trail, versioned; `documentSlug` distinguishes the platform document from a study-specific one — `consentVersion` is a bare semver, so without it a study's `1.0.0` would satisfy a check for the platform's)                                                                                                                           | No                           |
-| `habit_comments`              | Comment-ownership mapping (author of anonymous Neo4j Comment nodes)                                                                                                                         | No                           |
-| `backup_audit_log`            | Append-only record of admin backup trigger/restore/upload actions                                                                                                                           | No                           |
-| `restore_confirmation_tokens` | Short-lived, single-use tokens gating an **admin system-backup** restore call (TTL-indexed)                                                                                                 | No                           |
-| `restore_attempts`            | Security log of **participant passphrase-based account-recovery** attempts (unrelated to the collection above despite the similar name — TTL-indexed)                                       | No                           |
-| `study_memberships`           | Per-study researcher access. Required only where a study's `identity.researcherScoping` is `scoped`, which verified studies force on; `scope` separates reading a study from exporting it   | No                           |
-| `study_consent_documents`     | Study-specific consent text authored in the admin portal, one row per (`slug`, `lang`). **Overrides** the shipped `app/language/<lang>/consent-<slug>.md`; deleting the row falls back to it | No                           |
+| Collection                    | Primary Purpose                                                                                                                                                                                                                                               | Soft-Delete?                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `participants`                | Admin-created participant accounts                                                                                                                                                                                                                            | Yes (`deletedAt`)            |
+| `profiles`                    | Participant profile questionnaire answers                                                                                                                                                                                                                     | No                           |
+| `surveys`                     | Survey definitions (created by admin)                                                                                                                                                                                                                         | No                           |
+| `survey_responses`            | Completed survey answers                                                                                                                                                                                                                                      | No                           |
+| `habit_donations`             | Habit donation log (denormalized from Neo4j)                                                                                                                                                                                                                  | No                           |
+| `habit_annotations`           | Anonymous crowd annotations (helpful / iDoThis)                                                                                                                                                                                                               | No                           |
+| `admin_settings`              | Key-value platform configuration                                                                                                                                                                                                                              | No                           |
+| `recommendations_log`         | Legacy, unwritten collection retained only for historical compatibility. Adoption now comes from `implementation_intentions.sourceRecommendationId`; product events live in PostHog.                                                                          | No                           |
+| `users`                       | Per-user preferences (preferredLanguage)                                                                                                                                                                                                                      | No                           |
+| `deviceTokens`                | FCM push-token registrations — one document per participant device                                                                                                                                                                                            | No                           |
+| `questionnaires`              | Questionnaire definitions (slug, title, questions)                                                                                                                                                                                                            | No                           |
+| `form_responses`              | Questionnaire form submissions (answers) from participants                                                                                                                                                                                                    | No                           |
+| `studies`                     | Research studies: groups, feature toggles, end date + end-of-study notification                                                                                                                                                                               | Yes (`isActive`/`deletedAt`) |
+| `questionnaire_assignments`   | Questionnaire assigned to a study (all groups) or a specific group, with a cadence                                                                                                                                                                            | No                           |
+| `questionnaire_windows`       | Per-participant scheduled questionnaire occurrences + completion state                                                                                                                                                                                        | No                           |
+| `enrollments`                 | Read-side mirror of each participant's _current_ study/group (source of truth is Neo4j `ENROLLED_IN`); powers dropout export, admin stats, notification targeting, questionnaire scheduling                                                                   | No                           |
+| `recommendations`             | Recommendation records from the Python recommender                                                                                                                                                                                                            | No                           |
+| `recommendation_feedback`     | Free-text feedback on individual recommendations                                                                                                                                                                                                              | No                           |
+| `habits`                      | Non-habit submissions saved for manual review                                                                                                                                                                                                                 | No                           |
+| `implementation_intentions`   | Habit plans created by DFG study participants                                                                                                                                                                                                                 | No                           |
+| `daily_behavior_logs`         | Per-intention daily enactment logs                                                                                                                                                                                                                            | No                           |
+| `srhi_responses`              | Weekly SRHI habit-strength measurements                                                                                                                                                                                                                       | No                           |
+| `cue_pools`                   | Pre-rated contextual cues for study conditions                                                                                                                                                                                                                | No                           |
+| `notification_campaigns`      | Researcher-composed push notification campaigns                                                                                                                                                                                                               | No                           |
+| `consents`                    | Informed-consent acceptances (append-only audit trail, versioned; `documentSlug` distinguishes the platform document from a study-specific one — `consentVersion` is a bare semver, so without it a study's `1.0.0` would satisfy a check for the platform's) | No                           |
+| `habit_comments`              | Comment-ownership mapping (author of anonymous Neo4j Comment nodes)                                                                                                                                                                                           | No                           |
+| `backup_audit_log`            | Append-only record of admin backup trigger/restore/upload actions                                                                                                                                                                                             | No                           |
+| `restore_confirmation_tokens` | Short-lived, single-use tokens gating an **admin system-backup** restore call (TTL-indexed)                                                                                                                                                                   | No                           |
+| `restore_attempts`            | Security log of **participant passphrase-based account-recovery** attempts (unrelated to the collection above despite the similar name — TTL-indexed)                                                                                                         | No                           |
+| `study_memberships`           | Per-study researcher access. Required only where a study's `identity.researcherScoping` is `scoped`, which verified studies force on; `scope` separates reading a study from exporting it                                                                     | No                           |
+| `study_consent_documents`     | Study-specific consent text authored in the admin portal, one row per (`slug`, `lang`). **Overrides** the shipped `app/language/<lang>/consent-<slug>.md`; deleting the row falls back to it                                                                  | No                           |
 
 ---
 
@@ -983,16 +983,16 @@ the original one-document-per-participant behavior — and gets deleted the
 next time that same participant registers with a `deviceId` (i.e. once their
 app updates), so it never lingers as a stale, unidentifiable device.
 
-| Field         | BSON Type      | Required | Description                                                                                                  |
-| ------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `_id`         | ObjectId       | Auto     | MongoDB document ID                                                                                             |
-| `userId`      | String         | Yes      | Keycloak `sub` of the participant this device belongs to                                                        |
-| `deviceId`    | String \| null | No       | Stable per-device identifier — `identifierForVendor` on iOS, `ANDROID_ID` on Android. Absent on legacy documents |
-| `token`       | String         | Yes      | Current FCM push token for this device                                                                          |
-| `platform`    | String \| null | No       | `"ios"`, `"android"`, or `"web"` — absent on legacy documents                                                   |
-| `model`       | String \| null | No       | Device model string. iOS: raw hardware identifier from `utsname.machine` (e.g. `"iPhone16,1"` — no human-readable name is available from the plugin without an external lookup table). Android: `AndroidDeviceInfo.model` (already human-readable, e.g. `"Pixel 8"`) |
-| `appVersion`  | String \| null | No       | `"<version>+<buildNumber>"`, e.g. `"1.1.1+5"` — matches the format used in `CHANGELOG.md`                       |
-| `updatedAt`   | Date           | Yes      | Last time this device (re-)registered — drives the admin Devices modal's "last seen" and push-target freshness  |
+| Field        | BSON Type      | Required | Description                                                                                                                                                                                                                                                          |
+| ------------ | -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`        | ObjectId       | Auto     | MongoDB document ID                                                                                                                                                                                                                                                  |
+| `userId`     | String         | Yes      | Keycloak `sub` of the participant this device belongs to                                                                                                                                                                                                             |
+| `deviceId`   | String \| null | No       | Stable per-device identifier — `identifierForVendor` on iOS, `ANDROID_ID` on Android. Absent on legacy documents                                                                                                                                                     |
+| `token`      | String         | Yes      | Current FCM push token for this device                                                                                                                                                                                                                               |
+| `platform`   | String \| null | No       | `"ios"`, `"android"`, or `"web"` — absent on legacy documents                                                                                                                                                                                                        |
+| `model`      | String \| null | No       | Device model string. iOS: raw hardware identifier from `utsname.machine` (e.g. `"iPhone16,1"` — no human-readable name is available from the plugin without an external lookup table). Android: `AndroidDeviceInfo.model` (already human-readable, e.g. `"Pixel 8"`) |
+| `appVersion` | String \| null | No       | `"<version>+<buildNumber>"`, e.g. `"1.1.1+5"` — matches the format used in `CHANGELOG.md`                                                                                                                                                                            |
+| `updatedAt`  | Date           | Yes      | Last time this device (re-)registered — drives the admin Devices modal's "last seen" and push-target freshness                                                                                                                                                       |
 
 **Example document:**
 
@@ -1015,15 +1015,15 @@ app updates), so it never lingers as a stale, unidentifiable device.
 
 Questionnaire definitions. Loaded from seed data or admin tooling. Only documents with `active: true` are returned to clients.
 
-| Field         | BSON Type | Required | Description                                         |
-| ------------- | --------- | -------- | --------------------------------------------------- |
-| `_id`         | ObjectId  | Auto     | MongoDB document ID                                 |
-| `slug`        | String    | Yes      | URL-safe identifier (e.g. `sliq`, `rand-36`)        |
-| `title`       | String    | Yes      | Human-readable questionnaire title                  |
-| `description` | String    | No       | Short description shown to participants             |
-| `version`     | String    | Yes      | Schema version string (e.g. `"1.0"`)                |
-| `questions`   | Array     | Yes      | Array of question objects (type, id, text, options) |
-| `active`      | Boolean   | Yes      | `true` means visible to participants                |
+| Field         | BSON Type | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `_id`         | ObjectId  | Auto     | MongoDB document ID                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `slug`        | String    | Yes      | URL-safe identifier (e.g. `sliq`, `rand-36`)                                                                                                                                                                                                                                                                                                                                                                             |
+| `title`       | String    | Yes      | Human-readable questionnaire title                                                                                                                                                                                                                                                                                                                                                                                       |
+| `description` | String    | No       | Short description shown to participants                                                                                                                                                                                                                                                                                                                                                                                  |
+| `version`     | String    | Yes      | Schema version string (e.g. `"1.0"`)                                                                                                                                                                                                                                                                                                                                                                                     |
+| `questions`   | Array     | Yes      | Array of question objects (type, id, text, options)                                                                                                                                                                                                                                                                                                                                                                      |
+| `active`      | Boolean   | Yes      | `true` means visible to participants                                                                                                                                                                                                                                                                                                                                                                                     |
 | `scope`       | String    | No       | `study` (default) — anchored to enrollment, applies once per participant. `habit` — anchored to each habit's creation (+~5s), applies once per habit. `donation` — never auto-assigned/windowed; offered ad-hoc immediately after a habit donation when selected as a study/group's `donationQuestionnaireSlug` (see `habit_donations` below). Drives how `questionnaire_assignments.cadence` is interpreted; see below. |
 
 **SRHI is not a document in this collection.** It used to be (`slug: 'srhi'`,
@@ -1041,7 +1041,7 @@ document and `questionnaire_assignments` rows from databases seeded before
 this change — a stale assignment referencing a deleted `questionnaireId`
 would otherwise resolve to no scope and get treated as study-scoped by the
 generic pipeline, leaking SRHI back into enrollment-anchored windows.
-Any *other* `scope: 'habit'` questionnaire an admin defines still goes
+Any _other_ `scope: 'habit'` questionnaire an admin defines still goes
 through the normal library + assignment flow described below.
 
 ---
@@ -1050,13 +1050,13 @@ through the normal library + assignment flow described below.
 
 Questionnaire responses submitted by participants via `POST /api/v1/questionnaire-responses`.
 
-| Field               | BSON Type | Required | Description                                  |
-| ------------------- | --------- | -------- | -------------------------------------------- |
-| `_id`               | ObjectId  | Auto     | MongoDB document ID                          |
-| `userId`            | String    | Yes      | Keycloak `sub` of the submitting participant |
-| `questionnaireSlug` | String    | Yes      | Slug of the completed questionnaire          |
-| `answers`           | Object    | Yes      | Map of `questionId → answer value`           |
-| `submitted_at`      | Date      | Yes      | Timestamp of submission                      |
+| Field               | BSON Type | Required | Description                                                                                                                                                                                                                                                                                                                                                |
+| ------------------- | --------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`               | ObjectId  | Auto     | MongoDB document ID                                                                                                                                                                                                                                                                                                                                        |
+| `userId`            | String    | Yes      | Keycloak `sub` of the submitting participant                                                                                                                                                                                                                                                                                                               |
+| `questionnaireSlug` | String    | Yes      | Slug of the completed questionnaire                                                                                                                                                                                                                                                                                                                        |
+| `answers`           | Object    | Yes      | Map of `questionId → answer value`                                                                                                                                                                                                                                                                                                                         |
+| `submitted_at`      | Date      | Yes      | Timestamp of submission                                                                                                                                                                                                                                                                                                                                    |
 | `habitUuid`         | String    | No       | Only present for a post-donation questionnaire fill (see `habit_donations` below) — the same `uuid` as the donated habit's Neo4j `Habit` node. Set only after server-side verification that the caller owns a matching, not-yet-answered `habit_donations` record for that slug; a submission carrying an invalid/reused `habitUuid` is stored without it. |
 
 Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at router startup.
@@ -1109,20 +1109,20 @@ in the route handler, before classification runs (whether synchronous or via
 the BullMQ worker), so it exists regardless of the eventual accept/reject
 outcome.
 
-| Field                     | BSON Type      | Required | Description                                                                                                          |
-| -------------------------- | -------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
-| `_id`                     | ObjectId       | Auto     |                                                                                                                       |
-| `uuid`                    | String         | Yes      | Matches the Neo4j `Habit.uuid` for this donation                                                                     |
-| `userId`                  | String         | Yes      | Keycloak `sub` of the donating user                                                                                  |
-| `studyId` / `groupId`     | String \| null | No       | Resolved from the user's enrollment at donation time                                                                 |
-| `inputMode`               | String         | Yes      | `"freeText"`, `"structured"`, or `"voice"` — how the habit sentence was entered                                      |
-| `isHabit`                 | Boolean \| null | No      | The classifier's verdict, set best-effort once known (`null` until then — the queued/async donation path only learns this after the initial response is already sent) |
-| `transcript`              | String \| null | No       | Raw speech-to-text output, only for `inputMode: "voice"` — the transcribe endpoint itself is stateless, so the client resends this once alongside the (possibly-edited) final `sentence` at submit time |
-| `transcriptEdited`        | Boolean \| null | No      | Whether the participant edited the transcript before submitting                                                      |
-| `audioClip`               | Object \| null | No       | `{filename, mimeType, sizeBytes, durationSec, storedAt}` — set once the recorded audio is uploaded via `POST /habits/donations/:uuid/audio`, after the donation itself is already submitted |
-| `questionnaireSlug`       | String \| null | No       | Which pool questionnaire (if any) was offered after this donation, resolved from the study/group's `donationQuestionnaireSlug` at submit time |
-| `questionnaireResponseId` | ObjectId \| null | No     | Set once the linked `form_responses` document lands (see above)                                                      |
-| `createdAt` / `updatedAt` | Date           | Yes      |                                                                                                                       |
+| Field                     | BSON Type        | Required | Description                                                                                                                                                                                             |
+| ------------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`                     | ObjectId         | Auto     |                                                                                                                                                                                                         |
+| `uuid`                    | String           | Yes      | Matches the Neo4j `Habit.uuid` for this donation                                                                                                                                                        |
+| `userId`                  | String           | Yes      | Keycloak `sub` of the donating user                                                                                                                                                                     |
+| `studyId` / `groupId`     | String \| null   | No       | Resolved from the user's enrollment at donation time                                                                                                                                                    |
+| `inputMode`               | String           | Yes      | `"freeText"`, `"structured"`, or `"voice"` — how the habit sentence was entered                                                                                                                         |
+| `isHabit`                 | Boolean \| null  | No       | The classifier's verdict, set best-effort once known (`null` until then — the queued/async donation path only learns this after the initial response is already sent)                                   |
+| `transcript`              | String \| null   | No       | Raw speech-to-text output, only for `inputMode: "voice"` — the transcribe endpoint itself is stateless, so the client resends this once alongside the (possibly-edited) final `sentence` at submit time |
+| `transcriptEdited`        | Boolean \| null  | No       | Whether the participant edited the transcript before submitting                                                                                                                                         |
+| `audioClip`               | Object \| null   | No       | `{filename, mimeType, sizeBytes, durationSec, storedAt}` — set once the recorded audio is uploaded via `POST /habits/donations/:uuid/audio`, after the donation itself is already submitted             |
+| `questionnaireSlug`       | String \| null   | No       | Which pool questionnaire (if any) was offered after this donation, resolved from the study/group's `donationQuestionnaireSlug` at submit time                                                           |
+| `questionnaireResponseId` | ObjectId \| null | No       | Set once the linked `form_responses` document lands (see above)                                                                                                                                         |
+| `createdAt` / `updatedAt` | Date             | Yes      |                                                                                                                                                                                                         |
 
 **Audio storage.** The audio file itself is not stored in this document (or
 in MongoDB at all) — it's written to a Docker volume mounted into the `app`
@@ -1141,22 +1141,22 @@ row in `docs/architecture.md`.
 
 A research study/cohort: its experiment groups, participant-facing feature toggles, and lifecycle (end date + end-of-study notification). Managed via `.../admin/studies`.
 
-| Field                      | BSON Type         | Required | Description                                                                                                                                                        |
-| -------------------------- | ----------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `_id`                      | ObjectId          | Auto     | Study ID                                                                                                                                                           |
-| `name`                     | String            | Yes      | Human-readable study name                                                                                                                                          |
-| `description`              | String            | No       |                                                                                                                                                                    |
-| `isDefault`                | Boolean           | Yes      | At most one study may be default (partial-unique index); used for round-robin enrollment without a study code                                                      |
-| `isActive`                 | Boolean           | Yes      | Soft-delete flag                                                                                                                                                   |
-| `recommenderEnabled`       | Boolean           | No       | Absence = enabled. When `false`, participants don't see the recommender screen                                                                                     |
-| `onboardingEnabled`        | Boolean           | No       | Absence = enabled. Per-group override in `groups[].onboardingEnabled`                                                                                              |
-| `selfHabitCreationEnabled` | Boolean           | No       | Absence = enabled. Per-group override in `groups[].selfHabitCreationEnabled`                                                                                       |
-| `reminders`                | Object            | No       | `{ habit, questionnaire, endOfStudy, studyUpdate }` — see **Reminders** below. Per-group override in `groups[].reminders`                                          |
-| `endDate`                  | Date \| null      | No       | When set, the study concludes on this date; the admin schedule calendar stops projecting occurrences past it                                                       |
-| `endOfStudyNotification`   | Object \| null    | No       | `{ title, body }` — **content only**; whether/when it fires is `reminders.endOfStudy` above. Defaults to a generic title/body                                      |
-| `groups`                   | Array             | Yes      | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminders, autoDonate, onboardingEnabled, selfHabitCreationEnabled }` |
-| `questionnaires`           | Array\<ObjectId\> | Yes      | @deprecated — superseded by `questionnaire_assignments.active` as the single source of truth for which questionnaires apply to a study. No longer written by the admin UI; kept only for backward-compat reads of old data                                    |
-| `createdAt` / `updatedAt`  | Date              | Yes      | Timestamps                                                                                                                                                         |
+| Field                      | BSON Type         | Required | Description                                                                                                                                                                                                                |
+| -------------------------- | ----------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`                      | ObjectId          | Auto     | Study ID                                                                                                                                                                                                                   |
+| `name`                     | String            | Yes      | Human-readable study name                                                                                                                                                                                                  |
+| `description`              | String            | No       |                                                                                                                                                                                                                            |
+| `isDefault`                | Boolean           | Yes      | At most one study may be default (partial-unique index); used for round-robin enrollment without a study code                                                                                                              |
+| `isActive`                 | Boolean           | Yes      | Soft-delete flag                                                                                                                                                                                                           |
+| `recommenderEnabled`       | Boolean           | No       | Absence = enabled. When `false`, participants don't see the recommender screen                                                                                                                                             |
+| `onboardingEnabled`        | Boolean           | No       | Absence = enabled. Per-group override in `groups[].onboardingEnabled`                                                                                                                                                      |
+| `selfHabitCreationEnabled` | Boolean           | No       | Absence = enabled. Per-group override in `groups[].selfHabitCreationEnabled`                                                                                                                                               |
+| `reminders`                | Object            | No       | `{ habit, questionnaire, endOfStudy, studyUpdate }` — see **Reminders** below. Per-group override in `groups[].reminders`                                                                                                  |
+| `endDate`                  | Date \| null      | No       | When set, the study concludes on this date; the admin schedule calendar stops projecting occurrences past it                                                                                                               |
+| `endOfStudyNotification`   | Object \| null    | No       | `{ title, body }` — **content only**; whether/when it fires is `reminders.endOfStudy` above. Defaults to a generic title/body                                                                                              |
+| `groups`                   | Array             | Yes      | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminders, autoDonate, onboardingEnabled, selfHabitCreationEnabled }`                                                         |
+| `questionnaires`           | Array\<ObjectId\> | Yes      | @deprecated — superseded by `questionnaire_assignments.active` as the single source of truth for which questionnaires apply to a study. No longer written by the admin UI; kept only for backward-compat reads of old data |
+| `createdAt` / `updatedAt`  | Date              | Yes      | Timestamps                                                                                                                                                                                                                 |
 
 **Reminders.** Each of the 4 types (`habit`, `questionnaire`, `endOfStudy`,
 `studyUpdate`) is `{ mode, time }`:
@@ -1216,18 +1216,18 @@ want to query Neo4j directly. Unlike `ENROLLED_IN`, this collection does
 **not** keep history: switching or leaving a study overwrites the same
 document in place rather than creating a new one.
 
-| Field           | BSON Type      | Required | Description                                                                                                                                                                                                                                                                         |
-| --------------- | -------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `_id`           | ObjectId       | Auto     | Enrollment ID                                                                                                                                                                                                                                                                       |
-| `userId`        | String         | Yes      | Keycloak `sub`. Unique index — one document per user                                                                                                                                                                                                                                |
-| `studyId`       | ObjectId       | Yes      | Ref to `studies._id` — the participant's _current_ study                                                                                                                                                                                                                            |
-| `groupId`       | ObjectId       | Yes      | Ref to `studies.groups[].id`                                                                                                                                                                                                                                                        |
-| `studyCodeUsed` | String \| null | No       | The code redeemed to join the current study; `null` if enrolled via round-robin (no code)                                                                                                                                                                                           |
+| Field           | BSON Type      | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------- | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`           | ObjectId       | Auto     | Enrollment ID                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `userId`        | String         | Yes      | Keycloak `sub`. Unique index — one document per user                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `studyId`       | ObjectId       | Yes      | Ref to `studies._id` — the participant's _current_ study                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `groupId`       | ObjectId       | Yes      | Ref to `studies.groups[].id`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `studyCodeUsed` | String \| null | No       | The code redeemed to join the current study; `null` if enrolled via round-robin (no code)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `subjectCode`   | String \| null | No       | **Verified-identity studies only.** The study-local pseudonym issued by the identity register (e.g. `TUD-DFG01-0042`) — the join key researchers see instead of the raw Keycloak `sub`. **NOT unique:** a participant who loses their recovery passphrase gets a new account under the same subject code, so analyses must group rather than assume one row per subject. For verified enrolments `studyCodeUsed` is deliberately `null`: the `HHV-` code is 1:1 with a subject, so storing it would create a correlator between the research database and the register |
-| `enrolledAt`    | Date           | Yes      | When the _current_ study/group membership began (reset on every switch/leave)                                                                                                                                                                                                       |
-| `lastActiveAt`  | Date \| null   | No       | Updated on each daily log write (`touchEnrollmentActivity`)                                                                                                                                                                                                                         |
-| `droppedOutAt`  | Date \| null   | No       | Reserved for a future "paused within current study" state; switching/leaving always immediately re-enrolls elsewhere rather than leaving this set, so it's rarely non-null in practice — the real per-study dropout history lives on `ENROLLED_IN` relationships in Neo4j, not here |
-| `cueConfig`     | Object \| null | No       | Resolved cue config cache; reset to `null` on switch/leave so it re-resolves against the new study/group                                                                                                                                                                            |
+| `enrolledAt`    | Date           | Yes      | When the _current_ study/group membership began (reset on every switch/leave)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `lastActiveAt`  | Date \| null   | No       | Updated on each daily log write (`touchEnrollmentActivity`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `droppedOutAt`  | Date \| null   | No       | Reserved for a future "paused within current study" state; switching/leaving always immediately re-enrolls elsewhere rather than leaving this set, so it's rarely non-null in practice — the real per-study dropout history lives on `ENROLLED_IN` relationships in Neo4j, not here                                                                                                                                                                                                                                                                                    |
+| `cueConfig`     | Object \| null | No       | Resolved cue config cache; reset to `null` on switch/leave so it re-resolves against the new study/group                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 Upserted (not just updated) by `_upsertMongoEnrollment()` on every
 enroll/switch/leave call, so it self-heals if it was ever missing —
@@ -1242,27 +1242,27 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 (all groups); a group id restricts / overrides it for that group. Managed via
 `.../admin/studies/:id/questionnaire-assignments`.
 
-| Field                     | BSON Type        | Required | Description                                                    |
-| ------------------------- | ---------------- | -------- | -------------------------------------------------------------- |
-| `_id`                     | ObjectId         | Auto     | Assignment ID                                                  |
-| `studyId`                 | ObjectId         | Yes      | Ref to `studies._id`                                           |
-| `groupId`                 | ObjectId \| null | Yes      | Ref to `studies.groups[].id`; `null` = all groups (study-wide) |
-| `questionnaireId`         | ObjectId         | Yes      | Ref to `questionnaires._id`                                    |
-| `questionnaireSlug`       | String           | Yes      | Denormalised slug (matches `form_responses.questionnaireSlug`) |
-| `questionnaireTitle`      | String           | Yes      | Denormalised title (for admin display)                         |
-| `cadence`                 | Object           | Yes      | Schedule — see below                                           |
+| Field                     | BSON Type        | Required | Description                                                                                                                                                                                         |
+| ------------------------- | ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`                     | ObjectId         | Auto     | Assignment ID                                                                                                                                                                                       |
+| `studyId`                 | ObjectId         | Yes      | Ref to `studies._id`                                                                                                                                                                                |
+| `groupId`                 | ObjectId \| null | Yes      | Ref to `studies.groups[].id`; `null` = all groups (study-wide)                                                                                                                                      |
+| `questionnaireId`         | ObjectId         | Yes      | Ref to `questionnaires._id`                                                                                                                                                                         |
+| `questionnaireSlug`       | String           | Yes      | Denormalised slug (matches `form_responses.questionnaireSlug`)                                                                                                                                      |
+| `questionnaireTitle`      | String           | Yes      | Denormalised title (for admin display)                                                                                                                                                              |
+| `cadence`                 | Object           | Yes      | Schedule — see below                                                                                                                                                                                |
 | `active`                  | Boolean          | Yes      | The single on/off flag for this questionnaire in this study — gates both availability and whether windows are generated. Never defaulted `true` automatically; an admin must explicitly turn it on. |
-| `createdAt` / `updatedAt` | Date             | Yes      | Timestamps                                                     |
+| `createdAt` / `updatedAt` | Date             | Yes      | Timestamps                                                                                                                                                                                          |
 
 **Cadence** is one of two shapes:
 
 - **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences, continuous? }`. Due dates = `anchor + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1` (see **Scope & anchor** below for what "anchor" means). When `continuous: true`, `occurrences` is ignored and windows are generated on a rolling basis instead of a fixed count — see **Continuous delivery** below.
 - **Fixed** — `{ mode: "fixed", weeks?: number[], days?: number[] }`. Due dates = the union of `week·7` and exact `day` offsets after the anchor (week 0 / day 0 = the anchor itself).
 
-**Scope & anchor.** The questionnaire *definition*'s `scope` field (see `questionnaires` above) determines what "anchor" means for a given assignment's cadence:
+**Scope & anchor.** The questionnaire _definition_'s `scope` field (see `questionnaires` above) determines what "anchor" means for a given assignment's cadence:
 
 - `scope: 'study'` (default) — anchored at the participant's **enrollment**. `startOffsetDays` ("first due") is admin-editable. Windows are generated per participant (`intentionId: null`).
-- `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below), via `generateHabitCreationWindows`. SRHI is *not* an assignment at all — see the note in `questionnaires` above — it uses a completely separate, unconditional pipeline (`srhiService.generateWindows`, writing to `srhi_responses`) invoked directly by `POST /habits/intentions`, with no `questionnaire_assignments` row and no scope check.
+- `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below), via `generateHabitCreationWindows`. SRHI is _not_ an assignment at all — see the note in `questionnaires` above — it uses a completely separate, unconditional pipeline (`srhiService.generateWindows`, writing to `srhi_responses`) invoked directly by `POST /habits/intentions`, with no `questionnaire_assignments` row and no scope check.
 
 **Continuous delivery.** A `continuous: true` interval cadence never generates all its windows upfront — only a rolling buffer capped at 12 future/open windows at a time (`CONTINUOUS_TOPUP_CAP`). The buffer is topped back up to 12 opportunistically whenever a window is submitted (`markWindowSubmitted`) or when the participant's due-list is read (`getDueQuestionnaires`), extending from the last existing window's `scheduledFor` rather than recomputing from the original enrollment/habit-creation date.
 
@@ -1301,20 +1301,20 @@ per habit (`generateHabitCreationWindows`, called from `POST
 /habits/intentions`) — never backfilled for existing habits when an
 assignment is newly created/activated.
 
-| Field               | BSON Type        | Required | Description                                            |
-| ------------------- | ---------------- | -------- | ------------------------------------------------------ |
-| `_id`               | ObjectId         | Auto     | Window ID                                              |
-| `userId`            | String           | Yes      | Keycloak `sub`                                         |
-| `studyId`           | ObjectId         | Yes      | Ref to `studies._id`                                   |
-| `groupId`           | ObjectId \| null | Yes      | Participant's group at generation time                 |
-| `assignmentId`      | ObjectId         | Yes      | Ref to `questionnaire_assignments._id`                 |
-| `questionnaireId`   | ObjectId         | Yes      | Ref to `questionnaires._id`                            |
-| `questionnaireSlug` | String           | Yes      | Denormalised slug                                      |
-| `occurrence`        | Int              | Yes      | 1-based index within the assignment's schedule         |
+| Field               | BSON Type        | Required | Description                                                                                                                                                                    |
+| ------------------- | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `_id`               | ObjectId         | Auto     | Window ID                                                                                                                                                                      |
+| `userId`            | String           | Yes      | Keycloak `sub`                                                                                                                                                                 |
+| `studyId`           | ObjectId         | Yes      | Ref to `studies._id`                                                                                                                                                           |
+| `groupId`           | ObjectId \| null | Yes      | Participant's group at generation time                                                                                                                                         |
+| `assignmentId`      | ObjectId         | Yes      | Ref to `questionnaire_assignments._id`                                                                                                                                         |
+| `questionnaireId`   | ObjectId         | Yes      | Ref to `questionnaires._id`                                                                                                                                                    |
+| `questionnaireSlug` | String           | Yes      | Denormalised slug                                                                                                                                                              |
+| `occurrence`        | Int              | Yes      | 1-based index within the assignment's schedule                                                                                                                                 |
 | `intentionId`       | ObjectId \| null | No       | Set only for `scope: 'habit'` windows — the `implementation_intentions._id` this per-habit window series belongs to; `null` for `scope: 'study'` (enrollment-anchored) windows |
-| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset` for study-scoped, or habit `createdAt + ~5s + offset` for habit-scoped windows) |
-| `submittedAt`       | Date \| null     | Yes      | When completed (null = open)                           |
-| `responseId`        | ObjectId \| null | Yes      | Ref to the `form_responses` entry it was answered with |
+| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset` for study-scoped, or habit `createdAt + ~5s + offset` for habit-scoped windows)                                                                |
+| `submittedAt`       | Date \| null     | Yes      | When completed (null = open)                                                                                                                                                   |
+| `responseId`        | ObjectId \| null | Yes      | Ref to the `form_responses` entry it was answered with                                                                                                                         |
 
 Unique index on `(userId, assignmentId, occurrence, intentionId)` — `intentionId` is part
 of the key so a habit-scoped questionnaire's per-habit window series (multiple occurrences
@@ -1373,25 +1373,27 @@ These five collections are created and managed by the DFG study module. They sha
 
 One document per implementation intention (habit plan) created by a user.
 
-| Field                | Type           | Description                                                                                                          |
-| -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `_id`                | ObjectId       |                                                                                                                      |
-| `userId`             | String         | Keycloak `sub`                                                                                                       |
-| `enrollmentId`       | ObjectId\|null | Links to enrollment if study participant                                                                             |
-| `studyId`            | ObjectId\|null |                                                                                                                      |
-| `groupId`            | ObjectId\|null |                                                                                                                      |
-| `behaviorKey`        | String         | e.g. `"walking"`                                                                                                     |
-| `behaviorLabel`      | String         | e.g. `"Walking"`                                                                                                     |
-| `durationMinutes`    | Int            | Target session duration                                                                                              |
-| `cues`               | Array          | `[{text, source, cueId?}]` — 1 or 2 cues; source: `"pre_rated"` or `"self_selected"`                                 |
-| `intentionStatement` | String         | Full if-then statement e.g. `"After dinner, I will walk for 20 minutes."`                                            |
-| `cadence`            | Object\|null   | `{type: "daily"\|"weekly", targetPerWeek: Int\|null}` (§13.6 in DOCUMENTATION.md). Absent on documents created before this field existed — read `normalizeCadence()`'s output, not this field directly; do not confuse with the unrelated `questionnaire_assignments.cadence` field above (SRHI check-in scheduling, not a habit's own target frequency) |
-| `reminderTime`       | String\|null   | Daily reminder time `HH:mm` chosen at creation; frequency fades via the adaptive reminder plan (see architecture.md) |
-| `status`             | String         | `"active"`, `"paused"`, `"completed"`, `"abandoned"`                                                                 |
-| `createdAt`          | Date           |                                                                                                                      |
-| `updatedAt`          | Date           |                                                                                                                      |
+| Field                    | Type           | Description                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_id`                    | ObjectId       |                                                                                                                                                                                                                                                                                                                                                          |
+| `userId`                 | String         | Keycloak `sub`                                                                                                                                                                                                                                                                                                                                           |
+| `enrollmentId`           | ObjectId\|null | Links to enrollment if study participant                                                                                                                                                                                                                                                                                                                 |
+| `studyId`                | ObjectId\|null |                                                                                                                                                                                                                                                                                                                                                          |
+| `groupId`                | ObjectId\|null |                                                                                                                                                                                                                                                                                                                                                          |
+| `behaviorKey`            | String         | e.g. `"walking"`                                                                                                                                                                                                                                                                                                                                         |
+| `behaviorLabel`          | String         | e.g. `"Walking"`                                                                                                                                                                                                                                                                                                                                         |
+| `durationMinutes`        | Int            | Target session duration                                                                                                                                                                                                                                                                                                                                  |
+| `cues`                   | Array          | `[{text, source, cueId?}]` — 1 or 2 cues; source: `"pre_rated"` or `"self_selected"`                                                                                                                                                                                                                                                                     |
+| `intentionStatement`     | String         | Full if-then statement e.g. `"After dinner, I will walk for 20 minutes."`                                                                                                                                                                                                                                                                                |
+| `cadence`                | Object\|null   | `{type: "daily"\|"weekly", targetPerWeek: Int\|null}` (§13.6 in DOCUMENTATION.md). Absent on documents created before this field existed — read `normalizeCadence()`'s output, not this field directly; do not confuse with the unrelated `questionnaire_assignments.cadence` field above (SRHI check-in scheduling, not a habit's own target frequency) |
+| `reminderTime`           | String\|null   | Daily reminder time `HH:mm` chosen at creation; frequency fades via the adaptive reminder plan (see architecture.md)                                                                                                                                                                                                                                     |
+| `status`                 | String         | `"active"`, `"paused"`, `"completed"`, `"abandoned"`                                                                                                                                                                                                                                                                                                     |
+| `createdAt`              | Date           |                                                                                                                                                                                                                                                                                                                                                          |
+| `updatedAt`              | Date           |                                                                                                                                                                                                                                                                                                                                                          |
+| `sourceRecommendationId` | String\|null   | UUID v4 of the recommendation that opened this creation flow; absent/null for independently created habits. This is the authoritative adoption lineage and replaces the unwritten legacy `recommendations_log` acceptance counter.                                                                                                                       |
 
-Indexes: `{userId, status}`, `{enrollmentId}` (sparse)
+Indexes: `{userId, status}`, `{enrollmentId}` (sparse),
+`{sourceRecommendationId}` (sparse)
 
 ---
 
@@ -1412,7 +1414,7 @@ Indexes: `{intentionId, date}` unique, `{userId, date}`
 
 Logging is identical regardless of the intention's `cadence` — a weekly-cadence
 habit still gets one `daily_behavior_logs` document per logged day, same as a
-daily habit. Only *interpretation* differs: for a weekly-cadence intention,
+daily habit. Only _interpretation_ differs: for a weekly-cadence intention,
 adherence and streaks are computed against `targetPerWeek` logs per
 Monday-anchored calendar week rather than against every calendar day (see
 §13.6 in DOCUMENTATION.md).
@@ -1577,6 +1579,41 @@ Source: `app/models/restoreAttempt.js`.
 
 ---
 
+### 3.4 PostHog Product-Event Store (dedicated analytics VM)
+
+PostHog is an exploration store, not the research system of record. Raw events
+live in ClickHouse on the dedicated analytics VM; PostgreSQL holds PostHog's
+project, dashboard and user metadata. Kafka is transient transport and is not
+backed up. The event schema source is
+`app/analytics/event-registry.json` (currently schema version 1).
+
+Every event has the following controlled context:
+
+| Property                | Type                 | Meaning                                                            |
+| ----------------------- | -------------------- | ------------------------------------------------------------------ |
+| `distinct_id`           | opaque string        | Keycloak `sub`; never name, email, goal, habit/cue text or comment |
+| `study_id` / `group_id` | opaque string        | Active assignment, or `not_assigned` before/without enrollment     |
+| `app_version`           | semantic version     | Flutter/backend version emitting the event                         |
+| `platform`              | enum                 | Android, iOS, web, desktop, server or unknown                      |
+| `locale`                | enum                 | One of the five shipped locales, or unknown                        |
+| `schema_version`        | non-negative integer | Registry version used to validate the payload                      |
+
+Raw-event retention is one year and must be configured in PostHog during the
+first live setup. Local PostgreSQL and ClickHouse backups retain 14 days by
+default and can be copied to the configured offsite rclone destination. Session
+replay is disabled, and the registry rejects unapproved properties before an
+SDK can send them.
+
+The current self-service account deletion removes the login identity while
+retaining contributed research data under an orphaned random UUID. PostHog
+events follow that same pseudonymisation model and expire under the one-year raw
+retention. If a participant requests erasure of contributed data rather than
+account deletion, the operator must include that UUID in the PostHog erasure
+procedure as well as the MongoDB/Neo4j steps below. Automated PostHog raw-event
+export/erasure remains a live-project integration because it requires the
+project ID and a private administrative API key, neither of which belongs in
+the repository.
+
 ## 4. G1–G4 Study Group Encoding
 
 Participants are assigned to one of four experimental conditions at enrolment. The group is stored in three places and must remain consistent:
@@ -1624,21 +1661,22 @@ ORDER BY group
 
 The platform applies soft-deletion for participants. The table below documents which data is retained versus removed/anonymised when a participant is deleted via `DELETE /api/v1/admin/participants/:id`.
 
-| Data                                           | Store    | On Soft-Delete                           | Rationale                                                          |
-| ---------------------------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------ |
-| `participants.userId`                          | MongoDB  | **Retained** (unmodified)                | Required to trace linked records                                   |
-| `participants.username`                        | MongoDB  | **Anonymised** → `deleted-<sha256[:8]>`  | Removes PII identifier                                             |
-| `participants.password`                        | MongoDB  | **Retained** (token card already issued) | Password is random; no real PII                                    |
-| `participants.group`                           | MongoDB  | **Retained**                             | Needed for study group analysis                                    |
-| `participants.enrolledAt`                      | MongoDB  | **Retained**                             | Needed for timeline analysis                                       |
-| `participants.deletedAt`                       | MongoDB  | **Set** (current timestamp)              | Marks document as deleted                                          |
-| Profile questionnaire (`profiles`)             | MongoDB  | **Not modified**                         | Profile answers retained for research; no name/contact data stored |
-| Survey responses (`survey_responses`)          | MongoDB  | **Not modified**                         | Research data; pseudonymised by `participantId` only               |
-| Habit donations (`habit_donations`)            | MongoDB  | **Not modified**                         | Research data; pseudonymised by `participantId`                    |
-| Habit graph nodes (`hhh__Donor`, `hhh__Habit`) | Neo4j    | **Not modified**                         | Graph retained for research; no PII in node properties             |
-| Habit annotations (`habit_annotations`)        | MongoDB  | **Not applicable**                       | Anonymous — no `userId` field                                      |
-| Recommendations log (`recommendations_log`)    | MongoDB  | **Not modified**                         | Research data; pseudonymised                                       |
-| Keycloak user account                          | Keycloak | **Not automatically deleted**            | Manual Keycloak admin action required to revoke login access       |
+| Data                                           | Store                | On Soft-Delete                           | Rationale                                                          |
+| ---------------------------------------------- | -------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `participants.userId`                          | MongoDB              | **Retained** (unmodified)                | Required to trace linked records                                   |
+| `participants.username`                        | MongoDB              | **Anonymised** → `deleted-<sha256[:8]>`  | Removes PII identifier                                             |
+| `participants.password`                        | MongoDB              | **Retained** (token card already issued) | Password is random; no real PII                                    |
+| `participants.group`                           | MongoDB              | **Retained**                             | Needed for study group analysis                                    |
+| `participants.enrolledAt`                      | MongoDB              | **Retained**                             | Needed for timeline analysis                                       |
+| `participants.deletedAt`                       | MongoDB              | **Set** (current timestamp)              | Marks document as deleted                                          |
+| Profile questionnaire (`profiles`)             | MongoDB              | **Not modified**                         | Profile answers retained for research; no name/contact data stored |
+| Survey responses (`survey_responses`)          | MongoDB              | **Not modified**                         | Research data; pseudonymised by `participantId` only               |
+| Habit donations (`habit_donations`)            | MongoDB              | **Not modified**                         | Research data; pseudonymised by `participantId`                    |
+| Habit graph nodes (`hhh__Donor`, `hhh__Habit`) | Neo4j                | **Not modified**                         | Graph retained for research; no PII in node properties             |
+| Habit annotations (`habit_annotations`)        | MongoDB              | **Not applicable**                       | Anonymous — no `userId` field                                      |
+| Recommendations log (`recommendations_log`)    | MongoDB              | **Not modified**                         | Research data; pseudonymised                                       |
+| Product analytics events                       | PostHog / ClickHouse | **Not modified by admin soft-delete**    | One-year raw retention; pseudonymous Keycloak UUID only            |
+| Keycloak user account                          | Keycloak             | **Not automatically deleted**            | Manual Keycloak admin action required to revoke login access       |
 
 **Note:** To fully remove a participant from the system (GDPR right to erasure), an operator must additionally:
 
@@ -1656,14 +1694,15 @@ calls `DELETE /api/v1/users/me` (`app/routes/usersRouter.js`). Unlike the
 admin flow, this one **does** automatically remove the Keycloak identity —
 it's identity/credential removal, not a data-erasure request:
 
-| Data                                    | On self-service delete                                        |
-| ---------------------------------------- | --------------------------------------------------------------- |
-| Keycloak user account                   | **Deleted** (`kc.deleteUser(userId)`) — participant can no longer sign in |
-| `participants.recoveryPhrase`           | **Cleared** (`null`)                                            |
-| `participants.accountDeletedAt`         | **Set** (current timestamp)                                     |
-| `deviceTokens` for this user             | **Deleted** — stops push notifications                          |
-| `participants.username`, `.group`, etc. | **Retained** — unlike the admin flow, not anonymised            |
+| Data                                                                                             | On self-service delete                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Keycloak user account                                                                            | **Deleted** (`kc.deleteUser(userId)`) — participant can no longer sign in                                                                                    |
+| `participants.recoveryPhrase`                                                                    | **Cleared** (`null`)                                                                                                                                         |
+| `participants.accountDeletedAt`                                                                  | **Set** (current timestamp)                                                                                                                                  |
+| `deviceTokens` for this user                                                                     | **Deleted** — stops push notifications                                                                                                                       |
+| `participants.username`, `.group`, etc.                                                          | **Retained** — unlike the admin flow, not anonymised                                                                                                         |
 | `profiles`, `survey_responses`/logs, `habit_donations`, `recommendations_log`, Neo4j graph nodes | **Not modified** — kept for research, identifiable only via `userId`/`participantId`, which is now an orphaned random UUID with no surviving identity record |
+| PostHog product events                                                                           | **Not modified** — same orphaned random UUID model; raw events expire after one year                                                                         |
 
 The mobile app's delete-confirmation copy (`deleteAccountContent` in
 `mobile/lib/l10n/app_*.arb`) describes this accurately: the account/login is
@@ -1683,19 +1722,18 @@ source: [`identity-service/src/db/schema.sql`](../identity-service/src/db/schema
 
 Only populated for studies with `identity.mode = 'verified'`.
 
-| Table | Purpose |
-| --- | --- |
-| `study_registers` | One per verified study. Holds the subject-code prefix, the wrapped per-register data key, and the sequence counter |
-| `subjects` | The people. Every identifying field is a `bytea` of AES-256-GCM ciphertext (`*_ct`); `*_bi` columns are keyed blind indexes for exact match without decryption |
-| `subject_account_links` | **A table, not a column** — a participant who loses their passphrase gets a new Keycloak `sub` and must not appear as two subjects. Superseded links are retained for the audit trail; a partial unique index allows only one live link per subject |
-| `enrollment_codes` | Single-use `HHV-` credentials. Looked up by keyed digest; the plaintext is kept encrypted only so a nurse can reprint a sheet |
-| `study_site_assignments` | A realm role says **what**; this says **where**. A nurse with no row here sees no roster at all |
-| `reidentification_requests` | Legal basis, reason (≥50 chars, DB `CHECK`), requested fields, approver count, reveal window and reveal count |
-| `reidentification_approvals` | Separate table so two-approver mode is expressible, and so the **four-eyes rule is a database trigger** rather than application code a refactor could drop |
-| `identity_audit_log` | In this database, so no HHH admin can alter it. Records field **names**, never values; IPs are HMAC-hashed |
+| Table                        | Purpose                                                                                                                                                                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `study_registers`            | One per verified study. Holds the subject-code prefix, the wrapped per-register data key, and the sequence counter                                                                                                                                  |
+| `subjects`                   | The people. Every identifying field is a `bytea` of AES-256-GCM ciphertext (`*_ct`); `*_bi` columns are keyed blind indexes for exact match without decryption                                                                                      |
+| `subject_account_links`      | **A table, not a column** — a participant who loses their passphrase gets a new Keycloak `sub` and must not appear as two subjects. Superseded links are retained for the audit trail; a partial unique index allows only one live link per subject |
+| `enrollment_codes`           | Single-use `HHV-` credentials. Looked up by keyed digest; the plaintext is kept encrypted only so a nurse can reprint a sheet                                                                                                                       |
+| `study_site_assignments`     | A realm role says **what**; this says **where**. A nurse with no row here sees no roster at all                                                                                                                                                     |
+| `reidentification_requests`  | Legal basis, reason (≥50 chars, DB `CHECK`), requested fields, approver count, reveal window and reveal count                                                                                                                                       |
+| `reidentification_approvals` | Separate table so two-approver mode is expressible, and so the **four-eyes rule is a database trigger** rather than application code a refactor could drop                                                                                          |
+| `identity_audit_log`         | In this database, so no HHH admin can alter it. Records field **names**, never values; IPs are HMAC-hashed                                                                                                                                          |
 
 **No plaintext identifier exists in this database.** Even the Keycloak `sub` on
 an account link is encrypted, with a blind index alongside it for reverse
 lookup. See [`identity-register.md`](identity-register.md) for the operational
 view and the equality leak that deterministic blind indexes accept.
-

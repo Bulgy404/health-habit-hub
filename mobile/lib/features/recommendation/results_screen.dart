@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../analytics/analytics_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../my_habits/my_habits_provider.dart';
 import 'recommendation_feature_service.dart';
@@ -179,7 +182,10 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
       // admin's activity-type restriction. Route through the same catalog
       // picker the "+ New Habit" flow uses instead.
       if (config.behaviorOptions.isNotEmpty) {
-        context.push('/habits/new/behavior');
+        context.push(
+          '/habits/new/behavior',
+          extra: {'recommendationId': widget.recommendationId},
+        );
         return;
       }
       context.push(
@@ -187,6 +193,7 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
         extra: {
           'behaviorKey': _slugify(widget.item.title),
           'behaviorLabel': widget.item.title,
+          'recommendationId': widget.recommendationId,
           'config': config,
           'initialCue': widget.item.suggestedCue.isNotEmpty
               ? widget.item.suggestedCue
@@ -223,6 +230,12 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
       await service.submitFeedback(
         recommendationId: widget.recommendationId,
         comment: comment,
+      );
+      unawaited(
+        ref.read(analyticsProvider).capture(
+          'recommendation_feedback_submitted',
+          {'recommendation_id': widget.recommendationId},
+        ),
       );
       if (mounted) {
         setState(() {

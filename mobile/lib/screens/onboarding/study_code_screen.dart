@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../analytics/analytics_service.dart';
 import 'consent_screen.dart' show kPendingStudyConsentSlugKey;
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/auth_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Secure-storage key constants
@@ -47,8 +51,9 @@ final RegExp _anonymousCodePattern = RegExp(r'^HHH-[A-Z0-9]{5}$');
 
 /// Verified-identity enrolment code: HHV-XXXXX-XXXXX over Crockford base32
 /// (no I, L, O or U — the characters misread off a printed sheet).
-final RegExp _verifiedCodePattern =
-    RegExp(r'^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$');
+final RegExp _verifiedCodePattern = RegExp(
+  r'^HHV-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}-[0-9ABCDEFGHJKMNPQRSTVWXYZ]{5}$',
+);
 
 /// Normalises a code for submission.
 ///
@@ -163,8 +168,22 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
           consentSlug != null &&
           consentSlug.isNotEmpty) {
         await storage.write(
-            key: kPendingStudyConsentSlugKey, value: consentSlug);
+          key: kPendingStudyConsentSlugKey,
+          value: consentSlug,
+        );
       }
+
+      final analytics = ref.read(analyticsProvider);
+      final userId = await ref.read(userIdProvider.future);
+      if (userId != null) {
+        await analytics.identify(userId, studyId: studyId, groupId: groupId);
+      }
+      unawaited(
+        analytics.capture('onboarding_step_completed', {'step': 'study_code'}),
+      );
+      unawaited(
+        analytics.capture('onboarding_completed', {'study_code_used': true}),
+      );
 
       if (!mounted) return;
       context.go('/share');
@@ -226,6 +245,14 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     const storage = FlutterSecureStorage();
     await storage.write(key: kStudyEnrolledKey, value: 'true');
 
+    final analytics = ref.read(analyticsProvider);
+    unawaited(
+      analytics.capture('onboarding_step_completed', {'step': 'study_code'}),
+    );
+    unawaited(
+      analytics.capture('onboarding_completed', {'study_code_used': false}),
+    );
+
     if (!mounted) return;
     context.go('/share');
   }
@@ -234,9 +261,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.studyCodeAppBarTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.studyCodeAppBarTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -251,17 +276,17 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
             const SizedBox(height: 24),
             Text(
               l10n.studyCodeQuestion,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               l10n.studyCodeSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                  ),
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -270,7 +295,8 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
               enabled: !_isLoading,
               decoration: InputDecoration(
                 labelText: l10n.studyCodeLabel,
-                hintText: 'HHH-XXXXX', // or HHV-XXXXX-XXXXX for verified studies
+                hintText:
+                    'HHH-XXXXX', // or HHV-XXXXX-XXXXX for verified studies
                 border: const OutlineInputBorder(),
                 errorText: _errorMessage,
                 errorMaxLines: 3,

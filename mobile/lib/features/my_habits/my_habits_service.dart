@@ -134,6 +134,8 @@ class MyHabitsService {
     // § weekly-frequency habits — daily by default, so a caller that never
     // passes this gets identical behavior to before this field existed.
     Cadence cadence = Cadence.daily,
+    // Recommendation lineage — UUID returned by the recommendation service.
+    String? recommendationId,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -150,6 +152,7 @@ class MyHabitsService {
           'stackedOn': ?stackedOn,
           'anchorLabel': ?anchorLabel,
           'reminderTime': ?reminderTime,
+          'sourceRecommendationId': ?recommendationId,
         },
       );
       if (res.statusCode == 409) {
@@ -232,10 +235,7 @@ class MyHabitsService {
     try {
       final res = await _dio.get<List<dynamic>>(
         '$_base/habits/intentions/$intentionId/logs',
-        queryParameters: {
-          'from': ?from,
-          'to': ?to,
-        },
+        queryParameters: {'from': ?from, 'to': ?to},
       );
       return (res.data ?? [])
           .cast<Map<String, dynamic>>()
