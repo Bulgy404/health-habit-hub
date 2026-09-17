@@ -3,6 +3,6 @@
   "KEYCLOAK_URL": "https://habit.wiwi.tu-dresden.de/auth",
   "WS_BASE_URL": "wss://habit.wiwi.tu-dresden.de/ws",
   "SUPPORT_EMAIL": "digital-health@tu-dresden.de",
-  "POSTHOG_PROJECT_KEY": "",
-  "POSTHOG_HOST": ""
+  "POSTHOG_PROJECT_KEY": "phc_rmfXTPXfPCPromGqCRaFd4GePS9FKpzRrpwRDh4tgEUk",
+  "POSTHOG_HOST": "https://habit.wiwi.tu-dresden.de/ingest"
 }
