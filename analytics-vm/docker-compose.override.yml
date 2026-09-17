@@ -27,6 +27,13 @@ services:
     # host, and the mapping below targets it.
     ports: !override
       - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:${POSTHOG_HTTP_PORT:-8000}:8000'
+    # Pinned so it can be named in TRUSTED_PROXIES below. PostHog's
+    # get_trusted_client_ip requires every hop — including REMOTE_ADDR, which is
+    # this container — to appear in that list by exact string match; CIDRs are
+    # not supported, so a DHCP-assigned container address cannot be used.
+    networks:
+      default:
+        ipv4_address: ${POSTHOG_PROXY_IP:-172.17.1.10}
     environment:
       CADDY_TLS_BLOCK: ''
       CADDY_HOST: ':8000'
@@ -36,6 +43,14 @@ services:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
       OPT_OUT_CAPTURE: 'true'
+      # IS_BEHIND_PROXY is set upstream, and without this PostHog logs
+      # "you haven't configured any trusted proxies" and get_trusted_client_ip
+      # returns None for every forwarded request. The chain reaching Django is
+      # habitvm's Traefik -> this stack's Caddy -> web, so both hops are listed:
+      # Caddy as REMOTE_ADDR, habitvm as the remaining X-Forwarded-For entry.
+      # Traefik is left with its default empty forwardedHeaders.trustedIPs, so
+      # it discards client-supplied X-Forwarded-For rather than appending to it.
+      TRUSTED_PROXIES: '${POSTHOG_PROXY_IP:-172.17.1.10},${POSTHOG_EDGE_PROXY_IP:-141.76.16.16}'
     # NGINX Unit runs a hardcoded 4 Python app processes (the image's
     # /docker-entrypoint.d config sets "processes": 4; there is no env var for
     # it), measured at roughly 1062 + 750 + 437 + 432 MB RSS. 1024m killed the
@@ -270,3 +285,12 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+
+networks:
+  # The static proxy address above only holds if the subnet is deterministic.
+  # Docker would otherwise pick the next free /24 from the daemon's pool, which
+  # would silently invalidate TRUSTED_PROXIES after a network recreate.
+  default:
+    ipam:
+      config:
+        - subnet: ${POSTHOG_NETWORK_SUBNET:-172.17.1.0/24}
