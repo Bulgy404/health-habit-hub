@@ -122,7 +122,30 @@ The VM was provisioned with **12 GB** (11.6 GiB usable), below `doctor`'s
 threshold. Started anyway for measurement: 37 containers idled at 8.9 GiB, then
 first-run migrations exhausted memory — **30 OOM kills** (including `systemd`
 and `sd-pam`, which made the host unreachable by SSH) and a load average of 505.
-An increase to 32 GB has been requested. Do not bypass `doctor` on this point.
+Do not bypass `doctor` on this point. 32 GB was requested; the VM now runs on
+**24 GB** (23.6 GiB usable), which is enough — the stack idles at 12.8 GiB with
+11.4 GiB available.
+
+### Swap is sized for `Committed_AS`, not for paging
+
+Swap was raised from 5 GiB to **16 GiB on 2026-09-17**. Not because the host
+runs out of memory, but because ZIH's Checkmk `Memory` check warns when
+`Committed_AS` exceeds RAM + swap. This stack commits roughly 33 GiB of address
+space while resident in 12.8 — ClickHouse alone reserves 11.3 GiB of `VmData`
+against 819 MiB RSS — so the check sat permanently at WARN (114.8%) with no
+underlying fault. At 16 GiB it reads 86%.
+
+It is also a real net. Every OOM kill this deployment has had (`web`, `worker`,
+`temporal-django-worker`) happened with swap at 0 B used and nowhere to spill;
+Docker gives a container swap equal to its `mem_limit` when `memswap_limit` is
+unset, so the headroom now reaches the cgroups that were dying.
+
+Two things to know before touching it. `vm.swappiness` is **0**
+(`/etc/sysctl.d/40-swappiness.conf`) — that does not disable swap, it only stops
+proactive paging, which is what you want from a net. And the extension left VG
+`main` with **3.5 GiB unallocated** instead of 14.5, so there is much less room
+to grow `/` or `/var` in an emergency; a swapfile on `/data` is the alternative
+if that headroom is ever needed back.
 
 ## Connect habitvm after the address is known
 

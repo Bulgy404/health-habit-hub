@@ -18,6 +18,7 @@ and is annotated with the expected output.
 8. [Rotating Secrets](#rotating-secrets)
 9. [Adding an Admin User](#adding-an-admin-user)
 10. [Checking Service Health](#checking-service-health)
+    - [ZIH Checkmk agent](#zih-checkmk-agent)
 11. [Critical Alerts](#critical-alerts)
 12. [Queue & Cache Monitoring](#queue--cache-monitoring-local-dev)
     - [Dedicated analytics VM](#dedicated-analytics-vm)
@@ -839,6 +840,99 @@ done
 echo "ERROR: Services not healthy after 60s" && exit 1
 ```
 
+### ZIH Checkmk agent
+
+Separate from the Grafana stack above, ZIH monitors both VMs from
+`monitoring.tu-dresden.de`. That check is **pull over SSH, not a network
+listener**: the baked agent package ships `/etc/check_mk/super-server.cfg` with
+`no_service`, so nothing binds `6556` — which is why installing it on the
+publicly addressable `habitvm` needs no firewall change.
+
+Four artefacts make the pull work. Only the first comes from the package —
+see [Installing it](#installing-it-on-a-host-that-lacks-it) below:
+
+| Artefact | Purpose |
+|---|---|
+| `/usr/bin/check_mk_agent` | the agent itself — **from the package** |
+| user `cmk-agent` | the account ZIH's server logs in as — placed by hand |
+| `/etc/sudoers.d/u_cmk-agent` | `NOPASSWD: /usr/bin/check_mk_agent`, nothing else — placed by hand |
+| `~cmk-agent/.ssh/authorized_keys` | `restrict,command="/usr/bin/sudo /usr/bin/check_mk_agent",cert-authority,principals="cmk-agent"` trusting `CA-monitoring.tu-dresden.de` |
+
+It is a **certificate authority** entry, not a fixed public key, so ZIH rotates
+the server's key without touching the host. `restrict` plus the forced command
+means the login can do nothing but print agent output.
+
+`habitvmmonitoring` got `check-mk-agent 2.4.0p29-1.8987086677dfa8e0` on
+2026-09-16. `habitvm` had **never** had it (no entry in `/var/log/dpkg.log*`),
+which is what produced the standing CRIT pair on 2026-09-17:
+
+```
+[agent] cmk-agent@141.76.16.16: Permission denied (publickey,password).
+Automatic rediscovery currently not possible due to failing data source(s).
+```
+
+Both lines are the same fault — ZIH's server SSHing to an account that does not
+exist. The discovery CRIT is downstream, but it does **not** clear by itself
+once the agent answers: the newly discovered services have to be activated in
+the UI.
+
+#### Installing it on a host that lacks it
+
+**The package is only half of it.** `check-mk-agent` ships the agent binary and
+plugins; it does *not* create the login. Its own `manage-agent-user.sh` would
+make a nologin *system* account commented "Checkmk agent system user" — but the
+`cmk-agent` on `habitvmmonitoring` is a normal user with `/bin/bash` and the
+comment "Checkmk run monitoring agent", the sudoers file uses ZIH's `u_` naming
+convention, and no file in the package contains the CA key at all. ZIH placed
+all three by hand in the same minute as the install. A host that lacks the agent
+needs both halves.
+
+The `.deb` is bakery-built per site and is in no apt repo. Get it from **Setup →
+Agents → Linux** on `monitoring.tu-dresden.de`, or rebuild it from a host that
+already has it — `dpkg --verify check-mk-agent` was clean, so the installed
+files plus `/var/lib/dpkg/info/check-mk-agent.{postinst,prerm,md5sums}` and the
+control stanza from `/var/lib/dpkg/status` reproduce it exactly (44/44 md5sums
+matched on 2026-09-17). Do not hand-copy binaries without the maintainer
+scripts: they deactivate the async/socket units, which is what keeps `6556`
+closed.
+
+```bash
+# on the Mac: package and CA trust onto the target host
+scp check-mk-agent_*.deb habitvm:/tmp/
+scp root@habitvmmonitoring:/home/cmk-agent/.ssh/authorized_keys /tmp/cmk_authorized_keys
+scp /tmp/cmk_authorized_keys habitvm:/tmp/
+
+# on the target, as root (sudo on habitvm is password-interactive)
+dpkg -i /tmp/check-mk-agent_*.deb
+useradd --create-home --shell /bin/bash --comment "Checkmk run monitoring agent" --user-group cmk-agent
+passwd --lock cmk-agent
+install -d -m 0700 -o cmk-agent -g cmk-agent /home/cmk-agent/.ssh
+install -m 0600 -o cmk-agent -g cmk-agent /tmp/cmk_authorized_keys /home/cmk-agent/.ssh/authorized_keys
+printf 'cmk-agent ALL=(ALL) NOPASSWD: /usr/bin/check_mk_agent\n' > /etc/sudoers.d/u_cmk-agent
+chmod 0440 /etc/sudoers.d/u_cmk-agent
+rm -f /tmp/cmk_authorized_keys /tmp/check-mk-agent_*.deb
+```
+
+Then verify — this is the only check that matters, because it walks the exact
+path ZIH's server takes:
+
+```bash
+sudo -u cmk-agent sudo -n /usr/bin/check_mk_agent | head -3
+```
+
+`<<<check_mk>>>` means the host side is done.
+
+> **Do not gate that check behind `visudo -c`.** ZIH's own sudoers file is mode
+> 0600, and `visudo -c` rejects it on *both* hosts with `bad permissions, should
+> be mode 0440` — while sudo itself accepts it and the agent runs fine. Sudo
+> only requires that the file not be group- or world-writable. Chaining the
+> verification after `visudo -c &&` makes a working install look broken.
+> `habitvm` was set to 0440 on 2026-09-17; `habitvmmonitoring` is still 0600.
+
+Finally, in the Checkmk UI run a service discovery on the host **and activate
+the found services**. The `Check_MK Discovery` CRIT does not clear on its own
+once the agent answers — the discovered services have to be accepted.
+
 ---
 
 ## 11. Critical Alerts
@@ -1469,6 +1563,21 @@ Two differences worth remembering. `habitvmmonitoring` has a **separate 10 GB
 independently of `/`, so include it in the routine check. And its root account
 is reachable **by SSH key directly** (`PermitRootLogin prohibit-password`),
 because ZIH provisioned the box with no password on the `service` account.
+
+Its swap was extended from 5 GiB to **16 GiB on 2026-09-17**, which left the
+`main` volume group with 3.5 GiB unallocated (it had 14.5 GiB). The reason is
+Checkmk, not a shortage of real memory: the ZIH `Memory` check warns when
+`Committed_AS` exceeds RAM + swap, and the 38-container PostHog stack commits
+roughly 33 GiB of address space while actually resident in 12 GiB of 23.6. At a
+5 GiB swap the ratio was 114.8% and the check sat permanently at WARN; at 16 GiB
+it is 84.5%. The swap is also a real safety net — every OOM kill this stack has
+had (`web`, `worker`, `temporal-django-worker`) happened with swap at 0 B used
+and nowhere to spill. `mkswap -U` preserved the signature UUID, and `/etc/fstab`
+references the LV by device-mapper UUID, so neither needed editing.
+
+`vm.swappiness` stays at 0 (`/etc/sysctl.d/40-swappiness.conf`). That does not
+disable swap — the kernel still spills under genuine pressure — it only stops
+proactive swapping, which is what you want from a net rather than a tier.
 
 Its snapper limits were capped on 2026-09-16 to the values under
 [Prevention](#prevention--cap-snapper) below, at which point `/` had 5.98 GiB
