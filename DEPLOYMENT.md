@@ -20,7 +20,7 @@ This guide covers deploying Health Habit Hub to production using Portainer on th
 - URL: `https://habit.wiwi.tu-dresden.de`
 - Server IP: `141.76.16.16`
 - Management: Portainer
-- Auto-update: Every 5 minutes from `main` branch
+- Updates: **manual** — Pull and redeploy in Portainer. Nothing polls `main`.
 
 ---
 
@@ -187,9 +187,9 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 ### 0. Code Quality
 
 - [ ] `make test` passes locally (or the individual `test-backend`,
-      `test-flutter`, `test-python`, `test-admin` targets) — this is the only
-      gate before a push reaches production, since Portainer's auto-update
-      polls `main` on a timer with no CI check of its own.
+      `test-flutter`, `test-python`, `test-admin` targets). CI re-runs these on
+      the pull request, but nothing re-runs them at deploy time: a Pull and
+      redeploy builds whatever is on `main` as-is, green or not.
 - [ ] If the change touches admin UI styling, manually check both light and
       dark mode in a browser — CSS module changes aren't covered by
       `test-admin`'s typecheck.
@@ -534,11 +534,12 @@ commands, safety constraints and upgrade procedure are in
 - **Repository URL:** `https://github.com/Bulgy404/health-habit-hub.git`
 - **Repository reference:** `refs/heads/main`
 - **Compose path:** `docker-compose.yml`
-- **GitOps updates:** Enable
-  - Mechanism: Polling, interval 5 minutes
+- **GitOps updates:** leave **disabled**. Deployments are triggered by hand
+  (see [Deploying an Update](#deploying-an-update)) so that merging to `main`
+  and changing production stay separate decisions — a merge never moves
+  production on its own.
   - Re-pull image / Force redeployment: **Business Edition features** — greyed
-    out on Community Edition. Not required; GitOps polling still re-fetches
-    and redeploys `docker-compose.yml` on CE, just without those two extras.
+    out on Community Edition. Neither is needed for the manual flow.
 
 > **Before deploying:** this only clones `docker-compose.yml` itself, not the
 > rest of the repository (see [Bind-Mount Config
@@ -808,23 +809,26 @@ hhh-backup-internal network (bridge, internal-only)
 
 ---
 
-## Automatic Updates
+## Deploying an Update
 
-### How It Works
-
-- Portainer polls the `main` branch every 5 minutes
-- If changes are detected:
-  1. Pulls latest code
-  2. Rebuilds images if needed
-  3. Recreates containers
-  4. Zero-downtime for config-only changes
-
-### Triggering a Manual Update
+**Nothing deploys itself.** Merging to `main` publishes the code; it does not
+touch production. The stack keeps serving the commit it was last deployed with
+until someone redeploys it by hand, so "it's merged" and "it's live" are two
+different states and can stay apart indefinitely.
 
 In Portainer:
 
 1. Go to **Stacks** → `health-habit-hub-2`
 2. Click **Pull and redeploy**
+3. Watch the stack's container logs until the affected services report healthy
+
+That re-fetches `docker-compose.yml` at `refs/heads/main`, rebuilds the images
+whose build context changed, and recreates those containers. Config-only
+changes are zero-downtime.
+
+Because the deploy is the manual step, it is also the moment user-visible
+changes go live — a bumped consent version, for instance, starts prompting
+participants for re-consent when you click redeploy, not when the PR merged.
 
 ---
 
@@ -1159,10 +1163,11 @@ docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
 
 1. Run `make test` locally first (backend lint + unit/integration tests +
    `npm audit`, Flutter analyze + tests, Python API-service pytest, admin
-   typecheck) — Portainer's auto-update has no CI gate of its own, so this is
-   the only check before a push reaches production.
-2. Push changes to `main` branch
-3. Wait 5 minutes (or trigger a manual update in Portainer)
+   typecheck). Nothing re-checks this at deploy time — a redeploy builds `main`
+   as-is.
+2. Merge the change to `main`
+3. Deploy it: Portainer → **Stacks** → `health-habit-hub-2` → **Pull and
+   redeploy**. Until this step, production is unchanged.
 4. Verify deployment in Portainer logs
 
 ### Rotating Passwords
