@@ -126,11 +126,12 @@ prepare_runtime() {
   cp "$runtime_dir/posthog/docker-compose.base.yml" "$runtime_dir/docker-compose.base.yml"
   cp "$runtime_dir/posthog/.env.services" "$runtime_dir/.env.services"
 
-  mkdir -p "$runtime_dir/compose" "$runtime_dir/share"
+  mkdir -p "$runtime_dir/compose" "$runtime_dir/share" "$runtime_dir/clickhouse"
   cp "$script_dir/templates/compose/start" "$runtime_dir/compose/start"
   cp "$script_dir/templates/compose/wait" "$runtime_dir/compose/wait"
   cp "$script_dir/templates/compose/temporal-django-worker" "$runtime_dir/compose/temporal-django-worker"
   chmod 0755 "$runtime_dir/compose/start" "$runtime_dir/compose/wait" "$runtime_dir/compose/temporal-django-worker"
+  cp "$script_dir/clickhouse/zz-hhh-pools.xml" "$runtime_dir/clickhouse/zz-hhh-pools.xml"
 
   if [ ! -s "$runtime_dir/share/GeoLite2-City.mmdb" ]; then
     need_command brotli
@@ -155,6 +156,23 @@ prepare_runtime() {
   chmod go+rX "$script_dir"
 
   printf 'Prepared PostHog %s in %s\n' "$actual_revision" "$runtime_dir"
+}
+
+# Remove one-shot containers that finished cleanly. kafka-init exits 0 by design
+# with restart policy "no", then sits in "Exited (0)" indefinitely — which the
+# ZIH Checkmk "Docker containers" check counts as a stopped container and
+# escalates to CRIT at a threshold of one. Only exit-code-0 containers are
+# removed, so a failed init is left in place with its logs intact. Compose
+# recreates them on the next `up`.
+remove_completed_oneshots() {
+  docker ps -aq \
+    --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-hhh-analytics}" \
+    --filter status=exited --filter exited=0 2>/dev/null | while read -r cid; do
+    [ -n "$cid" ] || continue
+    case "$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$cid" 2>/dev/null)" in
+      no|"") docker rm "$cid" >/dev/null 2>&1 || true ;;
+    esac
+  done
 }
 
 compose() {
@@ -297,6 +315,7 @@ case "$action" in
     prepare_runtime
     compose pull
     compose up -d --no-build
+    remove_completed_oneshots
     compose ps
     ;;
   status)

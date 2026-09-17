@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+  Overrides ClickHouse's background pool sizes for a single-node instance.
+
+  Merged after config.d/default.xml (files in config.d are applied in
+  alphabetical order, hence the zz- prefix), so this wins.
+
+  ClickHouse defaults background_schedule_pool_size to 512, which is sized for
+  large replicated clusters. On this host that produced 512 idle BgSchPool
+  threads out of 1192 for the whole server — on 8 vCPU, with one node, no
+  replication and a study-sized workload. The pool schedules periodic tasks
+  (replication queues, merge scheduling, Kafka stream polling); 64 is ample
+  here and the threads are created lazily up to the limit.
+
+  Deliberately NOT touched: the Kafka consumer threads (KafkaBroker/KafkaMain,
+  ~290) scale with the number of Kafka engine tables PostHog creates, not with
+  a pool size, and throttling them would slow ingestion.
+-->
+<clickhouse>
+    <background_schedule_pool_size>64</background_schedule_pool_size>
+    <background_common_pool_size>8</background_common_pool_size>
+</clickhouse>

@@ -74,6 +74,13 @@ services:
     mem_limit: 1536m
 
   clickhouse:
+    # Appended, not replaced: upstream's four config mounts still apply. See the
+    # file's own comment for why the background pools are reduced.
+    volumes:
+      # Relative to the Compose project directory, which manage.sh sets to
+      # runtime/ — prepare_runtime copies this file in, the same way it does
+      # the compose/ entrypoints.
+      - './clickhouse/zz-hhh-pools.xml:/etc/clickhouse-server/config.d/zz-hhh-pools.xml:ro'
     mem_limit: 4096m
 
   kafka:
