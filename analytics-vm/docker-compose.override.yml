@@ -53,7 +53,17 @@ services:
   temporal-django-worker:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
-    mem_limit: 768m
+    # This runs the same Django stack as web, so 768m was well under what it
+    # needs: the cgroup OOM-killed it (OOMKilled=true, "Killed python3 manage.py
+    # start_temporal_worker") about ten hours into the first deployment.
+    mem_limit: 1536m
+    # Upstream leaves this on `on-failure`, which does not help here: bin/
+    # temporal-django-worker catches the dead child, logs "Worker process no
+    # longer exists, exiting" and returns 0. Docker sees a clean exit, declines
+    # to restart, and the worker stays down silently — no unhealthy container,
+    # no restart loop, nothing to alert on. `always` makes a kill recoverable
+    # regardless of the exit code the wrapper reports.
+    restart: always
 
   asyncmigrationscheck:
     environment:
