@@ -33,7 +33,7 @@ services:
     # not supported, so a DHCP-assigned container address cannot be used.
     networks:
       default:
-        ipv4_address: ${POSTHOG_PROXY_IP:-172.17.1.10}
+        ipv4_address: ${POSTHOG_PROXY_IP:-172.23.255.200}
     environment:
       CADDY_TLS_BLOCK: ''
       CADDY_HOST: ':8000'
@@ -50,7 +50,7 @@ services:
       # Caddy as REMOTE_ADDR, habitvm as the remaining X-Forwarded-For entry.
       # Traefik is left with its default empty forwardedHeaders.trustedIPs, so
       # it discards client-supplied X-Forwarded-For rather than appending to it.
-      TRUSTED_PROXIES: '${POSTHOG_PROXY_IP:-172.17.1.10},${POSTHOG_EDGE_PROXY_IP:-141.76.16.16}'
+      TRUSTED_PROXIES: '${POSTHOG_PROXY_IP:-172.23.255.200},${POSTHOG_EDGE_PROXY_IP:-141.76.16.16}'
     # NGINX Unit runs a hardcoded 4 Python app processes (the image's
     # /docker-entrypoint.d config sets "processes": 4; there is no env var for
     # it), measured at roughly 1062 + 750 + 437 + 432 MB RSS. 1024m killed the
@@ -293,4 +293,18 @@ networks:
   default:
     ipam:
       config:
-        - subnet: ${POSTHOG_NETWORK_SUBNET:-172.17.1.0/24}
+        # Two separate collisions to avoid, both learned the hard way:
+        #
+        # 1. ip_range confines Docker's dynamic allocation to the lower half so
+        #    it cannot hand out the static proxy address. Without it Docker
+        #    assigns from the start of the subnet, a container that starts
+        #    before proxy takes the address, and proxy dies with "Address
+        #    already in use" — taking the published port down with it.
+        #
+        # 2. The subnet itself sits at the top of the daemon's address pool
+        #    (172.20.0.0/14, see /etc/docker/daemon.json). Docker allocates
+        #    networks from the bottom, so a sibling network — otel_network here
+        #    — otherwise claims the pinned range first and the default network
+        #    cannot be created at all: "networks have overlapping IPv4".
+        - subnet: ${POSTHOG_NETWORK_SUBNET:-172.23.255.0/24}
+          ip_range: ${POSTHOG_NETWORK_RANGE:-172.23.255.0/25}
