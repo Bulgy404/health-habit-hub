@@ -13,22 +13,37 @@ services:
   # plain HTTP on the private network; habitvm terminates public TLS and exposes
   # only the ingest allowlist. Never set POSTHOG_BIND_ADDRESS to a public bind.
   proxy:
+    # Caddy's site address comes from CADDY_HOST, but NOT from this block: the
+    # upstream base file builds the whole Caddyfile as a CADDYFILE env string
+    # containing ${CADDY_HOST:-http://localhost:8000}, which Compose expands at
+    # config time from the .env file. A value set here lands in the container's
+    # environment far too late — the Caddyfile text is already baked. So
+    # CADDY_HOST must be set in .env, and is repeated here only so the two
+    # cannot silently disagree.
+    #
+    # With the default, Caddy binds :8000 and matches only the host "localhost",
+    # so mapping the host port to container :80 hit nothing at all and every
+    # request was refused. .env now sets ':8000', which binds that port for any
+    # host, and the mapping below targets it.
     ports: !override
-      - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:${POSTHOG_HTTP_PORT:-8000}:80'
+      - '${POSTHOG_BIND_ADDRESS:?set POSTHOG_BIND_ADDRESS}:${POSTHOG_HTTP_PORT:-8000}:8000'
     environment:
       CADDY_TLS_BLOCK: ''
-      CADDY_HOST: ':80'
+      CADDY_HOST: ':8000'
     mem_limit: 256m
 
   web:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
       OPT_OUT_CAPTURE: 'true'
-    # Django plus `bin/migrate`, which runs migrate_clickhouse. At 1024m the
-    # migration was OOM-killed by the cgroup (oomkilled=true) while the host
-    # still had 16 GiB free, so web restart-looped without ever finishing
-    # setup. Migrations are the peak; steady state sits well below this.
-    mem_limit: 3072m
+    # NGINX Unit runs a hardcoded 4 Python app processes (the image's
+    # /docker-entrypoint.d config sets "processes": 4; there is no env var for
+    # it), measured at roughly 1062 + 750 + 437 + 432 MB RSS. 1024m killed the
+    # migrate_clickhouse step outright; 3072m got through migrations but the
+    # app processes kept being SIGKILLed afterwards — 58 signal-9 events, still
+    # climbing at 6 per 75s, with the container pinned at 85% of its cap while
+    # the host had 14 GiB free.
+    mem_limit: 5120m
 
   worker:
     environment:

@@ -103,8 +103,22 @@ prepare_runtime() {
     git clone --filter=blob:none --no-checkout https://github.com/PostHog/posthog.git "$runtime_dir/posthog"
   fi
 
-  git -C "$runtime_dir/posthog" fetch --depth 1 origin "$POSTHOG_UPSTREAM_REVISION"
-  git -C "$runtime_dir/posthog" checkout --detach "$POSTHOG_UPSTREAM_REVISION"
+  # Only reach for the network when the checkout is not already at the pinned
+  # revision. `up` calls this on every start, so without the guard a restart of
+  # an already-prepared stack depends on GitHub being reachable — a transient
+  # 504 aborted a restart here on 2026-09-16 and left the stack untouched. The
+  # file checks matter as much as the revision check: the clone is
+  # --filter=blob:none --no-checkout, so HEAD can be correct while the working
+  # tree is still incomplete.
+  if [ "$(git -C "$runtime_dir/posthog" rev-parse HEAD 2>/dev/null || echo none)" = "$POSTHOG_UPSTREAM_REVISION" ] \
+     && [ -f "$runtime_dir/posthog/docker-compose.hobby.yml" ] \
+     && [ -f "$runtime_dir/posthog/docker-compose.base.yml" ] \
+     && [ -f "$runtime_dir/posthog/.env.services" ]; then
+    printf 'Already at %s; skipping fetch.\n' "$POSTHOG_UPSTREAM_REVISION"
+  else
+    git -C "$runtime_dir/posthog" fetch --depth 1 origin "$POSTHOG_UPSTREAM_REVISION"
+    git -C "$runtime_dir/posthog" checkout --detach "$POSTHOG_UPSTREAM_REVISION"
+  fi
   actual_revision=$(git -C "$runtime_dir/posthog" rev-parse HEAD)
   [ "$actual_revision" = "$POSTHOG_UPSTREAM_REVISION" ] || fail "checked-out PostHog revision does not match .env"
 
