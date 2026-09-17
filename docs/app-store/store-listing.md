@@ -159,18 +159,67 @@ Notes on the choices:
 
 ---
 
-## 5. Release notes — 1.2.0
+## 5. Release notes
 
-Google Play → *What's new* (max 500 characters). App Store → *What's New in
-This Version* (max 4000; the same text is fine).
+**Newest first. Never delete an older release's text** — see §6 for why, and for
+the five-point rule the entries below follow.
 
-> Most of what 1.2.0 contains is server- and portal-side — the identity
-> register, per-study control over which research papers inform
-> recommendations, scoped researcher access, and security fixes. Very little of
-> it is visible in the app, and the notes below say only what a participant can
-> actually see. Claiming more would be the easiest thing here to get wrong.
+The same five points go to both stores: App Store → *What's New in This
+Version* (max 4000), Google Play → *What's new* (max 500).
 
-### English (464)
+### 1.3.0 — current submission
+
+> 1.3.0 is the resubmission after the 1.2.0 (4) rejection under guideline
+> 5.1.3(iv), so **1.2.0 never reached App Store users** — its clinical-study
+> points are repeated here because they are new to anyone upgrading from 1.1.x.
+> The only change that is new on both platforms is usage measurement: a release
+> build now sends events to the self-hosted PostHog instance by default
+> (`AppConfig._prodPosthogProjectKey`). **Disclosing it is not optional** — see
+> the privacy note below.
+
+#### English (456)
+
+```
+• Usage is now measured as fixed event names and counts — never your habit text, and no session recording
+• That usage data stays on TU Dresden's own servers; no commercial analytics provider
+• Join a clinical study that verifies its participants — optional, separate from anonymous use
+• Such studies ask for their own consent in full first; your subject code is in Settings
+• The age question at setup is now required, plus security and reliability fixes
+```
+
+#### German (495)
+
+```
+• Die Nutzung wird als feste Ereignisnamen und Zahlen gemessen – nie dein Gewohnheitstext, keine Aufzeichnung
+• Diese Nutzungsdaten bleiben auf Servern der TU Dresden; kein kommerzieller Anbieter
+• Klinischer Studie beitreten, die ihre Teilnehmenden kennt – optional, getrennt von der anonymen Nutzung
+• Solche Studien holen vorher ihre eigene Einwilligung ein; dein Subjektcode steht in den Einstellungen
+• Altersangabe beim Einrichten ist Pflicht, dazu Korrekturen an Sicherheit und Stabilität
+```
+
+#### Privacy declarations must change with this release
+
+Both stores' privacy answers were written for a build that sent no telemetry.
+1.3.0 does, so before submitting:
+
+- **App Store Connect → App Privacy**: declare *Usage Data → Product
+  Interaction*, collected, **not linked** to identity, used for *Analytics* and
+  *App Functionality*. Leave tracking as "no" — the data never leaves TU
+  Dresden infrastructure and is not shared with any third party for
+  advertising.
+- **Google Play → Data safety**: the same addition under *App activity → App
+  interactions*, collected, not shared, not required to use the app.
+- §3's privacy bullets stay truthful against this: they claim no name, no email
+  and pseudonymous storage — all still true — and none of them claims the app
+  measures nothing.
+
+### 1.2.0 — rejected at review, never published
+
+Retained per §6. Most of 1.2.0 was server- and portal-side (identity register,
+per-study control over which papers inform recommendations, scoped researcher
+access, security fixes); these were the participant-visible parts.
+
+#### English (464)
 
 ```
 Support for clinical studies that verify who their participants are — entirely optional, and separate from ordinary anonymous use.
@@ -183,7 +232,7 @@ Support for clinical studies that verify who their participants are — entirely
 Plus security and reliability improvements throughout.
 ```
 
-### German (496)
+#### German (496)
 
 ```
 Unterstützung für klinische Studien, die wissen müssen, wer teilnimmt – optional und getrennt von der anonymen Nutzung.
@@ -199,6 +248,29 @@ Dazu Verbesserungen bei Sicherheit und Stabilität.
 ---
 
 ## 6. Notes for whoever updates this
+
+### Release notes: the two rules that are not negotiable
+
+1. **Exactly five key points, and nothing else.** No intro sentence, no
+   ALL-CAPS section headings, no closing line — five bullets, newest release
+   first, in both languages. They have to fit Google Play's 500-character
+   limit, which is what keeps them honest; the App Store's 4000 is not an
+   invitation to write more, because the same text goes to both stores. If a
+   release has fewer than five participant-visible changes, fold the small ones
+   into the fifth bullet ("plus security and reliability fixes") rather than
+   padding to five. If it has more, cut to the five a participant would notice
+   first.
+
+2. **Never delete or overwrite an older release's What's New.** Add the new
+   release as a new `###` block at the top of §5 and leave every previous one
+   below it, oldest last, each under its version heading with a one-line note
+   on what it was. The history is the only record of what a user upgrading from
+   an old build has already been told, and of what was written but never
+   published because a release was rejected — 1.2.0 is exactly that case. When
+   a release is rejected, keep its text and say so in the heading; do not
+   quietly fold it into the next one without a note.
+
+### Everything else
 
 - **Legal URLs** the stores require are listed in
   [`DOCUMENTATION.md` §15](../../DOCUMENTATION.md#15-mobile-release--ios-and-android)

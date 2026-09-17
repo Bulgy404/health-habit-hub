@@ -1,6 +1,6 @@
 ---
-version: 1.3.0
-effectiveDate: 2026-08-03
+version: 1.4.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -87,6 +87,7 @@ Wir erheben Angaben zu:
 - Beschreibungen von Alltagsgewohnheiten
 - Demografische Merkmale (z. B. Altersgruppe, Geschlecht, Beruf) – nur in anonymisierter Form
 - App-Nutzungsverhalten (z. B. ob eine empfohlene Gewohnheit umgesetzt wurde)
+- Technische Nutzungsmessung: Um zu erkennen, welche Teile der App verständlich sind und an welchen Stellen Teilnehmende abbrechen, zählen wir das Erreichen festgelegter Schritte (z. B. „Einrichtung abgeschlossen“, „Gewohnheit angelegt“) zusammen mit App-Version, Plattform und Sprache. **Die von Ihnen eingegebenen Texte werden dabei nicht übertragen**, und es werden keine Bildschirminhalte aufgezeichnet.
 - Wöchentliche Fragebögen zu Gewohnheitsstärke und Wohlbefinden
 
 Werden Sie über eine kooperierende klinische Einrichtung auf die Studie aufmerksam gemacht, werden keine Daten aus Ihrer Patientenakte oder anderen klinischen Informationssystemen in die Studie übernommen. Sämtliche im Rahmen der Studie erhobenen Informationen werden ausschließlich von Ihnen selbst innerhalb der Health Habit Hub App eingegeben. Die klinische Einrichtung erhält keinen Zugriff auf Ihre Studiendaten.
@@ -115,6 +116,8 @@ Für Japan und Kanada liegt ein EU-Angemessenheitsbeschluss vor. Belgien ist EU-
 ### Wie lange werden die Daten gespeichert?
 
 Die anonymen Daten werden auf den Servern der TU Dresden gespeichert. Sie können dauerhaft aufbewahrt werden, um wissenschaftliche Langzeitforschung zu ermöglichen. Sobald Daten vollständig anonymisiert sind, ist eine nachträgliche Identifikation und damit auch eine gezielte Löschung einzelner Datensätze nicht mehr möglich.
+
+Die Einzelereignisse der technischen Nutzungsmessung werden spätestens nach einem Jahr gelöscht. Daraus gebildete zusammengefasste Auswertungen können länger aufbewahrt werden.
 
 ### Ihre Rechte
 
@@ -149,6 +152,7 @@ Ich habe die Informationen zu dieser Studie gelesen und verstanden. Ich wurde da
 - meine Teilnahme freiwillig ist,
 - ich jederzeit ohne Angabe von Gründen aufhören kann,
 - alle meine Daten vollständig anonymisiert werden,
+- die Nutzung der App technisch gemessen wird, um sie zu verbessern, ohne dass dabei die von mir eingegebenen Texte übertragen werden,
 - eine Löschung meines Kontos nur mein Konto entfernt, meine bereits anonym erhobenen Studiendaten jedoch verbleiben, sofern ich nicht in einem dringenden Fall die zusätzliche Entfernung dieser Daten direkt beim Studienteam beantrage,
 - die Daten für wissenschaftliche Zwecke und in einer offenen Forschungsdatenbank verwendet werden.
 

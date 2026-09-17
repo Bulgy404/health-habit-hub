@@ -1,6 +1,6 @@
 ---
-version: 1.3.0
-effectiveDate: 2026-08-03
+version: 1.4.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -89,6 +89,7 @@ Wij verzamelen:
 - Beschrijvingen van dagelijkse gewoonten
 - Demografische kenmerken (bijv. leeftijdsgroep, geslacht, beroep) — uitsluitend in geanonimiseerde vorm
 - App-gebruiksgedrag (bijv. of een aanbevolen gewoonte is opgevolgd)
+- Technische gebruiksmeting: om te zien welke delen van de app begrijpelijk zijn en waar deelnemers afhaken, tellen wij het bereiken van vooraf vastgelegde stappen (bijv. "installatie voltooid", "gewoonte aangemaakt"), samen met app-versie, platform en taal. **De door u ingevoerde teksten worden daarbij niet doorgestuurd** en er worden geen schermafbeeldingen vastgelegd.
 - Antwoorden op wekelijkse vragenlijsten over gewoontesterkte en welzijn
 
 Als u via een samenwerkende klinische instelling op de studie bent geattendeerd, worden er geen gegevens uit uw patiëntendossier of andere klinische informatiesystemen in de studie overgenomen. Alle in het kader van de studie verzamelde informatie wordt uitsluitend door uzelf ingevoerd binnen de Health Habit Hub-app. De klinische instelling krijgt geen toegang tot uw studiegegevens.
@@ -117,6 +118,8 @@ Japan en Canada hebben beide een adequaatheidsbesluit van de EU ontvangen. Belgi
 ### Hoe lang worden de gegevens bewaard?
 
 Anonieme gegevens worden opgeslagen op de servers van de TU Dresden en kunnen permanent worden bewaard ter ondersteuning van wetenschappelijk langetermijnonderzoek. Zodra gegevens volledig zijn geanonimiseerd, kunnen individuele gegevens niet meer worden geïdentificeerd of selectief worden verwijderd.
+
+De afzonderlijke gebeurtenissen uit de technische gebruiksmeting worden uiterlijk na één jaar verwijderd. Daaruit afgeleide geaggregeerde analyses kunnen langer worden bewaard.
 
 ### Uw rechten
 
@@ -151,6 +154,7 @@ Ik heb de informatie over deze studie gelezen en begrepen. Ik ben geïnformeerd 
 - mijn deelname vrijwillig is,
 - ik op elk moment kan stoppen zonder opgaaf van redenen,
 - al mijn gegevens volledig worden geanonimiseerd,
+- het gebruik van de app technisch wordt gemeten om de app te verbeteren, zonder dat de door mij ingevoerde teksten worden doorgestuurd,
 - het verwijderen van mijn account alleen mijn account verwijdert, terwijl mijn reeds anoniem verzamelde studiegegevens bewaard blijven, tenzij ik in een dringend geval de aanvullende verwijdering hiervan rechtstreeks bij het studieteam aanvraag,
 - de gegevens worden gebruikt voor wetenschappelijke doeleinden en in een open onderzoeksdatabase.
 

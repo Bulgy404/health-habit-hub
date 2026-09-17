@@ -1,6 +1,6 @@
 ---
-version: 1.3.0
-effectiveDate: 2026-08-03
+version: 1.4.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -89,6 +89,7 @@ Nous collectons :
 - Des descriptions d'habitudes quotidiennes
 - Des caractéristiques démographiques (par exemple, tranche d'âge, sexe, profession) — uniquement sous forme anonymisée
 - Le comportement d'utilisation de l'application (par exemple, si une habitude recommandée a été suivie)
+- La mesure technique de l'utilisation : afin de repérer quelles parties de l'application sont compréhensibles et à quels endroits les participants abandonnent, nous comptons le franchissement d'étapes prédéfinies (par ex. « configuration terminée », « habitude créée »), avec la version de l'application, la plateforme et la langue. **Les textes que vous saisissez ne sont pas transmis** et aucun contenu d'écran n'est enregistré.
 - Les réponses aux questionnaires hebdomadaires sur la force des habitudes et le bien-être
 
 Si vous avez pris connaissance de l'étude par l'intermédiaire d'un établissement clinique partenaire, aucune donnée issue de votre dossier patient ou d'autres systèmes d'information cliniques n'est transmise à l'étude. Toutes les informations collectées dans le cadre de l'étude sont saisies exclusivement par vous-même au sein de l'application Health Habit Hub. L'établissement clinique n'a aucun accès à vos données d'étude.
@@ -117,6 +118,8 @@ Le Japon et le Canada font tous deux l'objet d'une décision d'adéquation de l'
 ### Combien de temps les données sont-elles conservées ?
 
 Les données anonymes sont stockées sur les serveurs de la TU Dresden et peuvent être conservées de manière permanente afin de soutenir la recherche scientifique à long terme. Une fois les données entièrement anonymisées, il n'est plus possible d'identifier des enregistrements individuels ni de les supprimer de manière sélective.
+
+Les événements individuels issus de la mesure technique de l'utilisation sont supprimés au plus tard au bout d'un an. Les analyses agrégées qui en découlent peuvent être conservées plus longtemps.
 
 ### Vos droits
 
@@ -151,6 +154,7 @@ J'ai lu et compris les informations relatives à cette étude. J'ai été inform
 - ma participation est volontaire,
 - je peux arrêter à tout moment sans avoir à en donner la raison,
 - toutes mes données seront entièrement anonymisées,
+- l'utilisation de l'application fait l'objet d'une mesure technique destinée à l'améliorer, sans que les textes que je saisis soient transmis,
 - la suppression de mon compte ne supprime que mon compte, mes données d'étude déjà collectées de manière anonyme étant conservées, sauf si je demande en outre, dans un cas urgent, leur suppression directement auprès de l'équipe de l'étude,
 - les données seront utilisées à des fins scientifiques et dans une base de données de recherche ouverte.
 

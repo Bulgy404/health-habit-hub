@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2026-07-22
+version: 1.2.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -190,11 +190,20 @@ email address or phone number.
   token) is stored so reminders can be delivered.
 - **Technical data:** log data for error analysis and secure operation (e.g.
   time of access, error messages).
+- **Usage data (product analytics):** to see where the app is understandable
+  and where participants drop out, we record that fixed steps have been
+  reached. Only events from a closed list held in the program code are
+  transmitted (e.g. "onboarding_completed", "habit_created"), together with
+  technical context (app version, platform, language, and study and group
+  assignment). These events are associated with your pseudonymous identifier.
+  **Text you enter — habits, goals, cues or comments — is not transmitted.**
+  There is no automatic capture of screen contents and no session recording.
 
 ## Purposes and legal basis
 
 Processing takes place for the purpose of scientific research into health
-habits and for the technical operation of the app.
+habits, for improving and further developing the app, and for its technical
+operation.
 
 The legal basis is your consent under Art. 6(1)(a) GDPR, which you give at the
 start of the study. Where your entries constitute health data within the meaning
@@ -211,6 +220,10 @@ Art. 9(2)(a) GDPR.
   used to deliver notifications. The push token and the notification content are
   transmitted. You can disable notifications at any time in your system settings.
 
+- **Product analytics:** usage data is processed using the self-hosted
+  analytics software PostHog on a server of TU Dresden. It is not transmitted
+  to any commercial analytics provider.
+
 Your data is not passed on for advertising purposes. No tracking across other
 providers' apps or websites takes place.
 
@@ -219,6 +232,11 @@ providers' apps or websites takes place.
 Your study data is stored for the duration of the study and the subsequent
 analysis and archiving period in accordance with the rules of good scientific
 practice.
+
+By way of exception, the individual events described under "Usage data
+(product analytics)" are deleted after one year at the latest. Aggregated
+evaluations derived from them that contain no personal reference may be kept
+beyond that period.
 
 ## Your rights
 

@@ -54,6 +54,7 @@ const de: Dict = {
   foot_download: 'App laden', foot_guide: 'Teilnahme-Leitfaden', foot_faq: 'Häufige Fragen',
   foot_admin: 'Admin-Portal', foot_docs: 'Dokumentation', foot_contact: 'Kontakt',
   foot_imprint: 'Impressum', foot_privacy: 'Datenschutz', foot_consent: 'Einwilligung', foot_accessibility: 'Barrierefreiheit',
+  legal_effective: 'Stand', legal_version: 'Fassung',
 
   // home hero
   home_title: 'Viele Gewohnheiten. Ein lebendiges Netzwerk.',
@@ -209,6 +210,7 @@ const en: Dict = {
   foot_download: 'Download the app', foot_guide: 'Participation guide', foot_faq: 'FAQ',
   foot_admin: 'Admin portal', foot_docs: 'Documentation', foot_contact: 'Contact',
   foot_imprint: 'Imprint', foot_privacy: 'Privacy', foot_consent: 'Consent', foot_accessibility: 'Accessibility',
+  legal_effective: 'Effective', legal_version: 'Version',
 
   home_title: 'Many habits. One living network.',
   home_title_em: 'One living network',

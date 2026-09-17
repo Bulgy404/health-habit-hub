@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2026-07-22
+version: 1.2.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -193,11 +193,22 @@ téléphone**.
   d'appareil (jeton push) est enregistré afin de délivrer les rappels.
 - **Données techniques :** journaux destinés à l'analyse des erreurs et à un
   fonctionnement sécurisé (par ex. heure d'accès, messages d'erreur).
+- **Données d'utilisation (analyse produit) :** afin de repérer les endroits où
+  l'application est compréhensible et ceux où les participants abandonnent,
+  nous enregistrons le franchissement d'étapes prédéfinies. Seuls sont transmis
+  des événements issus d'une liste fermée inscrite dans le code du programme
+  (par ex. « onboarding_completed », « habit_created »), accompagnés
+  d'informations techniques (version de l'application, plateforme, langue,
+  affectation à l'étude et au groupe). Ces événements sont rattachés à votre
+  identifiant pseudonyme. **Les textes que vous saisissez — habitudes,
+  objectifs, déclencheurs ou commentaires — ne sont pas transmis.** Il n'y a ni
+  capture automatique du contenu de l'écran, ni enregistrement de session.
 
 ## Finalités et bases juridiques
 
 Le traitement est effectué à des fins de recherche scientifique sur les
-habitudes de santé et pour le fonctionnement technique de l'application.
+habitudes de santé, aux fins de l'amélioration et du développement de
+l'application, ainsi que pour son fonctionnement technique.
 
 La base juridique est votre consentement au titre de l'art. 6, § 1, point a) du
 RGPD, donné au début de l'étude. Dans la mesure où vos saisies constituent des
@@ -217,6 +228,11 @@ consentement explicite au titre de l'art. 9, § 2, point a) du RGPD.
   notification sont transmis. Vous pouvez désactiver les notifications à tout
   moment dans les réglages de votre système.
 
+- **Analyse produit :** les données d'utilisation sont traitées au moyen du
+  logiciel d'analyse PostHog, hébergé par nos soins sur un serveur de la
+  TU Dresden. Aucune transmission à un prestataire d'analyse commercial n'a
+  lieu.
+
 Vos données ne sont pas transmises à des fins publicitaires. Aucun suivi à
 travers les applications ou sites web d'autres fournisseurs n'a lieu.
 
@@ -225,6 +241,11 @@ travers les applications ou sites web d'autres fournisseurs n'a lieu.
 Vos données d'étude sont conservées pendant la durée de l'étude ainsi que
 pendant la période d'analyse et d'archivage qui suit, conformément aux règles
 de bonne pratique scientifique.
+
+Par dérogation, les événements individuels décrits sous « Données
+d'utilisation (analyse produit) » sont supprimés au plus tard au bout d'un an.
+Les analyses agrégées qui en sont issues et ne comportent aucun lien avec une
+personne peuvent être conservées au-delà.
 
 ## Vos droits
 

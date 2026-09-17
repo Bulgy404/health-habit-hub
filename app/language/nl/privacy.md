@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2026-07-22
+version: 1.2.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -192,11 +192,22 @@ De app is ontworpen volgens het beginsel van dataminimalisatie. Wij verzamelen
   (pushtoken) opgeslagen om herinneringen te kunnen bezorgen.
 - **Technische gegevens:** loggegevens voor foutanalyse en een veilige werking
   (bijv. tijdstip van toegang, foutmeldingen).
+- **Gebruiksgegevens (productanalyse):** om te zien waar de app begrijpelijk is
+  en waar deelnemers afhaken, leggen wij vast dat vooraf vastgelegde stappen
+  zijn bereikt. Er worden uitsluitend gebeurtenissen doorgestuurd uit een
+  afgesloten lijst die in de programmacode is vastgelegd (bijv.
+  "onboarding_completed", "habit_created"), samen met technische
+  context (app-versie, platform, taal en de toewijzing aan onderzoek en groep).
+  Deze gebeurtenissen worden gekoppeld aan uw pseudonieme identificatie.
+  **Door u ingevoerde teksten — gewoonten, doelen, triggers of opmerkingen —
+  worden niet doorgestuurd.** Er vindt geen automatische registratie van
+  schermafbeeldingen en geen sessieopname plaats.
 
 ## Doeleinden en rechtsgrondslagen
 
 De verwerking vindt plaats ten behoeve van wetenschappelijk onderzoek naar
-gezondheidsgewoonten en voor de technische werking van de app.
+gezondheidsgewoonten, ten behoeve van de verbetering en doorontwikkeling van
+de app, en voor de technische werking ervan.
 
 De rechtsgrondslag is uw toestemming op grond van art. 6, lid 1, onder a) AVG,
 die u aan het begin van het onderzoek geeft. Voor zover uw invoer
@@ -217,6 +228,10 @@ AVG.
   de inhoud van de melding doorgestuurd. U kunt meldingen te allen tijde
   uitschakelen in uw systeeminstellingen.
 
+- **Productanalyse:** de gebruiksgegevens worden verwerkt met de in eigen
+  beheer gedraaide analysesoftware PostHog op een server van de TU Dresden. Er
+  vindt geen doorgifte aan een commerciële analyseaanbieder plaats.
+
 Uw gegevens worden niet doorgegeven voor reclamedoeleinden. Er vindt geen
 tracking plaats via apps of websites van andere aanbieders.
 
@@ -225,6 +240,11 @@ tracking plaats via apps of websites van andere aanbieders.
 Uw onderzoeksgegevens worden bewaard gedurende de looptijd van het onderzoek en
 de daaropvolgende analyse- en archiveringsperiode, overeenkomstig de regels van
 goede wetenschappelijke praktijk.
+
+In afwijking daarvan worden de onder "Gebruiksgegevens (productanalyse)"
+beschreven afzonderlijke gebeurtenissen uiterlijk na één jaar verwijderd.
+Daaruit afgeleide geaggregeerde analyses zonder herleidbaarheid tot een persoon
+kunnen langer worden bewaard.
 
 ## Uw rechten
 

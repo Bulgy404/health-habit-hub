@@ -1,16 +1,35 @@
 ---
 import Base from '../layouts/Base.astro';
-import type { Lang, PageKey } from '../i18n/ui';
+import { useT, type Lang, type PageKey } from '../i18n/ui';
 
 interface Props { lang: Lang; doc: string; pageKey: PageKey; title: string; injectTitle?: boolean; }
 const { lang, doc, pageKey, title, injectTitle = false } = Astro.props;
 
 const mods = import.meta.glob('../content/legal/**/*.md', { eager: true }) as Record<string, any>;
-const Content = mods[`../content/legal/${lang}/${doc}.md`].Content;
+const mod = mods[`../content/legal/${lang}/${doc}.md`];
+const Content = mod.Content;
+
+// Version and effective date live in each document's front matter. The app
+// renders them (app/utils/legalPage.js); the website used to drop them, which
+// left readers with no way to tell which revision they were looking at.
+const t = useT(lang);
+const { version, effectiveDate: rawDate } = mod.frontmatter ?? {};
+// An unquoted YAML date comes through as a full ISO timestamp
+// ("2026-09-17T00:00:00.000Z"); keep only the calendar date.
+const effectiveDate = rawDate ? String(rawDate).slice(0, 10) : undefined;
+const shownDate = effectiveDate && lang === 'de'
+  ? effectiveDate.split('-').reverse().join('.')
+  : effectiveDate;
 ---
 <Base lang={lang} page={pageKey} title={`${title} · Health Habit Hub`}>
   <article class="legal"><div class="wrap">
     {injectTitle && <h1>{title}</h1>}
+    {effectiveDate && (
+      <p class="legal-meta">
+        {t('legal_effective')}: <time datetime={effectiveDate}>{shownDate}</time>
+        {version && <> · {t('legal_version')} {version}</>}
+      </p>
+    )}
     <Content />
   </div></article>
 </Base>
@@ -20,6 +39,7 @@ const Content = mods[`../content/legal/${lang}/${doc}.md`].Content;
   .legal .wrap{max-width:760px}
   .legal h1{font-size:clamp(26px,3vw,34px);margin:36px 0 14px}
   .legal h1:first-child{margin-top:0}
+  .legal .legal-meta{color:var(--muted,#64748b);font-size:14px;margin:0 0 28px}
   .legal h2{font-family:'Fraunces Variable',serif;font-weight:500;font-size:26px;margin:36px 0 12px}
   .legal h3{font-size:18px;margin:26px 0 10px}
   .legal p,.legal li{color:#334155;font-size:16px;margin:10px 0}

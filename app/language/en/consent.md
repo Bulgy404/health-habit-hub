@@ -1,6 +1,6 @@
 ---
-version: 1.3.0
-effectiveDate: 2026-08-03
+version: 1.4.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -89,6 +89,7 @@ We collect:
 - Descriptions of everyday habits
 - Demographic characteristics (e.g. age group, gender, occupation) — in anonymised form only
 - App usage behaviour (e.g. whether a recommended habit was followed)
+- Technical usage measurement: to see which parts of the app are understandable and where participants drop out, we count that fixed steps have been reached (e.g. "setup completed", "habit created"), together with app version, platform and language. **The text you enter is not transmitted**, and no screen contents are recorded.
 - Weekly questionnaire responses on habit strength and well-being
 
 If you learned of the study through a cooperating clinical institution, no data from your patient records or other clinical information systems is transferred into the study. All information collected as part of the study is entered exclusively by you within the Health Habit Hub app. The clinical institution has no access to your study data.
@@ -117,6 +118,8 @@ Japan and Canada have both received an EU adequacy decision. Belgium is an EU me
 ### How long is the data stored?
 
 Anonymous data is stored on TU Dresden servers and may be kept permanently to support long-term scientific research. Once data has been fully anonymised, individual records can no longer be identified or selectively deleted.
+
+The individual events from technical usage measurement are deleted after one year at the latest. Aggregated evaluations derived from them may be kept longer.
 
 ### Your rights
 
@@ -151,6 +154,7 @@ I have read and understood the information about this study. I have been informe
 - my participation is voluntary,
 - I can stop at any time without giving a reason,
 - all my data will be fully anonymised,
+- app usage is measured technically in order to improve the app, without the text I enter being transmitted,
 - deleting my account deletes only my account, while my already anonymously collected study data remains, unless I additionally request its removal directly from the study team in an urgent case,
 - the data will be used for scientific purposes and in an open research database.
 

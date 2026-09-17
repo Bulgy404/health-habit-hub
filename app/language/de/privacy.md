@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2026-07-22
+version: 1.2.0
+effectiveDate: 2026-09-17
 bindingLanguage: de
 ---
 
@@ -192,11 +192,22 @@ E-Mail-Adresse und keine Telefonnummer**.
   Geräte-Kennung (Push-Token) gespeichert, um Erinnerungen zuzustellen.
 - **Technische Daten:** Protokolldaten zur Fehleranalyse und zum sicheren
   Betrieb (z. B. Zeitpunkt des Zugriffs, Fehlermeldungen).
+- **Nutzungsdaten (Produktanalyse):** Um zu erkennen, an welchen Stellen die
+  App verständlich ist und an welchen Teilnehmende abbrechen, erfassen wir das
+  Erreichen festgelegter Schritte. Übertragen werden ausschließlich Ereignisse
+  aus einer abschließenden, im Programmcode hinterlegten Liste (z. B.
+  „onboarding_completed“, „habit_created“) sowie technische Begleitangaben
+  (App-Version, Plattform, Sprache sowie Studien- und Gruppenzuordnung). Diese
+  Ereignisse werden Ihrer pseudonymen Kennung zugeordnet. **Von Ihnen
+  eingegebene Texte – Gewohnheiten, Ziele, Auslöser oder Kommentare – werden
+  dabei nicht übertragen.** Es findet weder eine automatische Erfassung von
+  Bildschirminhalten noch eine Sitzungsaufzeichnung statt.
 
 ## Zwecke und Rechtsgrundlagen
 
 Die Verarbeitung erfolgt zum Zweck der wissenschaftlichen Forschung zu
-Gesundheitsgewohnheiten sowie zum technischen Betrieb der App.
+Gesundheitsgewohnheiten, zur Verbesserung und Weiterentwicklung der App sowie
+zu deren technischem Betrieb.
 
 Rechtsgrundlage ist Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO, die Sie
 zu Beginn der Studie erteilen. Soweit Ihre Angaben Gesundheitsdaten im Sinne von
@@ -215,6 +226,10 @@ ausdrücklichen Einwilligung nach Art. 9 Abs. 2 lit. a DSGVO.
   das Push-Token und der Benachrichtigungsinhalt übertragen. Sie können
   Benachrichtigungen jederzeit in den Systemeinstellungen deaktivieren.
 
+- **Produktanalyse:** Die Nutzungsdaten werden mit der selbst betriebenen
+  Analyse-Software PostHog auf einem Server der TU Dresden verarbeitet. Eine
+  Übermittlung an einen kommerziellen Analyseanbieter findet nicht statt.
+
 Eine Übermittlung Ihrer Daten zu Werbezwecken findet nicht statt. Es findet kein
 Tracking über Apps oder Websites anderer Anbieter hinweg statt.
 
@@ -223,6 +238,11 @@ Tracking über Apps oder Websites anderer Anbieter hinweg statt.
 Ihre Studiendaten werden für die Dauer der Studie und den anschließenden
 Auswertungs- und Archivierungszeitraum gemäß den Regeln guter
 wissenschaftlicher Praxis gespeichert.
+
+Die unter „Nutzungsdaten (Produktanalyse)“ beschriebenen Einzelereignisse
+werden abweichend davon spätestens nach einem Jahr gelöscht. Daraus gebildete
+zusammengefasste Auswertungen ohne Personenbezug können darüber hinaus
+aufbewahrt werden.
 
 ## Ihre Rechte
 
