@@ -43,12 +43,37 @@ services:
     # app processes kept being SIGKILLed afterwards — 58 signal-9 events, still
     # climbing at 6 per 75s, with the container pinned at 85% of its cap while
     # the host had 14 GiB free.
+    # 5120m. An earlier attempt at 4096m was based on a 1.46 GiB reading taken
+    # shortly after a restart; the four Unit processes grow well past that —
+    # measured at 3.5 GiB (87% of 4096m) after a few hours idle. Unit recycles a
+    # process every 7500 requests, which never triggers without traffic.
     mem_limit: 5120m
 
   worker:
     environment:
       SITE_URL: '${POSTHOG_SITE_URL:?set POSTHOG_SITE_URL}'
-    mem_limit: 1024m
+      # Celery's prefork pool defaults to one child per CPU — eight here — and
+      # each child measured 840 MB anon-rss at kill time, so the default wants
+      # roughly 7 GB for a study-sized workload. bin/docker-worker-celery turns
+      # WEB_CONCURRENCY into --concurrency.
+      #
+      # At 2 the container sat at 99.3% of a 3 GiB limit (parent + two children
+      # + beat), which is one spike from another kill. 1 leaves it near 70%.
+      # PostHog's background work here is periodic maintenance, not throughput,
+      # so a single child is appropriate; raise POSTHOG_WORKER_CONCURRENCY if
+      # the queue starts backing up.
+      WEB_CONCURRENCY: '${POSTHOG_WORKER_CONCURRENCY:-1}'
+    # Runs two celery processes (worker and beat), each about 600 MB resident.
+    # At 1024m the cgroup killed them continuously — 143 "Memory cgroup out of
+    # memory: Killed process (celery)" entries and 2947 container restarts, with
+    # preflight reporting celery: False the whole time. The container's own
+    # OOMKilled flag stays false because the wrapper catches the dead child, so
+    # this is only visible in dmesg or the kernel's memcg constraint.
+    #
+    # 2048m was still not enough even at --concurrency 2: a single celeryd child
+    # reached 840 MB anon-rss, and with the parent and beat alongside it that
+    # exceeds 2 GiB. 3072m covers the four processes measured.
+    mem_limit: 3072m
 
   temporal-django-worker:
     environment:
@@ -81,7 +106,9 @@ services:
       # runtime/ — prepare_runtime copies this file in, the same way it does
       # the compose/ entrypoints.
       - './clickhouse/zz-hhh-pools.xml:/etc/clickhouse-server/config.d/zz-hhh-pools.xml:ro'
-    mem_limit: 4096m
+    # Measured at 789 MiB with the reduced thread pools, so 4096m was idle
+    # headroom. 3072m keeps nearly 4x for query spikes while funding the worker.
+    mem_limit: 3072m
 
   kafka:
     # Upstream runs Redpanda with `--memory=3G --reserve-memory=500M`, and

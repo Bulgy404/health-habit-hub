@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ZIH Checkmk agent on `habitvm`, which had never had one — the monitoring
+  server was polling `ssh cmk-agent@141.76.16.16` against an account that did
+  not exist, so every host-level check (filesystem, memory, CPU) was blind on
+  the production VM. `docs/runbook.md` §10 now documents the full procedure,
+  including that the package ships only the agent and the login layer has to be
+  provisioned alongside it.
 - Analytics VM (`habitvmmonitoring`) provisioned and prepared: ext4 data disk at
   `/data`, Docker with relocated image storage, pinned address pools, snapper
   capped, and the Portainer agent attached to the existing Portainer server.
@@ -21,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Analytics VM swap raised from 5 GiB to 16 GiB. The stack commits ~33 GiB of
+  address space while resident in 12.8, which held ZIH's Checkmk `Memory` check
+  at WARN (114.8% of RAM + swap) with no underlying fault; it now reads 86%, and
+  the OOM kills this deployment has seen finally have somewhere to spill. Costs
+  11 GiB of VG `main` headroom — see `analytics-vm/README.md`.
 - Merged the long-lived `monitoring` branch into `main`, bringing the
   ingest-only Traefik route, the event registry, `productAnalyticsService` and
   the `analytics-vm/` deployment package.
@@ -34,9 +45,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known issues
 
-- The analytics VM was provisioned with 12 GB RAM against a 16 GB requirement.
-  First-run migrations exhausted memory (30 OOM kills). An increase to 32 GB has
-  been requested; the stack is stopped until then.
+- ZIH's Checkmk warns on `habitvmmonitoring`'s thread count (~2770 against a
+  2000/4000 default). This is what a 38-container analytics host looks like at
+  rest — ClickHouse accounts for 736, of which 276 are librdkafka threads bound
+  to PostHog's 41 Kafka engine tables and not tunable without disabling
+  ingestion. Host-specific levels have to be requested from ZIH; until then the
+  check carries no signal, and a real thread leak would hide in it.
+- `habitvm`'s Checkmk agent was replicated from `habitvmmonitoring` rather than
+  installed by ZIH, so they have no record of it and `habitvm` has no
+  sudo-capable ZIH account to maintain it through. Worth a ticket so the two
+  hosts do not drift.
 
 ## [1.2.0] - 2026-09-14
 
