@@ -56,16 +56,32 @@ abstract final class AppConfig {
     defaultValue: kReleaseMode ? _prodWsBaseUrl : _localhostWsBaseUrl,
   );
 
-  /// Write-only PostHog project key. Empty keeps analytics completely off.
-  /// Set together with [posthogHost] after the private analytics VM and its
-  /// project have been created.
+  // Analytics endpoints, mode-dependent for the same reason as the URLs above:
+  // an Xcode archive cannot pass --dart-define, so anything without a release
+  // default is empty in a shipped build. For the URLs that produced a blank
+  // screen; here it is quieter and worse — analyticsConfigured turns false and
+  // the app ships sending nothing at all, with no error to notice.
+  //
+  // The project key is a write-only ingestion identifier, not an administrative
+  // API key, and it is extractable from any shipped binary regardless.
+  static const _prodPosthogProjectKey =
+      'phc_rmfXTPXfPCPromGqCRaFd4GePS9FKpzRrpwRDh4tgEUk';
+  static const _prodPosthogHost = 'https://habit.wiwi.tu-dresden.de/ingest';
+
+  /// Write-only PostHog project key. Empty keeps analytics completely off, which
+  /// is what debug and profile builds get — local development never emits study
+  /// telemetry.
   static const posthogProjectKey = String.fromEnvironment(
     'POSTHOG_PROJECT_KEY',
+    defaultValue: kReleaseMode ? _prodPosthogProjectKey : '',
   );
 
   /// Public ingest proxy URL on habitvm, ending in `/ingest`.
   /// Never point a mobile build at the analytics VM's private address.
-  static const posthogHost = String.fromEnvironment('POSTHOG_HOST');
+  static const posthogHost = String.fromEnvironment(
+    'POSTHOG_HOST',
+    defaultValue: kReleaseMode ? _prodPosthogHost : '',
+  );
 
   /// Analytics is deliberately fail-closed: partial configuration sends no
   /// telemetry. The SDK integration can use this seam without environment-
