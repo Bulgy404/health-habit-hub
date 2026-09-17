@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-17
+
 ### Added
+
+- PostHog analytics wired up in the mobile app: `POSTHOG_PROJECT_KEY` and
+  `POSTHOG_HOST` are set in `dart_defines_prod.json` **and** given release-mode
+  defaults in `app_config.dart`. The defaults matter because an Xcode archive
+  cannot pass `--dart-define`: without them `Product -> Archive` ships a build
+  where `analyticsConfigured` is false and the app sends nothing, with no error
+  to notice. Debug and profile builds still default to empty, so local
+  development emits no study telemetry.
 
 - ZIH Checkmk agent on `habitvm`, which had never had one — the monitoring
   server was polling `ssh cmk-agent@141.76.16.16` against an account that did
