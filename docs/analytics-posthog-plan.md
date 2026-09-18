@@ -43,8 +43,15 @@ decision:
    2FA, and set one-year raw-event retention in PostHog;
 4. configure `.env`, the production Dart defines, and the `habitvm` stack
    variables, then run the first live smoke test;
-5. configure the rclone remote and perform/document a PostgreSQL + ClickHouse
-   restore drill on a scratch VM;
+5. ~~configure the rclone remote and perform/document a PostgreSQL + ClickHouse
+   restore drill~~ — **drill done 2026-09-17**, both halves restored and verified
+   against live (see [`analytics-vm/README.md`](../analytics-vm/README.md) §Drill
+   record); the daily timer is installed and its first run checksum-verified.
+   `OFFSITE_REMOTE` is deliberately left blank: ZIH backs up the VM itself. Note
+   that is a crash-consistent snapshot of a running database, not an
+   application-consistent dump — the two protect against different failures, so
+   the local dumps are not redundant. Re-run the drill on real study data before
+   recruitment;
 6. establish the real event-volume baseline and tune the conservative alert;
 7. complete the DPIA/processing-activities entry and researcher account
    offboarding procedure;

@@ -37,9 +37,13 @@ Prerequisites: Ubuntu LTS, Git, curl, brotli, Docker Engine, and Docker Compose
 `data-root` as `/data/docker` **before the first pull**. `manage.sh up` refuses
 to proceed when Docker reports a different root.
 
+Clone the repository in place rather than copying the directory out of it —
+`.gitignore` already excludes `.env` and `runtime/`, so the package works inside
+a checkout and `git pull` updates it. The systemd units below assume this path.
+
 ```bash
-cp -a analytics-vm /opt/hhh-analytics-config
-cd /opt/hhh-analytics-config
+git clone --depth 1 https://github.com/Bulgy404/health-habit-hub.git /opt/hhh-analytics
+cd /opt/hhh-analytics/analytics-vm
 ./manage.sh init
 editor .env
 ./manage.sh doctor
@@ -208,6 +212,60 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now hhh-analytics-backup.timer
 systemctl list-timers hhh-analytics-backup.timer
 ```
+
+The units reference `/opt/hhh-analytics/analytics-vm`. If the package lives
+elsewhere, edit both paths in the service file before installing — a wrong
+`WorkingDirectory` makes the timer fail silently every night.
+
+Installed and verified on 2026-09-17: timer active, first run produced a 3.1 MB
+PostgreSQL dump and a 6.4 MB ClickHouse archive whose recomputed SHA-256 sums
+both matched the manifest.
+
+### Restoring — read this before you need it
+
+A restore is a **procedure, not a command**, and the failure modes are quiet.
+Both were found by an actual drill on 2026-09-17 (see below); neither produces
+an error you would notice under pressure.
+
+**PostgreSQL** is straightforward — the dump is `pg_dump` custom format:
+
+```bash
+pg_restore --no-owner --no-acl -U posthog -d posthog <name>-postgres.dump
+```
+
+**ClickHouse is not.** PostHog's tables are `ReplicatedMergeTree`, so the
+instance you restore into must be configured like production *before* the
+restore runs:
+
+1. **ZooKeeper must be reachable** under the hostname the config expects.
+2. **The `{replica}` and `{shard}` macros must exist** — they come from
+   `docker/clickhouse/config.xml` and `config.d/default.xml`. Restore into a
+   bare `clickhouse-server` and every `ReplicatedMergeTree` create fails with
+   `code: 139, No macro 'replica' in config`, `clickhouse-backup` still **exits
+   0**, and you are left with views and an empty schema. In the drill this
+   produced 91 tables of 333 with `sharded_events` absent — a restore that looks
+   successful and contains no events.
+3. **`CLICKHOUSE_SKIP_USER_SETUP=1` must be set**, as it is on the live
+   container. Without it the entrypoint generates a random password for
+   `default`, and `clickhouse-backup` cannot authenticate — it retries in a loop
+   rather than failing, so it presents as a hang.
+
+With all three in place the restore is clean:
+
+```bash
+# extract the archive into the target's backup directory, then
+clickhouse-backup restore <name>
+```
+
+### Drill record
+
+| date | scope | result |
+| --- | --- | --- |
+| 2026-09-17 | PostgreSQL, isolated container | 692 tables, 2697 migrations, owner account and project API token intact, password hash preserved — identical to live |
+| 2026-09-17 | ClickHouse, temp instance with production config + ZooKeeper | 333 tables and 112 `sharded_events` rows, event breakdown identical to live, zero failed creates |
+
+Re-run the drill after any PostHog upgrade, and once on real study data —
+112 synthetic events exercise the mechanism, not the volume.
 
 Before a study, restore both files into a scratch copy of the same pinned stack,
 verify their manifest checksums, and confirm a known event is queryable. Restore

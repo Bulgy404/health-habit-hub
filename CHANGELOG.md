@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Daily backups on `habitvmmonitoring`: systemd timer installed and enabled,
+  producing a PostgreSQL dump and a ClickHouse snapshot with SHA-256 manifests,
+  retained 14 days to match habitvm. Nothing had been backed up until now — the
+  units shipped in the repo but were never installed.
+- Restore drill documented in `analytics-vm/README.md`, with both quiet failure
+  modes it exposed: restoring PostHog's ClickHouse into a bare instance yields
+  an empty schema while `clickhouse-backup` exits 0, and a target without
+  `CLICKHOUSE_SKIP_USER_SETUP=1` presents as a hang rather than an auth error.
+
+### Fixed
+
+- `hhh-analytics-backup.service` pointed at `/opt/hhh-analytics-config`, a path
+  the documented install does not create. The timer would have failed silently
+  every night. Units and the README now both use the in-place checkout layout.
+
 ## [1.3.0] - 2026-09-17
 
 ### Added

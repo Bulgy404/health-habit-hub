@@ -5,8 +5,8 @@ After=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/hhh-analytics-config
-ExecStart=/opt/hhh-analytics-config/manage.sh backup
+WorkingDirectory=/opt/hhh-analytics/analytics-vm
+ExecStart=/opt/hhh-analytics/analytics-vm/manage.sh backup
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
