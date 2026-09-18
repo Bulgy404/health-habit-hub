@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-18
+
+### Highlights
+
+**A dedicated analytics and monitoring VM.** `habitvmmonitoring` (8 vCPU,
+24 GB RAM, 500 GB ext4 data disk, TU-internal only) now runs self-hosted
+PostHog next to the study platform rather than on it, so analytics can never
+exhaust `habitvm`'s memory. Participants' phones never reach it directly:
+`habitvm`'s Traefik forwards only the `/ingest` event endpoints inward, and
+the PostHog UI is reachable only from the TU network or VPN. It is attached to
+the existing Portainer server, linked from the admin portal's **System &
+Links** page, and deployed with `analytics-vm/manage.sh`, which pins every
+upstream image by digest.
+
+**Monitoring on both VMs.** ZIH's Checkmk now watches both hosts. `habitvm`
+had never had a working agent, so host-level checks (filesystem, memory, CPU)
+on the production VM had been blind. The Grafana stack gains node and
+container exporters for the analytics VM, a private PostHog reachability probe,
+and alerts on disk, memory and container pressure, plus a conservative
+ingestion-volume warning.
+
+**Backups with a tested restore.** The analytics VM takes a daily PostgreSQL
+dump and ClickHouse snapshot with checksum manifests, kept for 14 days. A full
+restore was run and verified against live data, and the steps are documented
+in `analytics-vm/README.md`.
+
+**Product analytics in the app.** The mobile app sends allowlisted,
+pseudonymous events to PostHog: onboarding, habit creation, recommendations,
+enrollment, and now notification effectiveness (reminder taps, habit logs,
+reminder-tier changes, notification permission). No free text, session replay
+or autocapture ever leaves the device.
+
 ### Added
 
 - Daily backups on `habitvmmonitoring`: systemd timer installed and enabled,
@@ -27,16 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stored as `implementation_intentions.lastReminderFrequency`. The app-side
   events need a new app release; reminders scheduled by older versions report
   `kind: unknown`.
-
-### Fixed
-
-- `hhh-analytics-backup.service` pointed at `/opt/hhh-analytics-config`, a path
-  the documented install does not create. The timer would have failed silently
-  every night. Units and the README now both use the in-place checkout layout.
-
-## [1.3.0] - 2026-09-17
-
-### Added
 
 - PostHog analytics wired up in the mobile app: `POSTHOG_PROJECT_KEY` and
   `POSTHOG_HOST` are set in `dart_defines_prod.json` **and** given release-mode
@@ -74,6 +96,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `analytics-vm/` deployment package.
 - `docs/analytics-posthog-plan.md` updated with the provisioned spec versus the
   requested one, and the measured memory exhaustion that blocks deployment.
+
+### Fixed
+
+- `hhh-analytics-backup.service` pointed at `/opt/hhh-analytics-config`, a path
+  the documented install does not create. The timer would have failed silently
+  every night. Units and the README now both use the in-place checkout layout.
 
 ### Removed
 
