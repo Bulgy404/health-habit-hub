@@ -8,7 +8,7 @@ final class AnalyticsPropertyRule {
   final Set<String>? values;
 }
 
-const analyticsSchemaVersion = 1;
+const analyticsSchemaVersion = 2;
 
 const analyticsCommonPropertyRegistry = <String, AnalyticsPropertyRule>{
   'study_id': AnalyticsPropertyRule(type: 'opaque_id', values: null),
@@ -146,5 +146,68 @@ const analyticsEventRegistry = <String, Map<String, AnalyticsPropertyRule>>{
   },
   'enrollment_completed': <String, AnalyticsPropertyRule>{
     'study_code_used': AnalyticsPropertyRule(type: 'boolean', values: null),
+  },
+  'habit_logged': <String, AnalyticsPropertyRule>{
+    'intention_id': AnalyticsPropertyRule(type: 'opaque_id', values: null),
+    'enacted': AnalyticsPropertyRule(type: 'boolean', values: null),
+  },
+  'reminder_frequency_changed': <String, AnalyticsPropertyRule>{
+    'intention_id': AnalyticsPropertyRule(type: 'opaque_id', values: null),
+    'frequency': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{
+        'daily',
+        'every_2_days',
+        'twice_weekly',
+        'weekly',
+        'off',
+      },
+    ),
+    'previous_frequency': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{
+        'daily',
+        'every_2_days',
+        'twice_weekly',
+        'weekly',
+        'off',
+        'none',
+      },
+    ),
+  },
+  'notification_opened': <String, AnalyticsPropertyRule>{
+    'kind': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{
+        'habit_reminder',
+        'questionnaire',
+        'praise',
+        'recovery',
+        'campaign',
+        'unknown',
+      },
+    ),
+    'intention_id': AnalyticsPropertyRule(type: 'opaque_id', values: null),
+    'reminder_frequency': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{
+        'daily',
+        'every_2_days',
+        'twice_weekly',
+        'weekly',
+        'none',
+        'unknown',
+      },
+    ),
+    'launch': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{'cold_start', 'running'},
+    ),
+  },
+  'notification_permission_checked': <String, AnalyticsPropertyRule>{
+    'status': AnalyticsPropertyRule(
+      type: 'enum',
+      values: <String>{'granted', 'denied', 'provisional', 'not_determined'},
+    ),
   },
 };

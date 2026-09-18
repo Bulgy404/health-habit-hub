@@ -28,7 +28,7 @@ the RAM increase described under [Provisioned spec](#provisioned-spec-2026-09-16
 | Separate data services     | Complete                                | The pinned upstream Compose keeps Kafka/ZooKeeper, ClickHouse, PostgreSQL, Redis/Valkey, object storage, Temporal, web, capture, ingestion and worker processes in separate containers.                                                                                                                                   |
 | Public ingest / private UI | Complete, disabled by default           | Traefik renders a rate-limited `/ingest` router only when `POSTHOG_INTERNAL_URL` is configured. Its allowlist covers `/i/`, `/e/`, `/decide[/]`, `/flags[/]`, `/batch[/]` and `/array/`; `/` is never forwarded.                                                                                                          |
 | Event contract             | Complete for the initial high-value set | One versioned JSON registry generates the Flutter contract and is checked in CI. Client and server reject unknown names, keys, types and free-form values and add controlled common context.                                                                                                                              |
-| Instrumentation            | Initial production set complete         | Onboarding, habit-creation, recommendation and enrollment events are wired. Recommendation outcomes and accepted habits are emitted authoritatively by the backend; session replay and SDK autocapture are disabled. Lower-value engagement/notification events listed below remain candidates, not a deployment blocker. |
+| Instrumentation            | Schema v2: notification effectiveness   | Onboarding, habit-creation, recommendation and enrollment events are wired. Recommendation outcomes and accepted habits are emitted authoritatively by the backend; session replay and SDK autocapture are disabled. Schema v2 adds the notification-effectiveness set ([§2.1](#21-schema-v2--notification-effectiveness-question-3)); it reaches participants with the next app release. Generic engagement events remain candidates. |
 | Monitoring                 | Complete for activation                 | Both VMs expose node/container metrics, PostHog has a private blackbox probe, Grafana alerts on reachability/exporters/disk/memory/container pressure, and Traefik request metrics provide a conservative ingestion-budget warning.                                                                                       |
 | Backup                     | Complete for activation                 | A systemd timer runs custom-format PostgreSQL and ClickHouse backups, checksum manifests, retention and optional rclone offsite copy. A witnessed restore drill remains mandatory after the live stack exists.                                                                                                            |
 | Documentation and diagrams | Complete                                | Deployment, operations, data-model, architecture, use-case overview, UC-40/UC-41 sequences and the rendered system architecture describe the cross-VM design.                                                                                                                                                             |
@@ -234,10 +234,14 @@ PostHog's SDK-level `$identify`/`$set` protocol record is the only exception to
 the capture registry. The wrapper supplies only the opaque Keycloak subject and
 validated study/group IDs; all other person properties are forbidden.
 
-The initial set intentionally excludes generic screen views, background/session
-events, every API error, and notification delivery/open events. Those are
-candidate schema-version-2 additions after the live event-volume baseline is
-known. Adding names to prose or calling `Posthog().capture` directly is not an
+- **Notification effectiveness (schema v2):** `habit_logged`,
+  `reminder_frequency_changed`, `notification_opened` and
+  `notification_permission_checked` — see
+  [§2.1](#21-schema-v2--notification-effectiveness-question-3).
+
+The registry intentionally excludes generic screen views, background/session
+events and every API error. Those remain candidates after the live
+event-volume baseline is known. Adding names to prose or calling `Posthog().capture` directly is not an
 implementation: a future event must first be reviewed for research value and
 privacy, added to the shared registry, generated for Flutter, and tested at its
 source. Notification delivery in particular needs a token-to-participant
@@ -245,6 +249,98 @@ success result from Firebase; campaign-level recipient counts must not be
 misrepresented as one successful send per participant.
 
 **Every event carries**: `study_id`, `group_id`, `app_version`, `platform`, `locale`, `schema_version`. Group analytics: **study** as a PostHog group so arm comparison is native.
+
+### 2.1 Schema v2 — notification effectiveness (question 3)
+
+Question 3 asks whether reminders work, and whether the adaptive algorithm's
+fading is right. Tracing the code first changed the plan in two ways.
+
+**The adaptive reminders are not push notifications.** There are two systems:
+
+|           | Habit reminders                                      | Campaigns                           |
+| --------- | ---------------------------------------------------- | ----------------------------------- |
+| Origin    | the adaptive algorithm (`reminderPlanService.js`)    | researcher broadcasts               |
+| Mechanism | **local** notifications scheduled on the device      | FCM push from the server            |
+| Code      | `mobile/lib/services/reminder_scheduler_service.dart` | `app/services/notificationService.js` |
+
+So the Firebase per-token result the earlier draft of this section asked for
+concerns campaigns only. The algorithm under evaluation never touches
+Firebase.
+
+**What can and cannot be observed.**
+
+| Step                          | Observable? | How                                                               |
+| ----------------------------- | ----------- | ----------------------------------------------------------------- |
+| algorithm chooses a tier      | yes         | `reminder_frequency_changed`, server-side                         |
+| reminder shown                | **no**      | iOS displays a local notification without waking the app          |
+| reminder tapped               | yes         | `notification_opened`, warm and cold start                        |
+| behaviour logged              | yes         | `habit_logged`, server-side                                       |
+| participant can see reminders | yes         | `notification_permission_checked`                                 |
+
+"Shown but ignored" is therefore unknowable on iOS, and open rate is taps ÷
+reminders *scheduled*, not ÷ shown. Android fires with
+`inexactAllowWhileIdle`, so fire times are approximate. A reminder for a habit
+already logged today is cancelled (`cancelTodayFor`) — no tap is expected for
+it, which is correct rather than a miss.
+
+**Events.**
+
+| Event                             | Source  | Properties                                                                                                                        | When                                                                     |
+| --------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `habit_logged`                    | backend | `intention_id`, `enacted`                                                                                                         | every accepted `POST /habits/intentions/:id/logs`                        |
+| `reminder_frequency_changed`      | backend | `intention_id`, `frequency`, `previous_frequency` (`none` = first tier)                                                           | once per change, when the participant's app fetches its plans            |
+| `notification_opened`             | app     | `kind` (`habit_reminder`/`questionnaire`/`praise`/`recovery`/`campaign`/`unknown`), `intention_id`, `reminder_frequency`, `launch` | every tap on a local notification or FCM push                            |
+| `notification_permission_checked` | app     | `status` (`granted`/`denied`/`provisional`/`not_determined`)                                                                      | every app start, after the permission request                            |
+
+Design decisions worth knowing:
+
+- **The algorithm's decision is recorded, not every scheduled reminder.** One
+  event per tier change, not one per reminder, keeps the budget small and
+  records what actually needs evaluating. The last tier is persisted on
+  `implementation_intentions.lastReminderFrequency`; the update is conditional,
+  so concurrent fetches record a change once. The admin participant view
+  computes the same plans read-only and never records a change on a
+  participant's behalf.
+- **`habit_logged` is server-side** so a log counts once whichever client wrote
+  it. An un-log (`DELETE`) is not an event.
+- **Reminder attribution rides in the payload.** A local notification returns
+  one string to the app; it now carries `hhh_n`/`hhh_i`/`hhh_f` query
+  parameters after the route, which `parseNotificationPayload` strips before
+  navigation. Reminders scheduled by an older app version still carry a bare
+  route and report `kind: unknown` — expect those until every participant has
+  updated and resynced.
+- **`intention_id` is the Mongo id of the habit.** It is a pseudonymous record
+  id in the same domain as `distinct_id`, never the habit's name, cue or text.
+  It is what makes "tapped the reminder for habit X, then logged habit X"
+  answerable. This is the privacy decision in this schema version.
+- **Permission is sent on every app start**, not only on change, so the current
+  value per person is always recent and needs no on-device state.
+
+**Budget.** Roughly 1 permission event per app start, 1–2 logs per habit per
+day, a few taps a week and rare tier changes: on the order of 10k events/month
+at 200 participants — 1–2 % of the ceiling below.
+
+**The analysis this enables** (PostHog, no custom code):
+
+1. *Reminder response:* funnel `notification_opened` (`kind = habit_reminder`)
+   → `habit_logged` (`enacted = true`) within 2 h, broken down by
+   `reminder_frequency` and by study/group.
+2. *Silent effect:* reminders that are not tapped can still work. Compare the
+   share of days with `habit_logged` per participant across `frequency` periods
+   from `reminder_frequency_changed` — not a funnel, a trend by cohort.
+3. *Reach:* the share of participants whose latest
+   `notification_permission_checked` is `denied`, per arm. Exclude them from
+   (1) and (2) before interpreting a non-response.
+
+**Deferred, deliberately: campaign send results.** `notification_opened`
+already counts campaign opens per participant (`kind = campaign`), but there is
+no send-side event. `sendToTokens` receives bare tokens and reduces
+`sendEach`'s per-token results to counts, so a per-participant
+`campaign_push_sent` needs the token→participant mapping carried through, and a
+campaign id in the FCM data payload to name the campaign on open. Even then
+Firebase `success` means *accepted by Firebase*, not delivered. Not needed for
+evaluating the adaptive algorithm; do it if campaign reach becomes a research
+question.
 
 ### Event budget — how to stay near the ceiling
 
@@ -289,8 +385,10 @@ in-memory sink, so screens never call native SDK channels directly.
 not be trusted to report or could silently drop: `recommendation_generated`
 with real latency/cache status, `recommendation_failed`, `habit_created`,
 `recommendation_adopted`, and `enrollment_completed`. Captures are detached and
-fail closed, never blocking a response. `notification_sent` remains excluded
-until Firebase success can be attributed accurately per participant.
+fail closed, never blocking a response. Schema v2 adds `habit_logged` and
+`reminder_frequency_changed` on the server (§2.1). A campaign
+`notification_sent` remains excluded until Firebase success can be attributed
+accurately per participant.
 
 ---
 
@@ -384,9 +482,9 @@ VM provisioning, firewall configuration, first startup and the restore drill
 must wait for the future VM.
 
 **Phase 2 — high-value set complete.** Habit creation, recommendation and
-enrollment events are implemented. Generic engagement, notifications and
-client API-health events are deferred until the live budget is measured; they
-are not silently emitted outside the registry.
+enrollment events are implemented; schema v2 adds notification effectiveness
+(§2.1). Generic engagement and client API-health events are deferred until the
+live budget is measured; they are not silently emitted outside the registry.
 
 **Phase 3 — governance decision pending.** See §6 and §4. There is no missing
 system-of-record lineage; rollups, raw export and contributed-data erasure need
@@ -407,6 +505,12 @@ self-hosted-versus-migrate decision require the live deployment.
   engagement events and reduce existing low-value client events first.
 - **Privacy assertion as a test, not a promise.** A CI check asserting every event name and property key in the registry is on the allowlist, and a manual review that no free-text field (goal, habit name, cue, comment) reaches a property. Then verify empirically: run the onboarding + recommendation flows against a local PostHog and grep the captured payloads for the typed goal string — it must be absent.
 - **Funnel correctness.** Drive the five onboarding screens on a simulator, deliberately abandon at the passphrase step, and confirm PostHog shows a 4/5 funnel with the drop at that step — the exact question this feature exists to answer.
+- **Notification attribution.** On a release build, create a habit, wait for
+  (or temporarily move up) its reminder, tap it from a killed app and from the
+  background, then log the habit. PostHog must show two `notification_opened`
+  events with `kind = habit_reminder`, the habit's `intention_id`, a
+  `reminder_frequency` and `launch` = `cold_start`/`running`, followed by
+  `habit_logged` with the same `intention_id`.
 - **Lineage.** Generate a recommendation → adopt it → confirm `implementation_intentions.sourceRecommendationId` is set, `recommendation_adopted` carries the same id, and `adminStatsService` reports a non-zero `accepted` for the first time. Repeat on a **catalog-restricted** arm, which is the branch that silently loses lineage today.
 - **Resource safety.** `docker stats` after 24 h under load: PostHog's total RSS must sit inside its limits with Mongo and Neo4j unchanged. Deliberately stress ClickHouse and confirm its `mem_limit` binds rather than the host OOM-killer firing.
 - **Backup.** Restore the `pg_dump` and `clickhouse-backup` artifacts into a

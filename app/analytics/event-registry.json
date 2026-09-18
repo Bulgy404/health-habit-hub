@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "commonProperties": {
     "study_id": { "type": "opaque_id" },
     "group_id": { "type": "opaque_id" },
@@ -169,6 +169,71 @@
     "enrollment_completed": {
       "properties": {
         "study_code_used": { "type": "boolean" }
+      }
+    },
+    "habit_logged": {
+      "properties": {
+        "intention_id": { "type": "opaque_id" },
+        "enacted": { "type": "boolean" }
+      }
+    },
+    "reminder_frequency_changed": {
+      "properties": {
+        "intention_id": { "type": "opaque_id" },
+        "frequency": {
+          "type": "enum",
+          "values": ["daily", "every_2_days", "twice_weekly", "weekly", "off"]
+        },
+        "previous_frequency": {
+          "type": "enum",
+          "values": [
+            "daily",
+            "every_2_days",
+            "twice_weekly",
+            "weekly",
+            "off",
+            "none"
+          ]
+        }
+      }
+    },
+    "notification_opened": {
+      "properties": {
+        "kind": {
+          "type": "enum",
+          "values": [
+            "habit_reminder",
+            "questionnaire",
+            "praise",
+            "recovery",
+            "campaign",
+            "unknown"
+          ]
+        },
+        "intention_id": { "type": "opaque_id" },
+        "reminder_frequency": {
+          "type": "enum",
+          "values": [
+            "daily",
+            "every_2_days",
+            "twice_weekly",
+            "weekly",
+            "none",
+            "unknown"
+          ]
+        },
+        "launch": {
+          "type": "enum",
+          "values": ["cold_start", "running"]
+        }
+      }
+    },
+    "notification_permission_checked": {
+      "properties": {
+        "status": {
+          "type": "enum",
+          "values": ["granted", "denied", "provisional", "not_determined"]
+        }
       }
     }
   }

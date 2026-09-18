@@ -44,7 +44,7 @@ void main() {
         'app_version': '1.0.0',
         'platform': 'unknown',
         'locale': 'en',
-        'schema_version': 1,
+        'schema_version': 2,
         'step': 'passphrase',
       });
     });

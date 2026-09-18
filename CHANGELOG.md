@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   modes it exposed: restoring PostHog's ClickHouse into a bare instance yields
   an empty schema while `clickhouse-backup` exits 0, and a target without
   `CLICKHOUSE_SKIP_USER_SETUP=1` presents as a hang rather than an auth error.
+- Analytics schema v2 — notification effectiveness (question 3 in
+  `docs/analytics-posthog-plan.md` §2.1). Four new allowlisted events:
+  `habit_logged` and `reminder_frequency_changed` from the backend,
+  `notification_opened` and `notification_permission_checked` from the app.
+  Local notification payloads now carry the notification kind, the habit and
+  the reminder tier after the route, so a tapped reminder can be attributed;
+  navigation strips them. The adaptive algorithm's last tier per habit is
+  stored as `implementation_intentions.lastReminderFrequency`. The app-side
+  events need a new app release; reminders scheduled by older versions report
+  `kind: unknown`.
 
 ### Fixed
 
