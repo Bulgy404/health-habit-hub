@@ -38,7 +38,7 @@ describe('ProductAnalytics', () => {
       app_version: '1.0.0',
       platform: 'server',
       locale: 'unknown',
-      schema_version: 1,
+      schema_version: 2,
       latency_ms: 125,
       count: 3,
       cache_hit: false,

@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:record/record.dart';
 
+import '../analytics/analytics_service.dart';
+import '../analytics/notification_attribution.dart';
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
@@ -58,8 +60,9 @@ final habitReminderSyncProvider = Provider<Future<void> Function()>((ref) {
     // badges are earned/lost days or weeks after habit creation (the other
     // check, right after creating a habit, mostly only ever sees First Step).
     try {
-      final g = await MyHabitsService(dio: ref.read(dioProvider))
-          .fetchGamification();
+      final g = await MyHabitsService(
+        dio: ref.read(dioProvider),
+      ).fetchGamification();
       final earnedKeys = g.newlyEarned.map((b) => b.badgeKey).toList();
       if (earnedKeys.isNotEmpty) {
         await service.showPraiseNotifications(earnedKeys);
@@ -265,8 +268,21 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     try {
       final service = ref.read(pushNotificationServiceProvider);
       await service.initialize(
-        onLocalNotificationTap: (route) {
+        onPermissionStatus: (status) => unawaited(
+          ref.read(analyticsProvider).capture(
+            'notification_permission_checked',
+            {'status': status},
+          ),
+        ),
+        onLocalNotificationTap: (payload) {
           if (!mounted) return;
+          final tap = parseNotificationPayload(payload);
+          captureNotificationOpened(
+            ref.read(analyticsProvider),
+            tap,
+            coldStart: false,
+          );
+          final route = tap.route;
           try {
             context.go(route);
           } catch (e) {
@@ -293,14 +309,23 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
 
     // Handle a local notification (e.g. a habit reminder) that launched the
     // app from a cold start.
-    final localLaunchRoute = await getInitialLocalNotificationPayload();
-    if (localLaunchRoute != null && localLaunchRoute.isNotEmpty && mounted) {
-      context.go(localLaunchRoute);
+    final localLaunchPayload = await getInitialLocalNotificationPayload();
+    if (localLaunchPayload != null &&
+        localLaunchPayload.isNotEmpty &&
+        mounted) {
+      final tap = parseNotificationPayload(localLaunchPayload);
+      captureNotificationOpened(
+        ref.read(analyticsProvider),
+        tap,
+        coldStart: true,
+      );
+      context.go(tap.route);
     }
 
     // Handle notification tapped while app was terminated.
     final initial = await FirebaseMessaging.instance.getInitialMessage();
     if (initial != null && mounted) {
+      captureCampaignOpened(ref.read(analyticsProvider), coldStart: true);
       final route = ref
           .read(pushNotificationServiceProvider)
           .routeForMessage(initial);
@@ -310,6 +335,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     // Handle notification tapped while app was in background.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       if (!mounted) return;
+      captureCampaignOpened(ref.read(analyticsProvider), coldStart: false);
       final route = ref
           .read(pushNotificationServiceProvider)
           .routeForMessage(message);

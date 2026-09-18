@@ -23,6 +23,33 @@ import { productAnalytics } from '../services/productAnalyticsService.js';
 const log = logger.child({ module: 'intentionsRouter' });
 
 /**
+ * Capture a product-analytics event tagged with the participant's study and
+ * group. Detached: the enrollment lookup runs after the caller has already
+ * decided its response, so analytics adds no latency and can never fail a
+ * request.
+ */
+function captureForParticipant(database, userId, event, properties) {
+  database
+    .collection('enrollments')
+    .findOne(
+      { userId: String(userId) },
+      { projection: { studyId: 1, groupId: 1 } }
+    )
+    .then((enrollment) => {
+      productAnalytics.capture({
+        distinctId: String(userId),
+        event,
+        studyId: enrollment?.studyId?.toString(),
+        groupId: enrollment?.groupId?.toString(),
+        properties,
+      });
+    })
+    .catch((err) => {
+      log.warn({ err, event }, '[intentions] analytics capture skipped');
+    });
+}
+
+/**
  * @param {object} deps
  * @param {object} [deps.db]
  * @param {Function} [deps.neo4jRun]
@@ -59,7 +86,21 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       // implementation_intention, and vary the phrasing to avoid its own
       // habituation. Best-effort: fall back to generic + defaults on error.
       const [plans, cueConfig, templates] = await Promise.all([
-        computeReminderPlans({ db: database, userId }),
+        computeReminderPlans({
+          db: database,
+          userId,
+          onFrequencyChange: ({ intentionId, frequency, previousFrequency }) =>
+            captureForParticipant(
+              database,
+              userId,
+              'reminder_frequency_changed',
+              {
+                intention_id: intentionId,
+                frequency,
+                previous_frequency: previousFrequency,
+              }
+            ),
+        }),
         resolveHabitConfig({ db: database, userId, neo4jRun }).catch(() => ({
           reminderContentMode: 'generic',
         })),
@@ -435,6 +476,12 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         enacted,
       });
       res.status(201).json({ logged: true });
+      // Server-side so a log counts once whichever client wrote it; the
+      // outcome variable for "did a reminder lead to the behaviour?".
+      captureForParticipant(database, userId, 'habit_logged', {
+        intention_id: req.params.id,
+        enacted,
+      });
     } catch (err) {
       log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });

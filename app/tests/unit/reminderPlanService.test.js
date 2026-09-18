@@ -10,6 +10,8 @@ import {
   DEFAULT_II_REMINDER_TEMPLATES,
   readReminderTemplates,
   markAutomaticityReached,
+  recordReminderFrequency,
+  computeReminderPlans,
   normalizeCadence,
   weeklyAdherenceRate,
   currentStreakWeeks,
@@ -484,5 +486,107 @@ describe('markAutomaticityReached', () => {
     });
     assert.equal(updates.length, 0);
     assert.equal(doc.reachedAutomaticityAt, already);
+  });
+});
+
+describe('reminder frequency changes (notification-effectiveness analytics)', () => {
+  // Honours the conditional `$ne` filter, unlike a match-everything fake —
+  // the filter is what makes the change observable exactly once.
+  function makeDb(intentions) {
+    return {
+      collection(name) {
+        const cursor = (docs) => ({
+          sort: () => cursor(docs),
+          toArray: async () => docs,
+        });
+        if (name === 'implementation_intentions') {
+          return {
+            find: () => cursor(intentions),
+            async updateOne(filter, update) {
+              const doc = intentions.find(
+                (d) => String(d._id) === String(filter._id)
+              );
+              const ne = filter.lastReminderFrequency?.$ne;
+              if (
+                !doc ||
+                (ne !== undefined && doc.lastReminderFrequency === ne)
+              )
+                return { matchedCount: 0, modifiedCount: 0 };
+              Object.assign(doc, update.$set);
+              return { matchedCount: 1, modifiedCount: 1 };
+            },
+          };
+        }
+        return { find: () => cursor([]) };
+      },
+    };
+  }
+
+  test('records the first tier as a change from none', async () => {
+    const doc = { _id: new ObjectId() };
+    const change = await recordReminderFrequency({
+      db: makeDb([doc]),
+      intentionDoc: { ...doc },
+      frequency: 'daily',
+    });
+    assert.deepEqual(change, { previousFrequency: 'none' });
+    assert.equal(doc.lastReminderFrequency, 'daily');
+  });
+
+  test('reports nothing when the tier is unchanged', async () => {
+    const doc = { _id: new ObjectId(), lastReminderFrequency: 'weekly' };
+    const change = await recordReminderFrequency({
+      db: makeDb([doc]),
+      intentionDoc: { ...doc },
+      frequency: 'weekly',
+    });
+    assert.equal(change, null);
+  });
+
+  test('only one of two racing computations observes the change', async () => {
+    const doc = { _id: new ObjectId(), lastReminderFrequency: 'daily' };
+    const db = makeDb([doc]);
+    // Both read the document before either wrote.
+    const stale = { ...doc };
+    const results = await Promise.all([
+      recordReminderFrequency({ db, intentionDoc: stale, frequency: 'weekly' }),
+      recordReminderFrequency({ db, intentionDoc: stale, frequency: 'weekly' }),
+    ]);
+    assert.deepEqual(results.filter(Boolean), [{ previousFrequency: 'daily' }]);
+  });
+
+  test('computeReminderPlans reports changes only when asked to', async () => {
+    const doc = {
+      _id: new ObjectId(),
+      userId: 'u1',
+      status: 'active',
+      createdAt: NOW,
+    };
+    const db = makeDb([doc]);
+
+    await computeReminderPlans({ db, userId: 'u1', now: NOW });
+    assert.equal(
+      doc.lastReminderFrequency,
+      undefined,
+      'admin view is read-only'
+    );
+
+    const changes = [];
+    await computeReminderPlans({
+      db,
+      userId: 'u1',
+      now: NOW,
+      onFrequencyChange: (c) => changes.push(c),
+    });
+    await computeReminderPlans({
+      db,
+      userId: 'u1',
+      now: NOW,
+      onFrequencyChange: (c) => changes.push(c),
+    });
+    assert.equal(changes.length, 1, 'an unchanged tier is not re-reported');
+    assert.equal(changes[0].intentionId, String(doc._id));
+    assert.equal(changes[0].previousFrequency, 'none');
+    assert.ok(FREQUENCIES.includes(changes[0].frequency));
   });
 });

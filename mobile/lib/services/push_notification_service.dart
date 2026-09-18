@@ -43,6 +43,17 @@ String routeFromNotificationPayload(Map<String, dynamic> data) {
   };
 }
 
+/// Maps Firebase's authorization status onto the analytics enum for
+/// `notification_permission_checked`. One permission governs both FCM pushes
+/// and local reminders (iOS, Android 13+), so this is also whether habit
+/// reminders can be seen at all.
+String permissionStatusName(AuthorizationStatus status) => switch (status) {
+  AuthorizationStatus.authorized => 'granted',
+  AuthorizationStatus.denied => 'denied',
+  AuthorizationStatus.provisional => 'provisional',
+  AuthorizationStatus.notDetermined => 'not_determined',
+};
+
 // ---------------------------------------------------------------------------
 // Local notifications channel
 // ---------------------------------------------------------------------------
@@ -57,9 +68,10 @@ final _localNotifications = FlutterLocalNotificationsPlugin();
 /// high-importance notification channel.
 ///
 /// [onNotificationTap] fires with the tapped notification's `payload` (a
-/// GoRouter path, e.g. `/habits` for a habit reminder) whenever the app is
-/// running (foreground or background) when the user taps a local
-/// notification. For a tap that launches the app from a cold start, read
+/// GoRouter path plus analytics attribution, e.g.
+/// `/habits?hhh_n=habit_reminder&…` — see `parseNotificationPayload`)
+/// whenever the app is running (foreground or background) when the user taps
+/// a local notification. For a tap that launches the app from a cold start, read
 /// [getInitialLocalNotificationPayload] instead once initialisation
 /// completes.
 Future<void> initLocalNotifications({
@@ -80,7 +92,8 @@ Future<void> initLocalNotifications({
 
   await _localNotifications
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(
         const AndroidNotificationChannel(
           _kAndroidChannelId,
@@ -148,12 +161,19 @@ class PushNotificationService {
   /// 3. Listens for token refreshes and re-registers.
   /// 4. Shows foreground notifications via [flutter_local_notifications].
   ///
-  /// [onLocalNotificationTap] fires with the GoRouter path to navigate to
-  /// when a local notification (e.g. a habit reminder) is tapped while the
-  /// app is running. Cold-start taps are not covered here — check
-  /// [getInitialLocalNotificationPayload] separately once this completes.
+  /// [onLocalNotificationTap] fires with the tapped local notification's raw
+  /// payload (e.g. a habit reminder's) while the app is running. Payloads
+  /// carry analytics attribution after the route — split them with
+  /// `parseNotificationPayload` before navigating. Cold-start taps are not
+  /// covered here — check [getInitialLocalNotificationPayload] separately
+  /// once this completes.
+  ///
+  /// [onPermissionStatus] receives the notification permission as it stands
+  /// after the request — without it a participant who never responds to
+  /// reminders is indistinguishable from one who never sees them.
   Future<void> initialize({
-    void Function(String route)? onLocalNotificationTap,
+    void Function(String payload)? onLocalNotificationTap,
+    void Function(String status)? onPermissionStatus,
   }) async {
     // Registered first and unconditionally, before any Firebase call below.
     // Local notifications (habit reminders, SRHI, praise/recovery — all
@@ -183,7 +203,10 @@ class PushNotificationService {
     // failure here (no APNs entitlement, simulator limitations, no network)
     // must never take the local-notification tap wiring above down with it.
     try {
-      await messaging.requestPermission();
+      final settings = await messaging.requestPermission();
+      onPermissionStatus?.call(
+        permissionStatusName(settings.authorizationStatus),
+      );
 
       // iOS: firebase_messaging registers its own UNUserNotificationCenter
       // delegate, which by default suppresses the system alert/sound/badge
@@ -292,6 +315,8 @@ class PushNotificationService {
 // ---------------------------------------------------------------------------
 
 /// Provides the singleton [PushNotificationService] instance.
-final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+final pushNotificationServiceProvider = Provider<PushNotificationService>((
+  ref,
+) {
   return PushNotificationService(dio: ref.watch(dioProvider), ref: ref);
 });

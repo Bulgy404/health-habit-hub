@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../analytics/notification_attribution.dart';
 import '../config/app_config.dart';
 import '../features/my_habits/gamification_ui.dart';
 
@@ -121,7 +122,10 @@ class ReminderSchedulerService {
           // Settings → Achievements, i.e. '/settings/achievements') — a tap
           // silently went nowhere since go_router has nothing to match it
           // against.
-          payload: '/settings/achievements',
+          payload: tagNotificationPayload(
+            '/settings/achievements',
+            kind: 'praise',
+          ),
         );
       } catch (_) {
         // Non-fatal: a praise notification is a nicety, never a blocker.
@@ -156,7 +160,7 @@ class ReminderSchedulerService {
             ),
             iOS: DarwinNotificationDetails(),
           ),
-          payload: '/habits',
+          payload: tagNotificationPayload('/habits', kind: 'recovery'),
         );
       } catch (_) {
         // Non-fatal: this is a nicety, never a blocker.
@@ -335,7 +339,8 @@ class ReminderSchedulerService {
     // templates so the copy itself doesn't habituate.
     final reminderContentMode =
         response.data?['reminderContentMode']?.toString() ?? 'generic';
-    final templates = (response.data?['reminderTemplates'] as List<dynamic>?)
+    final templates =
+        (response.data?['reminderTemplates'] as List<dynamic>?)
             ?.whereType<String>()
             .toList() ??
         const <String>[];
@@ -392,7 +397,14 @@ class ReminderSchedulerService {
             iOS: DarwinNotificationDetails(),
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: '/habits',
+          // Carries the habit and the tier the algorithm chose, so a tap can
+          // be attributed (notification_opened) — see notification_attribution.
+          payload: tagNotificationPayload(
+            '/habits',
+            kind: 'habit_reminder',
+            intentionId: intentionId,
+            reminderFrequency: frequency,
+          ),
         );
       }
     }
@@ -454,9 +466,12 @@ class ReminderSchedulerService {
       );
       final title = it['questionnaireTitle']?.toString() ?? 'Questionnaire';
       final isSrhi = it['questionnaireSlug']?.toString() == 'srhi';
-      final payload = isSrhi
-          ? '/habits/${it['intentionId']}/srhi/${it['occurrence']}'
-          : '/settings/profile';
+      final payload = tagNotificationPayload(
+        isSrhi
+            ? '/habits/${it['intentionId']}/srhi/${it['occurrence']}'
+            : '/settings/profile',
+        kind: 'questionnaire',
+      );
 
       if (!fireAt.isAfter(now)) {
         // Already due — shown as a card too, but that only helps a
@@ -522,8 +537,7 @@ class ReminderSchedulerService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final notified =
-        (prefs.getStringList(_notifiedDueNowWindowIdsKey) ?? const [])
-            .toSet();
+        (prefs.getStringList(_notifiedDueNowWindowIdsKey) ?? const []).toSet();
     if (notified.contains(windowId)) return;
 
     await _plugin.show(

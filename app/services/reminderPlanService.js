@@ -553,11 +553,51 @@ export async function markAutomaticityReached({
 }
 
 /**
+ * Persist the tier the algorithm chose for a habit and report whether it
+ * differs from the last one recorded — the adaptive algorithm's *decision*,
+ * which is what notification-effectiveness analysis has to be split by.
+ *
+ * The update is conditional on the stored value differing, so of two
+ * concurrent plan computations only one observes the change. `none` as the
+ * previous value means the habit's first recorded tier. Best-effort, like
+ * [markAutomaticityReached]: a failed write reports no change and is retried
+ * the next time this is computed.
+ * @param {{ db: import('mongodb').Db, intentionDoc: object, frequency: string }} deps
+ * @returns {Promise<{ previousFrequency: string } | null>}
+ */
+export async function recordReminderFrequency({ db, intentionDoc, frequency }) {
+  const previousFrequency = intentionDoc.lastReminderFrequency ?? 'none';
+  if (previousFrequency === frequency) return null;
+  try {
+    const result = await db
+      .collection('implementation_intentions')
+      .updateOne(
+        { _id: intentionDoc._id, lastReminderFrequency: { $ne: frequency } },
+        { $set: { lastReminderFrequency: frequency } }
+      );
+    if (result.modifiedCount !== 1) return null;
+  } catch {
+    return null;
+  }
+  return { previousFrequency };
+}
+
+/**
  * Compute reminder plans for all of a user's active intentions.
- * @param {{ db: import('mongodb').Db, userId: string, now?: Date }} deps
+ *
+ * Pass [onFrequencyChange] only from the participant's own plan fetch: it
+ * records each habit's tier and is called once per change. The admin view
+ * computes the same plans read-only, so looking at a participant never
+ * records a change on their behalf.
+ * @param {{ db: import('mongodb').Db, userId: string, now?: Date, onFrequencyChange?: (change: { intentionId: string, frequency: string, previousFrequency: string }) => void }} deps
  * @returns {Promise<Array>}
  */
-export async function computeReminderPlans({ db, userId, now = new Date() }) {
+export async function computeReminderPlans({
+  db,
+  userId,
+  now = new Date(),
+  onFrequencyChange,
+}) {
   const config = await readReminderConfig(db);
   const intentions = await db
     .collection('implementation_intentions')
@@ -603,6 +643,20 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
         frequency: plan.frequency,
         now,
       });
+      if (onFrequencyChange) {
+        const change = await recordReminderFrequency({
+          db,
+          intentionDoc: doc,
+          frequency: plan.frequency,
+        });
+        if (change) {
+          onFrequencyChange({
+            intentionId: String(doc._id),
+            frequency: plan.frequency,
+            previousFrequency: change.previousFrequency,
+          });
+        }
+      }
       return plan;
     })
   );

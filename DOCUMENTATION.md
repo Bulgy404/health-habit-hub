@@ -924,6 +924,7 @@ All signals are additive to the existing Mongo/Neo4j split:
 | Gamification | `earnedBadges` per habit (added *and removed*, §6.5.1); `user_gamification.earnedBadges` for user-scoped badges | — |
 | Sharing | (read-only from Neo4j; no Mongo write) | `Habit.created_at` per donated habit → share XP and streak |
 | Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§6.5.2) | — |
+| Reminder tier history | `lastReminderFrequency` on `implementation_intentions` — the last tier recorded, so each change is reported to product analytics once (`docs/analytics-posthog-plan.md` §2.1) | — |
 
 Because the stacking relationship and habit type live on the graph, a
 researcher-facing view (an admin analytics panel, or a documented Cypher query
