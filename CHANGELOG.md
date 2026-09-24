@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- `anyio` bumped from 4.14.1 to 4.14.2 in `API-service` and `knowledge-mcp`,
+  clearing CVE-2026-63374, CVE-2026-64847 and CVE-2026-63349. The dependency
+  audit in CI fails on every branch until this lands.
+
+
 ### Fixed
 
 - The analytics stack did not survive a host reboot. Upstream's compose sets

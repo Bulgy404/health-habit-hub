@@ -6,7 +6,7 @@
 # and paste the full output below (direct deps: fastmcp>=2.0.0, httpx>=0.27.0).
 aiofile==3.11.1
 annotated-types==0.7.0
-anyio==4.14.1
+anyio==4.14.2
 attrs==26.1.0
 Authlib==1.7.2
 backports.tarfile==1.2.0
