@@ -13,6 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   clearing CVE-2026-63374, CVE-2026-64847 and CVE-2026-63349. The dependency
   audit in CI fails on every branch until this lands.
 
+
+### Fixed
+
+- The analytics stack did not survive a host reboot. Upstream's compose sets
+  `restart: on-failure` on nearly every service, which only covers a crash — a
+  reboot stops containers cleanly, they exit 0, and Docker leaves them down.
+  An unattended kernel upgrade rebooted `habitvmmonitoring` at 04:15 on
+  2026-09-24 and left PostgreSQL, Kafka, Redis, Valkey, object storage and
+  Temporal stopped while web, worker and capture kept retrying against a
+  missing data layer; the only alert was Grafana's PostHog reachability probe.
+  `analytics-vm/docker-compose.override.yml` now sets `restart: unless-stopped`
+  on every long-running service, which recovers after a reboot while still
+  honouring a deliberate `manage.sh stop`. The one-shots keep no policy, since
+  a restart policy would both re-run them on every daemon start and defeat
+  `remove_completed_oneshots`, leaving Exited(0) containers for Checkmk to
+  escalate.
+
 ## [1.3.0] - 2026-09-18
 
 ### Highlights

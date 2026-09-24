@@ -2,11 +2,31 @@
 # Compose stack. This file is always loaded after the pinned upstream files by
 # manage.sh. `!override` requires Docker Compose 2.24.4 or newer.
 
+# Restart after a host reboot. Upstream sets `on-failure` almost everywhere,
+# which only covers a crash: a reboot stops containers cleanly, they exit 0,
+# and Docker leaves them down. That is exactly what happened on 2026-09-24 —
+# an unattended kernel upgrade rebooted the VM at 04:15 and PostgreSQL, Kafka,
+# Redis, Valkey, object storage and Temporal never came back, while web/worker
+# retried against a missing data layer. `unless-stopped` restarts a container
+# that was running when the daemon went down, but still honours a deliberate
+# `manage.sh stop`, so the stack stays stopped when it was stopped on purpose.
+#
+# Deliberately NOT applied to the one-shots (migrate, asyncmigrationscheck,
+# kafka-init, clickhouse-backup): they exit 0 by design, and a restart policy
+# would make them run again on every daemon start. manage.sh's
+# remove_completed_oneshots also only cleans up containers whose policy is
+# "no", so giving them one would leave them behind as Exited(0) — which ZIH's
+# Checkmk counts as a stopped container and escalates to CRIT.
+x-restart-after-reboot: &restart-after-reboot
+  restart: unless-stopped
+
 x-node-service-limits: &node-service-limits
   mem_limit: 768m
+  restart: unless-stopped
 
 x-small-service-limits: &small-service-limits
   mem_limit: 384m
+  restart: unless-stopped
 
 services:
   # The only PostHog application port reachable from another host. Caddy uses
@@ -38,6 +58,7 @@ services:
       CADDY_TLS_BLOCK: ''
       CADDY_HOST: ':8000'
     mem_limit: 256m
+    <<: *restart-after-reboot
 
   web:
     environment:
@@ -63,6 +84,7 @@ services:
     # measured at 3.5 GiB (87% of 4096m) after a few hours idle. Unit recycles a
     # process every 7500 requests, which never triggers without traffic.
     mem_limit: 5120m
+    <<: *restart-after-reboot
 
   worker:
     environment:
@@ -89,6 +111,7 @@ services:
     # reached 840 MB anon-rss, and with the parent and beat alongside it that
     # exceeds 2 GiB. 3072m covers the four processes measured.
     mem_limit: 3072m
+    <<: *restart-after-reboot
 
   temporal-django-worker:
     environment:
@@ -112,6 +135,7 @@ services:
 
   db:
     mem_limit: 1536m
+    <<: *restart-after-reboot
 
   clickhouse:
     # Appended, not replaced: upstream's four config mounts still apply. See the
@@ -124,6 +148,7 @@ services:
     # Measured at 789 MiB with the reduced thread pools, so 4096m was idle
     # headroom. 3072m keeps nearly 4x for query spikes while funding the worker.
     mem_limit: 3072m
+    <<: *restart-after-reboot
 
   kafka:
     # Upstream runs Redpanda with `--memory=3G --reserve-memory=500M`, and
@@ -132,18 +157,22 @@ services:
     # that floor, so kafka restart-looped and every dependant stayed Created.
     # 4096m leaves headroom above the 3G seastar demands.
     mem_limit: 4096m
+    <<: *restart-after-reboot
 
   kafka-init:
     mem_limit: 256m
 
   zookeeper:
     mem_limit: 512m
+    <<: *restart-after-reboot
 
   redis7:
     mem_limit: 384m
+    <<: *restart-after-reboot
 
   valkey:
     mem_limit: 256m
+    <<: *restart-after-reboot
 
   objectstorage:
     # MinIO withdrew its images from Docker Hub — `docker pull minio/minio` now
@@ -154,24 +183,30 @@ services:
     image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a1ea29fa28355559ef137d71fc570e508a214ec84ff8083e39bc5428980b015e
     ports: !override []
     mem_limit: 512m
+    <<: *restart-after-reboot
 
   seaweedfs:
     ports: !override []
     mem_limit: 512m
+    <<: *restart-after-reboot
 
   temporal:
     ports: !override []
     mem_limit: 512m
+    <<: *restart-after-reboot
 
   temporal-ui:
     ports: !override []
     mem_limit: 256m
+    <<: *restart-after-reboot
 
   elasticsearch:
     mem_limit: 1024m
+    <<: *restart-after-reboot
 
   browserless:
     mem_limit: 768m
+    <<: *restart-after-reboot
 
   plugins:
     <<: *node-service-limits
@@ -222,7 +257,10 @@ services:
     <<: *small-service-limits
     image: ghcr.io/posthog/posthog/cymbal:master@sha256:7a7ddc13690f87777b2dc7e3f66c4677a14f060470268d2f33141a1fb7edf2cc
   temporal-admin-tools:
-    <<: *small-service-limits
+    mem_limit: 384m
+    # Deliberately no restart policy: this is an interactive tools container
+    # (tctl), not a service anything depends on.
+    restart: 'no'
 
   # Exporters are part of the analytics-VM package but do not publish to all
   # interfaces. The habitvm firewall should be the only allowed source.
