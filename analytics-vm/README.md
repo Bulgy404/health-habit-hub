@@ -193,6 +193,29 @@ key. The mobile SDK must never receive the private analytics-VM address.
 ./manage.sh stop
 ```
 
+### After a host reboot
+
+The VM installs security updates and reboots itself unattended — on 2026-09-24
+that happened at 04:15 on a new kernel. Upstream's compose sets
+`restart: on-failure` on nearly every service, which does **not** cover this: a
+reboot stops containers cleanly, they exit 0, and Docker leaves them down. That
+reboot left PostgreSQL, Kafka, Redis, Valkey, object storage and Temporal
+stopped while web, worker and capture ran on without a data layer, and the only
+outward sign was Grafana's reachability alert on `/_health`.
+
+The override now sets `restart: unless-stopped` on every long-running service,
+so a reboot recovers on its own while `./manage.sh stop` still keeps the stack
+down. The one-shots (`migrate`, `asyncmigrationscheck`, `kafka-init`,
+`clickhouse-backup`) deliberately keep no policy — see the comment at the top of
+`docker-compose.override.yml`.
+
+If the stack is ever found half-down, this is safe to run at any time and
+starts whatever is missing without touching what is healthy:
+
+```bash
+sudo /opt/hhh-analytics/analytics-vm/manage.sh up
+```
+
 ### Backups
 
 `backup` creates a custom-format PostgreSQL dump and a consistent ClickHouse
