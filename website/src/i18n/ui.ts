@@ -82,7 +82,7 @@ const de: Dict = {
   graph_title: 'Aus vielen Gewohnheiten wird ein Netzwerk.',
   graph_sub: 'Teilnehmende können ihre Gewohnheiten anonym teilen. So entsteht nach und nach ein Graph aus tausenden echten Verhaltensweisen, in dem verwandte Gewohnheiten zusammenrücken. Für Forschende ist das eine Landkarte menschlichen Verhaltens. Für Teilnehmende ist es ein Ort, an dem sie sehen, dass sie nicht allein sind.',
   graph_hint: 'Beispielhafte Gewohnheiten aus jeder Kategorie. Bewege die Maus über eine Karte, um verwandte hervorzuheben.',
-  graph_method: 'Datenerhebung: Teilnehmende entscheiden in der App selbst, ob sie eine Gewohnheit anonym zur Forschung teilen möchten. Freigegebene Einträge werden von persönlichen Merkmalen getrennt, nach Themen gruppiert und nur als aggregierter Graph gespeichert. Rückschlüsse auf einzelne Personen sind nicht möglich.',
+  graph_method: 'Datenerhebung: Teilnehmende entscheiden in der App selbst, ob sie eine Gewohnheit anonym zur Forschung teilen möchten. Freigegebene Einträge werden von persönlichen Merkmalen getrennt, nach Themen gruppiert und nur als aggregierter Graph gespeichert. Das erschwert Rückschlüsse auf einzelne Personen erheblich, denn detaillierte Einzeldaten lassen sich oft selbst ohne Namen einer Person zuordnen.',
   graph_note: 'Illustrative Beispiele, keine tatsächlichen Einträge.',
   graph_c1: 'Bewegung', graph_c2: 'Ernährung', graph_c3: 'Schlaf', graph_c4: 'Achtsamkeit',
   graph_loop_caption: 'So wird aus vielen einzelnen Beiträgen ein lernendes System.',
@@ -147,7 +147,7 @@ const de: Dict = {
   r_arch_setup: 'Studien-Setup', r_arch_app: 'App', r_arch_auth: 'Login', r_arch_api: 'API', r_arch_data: 'Datenbank', r_arch_rec: 'Empfehlungen', r_arch_edge: 'TU Dresden',
   r_arch_setup_d: 'Admin-Portal', r_arch_app_d: 'iOS, Android, Web', r_arch_auth_d: 'Keycloak SSO', r_arch_api_d: 'Node-Service', r_arch_data_d: 'MongoDB, Neo4j', r_arch_rec_d: 'Recommender', r_arch_edge_d: 'Traefik, TLS',
   r_arch_setup_x: 'Alles beginnt im Admin-Portal: Du legst deine Studie an, definierst die Gewohnheiten und die Einwilligungserklärung und erhältst einen Studiencode für deine Teilnehmenden.',
-  r_arch_app_x: 'Teilnehmende laden die App und geben deinen Studiencode ein, um beizutreten. Dieselbe Codebasis läuft auf iOS, Android und im Browser, damit niemand ausgeschlossen wird und deine Stichprobe nicht durch die Plattform verzerrt wird.',
+  r_arch_app_x: 'Teilnehmende laden die App und geben deinen Studiencode ein, um beizutreten, in etwa einer Minute. Dieselbe Codebasis läuft auf iOS, Android und im Browser, damit niemand wegen des eigenen Smartphones ausgeschlossen wird. Niedrige Einstiegshürden zählen, denn App-basierte Studien verlieren regelmäßig einen großen Teil ihrer Teilnehmenden.',
   r_arch_auth_x: 'Anmeldung und digitale Einwilligung laufen über Keycloak. Teilnehmende, Forschende und Admins sind sauber getrennt, und niemand sieht mehr Daten, als seine Rolle erlaubt. Das ist die Grundlage für ein sauberes Ethikvotum.',
   r_arch_api_x: 'Erst nach der Einwilligung nimmt ein zentraler Dienst die Daten entgegen, prüft sie und setzt deine Studienlogik durch. So bleiben die Regeln deiner Studie an einer Stelle definiert, statt über viele Geräte verstreut.',
   r_arch_data_x: 'MongoDB speichert die Einträge, Neo4j den Beziehungsgraphen zwischen Gewohnheiten. Diese Trennung macht sowohl klassische Auswertungen als auch Netzwerkanalysen möglich, ohne Kompromisse.',
@@ -197,8 +197,6 @@ const de: Dict = {
 
   // scientific footnotes
   refs_title: 'Quellen',
-  refs_link: 'Zur Quelle',
-  refs_own: 'Eigene Publikation',
 
   soon: 'Bald',
 };
@@ -234,7 +232,7 @@ const en: Dict = {
   graph_title: 'Many habits become one network.',
   graph_sub: 'Participants can share their habits anonymously. Bit by bit that builds a graph of thousands of real behaviours, where related habits move closer together. For researchers it is a map of human behaviour. For participants it is a place to see that they are not alone.',
   graph_hint: 'Example habits from each category. Hover a card to highlight related ones.',
-  graph_method: 'How the data is collected: in the app, participants choose for themselves whether to release a habit anonymously for research. Released entries are separated from personal details, grouped by theme, and stored only as an aggregate graph. No conclusions about individuals are possible.',
+  graph_method: 'How the data is collected: in the app, participants choose for themselves whether to release a habit anonymously for research. Released entries are separated from personal details, grouped by theme, and stored only as an aggregate graph. That makes it much harder to trace entries back to individuals, who can often be re-identified from detailed data even without a name.',
   graph_note: 'Illustrative examples, not real entries.',
   graph_c1: 'Movement', graph_c2: 'Nutrition', graph_c3: 'Sleep', graph_c4: 'Mindfulness',
   graph_loop_caption: 'This is how many individual contributions become a learning system.',
@@ -257,7 +255,7 @@ const en: Dict = {
   fork_r_go: 'Go to research',
 
   p_hero_title: 'Track your habits, and contribute to research along the way.',
-  p_hero_lead: 'The Health Habit Hub turns small daily steps into visible patterns. It is is free, it treats your data with care, and every entry helps science understand healthy habits a little better.',
+  p_hero_lead: 'The Health Habit Hub turns small daily steps into visible patterns. It is free, it treats your data with care, and every entry helps science understand healthy habits a little better.',
   p_ios: 'Download on the App Store', p_android_soon: 'Coming soon on Android',
   p_web: 'Prefer to start in the browser',
   p_s1_t: 'Explained in a single screen',
@@ -295,7 +293,7 @@ const en: Dict = {
   r_arch_setup: 'Study setup', r_arch_app: 'App', r_arch_auth: 'Login', r_arch_api: 'API', r_arch_data: 'Database', r_arch_rec: 'Recommend', r_arch_edge: 'TU Dresden',
   r_arch_setup_d: 'Admin portal', r_arch_app_d: 'iOS, Android, Web', r_arch_auth_d: 'Keycloak SSO', r_arch_api_d: 'Node service', r_arch_data_d: 'MongoDB, Neo4j', r_arch_rec_d: 'Recommender', r_arch_edge_d: 'Traefik, TLS',
   r_arch_setup_x: 'It all starts in the admin portal: you create your study, define the habits and the consent form, and get a study code for your participants.',
-  r_arch_app_x: 'Participants download the app and enter your study code to join. The same codebase runs on iOS, Android and the browser, so no one is excluded and your sample is not skewed by platform.',
+  r_arch_app_x: 'Participants download the app and enter your study code to join, in about a minute. The same codebase runs on iOS, Android and the browser, so no one is excluded because of their phone. Low entry barriers matter, because app-based studies routinely lose a large share of their participants.',
   r_arch_auth_x: 'Sign-in and digital consent run through Keycloak. Participants, researchers and admins are cleanly separated, and no one sees more data than their role allows. This is the basis for a clean ethics approval.',
   r_arch_api_x: 'Only after consent does a central service receive the data, validate it and enforce your study logic. Your study rules live in a single place instead of being scattered across many devices.',
   r_arch_data_x: 'MongoDB stores the entries, Neo4j the relationship graph between habits. That split makes both classic statistics and network analysis possible, with no compromise.',
@@ -344,8 +342,6 @@ const en: Dict = {
 
   // scientific footnotes
   refs_title: 'Sources',
-  refs_link: 'View source',
-  refs_own: 'Our publication',
 
   soon: 'Soon',
 };

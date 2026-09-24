@@ -20,12 +20,11 @@ const t = useT(lang);
 // publications, listed in full in the References section below.
 const shots: { img: ImageMetadata; t: string; p: string; cite?: RefId[] }[] = [
   { img: Onboarding, t: t('p_s1_t'), p: t('p_s1_p') },
-  { img: Habits, t: t('p_s2_t'), p: t('p_s2_p'), cite: ['habit-automaticity', 'jitai', 'just-in-time-fading'] },
+  { img: Habits, t: t('p_s2_t'), p: t('p_s2_p'), cite: ['habit-review', 'habit-automaticity', 'reminder-dependency', 'just-in-time-fading'] },
   { img: Graph, t: t('p_s3_t'), p: t('p_s3_p') },
-  { img: Recommendations, t: t('p_s4_t'), p: t('p_s4_p'), cite: ['bct-taxonomy', 'hrs-review', 'context-tailoring'] },
-  { img: SRHI, t: t('p_s5_t'), p: t('p_s5_p'), cite: ['srhi'] },
+  { img: Recommendations, t: t('p_s4_t'), p: t('p_s4_p'), cite: ['bct-taxonomy', 'bcio', 'tailoring-meta', 'recsys-explanations', 'context-tailoring'] },
+  { img: SRHI, t: t('p_s5_t'), p: t('p_s5_p'), cite: ['srhi', 'intention-behavior-gap', 'implementation-intentions', 'habit-promotion'] },
 ];
-const pageRefs: RefId[] = ['habit-automaticity', 'jitai', 'just-in-time-fading', 'bct-taxonomy', 'hrs-review', 'context-tailoring', 'srhi'];
 // shuffle once per build so the arrangement feels alive rather than fixed
 function shuffled<T>(arr: T[]): T[] {
   const a = arr.slice();
@@ -36,13 +35,18 @@ function shuffled<T>(arr: T[]): T[] {
   return a;
 }
 const bentoShots = shuffled(shots);
+// the last shot in the bento has no caption, so its claim (and citations) is
+// not shown - derive the page's reference order from the captions that are,
+// in the order they render, so footnotes count up from 1 down the page
+const heroCite: RefId[] = ['progress-monitoring', 'self-monitoring-techniques'];
+const pageRefs: RefId[] = [...new Set([...heroCite, ...bentoShots.slice(0, -1).flatMap((s) => s.cite ?? [])])];
 ---
 <header class="p-hero">
   <div class="hero-bg"></div>
   <div class="wrap p-hero-in reveal">
     <span class="eyebrow">{t('nav_participants')}</span>
     <h1>{t('p_hero_title')}</h1>
-    <p class="lead">{t('p_hero_lead')}</p>
+    <p class="lead">{t('p_hero_lead')}<Cite ids={heroCite} order={pageRefs} /></p>
     <div class="p-cta"><AppStoreBadges lang={lang} /></div>
   </div>
 </header>

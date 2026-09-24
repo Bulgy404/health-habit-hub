@@ -11,22 +11,23 @@ const t = useT(lang);
 // `cite` backs the behaviour-science claim in each capability with real
 // publications, listed in full in the References section further down.
 const caps: [string, string, RefId[]?][] = [
-  ['r_cap_1_t','r_cap_1_p'],['r_cap_2_t','r_cap_2_p',['srhi']],['r_cap_3_t','r_cap_3_p',['bct-taxonomy','hrs-review','context-tailoring']],
+  ['r_cap_1_t','r_cap_1_p'],['r_cap_2_t','r_cap_2_p',['srhi']],['r_cap_3_t','r_cap_3_p',['bcio','context-tailoring']],
   ['r_cap_4_t','r_cap_4_p'],['r_cap_5_t','r_cap_5_p'],['r_cap_6_t','r_cap_6_p'],
 ];
-const pageRefs: RefId[] = ['srhi', 'bct-taxonomy', 'hrs-review', 'context-tailoring'];
+const pageRefs: RefId[] = ['law-of-attrition', 'app-attrition', 'hrs-review', 'effective-engagement', 'srhi', 'bcio', 'context-tailoring'];
 // ordered as the researcher actually experiences it: set up the study,
 // then a participant joins, signs in and consents, then data flows in
 // TU Dresden is not one more step in the chain, it's the ground everything
 // else runs on - so it gets its own frame around the six real steps instead
-// of a seventh node in the line
-const arch = [
+// of a seventh node in the line. `cite` on a step backs its claim with the
+// References section below.
+const arch: [string, string, string, RefId[]?][] = [
   ['r_arch_setup','r_arch_setup_d','r_arch_setup_x'],
-  ['r_arch_app','r_arch_app_d','r_arch_app_x'],
+  ['r_arch_app','r_arch_app_d','r_arch_app_x',['law-of-attrition','app-attrition']],
   ['r_arch_auth','r_arch_auth_d','r_arch_auth_x'],
   ['r_arch_api','r_arch_api_d','r_arch_api_x'],
   ['r_arch_data','r_arch_data_d','r_arch_data_x'],
-  ['r_arch_rec','r_arch_rec_d','r_arch_rec_x'],
+  ['r_arch_rec','r_arch_rec_d','r_arch_rec_x',['hrs-review','effective-engagement']],
 ];
 // end-to-end encryption pipeline, from a passphrase only the holder knows
 // down to ciphertext on the server - the six steps of the crypto-wallet model
@@ -76,8 +77,8 @@ const sec = [
         </div>
       </div>
       <div class="arch-cards">
-        {arch.map(([k,d,x], i) => (
-          <div class="ac reveal"><span class="ac-n">{i+1}</span><div><h3>{t(k)} <em>{t(d)}</em></h3><p>{t(x)}</p></div></div>
+        {arch.map(([k,d,x,cite], i) => (
+          <div class="ac reveal"><span class="ac-n">{i+1}</span><div><h3>{t(k)} <em>{t(d)}</em></h3><p>{t(x)}{cite && <Cite ids={cite} order={pageRefs} />}</p></div></div>
         ))}
       </div>
 
