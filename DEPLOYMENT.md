@@ -526,7 +526,7 @@ commands, safety constraints and upgrade procedure are in
 ### Step 2: Create Stack
 
 1. Go to **Stacks** → **Add stack**
-2. Stack name: `health-habit-hub-2`
+2. Stack name: `health_habit_hub`
 3. Build method: **Repository**
 
 ### Step 3: Configure Git Repository
@@ -818,7 +818,7 @@ different states and can stay apart indefinitely.
 
 In Portainer:
 
-1. Go to **Stacks** → `health-habit-hub-2`
+1. Go to **Stacks** → `health_habit_hub`
 2. Click **Pull and redeploy**
 3. Watch the stack's container logs until the affected services report healthy
 
@@ -1160,7 +1160,7 @@ To silence an alert during planned maintenance, add a Grafana mute timing (**Ale
 
 View logs in Portainer:
 
-- **Stacks** → `health-habit-hub-2` → click a container → **Logs**
+- **Stacks** → `health_habit_hub` → click a container → **Logs**
 
 Or via CLI:
 
@@ -1199,7 +1199,7 @@ docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
    typecheck). Nothing re-checks this at deploy time — a redeploy builds `main`
    as-is.
 2. Merge the change to `main`
-3. Deploy it: Portainer → **Stacks** → `health-habit-hub-2` → **Pull and
+3. Deploy it: Portainer → **Stacks** → `health_habit_hub` → **Pull and
    redeploy**. Until this step, production is unchanged.
 4. Verify deployment in Portainer logs
 
