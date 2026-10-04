@@ -184,10 +184,9 @@ services:
         max-file: '3'
 
   app:
-    image: hhh/app
+    image: ghcr.io/bulgy404/hhh-app:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-app
-    build: ./app
-    pull_policy: build
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -277,7 +276,7 @@ services:
         condition: service_started
       backup:
         condition: service_started
-    # `build: ./app` means the maintenance scripts at repo-root scripts/ (e.g.
+    # The app image is built from ./app alone, so the maintenance scripts at repo-root scripts/ (e.g.
     # migrate-habits-bcio.js — see DEPLOYMENT.md's `docker exec hhh-app node
     # scripts/...`) are never baked into this image. Same fix as the other
     # config-sync consumers below: bind-mount the real checkout instead of
@@ -441,9 +440,8 @@ services:
         max-file: '3'
 
   translate:
-    image: hhh/translate
-    build: ./translate
-    pull_policy: build
+    image: ghcr.io/bulgy404/hhh-translate:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-translate
     restart: always
     # No `user:` override — the image runs as its built-in `libretranslate`
@@ -898,10 +896,9 @@ services:
         max-file: '3'
 
   lightrag:
-    image: hhh/lightrag
+    image: ghcr.io/bulgy404/hhh-lightrag:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-lightrag
-    build: ./lightrag
-    pull_policy: build
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -996,10 +993,9 @@ services:
         max-file: '3'
 
   knowledge-mcp:
-    image: hhh/knowledge-mcp
+    image: ghcr.io/bulgy404/hhh-knowledge-mcp:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-knowledge-mcp
-    build: ./knowledge-mcp
-    pull_policy: build
     restart: always
     environment:
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
@@ -1029,10 +1025,9 @@ services:
         max-file: '3'
 
   recommender:
-    image: hhh/recommender
+    image: ghcr.io/bulgy404/hhh-recommender:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-recommender
-    build: ./API-service
-    pull_policy: build
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -1086,34 +1081,14 @@ services:
         max-file: '3'
 
   admin:
-    image: hhh/admin
+    # NEXT_PUBLIC_* values are inlined into the client bundle at `next build`
+    # time, so they are baked into this image by CI (the `admin_build_args`
+    # step in .github/workflows/ci.yml, derived from the production domain),
+    # not read from `environment:` below. Changing one means rebuilding the
+    # image, not just redeploying the stack.
+    image: ghcr.io/bulgy404/hhh-admin:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-admin
-    pull_policy: build
-    build:
-      context: ./admin
-      # NEXT_PUBLIC_* vars are inlined into the client bundle at `next build`
-      # time — they must be passed as build args, not just runtime
-      # `environment:` (which has no effect on an already-built image). Kept
-      # in sync with the values below.
-      args:
-        NEXT_PUBLIC_NEXTAUTH_URL: https://${DOMAIN}/admin
-        NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: https://${DOMAIN}/auth
-        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
-        NEXT_PUBLIC_API_DOCS_URL: https://${DOMAIN}/api-docs
-        # Inlined by `next build`. Without it here the browser bundle carries
-        # `undefined` no matter what the runtime environment says.
-        NEXT_PUBLIC_IDENTITY_API_URL: ${NEXT_PUBLIC_IDENTITY_API_URL:-/identity/api}
-        NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
-        NEXT_PUBLIC_MONGO_EXPRESS_URL: https://${DOMAIN}/mongo
-        NEXT_PUBLIC_LIGHTRAG_WEBUI_URL: https://${DOMAIN}/lightrag/webui
-        NEXT_PUBLIC_PROMETHEUS_URL: https://${DOMAIN}/prometheus
-        NEXT_PUBLIC_REDIS_INSIGHT_URL: https://${DOMAIN}/redisinsight
-        NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser/
-        NEXT_PUBLIC_BULL_BOARD_URL: https://${DOMAIN}/queues
-        # PostHog runs on the separate TU-internal analytics VM, so this is a
-        # private address and port, not a path under ${DOMAIN}. The admin UI is
-        # never proxied through the public domain — see analytics-vm/README.md.
-        NEXT_PUBLIC_POSTHOG_URL: ${NEXT_PUBLIC_POSTHOG_URL:-http://172.26.52.166:8000}
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -1204,12 +1179,9 @@ services:
   # (not an NS change) to point at this server. No app code, no env-derived
   # build args — just the static `astro build` output behind nginx.
   website:
-    image: hhh/website
+    image: ghcr.io/bulgy404/hhh-website:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-website
-    pull_policy: build
-    build:
-      context: .
-      dockerfile: website/Dockerfile
     restart: always
     networks:
       - hhh-proxy
@@ -1541,10 +1513,9 @@ services:
         max-file: '3'
 
   backup:
-    image: hhh/backup
+    image: ghcr.io/bulgy404/hhh-backup:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-backup
-    build: ./backup-service
-    pull_policy: build
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -1726,9 +1697,8 @@ services:
         max-file: '3'
 
   identity-service:
-    build:
-      context: ./identity-service
-    image: hhh/identity-service
+    image: ghcr.io/bulgy404/hhh-identity-service:${HHH_IMAGE_TAG:-latest}
+    pull_policy: always
     container_name: hhh-identity
     restart: always
     profiles: ['identity']

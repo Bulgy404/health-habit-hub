@@ -39,6 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shrink on phones so they stay on a single row.
 
 
+### Changed
+
+- Production no longer builds images. Portainer 2.29.2+ cannot run compose
+  `build:` steps on a remote (agent) environment, so every deploy failed with
+  `failed to dial gRPC: unable to upgrade to h2c, received 400`. CI now builds
+  all nine custom images on every run (it previously build-checked only four)
+  and, once all of CI is green on `main` or a `v*` tag, pushes them to GHCR as
+  `ghcr.io/bulgy404/hhh-<name>` tagged `latest`, `sha-<short>` and the release
+  version. `docker-compose.yml` pulls `${HHH_IMAGE_TAG:-latest}` with
+  `pull_policy: always`, so Pull and redeploy works again on Portainer CE, and
+  setting `HHH_IMAGE_TAG` pins or rolls back the whole stack to one build. The
+  admin portal's `NEXT_PUBLIC_*` values are baked in by CI from the production
+  domain and can be overridden with repository variables. See "Deploying an
+  Update" in `DEPLOYMENT.md`.
+
 ### Fixed
 
 - The analytics stack did not survive a host reboot. Upstream's compose sets
@@ -54,6 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a restart policy would both re-run them on every daemon start and defeat
   `remove_completed_oneshots`, leaving Exited(0) containers for Checkmk to
   escalate.
+- The admin image ignored `NEXT_PUBLIC_IDENTITY_API_URL` and
+  `NEXT_PUBLIC_POSTHOG_URL`: compose passed them as build args, but the
+  Dockerfile never declared them, so the bundle always used the code's
+  fallbacks. Both are now declared. Production values were unaffected because
+  they matched the fallbacks.
 - CI's Flutter dependency audit failed as soon as google_fonts 9 was
   published. The major-upgrade check now has an explicit deferral list:
   google_fonts 9 moves to the separate `material_ui` package, whose

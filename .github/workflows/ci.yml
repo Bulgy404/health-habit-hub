@@ -451,54 +451,79 @@ jobs:
         run: bash tests/ontology/test-ontology.sh
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 9. DOCKER – build validation (all four custom images)
+  # 9. DOCKER – build validation (every image the production stack runs)
   # ─────────────────────────────────────────────────────────────────────────────
+  # Production no longer builds anything: Portainer cannot run compose `build:`
+  # steps on a remote (agent) environment since 2.29.2. `docker-publish` below
+  # pushes these same images to GHCR once CI is green, and docker-compose.yml
+  # pulls them from there.
   docker-build:
-    name: Docker – build images
+    name: Docker – build ${{ matrix.name }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: app, context: ./app, file: app/Dockerfile }
+          - { name: translate, context: ./translate, file: translate/Dockerfile }
+          - { name: lightrag, context: ./lightrag, file: lightrag/Dockerfile }
+          - { name: knowledge-mcp, context: ./knowledge-mcp, file: knowledge-mcp/Dockerfile }
+          - { name: recommender, context: ./API-service, file: API-service/Dockerfile }
+          - { name: admin, context: ./admin, file: admin/Dockerfile }
+          - { name: website, context: ., file: website/Dockerfile }
+          - { name: backup, context: ./backup-service, file: backup-service/Dockerfile }
+          - { name: identity-service, context: ./identity-service, file: identity-service/Dockerfile }
     steps:
       - uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Each image caches its layers to the GitHub Actions cache (scoped per
-      # image) so unchanged layers are reused across runs instead of rebuilt.
-      - name: Build app (Node.js)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./app
-          push: false
-          cache-from: type=gha,scope=app
-          cache-to: type=gha,mode=max,scope=app
+      # NEXT_PUBLIC_* values are inlined into the admin bundle by `next build`,
+      # so the published admin image is tied to the production domain. Override
+      # with repository variables (Settings → Variables → Actions) if it moves.
+      - name: Admin build args
+        id: admin_build_args
+        if: matrix.name == 'admin'
+        env:
+          DOMAIN: ${{ vars.HHH_DOMAIN || 'habit.wiwi.tu-dresden.de' }}
+          IDENTITY_API_URL: ${{ vars.NEXT_PUBLIC_IDENTITY_API_URL || '/identity/api' }}
+          GRAFANA_URL: ${{ vars.NEXT_PUBLIC_GRAFANA_URL }}
+          # PostHog runs on the TU-internal analytics VM, so this is a private
+          # address, not a path under the domain (see analytics-vm/README.md).
+          POSTHOG_URL: ${{ vars.NEXT_PUBLIC_POSTHOG_URL || 'http://172.26.52.166:8000' }}
+        run: |
+          {
+            echo 'args<<EOF'
+            echo "NEXT_PUBLIC_NEXTAUTH_URL=https://$DOMAIN/admin"
+            echo "NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://$DOMAIN/auth"
+            echo "NEXT_PUBLIC_API_URL=https://$DOMAIN/api/v1"
+            echo "NEXT_PUBLIC_API_DOCS_URL=https://$DOMAIN/api-docs"
+            echo "NEXT_PUBLIC_IDENTITY_API_URL=$IDENTITY_API_URL"
+            echo "NEXT_PUBLIC_GRAFANA_URL=${GRAFANA_URL:-https://$DOMAIN/grafana}"
+            echo "NEXT_PUBLIC_MONGO_EXPRESS_URL=https://$DOMAIN/mongo"
+            echo "NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://$DOMAIN/lightrag/webui"
+            echo "NEXT_PUBLIC_PROMETHEUS_URL=https://$DOMAIN/prometheus"
+            echo "NEXT_PUBLIC_REDIS_INSIGHT_URL=https://$DOMAIN/redisinsight"
+            echo "NEXT_PUBLIC_NEO4J_BROWSER_URL=https://$DOMAIN/neo4j/browser/"
+            echo "NEXT_PUBLIC_BULL_BOARD_URL=https://$DOMAIN/queues"
+            echo "NEXT_PUBLIC_POSTHOG_URL=$POSTHOG_URL"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Build recommender (Python)
+      # Layers are cached to the GitHub Actions cache, scoped per image, so the
+      # publish job below reuses them instead of building a second time.
+      - name: Build ${{ matrix.name }}
         uses: docker/build-push-action@v6
         with:
-          context: ./API-service
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          build-args: ${{ steps.admin_build_args.outputs.args }}
           push: false
-          cache-from: type=gha,scope=recommender
-          cache-to: type=gha,mode=max,scope=recommender
-
-      - name: Build backup-service
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backup-service
-          push: false
-          cache-from: type=gha,scope=backup
-          cache-to: type=gha,mode=max,scope=backup
-
-      - name: Build admin (Next.js)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./admin
-          file: admin/Dockerfile
-          tags: hhh-admin:ci
-          push: false
-          cache-from: type=gha,scope=admin
-          cache-to: type=gha,mode=max,scope=admin
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 10. PYTHON API-SERVICE – pytest
@@ -684,3 +709,98 @@ jobs:
       - flutter-dependency-audit
     steps:
       - run: echo "All CI jobs passed."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 14. DOCKER – publish images to GHCR (main and release tags, after CI passes)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Tags: `latest` and `sha-<short>` from main, plus `<version>` from a v* tag.
+  # docker-compose.yml pulls `${HHH_IMAGE_TAG:-latest}`; pin HHH_IMAGE_TAG in
+  # the Portainer stack env to a version or sha tag to deploy or roll back to
+  # an exact build. Merging still deploys nothing: Pull and redeploy does.
+  docker-publish:
+    name: Docker – publish ${{ matrix.name }}
+    needs: ci-passed
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: app, context: ./app, file: app/Dockerfile }
+          - { name: translate, context: ./translate, file: translate/Dockerfile }
+          - { name: lightrag, context: ./lightrag, file: lightrag/Dockerfile }
+          - { name: knowledge-mcp, context: ./knowledge-mcp, file: knowledge-mcp/Dockerfile }
+          - { name: recommender, context: ./API-service, file: API-service/Dockerfile }
+          - { name: admin, context: ./admin, file: admin/Dockerfile }
+          - { name: website, context: ., file: website/Dockerfile }
+          - { name: backup, context: ./backup-service, file: backup-service/Dockerfile }
+          - { name: identity-service, context: ./identity-service, file: identity-service/Dockerfile }
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/bulgy404/hhh-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+
+      # NEXT_PUBLIC_* values are inlined into the admin bundle by `next build`,
+      # so the published admin image is tied to the production domain. Override
+      # with repository variables (Settings → Variables → Actions) if it moves.
+      - name: Admin build args
+        id: admin_build_args
+        if: matrix.name == 'admin'
+        env:
+          DOMAIN: ${{ vars.HHH_DOMAIN || 'habit.wiwi.tu-dresden.de' }}
+          IDENTITY_API_URL: ${{ vars.NEXT_PUBLIC_IDENTITY_API_URL || '/identity/api' }}
+          GRAFANA_URL: ${{ vars.NEXT_PUBLIC_GRAFANA_URL }}
+          # PostHog runs on the TU-internal analytics VM, so this is a private
+          # address, not a path under the domain (see analytics-vm/README.md).
+          POSTHOG_URL: ${{ vars.NEXT_PUBLIC_POSTHOG_URL || 'http://172.26.52.166:8000' }}
+        run: |
+          {
+            echo 'args<<EOF'
+            echo "NEXT_PUBLIC_NEXTAUTH_URL=https://$DOMAIN/admin"
+            echo "NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://$DOMAIN/auth"
+            echo "NEXT_PUBLIC_API_URL=https://$DOMAIN/api/v1"
+            echo "NEXT_PUBLIC_API_DOCS_URL=https://$DOMAIN/api-docs"
+            echo "NEXT_PUBLIC_IDENTITY_API_URL=$IDENTITY_API_URL"
+            echo "NEXT_PUBLIC_GRAFANA_URL=${GRAFANA_URL:-https://$DOMAIN/grafana}"
+            echo "NEXT_PUBLIC_MONGO_EXPRESS_URL=https://$DOMAIN/mongo"
+            echo "NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://$DOMAIN/lightrag/webui"
+            echo "NEXT_PUBLIC_PROMETHEUS_URL=https://$DOMAIN/prometheus"
+            echo "NEXT_PUBLIC_REDIS_INSIGHT_URL=https://$DOMAIN/redisinsight"
+            echo "NEXT_PUBLIC_NEO4J_BROWSER_URL=https://$DOMAIN/neo4j/browser/"
+            echo "NEXT_PUBLIC_BULL_BOARD_URL=https://$DOMAIN/queues"
+            echo "NEXT_PUBLIC_POSTHOG_URL=$POSTHOG_URL"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          build-args: ${{ steps.admin_build_args.outputs.args }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}

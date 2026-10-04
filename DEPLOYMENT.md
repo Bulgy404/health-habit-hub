@@ -822,9 +822,43 @@ In Portainer:
 2. Click **Pull and redeploy**
 3. Watch the stack's container logs until the affected services report healthy
 
-That re-fetches `docker-compose.yml` at `refs/heads/main`, rebuilds the images
-whose build context changed, and recreates those containers. Config-only
+That re-fetches `docker-compose.yml` at `refs/heads/main`, pulls the images,
+and recreates the containers whose image or config changed. Config-only
 changes are zero-downtime.
+
+**Production builds nothing.** Every custom image (`hhh-app`, `hhh-admin`,
+`hhh-website`, `hhh-recommender`, `hhh-identity-service`, `hhh-knowledge-mcp`,
+`hhh-lightrag`, `hhh-translate`, `hhh-backup`) is built by CI and pushed to
+GHCR as `ghcr.io/bulgy404/hhh-<name>`, and `docker-compose.yml` only pulls
+them. Portainer 2.29.2+ cannot run compose `build:` steps on a remote (agent)
+environment; it fails with `failed to dial gRPC: unable to upgrade to h2c,
+received 400` ([Portainer known issue](https://docs.portainer.io/3.0-sts/faqs/known-issues/docker-compose-files-including-build-steps-fail)).
+
+- **Wait for CI before redeploying.** The `Docker – publish` jobs run only
+  after every CI job on `main` has passed, a few minutes after the push.
+  Redeploying earlier just pulls the previous `latest` again. Check the
+  commit's CI run on GitHub, or a package page under the repository's
+  **Packages**.
+- **Every service uses `pull_policy: always`,** so a redeploy fetches new
+  images even though Portainer CE greys out its own "Re-pull image" toggle.
+- **Tags:** each green `main` commit publishes `latest` and `sha-<short sha>`;
+  a `v*` tag also publishes the bare version (e.g. `1.4.0`). The stack pulls
+  `${HHH_IMAGE_TAG:-latest}`.
+- **Rollback or pinning:** set `HHH_IMAGE_TAG` in the stack's environment
+  variables to a `sha-…` or version tag and redeploy. Clear it to follow
+  `latest` again. This pins all nine images together.
+- **Admin build-time values:** `NEXT_PUBLIC_*` values are inlined into the
+  admin bundle when the image is built, so CI bakes them in from the
+  production domain (`habit.wiwi.tu-dresden.de`). If the domain or one of
+  those URLs changes, set the matching repository variable (`HHH_DOMAIN`,
+  `NEXT_PUBLIC_GRAFANA_URL`, `NEXT_PUBLIC_IDENTITY_API_URL`,
+  `NEXT_PUBLIC_POSTHOG_URL` under Settings → Secrets and variables → Actions)
+  and let CI publish a new image. Changing the Portainer stack env alone has
+  no effect on them.
+- **Package visibility (one-time):** GHCR creates each package as private on
+  its first push. Set all nine to **Public** (the package's page → Package
+  settings → Change visibility) so Portainer can pull without a registry
+  login.
 
 Because the deploy is the manual step, it is also the moment user-visible
 changes go live — a bumped consent version, for instance, starts prompting
@@ -856,9 +890,10 @@ things must all be correct (all handled in the repo; listed here so you know why
    `docker-compose.yml`) — it shadowed `/admin/api/auth/*` behind basic-auth, which
    is what produces the browser basic-auth popup.
 
-Because #1 lives in a **built** image (`middleware.ts`) _and_ a runtime env, a
-redeploy must **rebuild the admin image** (Portainer rebuild, or
-`docker compose build --no-cache admin`) as well as pick up the new compose env.
+Because #1 lives in a **built** image (`middleware.ts`) _and_ a runtime env, the
+fix needs a **new admin image** from CI (see [Deploying an
+Update](#deploying-an-update)) as well as a redeploy to pick up the new compose
+env.
 
 Also confirm the Keycloak `hhh-admin` client's Valid Redirect URIs include
 `https://${DOMAIN}/admin/*` (the realm import seeds this, but the import is skipped
