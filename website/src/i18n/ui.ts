@@ -40,7 +40,7 @@ export const links = {
   admin: 'https://habit.wiwi.tu-dresden.de/admin',
   github: 'https://github.com/Bulgy404/health-habit-hub',
   appStore: 'https://apple.co/4fJWerI',
-  playStore: '', // Android, coming soon
+  playStore: 'https://play.google.com/store/apps/details?id=de.felixreinsch.healthhabithub',
   contactEmail: 'digital-health@tu-dresden.de',
 };
 
@@ -108,7 +108,7 @@ const de: Dict = {
   // participants page
   p_hero_title: 'Verfolge deine Gewohnheiten, und trag ganz nebenbei zur Forschung bei.',
   p_hero_lead: 'Das Health Habit Hub macht aus kleinen täglichen Schritten sichtbare Muster. Die App ist kostenlos, geht sorgsam mit deinen Daten um, und jeder Eintrag hilft der Wissenschaft, gesunde Gewohnheiten besser zu verstehen.',
-  p_ios: 'Im App Store laden', p_android_soon: 'Für Android bald verfügbar',
+  p_ios: 'Im App Store laden',
   p_web: 'Lieber direkt im Browser starten',
   p_s1_t: 'In einem Screen erklärt',
   p_s1_p: 'Kein langes Onboarding, keine endlosen Formulare. Ein klares Versprechen, ein Weg hinein, und in einer Minute bist du dabei.',
@@ -121,7 +121,7 @@ const de: Dict = {
   p_s5_t: 'Fortschritt, den man messen kann',
   p_s5_p: 'Für jede Gewohnheit werden anerkannte Maße wie der Self-Report Habit Index über die Zeit erfasst. So wird sichtbar, wie aus einem Vorsatz eine echte Routine wird.',
   p_how_eyebrow: 'So machst du mit', p_how_title: 'In drei ruhigen Schritten dabei.',
-  p_how_1_t: 'App holen', p_how_1_p: 'Lade sie aus dem App Store, Android folgt bald, oder öffne sie einfach im Browser.',
+  p_how_1_t: 'App holen', p_how_1_p: 'Lade sie aus dem App Store oder von Google Play, oder öffne sie einfach im Browser.',
   p_how_2_t: 'Einwilligen', p_how_2_p: 'Lies die Einwilligung und den kurzen Leitfaden. Alles ist transparent und jederzeit widerrufbar.',
   p_how_3_t: 'Loslegen', p_how_3_p: 'Erfasse deine Gewohnheiten und schau deinem Fortschritt beim Wachsen zu.',
   p_trust_t: 'Deine Daten gehören dir',
@@ -198,7 +198,6 @@ const de: Dict = {
   // scientific footnotes
   refs_title: 'Quellen',
 
-  soon: 'Bald',
 };
 
 const en: Dict = {
@@ -256,7 +255,7 @@ const en: Dict = {
 
   p_hero_title: 'Track your habits, and contribute to research along the way.',
   p_hero_lead: 'The Health Habit Hub turns small daily steps into visible patterns. It is free, it treats your data with care, and every entry helps science understand healthy habits a little better.',
-  p_ios: 'Download on the App Store', p_android_soon: 'Coming soon on Android',
+  p_ios: 'Download on the App Store',
   p_web: 'Prefer to start in the browser',
   p_s1_t: 'Explained in a single screen',
   p_s1_p: 'No long onboarding, no endless forms. A clear promise, a way in, and you are set up in about a minute.',
@@ -269,7 +268,7 @@ const en: Dict = {
   p_s5_t: 'Progress you can measure',
   p_s5_p: 'For each habit, established measures like the Self-Report Habit Index are tracked over time, so you can watch an intention turn into a genuine routine.',
   p_how_eyebrow: 'How to take part', p_how_title: 'In three calm steps.',
-  p_how_1_t: 'Get the app', p_how_1_p: 'Download it from the App Store, Android is coming, or simply open it in your browser.',
+  p_how_1_t: 'Get the app', p_how_1_p: 'Download it from the App Store or Google Play, or simply open it in your browser.',
   p_how_2_t: 'Consent', p_how_2_p: 'Read the consent and the short guide. Everything is transparent and you can withdraw at any time.',
   p_how_3_t: 'Begin', p_how_3_p: 'Record your habits and watch your progress grow.',
   p_trust_t: 'Your data belongs to you',
@@ -343,7 +342,6 @@ const en: Dict = {
   // scientific footnotes
   refs_title: 'Sources',
 
-  soon: 'Soon',
 };
 
 const dicts: Record<Lang, Dict> = { de, en };

@@ -536,7 +536,11 @@ Schwarzer et al. 2018), arriving at 18 distinct principles across the four
 stages of habit formation (Decision → Action → Repetition → Automaticity).
 
 §6.0 below catalogs all 18 and states plainly whether each is implemented and
-where. §6.1–§6.5 document the five that were *added* to close the gaps that
+where. §6.0a adds a second, complementary yardstick: the 14 methodological
+criteria for *measuring* habit formation (Gardner, Rebar & Lally, 2022). The
+18 design principles ask whether the app *supports* habit formation well; the
+14 criteria ask whether the data it collects can *show* habit formation
+validly. §6.1–§6.5 document the five that were *added* to close the gaps that
 catalog identified — those five share this section's conventions: the nullable
 study→group config-override pattern (like `recommenderEnabled`), the Mongo
 (event/state) vs. Neo4j (structural/graph) split, transparent
@@ -581,6 +585,74 @@ a non-negotiable project requirement, not an oversight. The literature-derived
 survey (Reinsch et al. 2026) separately found these two principles rated lowest
 of all 18 by end users, which is a point in favor of this design, not against
 it.
+
+### 6.0a Habit-formation research criteria (Gardner, Rebar & Lally, 2022)
+
+Gardner, Rebar and Lally (2022) derived **14 methodological criteria** for
+studies that track how habits form in real life: four for study design (D),
+six for measurement (M) and four for analysis and interpretation (AI); nine
+are essential, five desirable. Applying the essential ones to the literature,
+they found only five studies that met them all. The criteria are written for
+*studies*, so a platform can only **afford** them: D and M criteria depend on
+what the app collects; AI criteria are met or missed by the analysis a
+researcher runs on the export. The table states, for each criterion, what the
+platform does and where.
+
+One structural point first. The platform has two data paths:
+
+- **Plans (implementation intentions):** an if-then plan with one or two cues
+  (`implementation_intentions`), a daily enacted/missed log
+  (`daily_behavior_logs`) and a weekly SRHI series (`srhi_responses`). All 14
+  criteria below are assessed against this path.
+- **Donations:** a free-text habit sentence that is classified, split into
+  seven context dimensions and mapped to BCIO (`Habit` → `Context` →
+  `BCIOConcept` in Neo4j). Donated habits carry no habit-strength measure and
+  no logs. A plan's if-then sentence is also donated quietly when the plan is
+  created (`_shareQuietly` in `new_habit_screen_3_confirm.dart`). However, the
+  resulting `Habit` uuid is not stored on the plan, so the two can only be
+  matched by user, text and time, not by an explicit key.
+
+| Code | Criterion (Gardner et al., 2022) | Level | Status | How the platform meets it |
+|---|---|---|---|---|
+| D1 | Focus on the strengthening of one or more **specific cue–behaviour associations** | Essential | ✅ Met | Every tracked habit is an if-then plan: `cues[]` (1–2, `pre_rated` from `cue_pools` or `self_selected`) bound to one `behaviorKey`/`behaviorLabel`, phrased as `intentionStatement` ("After dinner, I will walk for 20 minutes."). Habit stacking (§6.2) makes an existing habit the cue. The association is the unit of data, not a general activity level. |
+| D2 | Run in a **setting where habit can plausibly strengthen** (a change in motivation, capability or opportunity that starts repetition) | Essential | ✅ Met | Participants form a new if-then plan, which raises motivation and specifies opportunity (the mechanism Gardner et al. cite, e.g. Judah et al., 2013). Repetition is then supported by just-in-time reminders (DP 6) and a daily log. `habitType` separates *build* from *quit* habits (§6.1). Quit plans track habit **degradation**, not formation, and should be analysed separately. |
+| D3 | Moderator studies must use designs **sensitive to the temporal order** of repetition, habit and moderator | Essential (moderator studies) | ◐ Partly | Candidate moderators are recorded and exported: cue source and cue count as experimental factors (`cueConfig.cueSource` = low-quality / high-quality / self-selected, `cueCount` = single / multi; `cuePoolService.js`, `exportService.js`), cue ratings (stability, salience, specificity in `cue_pools`), study group, cadence, stacking (`creationMode`), and profile questionnaires. These are measured **once** (at plan creation or baseline). Time-varying moderators (e.g. weekly motivation or reward) are only available if a researcher schedules a recurring questionnaire. |
+| D4 | Use a **longitudinal design** | Desirable | ✅ Met | Daily logs and weekly SRHI for as long as the plan is active (`srhiService.js`: rolling weekly windows, `GENERATE_AHEAD = 4`, topped up indefinitely). Studies can set an end date (`studies`). |
+| M1 | **Measure habit** | Essential | ✅ Met | The validated 12-item Self-Report Habit Index (Verplanken & Orbell, 2003) on a 1–7 scale, item text in `app/utils/srhi.js`, responses in `srhi_responses.items`. |
+| M2 | **Do not infer habit from behavioural frequency** alone | Essential | ✅ Met (caveat) | Habit is measured by self-reported automaticity, not derived from the log count. Caveat: the full SRHI also contains a frequency item (`srhi_1` "I do frequently") and identity items. The automaticity-only **SRBAI** (items `srhi_2`, `srhi_3`, `srhi_5`, `srhi_8`; Gardner, Abraham, Lally & de Bruijn, 2012) can be computed from the stored items and should be the primary score in analyses. |
+| M3 | Measure habit **for the behaviour of interest** | Essential | ✅ Met | One SRHI series per plan (`srhi_responses.intentionId`), with the behaviour named in the stem (`srhiStem(behaviorLabel)`: "Walking is something…", `srhi_form_screen.dart`). |
+| M4 | Habit measure at an **appropriate level of behavioural specificity** | Desirable | ◐ Partly | The stem uses the generic `behaviorLabel` ("Walking"), not the planned behaviour ("walking for 20 minutes"). → **Issue #63.** |
+| M5 | Use **context-specific** habit measures | Desirable | ◐ Partly | The cue is not in the SRHI stem. Context specificity is established *indirectly* through the plan each SRHI series belongs to. Gardner et al. accept this for behaviours that "can realistically only be performed in one context", and credited Fournier et al. (2017) on that basis. It holds for single-context behaviours (flossing, morning stretching), not for behaviours that also happen outside the cue (walking, water, snacks). The daily log does not record whether the behaviour happened in the planned situation, so the assumption cannot be checked. → **Issues #63 (cue in the stem) and #64 ("in the planned situation?" in the log).** |
+| M6 | Measure habit at **multiple timepoints** | Desirable | ✅ Met | Weekly SRHI windows (3-day response window, `WINDOW_DAYS = 3`), continuing until the plan is paused, ended or graduated (§6.5.2). |
+| AI1 | Treat habit strength as a **continuum** | Essential | ✅ Afforded | Item-level 1–7 responses and the mean score are stored and exported (`srhi_trajectories.csv`). Note: the in-app graduation rule (§6.5.2) uses a threshold (5.0) for a product decision. Research analyses should use the continuous score. |
+| AI2 | Do not infer effects of **repetition** from measures of time | Desirable | ◐ Partly afforded | `daily_logs.csv` gives a repetition count, so habit can be modelled against cumulative enacted days instead of calendar weeks. But only one enacted/missed per **day** is stored, with no time of performance, no count within a day and no context. Repetition is therefore known at day level only, and context-consistent repetitions cannot be separated from performances elsewhere. → **Issue #64.** |
+| AI3 | Do **not assume linear** habit growth (in practice: ≥ 3 habit measurements) | Essential | ✅ Afforded | ≥ 3 SRHI points per plan from week 3 onwards, so asymptotic or other non-linear growth models can be fitted. |
+| AI4 | Analyses must account for **individual differences** in growth trajectories | Essential | ✅ Afforded | Per-participant, per-plan time series (pseudonymous IDs) in the study export (`studyExportRouter.js`: SRHI, daily logs, dropout, questionnaire responses), suitable for person-level growth curves and multilevel models. |
+
+**Summary:** 10 of 14 met or afforded (D1, D2, D4, M1, M2, M3, M6, AI1, AI3,
+AI4); 4 partly (D3, M4, M5, AI2); none unmet. All nine *essential* criteria
+except D3 (which applies only to moderator studies) are met or afforded. The
+open points are all *desirable* criteria, and #63 and #64 close the measurement
+gaps (M4, M5) and most of AI2.
+
+**What the criteria do not cover, and the donation path does:** Gardner et
+al.'s criteria assume the researcher defines the behaviour and cue. The
+donation path records something none of the five studies they identified
+recorded: habits and their contexts **in the participant's own words**, across
+seven context dimensions. Neal, Wood, Labrecque and Lally (2012) showed that
+people's *perceived* triggers of their habits differ from the *actual*
+context triggers. A data model that links a donated description (perceived
+cues) to the plan's logs and SRHI series (enacted repetition and habit
+strength) for the same habit would make that comparison possible. Storing the
+donated `Habit` uuid on the plan is the missing link.
+
+**References (APA 7)**
+
+- Fournier, M., d'Arripe-Longueville, F., Rovere, C., Easthope, C. S., Schwabe, L., El Methni, J., & Radel, R. (2017). Effects of circadian cortisol on the development of a health habit. *Health Psychology, 36*(11), 1059–1064.
+- Gardner, B., Abraham, C., Lally, P., & de Bruijn, G.-J. (2012). Towards parsimony in habit measurement: Testing the convergent and predictive validity of an automaticity subscale of the Self-Report Habit Index. *International Journal of Behavioral Nutrition and Physical Activity, 9*, 102. https://doi.org/10.1186/1479-5868-9-102
+- Gardner, B., Rebar, A. L., & Lally, P. (2022). How does habit form? Guidelines for tracking real-world habit formation. *Cogent Psychology, 9*(1), 2041277. https://doi.org/10.1080/23311908.2022.2041277
+- Neal, D. T., Wood, W., Labrecque, J. S., & Lally, P. (2012). How do habits guide behavior? Perceived and actual triggers of habits in daily life. *Journal of Experimental Social Psychology, 48*(2), 492–498.
+- Verplanken, B., & Orbell, S. (2003). Reflections on past behavior: A self-report index of habit strength. *Journal of Applied Social Psychology, 33*(6), 1313–1330.
 
 ### 6.1 Habit Distinction — build vs. quit (§7.4)
 
