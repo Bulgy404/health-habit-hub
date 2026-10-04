@@ -855,10 +855,8 @@ received 400` ([Portainer known issue](https://docs.portainer.io/3.0-sts/faqs/kn
   `NEXT_PUBLIC_POSTHOG_URL` under Settings → Secrets and variables → Actions)
   and let CI publish a new image. Changing the Portainer stack env alone has
   no effect on them.
-- **Package visibility (one-time):** GHCR creates each package as private on
-  its first push. Set all nine to **Public** (the package's page → Package
-  settings → Change visibility) so Portainer can pull without a registry
-  login.
+- **Public packages:** the packages are linked to this public repository and
+  are public too, so Portainer pulls them with no registry login.
 
 Because the deploy is the manual step, it is also the moment user-visible
 changes go live — a bumped consent version, for instance, starts prompting
