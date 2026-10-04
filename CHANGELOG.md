@@ -12,6 +12,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `anyio` bumped from 4.14.1 to 4.14.2 in `API-service` and `knowledge-mcp`,
   clearing CVE-2026-63374, CVE-2026-64847 and CVE-2026-63349. The dependency
   audit in CI fails on every branch until this lands.
+- All 61 open Dependabot alerts cleared:
+  - `knowledge-mcp`: PyJWT 2.13.0 → 2.15.1, fixing a critical
+    asymmetric-PEM guard bypass and 13 further PyJWT advisories.
+  - `website`: nodemailer 9 → 10 (needs Node 20+, the image runs Node 22),
+    plus patched devalue, undici and http-cache-semantics.
+  - `identity-service`: patched nodemailer, multer, brace-expansion and
+    ip-address.
+  - `app`: patched @fastify/busboy, @grpc/grpc-js, brace-expansion,
+    fast-uri and ip-address. `nodemon` is gone and `npm run dev` now uses
+    Node's built-in `node --watch`, because nodemon pulled in `braces`,
+    whose advisory (GHSA-vfj7-8cjw-p6xm) has no patched release.
+  - `admin`: patched brace-expansion; Next.js 15.5.25 → 15.5.27.
+  - `mobile`: fastlane 2.237 → 2.240.1, the first release that allows the
+    patched rubyzip 3.7 (GHSA-47m2-wp7j-p9vc). This changes the release
+    tooling only, not the app.
+- Known and accepted: `braces` still reaches `admin` through
+  `eslint-config-next`, which has no release without it. It is a dev-only
+  linter that globs our own source files, so it is not reachable at runtime.
+
+### Added
+
+- The website's Google Play badge now links to the live Play Store listing,
+  using Google's official German and English badge artwork, and the footer
+  links to Google Play next to the App Store. The badges share one height and
+  shrink on phones so they stay on a single row.
 
 
 ### Fixed
@@ -29,6 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a restart policy would both re-run them on every daemon start and defeat
   `remove_completed_oneshots`, leaving Exited(0) containers for Checkmk to
   escalate.
+- CI's Flutter dependency audit failed as soon as google_fonts 9 was
+  published. The major-upgrade check now has an explicit deferral list:
+  google_fonts 9 moves to the separate `material_ui` package, whose
+  `TextTheme` is not the one `flutter/material.dart` exports, so adopting it
+  means migrating the whole app. Only major 9 is excused, so the next major,
+  or one for any other package, fails the audit again.
 
 ## [1.3.0] - 2026-09-18
 
