@@ -608,8 +608,17 @@ jobs:
           with open("/tmp/pub_outdated.json") as f:
               data = json.load(f)
 
+          # Major upgrades we have looked at and deliberately put off, keyed by
+          # package -> the deferred major. Only that exact major is excused, so
+          # the next one fails the audit again and forces a fresh look.
+          #   google_fonts 9: moves to the separate material_ui package, whose
+          #   TextTheme is not the one package:flutter/material.dart exports, so
+          #   adopting it means migrating the whole app off flutter/material.
+          deferred = {"google_fonts": 9}
+
           breaking = []
           skipped_prerelease = []
+          skipped_deferred = []
           for pkg in data.get("packages", []):
               if pkg.get("kind") != "direct":
                   continue
@@ -628,11 +637,18 @@ jobs:
               if "-" in resolvable:
                   skipped_prerelease.append(f"  {pkg['package']}: {current} -> {resolvable} (pre-release, ignored)")
                   continue
+              if deferred.get(pkg["package"]) == res_major:
+                  skipped_deferred.append(f"  {pkg['package']}: {current} -> {resolvable} (deferred, see note)")
+                  continue
               breaking.append(f"  {pkg['package']}: {current} -> {resolvable}")
 
           if skipped_prerelease:
               print("Pre-release major upgrades available (ignored):")
               print("\n".join(skipped_prerelease))
+
+          if skipped_deferred:
+              print("Deferred major upgrades (ignored):")
+              print("\n".join(skipped_deferred))
 
           if breaking:
               print("Breaking major-version upgrades available for direct dependencies:")
