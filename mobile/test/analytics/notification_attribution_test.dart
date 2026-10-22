@@ -123,5 +123,12 @@ void main() {
         );
       }
     });
+
+    test('a permanent denial counts as denied', () {
+      expect(
+        permissionStatusName(AuthorizationStatus.deniedPermanently),
+        'denied',
+      );
+    });
   });
 }

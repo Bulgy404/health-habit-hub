@@ -47,9 +47,15 @@ String routeFromNotificationPayload(Map<String, dynamic> data) {
 /// `notification_permission_checked`. One permission governs both FCM pushes
 /// and local reminders (iOS, Android 13+), so this is also whether habit
 /// reminders can be seen at all.
+///
+/// `deniedPermanently` (Android 13+ only, after the user has declined the
+/// prompt for good) is still `denied`: iOS already reports its permanent
+/// denial that way, and the analysis excludes `denied` participants per arm
+/// regardless of whether they can still be asked again.
 String permissionStatusName(AuthorizationStatus status) => switch (status) {
   AuthorizationStatus.authorized => 'granted',
-  AuthorizationStatus.denied => 'denied',
+  AuthorizationStatus.denied ||
+  AuthorizationStatus.deniedPermanently => 'denied',
   AuthorizationStatus.provisional => 'provisional',
   AuthorizationStatus.notDetermined => 'not_determined',
 };
@@ -222,6 +228,13 @@ class PushNotificationService {
         sound: true,
       );
 
+      // getToken/onTokenRefresh are deprecated in firebase_messaging 17 in
+      // favour of register()/onRegistered, but those hand back a Firebase
+      // Installation ID, not an FCM registration token. The backend sends
+      // with `messaging.sendEach({ token })` (app/services/
+      // notificationService.js) and prunes on registration-token errors, so
+      // moving to FIDs is a backend change too — until then keep the token.
+      // ignore: deprecated_member_use
       final token = await messaging.getToken();
       if (token != null) {
         try {
@@ -233,6 +246,7 @@ class PushNotificationService {
         }
       }
 
+      // ignore: deprecated_member_use
       messaging.onTokenRefresh.listen((newToken) async {
         try {
           await _registerToken(newToken);

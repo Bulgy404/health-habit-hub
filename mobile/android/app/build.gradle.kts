@@ -52,7 +52,9 @@ android {
         applicationId = "de.felixreinsch.healthhabithub"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // Pinned above Flutter's default (24): sentry_flutter 10 requires
+        // API 26. Firebase BoM 35 (firebase_core 5) only needs 24.
+        minSdk = 26
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
