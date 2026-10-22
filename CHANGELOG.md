@@ -23,10 +23,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     fast-uri and ip-address. `nodemon` is gone and `npm run dev` now uses
     Node's built-in `node --watch`, because nodemon pulled in `braces`,
     whose advisory (GHSA-vfj7-8cjw-p6xm) has no patched release.
-  - `admin`: patched brace-expansion; Next.js 15.5.25 → 15.5.27.
+  - `admin`: patched brace-expansion. (This entry first claimed Next.js
+    15.5.27 too, but the npm 10 lockfile redo left `next` at 15.5.25; the
+    sweep below fixes that.)
   - `mobile`: fastlane 2.237 → 2.240.1, the first release that allows the
     patched rubyzip 3.7 (GHSA-47m2-wp7j-p9vc). This changes the release
     tooling only, not the app.
+- All 12 Dependabot alerts opened since that sweep cleared (lockfiles
+  regenerated with npm 10, which CI uses):
+  - `app`, `identity-service`, `backup-service/api`: proxy-addr 2.0.7 →
+    2.0.8, fixing a critical IP-spoofing bypass of the trust-proxy subnet
+    check via IPv4-mapped IPv6 addresses (GHSA-jqcg-44mw-7w3h). `app` also
+    gets a patched fast-copy.
+  - `admin`: Next.js 15.5.25 → 15.5.28 (two SSG/ISR cache-poisoning
+    advisories; `package.json` now requires `^15.5.28`), handlebars 4.7.9 →
+    4.7.10 (critical, dev-only via ts-jest), source-map-js 1.2.2 and sharp
+    0.35.5.
+  - `website`: vite 8.2.2 → 8.3.5 (three launch-editor advisories in the dev
+    server), source-map-js 1.2.2, sharp 0.35.5 and smol-toml 1.9.1.
+  - `knowledge-mcp`: mcp 1.28.1 → 1.30.0, fixing unbounded session growth
+    in the StreamableHTTP transport (GHSA-84m7-p3x7-pcfv). 1.30.0 is the
+    newest 1.x; fastmcp 3.4.4 does not allow mcp 2.
+  - Found by CI's pip-audit before Dependabot flagged them: certifi
+    2026.6.17 → 2026.10.19 in `API-service` and `knowledge-mcp`
+    (PYSEC-2026-4320), and pymongo 4.17.0 → 4.18.3 in `API-service` (four
+    advisories, PYSEC-2026-4294 to -4297).
 - Known and accepted: `braces` still reaches `admin` through
   `eslint-config-next`, which has no release without it. It is a dev-only
   linter that globs our own source files, so it is not reachable at runtime.
