@@ -74,6 +74,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   admin portal's `NEXT_PUBLIC_*` values are baked in by CI from the production
   domain and can be overridden with repository variables. See "Deploying an
   Update" in `DEPLOYMENT.md`.
+- Mobile: firebase_core 4 → 5, firebase_messaging 16 → 17 and sentry_flutter
+  9 → 10, which had held CI's Flutter major-version audit red since mid-October.
+  - Android's `minSdk` is now 26 (Android 8.0), the floor sentry_flutter 10
+    requires; phones on Android 7.x stay on the last release.
+  - iOS builds through Swift Package Manager only. Sentry 10 dropped CocoaPods,
+    and every remaining plugin now ships a Swift package, so CocoaPods installs
+    nothing (`Podfile.lock` lists only Flutter's placeholder pod, and the
+    `[CP]` build phases are gone). A machine
+    with `enable-swift-package-manager: false` in its Flutter config can no
+    longer build iOS: run `flutter config --enable-swift-package-manager`, then
+    `flutter clean` once. The release workflow uses Flutter's default (on).
+  - Android 13+'s new `deniedPermanently` permission state is recorded as
+    `denied` in `notification_permission_checked`, as iOS already reports it.
+  - FCM token registration is unchanged. `getToken`/`onTokenRefresh` are
+    deprecated for `register()`/`onRegistered`, but those return a Firebase
+    Installation ID that the backend's `sendEach({ token })` cannot target, so
+    switching needs a backend change first.
 
 ### Fixed
 
