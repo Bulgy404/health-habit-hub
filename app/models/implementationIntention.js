@@ -9,6 +9,8 @@
  *   groupId            ObjectId   Optional. Reference to group.
  *   sourceRecommendationId string Optional. UUID of the recommendation that
  *                                 initiated this habit-creation flow.
+ *   sourceHabitId      string     Optional. Id of the community habit this one
+ *                                 was copied from in Explore (#4).
  *   behaviorKey        string     Required. Unique behavior identifier.
  *   behaviorLabel      string     Required. Display label for the behavior.
  *   durationMinutes    int        Required. Duration of behavior in minutes.
@@ -98,6 +100,7 @@ export const VALIDATOR = {
       studyId: { bsonType: ['objectId', 'null'] },
       groupId: { bsonType: ['objectId', 'null'] },
       sourceRecommendationId: { bsonType: ['string', 'null'] },
+      sourceHabitId: { bsonType: ['string', 'null'] },
       behaviorKey: { bsonType: 'string' },
       behaviorLabel: { bsonType: 'string' },
       durationMinutes: { bsonType: 'int' },

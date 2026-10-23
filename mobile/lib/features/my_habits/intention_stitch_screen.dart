@@ -38,6 +38,7 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
     this.anchorText,
     this.alsoTrackAnchor = false,
     this.recommendationId,
+    this.sourceHabitId,
     super.key,
   });
 
@@ -71,6 +72,9 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
 
   /// Recommendation that initiated this habit flow, if any.
   final String? recommendationId;
+
+  /// Community habit this one was copied from in Explore (#4), if any.
+  final String? sourceHabitId;
 
   @override
   ConsumerState<IntentionStitchScreen> createState() =>
@@ -216,6 +220,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
         'anchorText': ?widget.anchorText,
         'alsoTrackAnchor': widget.alsoTrackAnchor,
         'recommendationId': ?widget.recommendationId,
+        'sourceHabitId': ?widget.sourceHabitId,
         'stitchedSentence': _sentence,
       },
     );

@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../features/my_habits/my_habits_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
@@ -30,6 +32,7 @@ HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
     hasTranslation:
         bubble.originalText.isNotEmpty && bubble.originalText != bubble.label,
     contextText: bubble.contextText,
+    habitType: bubble.habitType,
   );
 }
 
@@ -540,6 +543,27 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
     }
   }
 
+  /// Starts the new-habit flow prefilled with this community habit (#4):
+  /// its text as the behaviour (editable on the first step), its build/quit
+  /// type, and its classified context phrase as the cue when that phrase is
+  /// in the same language as the shown text. The new intention records
+  /// `sourceHabitId` so copies can be traced back.
+  void _copyToMyHabits() {
+    final router = GoRouter.of(context);
+    final contextText = _node.contextText.trim();
+    Navigator.of(context).pop();
+    router.push(
+      '/habits/new/behavior',
+      extra: {
+        'initialBehaviorLabel': _node.name,
+        'habitType': _node.habitType,
+        if (contextText.isNotEmpty && _node.name.contains(contextText))
+          'initialCue': contextText,
+        'sourceHabitId': _node.id,
+      },
+    );
+  }
+
   Future<void> _annotate(String type) async {
     if (_loadingType != null) return;
     final notifier = ref.read(annotationStateProvider.notifier);
@@ -562,6 +586,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         language: _node.language,
         hasTranslation: _node.hasTranslation,
         contextText: _node.contextText,
+        habitType: _node.habitType,
       );
       widget.onNodeUpdated(updated);
       if (mounted) setState(() => _node = updated);
@@ -594,6 +619,13 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationState[_node.id]?.contains('helpful') ?? false;
     final busy = _loadingType != null;
     final commentsEnabled = ref.watch(commentsEnabledProvider);
+    // Copying needs free-text habit entry: a study that restricts habits to
+    // its activity catalog would have to drop the copied text anyway.
+    final habitConfig = ref.watch(habitConfigProvider).value;
+    final canCopy =
+        habitConfig != null &&
+        habitConfig.selfHabitCreationEnabled &&
+        habitConfig.behaviorOptions.isEmpty;
     final viewerLang = ref.watch(localeProvider).languageCode;
     // The habit's own donation language matching the viewer's language means
     // the displayed text already IS that original — nothing is missing, so
@@ -806,6 +838,14 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               ),
             ],
           ),
+          if (canCopy) ...[
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: _copyToMyHabits,
+              icon: const Icon(Icons.add_task),
+              label: Text(l10n.copyToMyHabits),
+            ),
+          ],
 
           // ── Community comments ─────────────────────────────────────
           const SizedBox(height: 20),

@@ -412,6 +412,7 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.strictEqual(body.habitType, 'build');
   assert.strictEqual(body.creationMode, 'standalone');
   assert.strictEqual(body.sourceRecommendationId, null);
+  assert.strictEqual(body.sourceHabitId, null);
 });
 
 test('POST /habits/intentions persists a valid recommendation UUID', async () => {
@@ -435,6 +436,27 @@ test('POST /habits/intentions rejects malformed recommendation lineage', async (
   assert.strictEqual(res.status, 400);
   const body = await res.json();
   assert.match(body.error, /UUID v4/);
+});
+
+test('POST /habits/intentions records the community habit it was copied from (#4)', async () => {
+  const sourceHabitId = '3b241101-e2bb-4255-8caf-4136c566a962';
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, sourceHabitId },
+    makeToken(['user'], 'copied-habit-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.sourceHabitId, sourceHabitId);
+});
+
+test('POST /habits/intentions rejects a malformed community habit id', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, sourceHabitId: 'not a habit id; drop table' },
+    makeToken(['user'], 'bad-source-habit-user')
+  );
+  assert.strictEqual(res.status, 400);
 });
 
 test('POST /habits/intentions defaults to build when habitType is missing (pre-§7.4 app builds)', async () => {

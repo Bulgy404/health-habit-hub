@@ -64,6 +64,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   export has an `inCueContext` column, and the admin analytics page shows the
   share answered "yes" per condition and habit week. Re-logging a day as
   missed clears its answer.
+- An "Add to my habits" button on a community habit in Explore copies it into
+  your own habits (#4). It opens the normal new-habit flow with the habit's
+  text (editable), its build/quit type and, when the classifier found one,
+  its situation as the suggested cue. The new habit records which community
+  habit it came from (`implementation_intentions.sourceHabitId`). The button
+  is hidden when habit creation is off or the study limits habits to its
+  activity catalog. Analytics schema v3 marks these flows with
+  `entry_point`/`behavior_source: 'community'` and `habit_created.from_community`.
 - The website's Google Play badge now links to the live Play Store listing,
   using Google's official German and English badge artwork, and the footer
   links to Google Play next to the App Store. The badges share one height and

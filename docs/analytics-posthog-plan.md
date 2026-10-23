@@ -238,6 +238,10 @@ validated study/group IDs; all other person properties are forbidden.
   `reminder_frequency_changed`, `notification_opened` and
   `notification_permission_checked` — see
   [§2.1](#21-schema-v2--notification-effectiveness-question-3).
+- **Copied community habits (schema v3):** `habit_creation_started` gains
+  `entry_point: 'community'` and `habit_behavior_selected` gains
+  `behavior_source: 'community'` for habits copied from Explore with "Add to
+  my habits" (#4), and `habit_created` gains `from_community`. No new events.
 
 The registry intentionally excludes generic screen views, background/session
 events and every API error. Those remain candidates after the live

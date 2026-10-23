@@ -136,6 +136,8 @@ class MyHabitsService {
     Cadence cadence = Cadence.daily,
     // Recommendation lineage — UUID returned by the recommendation service.
     String? recommendationId,
+    // Community lineage — the Explore habit this one was copied from (#4).
+    String? sourceHabitId,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -153,6 +155,7 @@ class MyHabitsService {
           'anchorLabel': ?anchorLabel,
           'reminderTime': ?reminderTime,
           'sourceRecommendationId': ?recommendationId,
+          'sourceHabitId': ?sourceHabitId,
         },
       );
       if (res.statusCode == 409) {

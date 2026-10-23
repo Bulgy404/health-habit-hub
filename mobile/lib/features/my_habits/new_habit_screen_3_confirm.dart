@@ -39,6 +39,7 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     this.alsoTrackAnchor = false,
     this.stitchedSentence,
     this.recommendationId,
+    this.sourceHabitId,
     super.key,
   });
 
@@ -79,6 +80,9 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 
   /// Recommendation that initiated this habit flow, if any.
   final String? recommendationId;
+
+  /// Community habit this one was copied from in Explore (#4), if any.
+  final String? sourceHabitId;
 
   @override
   ConsumerState<ConfirmPlanScreen> createState() => _ConfirmPlanScreenState();
@@ -287,6 +291,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                   : null,
             ),
             recommendationId: widget.recommendationId,
+            sourceHabitId: widget.sourceHabitId,
           );
       ref.invalidate(intentionsProvider);
       // §7.5 — a new habit earns the First Step badge; refresh so Settings/
