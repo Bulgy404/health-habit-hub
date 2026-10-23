@@ -125,6 +125,8 @@ export async function buildDailyLogsCsv({ db, studyId }) {
       dayNumber,
       enacted: l.enacted == null ? 'NA' : l.enacted ? 'TRUE' : 'FALSE',
       loggedAt: l.loggedAt?.toISOString() ?? 'NA',
+      // #64 — 'yes' | 'no' | 'unsure'; NA when not answered or not asked.
+      inCueContext: l.inCueContext ?? 'NA',
     };
   });
 

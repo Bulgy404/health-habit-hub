@@ -8,7 +8,19 @@
  *   date        string     Required. Date in YYYY-MM-DD format.
  *   enacted     boolean    Required. Whether behavior was performed.
  *   loggedAt    Date       Required. When the log entry was created.
+ *   inCueContext string    Optional. Whether an enacted behaviour happened in
+ *                          the planned cue situation (#64): 'yes' | 'no' |
+ *                          'unsure'. Null or absent when not asked or not
+ *                          answered (the prompt is skippable), on older logs,
+ *                          and on misses (enacted: false).
  */
+
+/** Answers to "In the planned situation?" (#64). */
+export const CUE_CONTEXT_ANSWERS = /** @type {const} */ ([
+  'yes',
+  'no',
+  'unsure',
+]);
 
 export const COLLECTION = 'daily_behavior_logs';
 
@@ -24,6 +36,10 @@ export const VALIDATOR = {
       date: { bsonType: 'string' },
       enacted: { bsonType: 'bool' },
       loggedAt: { bsonType: 'date' },
+      inCueContext: {
+        bsonType: ['string', 'null'],
+        enum: ['yes', 'no', 'unsure', null],
+      },
     },
   },
 };

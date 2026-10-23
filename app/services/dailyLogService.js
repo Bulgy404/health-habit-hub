@@ -17,11 +17,46 @@ export async function upsertLog({ db, intentionId, userId, date, enacted }) {
       // the update with a path conflict (HTTP 500). It lives in $set so it is
       // written on both insert and re-log.
       $setOnInsert: { intentionId: oid, userId, date },
-      $set: { enacted, loggedAt: now },
+      // A miss has no situation to report, so re-logging a day as missed
+      // clears any earlier "in the planned situation?" answer (#64).
+      // Re-logging it as enacted keeps the answer.
+      $set: enacted
+        ? { enacted, loggedAt: now }
+        : { enacted, loggedAt: now, inCueContext: null },
     },
     { upsert: true, returnDocument: 'after' }
   );
   await touchEnrollmentActivity({ db, userId });
+}
+
+/**
+ * Record whether an enacted day happened in the planned cue situation (#64):
+ * the answer to the optional "In the planned situation?" follow-up the app
+ * shows after logging. `inCueContext` null clears the answer.
+ *
+ * Only an existing, enacted log can carry an answer, so this never creates a
+ * log and reports `notFound` for a missing day or a miss. `userId` is in the
+ * filter for the same IDOR reason as [deleteLog].
+ * @param {{ db: object, intentionId: string, userId: string, date: string, inCueContext: 'yes'|'no'|'unsure'|null }} deps
+ * @returns {Promise<{ notFound: boolean }>}
+ */
+export async function setCueContext({
+  db,
+  intentionId,
+  userId,
+  date,
+  inCueContext,
+}) {
+  const result = await db.collection(COLLECTION).updateOne(
+    {
+      intentionId: new ObjectId(intentionId),
+      userId: String(userId),
+      date: String(date),
+      enacted: true,
+    },
+    { $set: { inCueContext } }
+  );
+  return { notFound: result.matchedCount === 0 };
 }
 
 /**
@@ -51,7 +86,7 @@ export async function deleteLog({ db, intentionId, userId, date }) {
  * for an `intentionId` owned by a different user returns no entries — see
  * IDOR fix in intentionsRouter.js.
  * @param {{ db: object, intentionId: string, userId: string, from?: string, to?: string }} deps
- * @returns {Promise<Array<{ date: string, enacted: boolean, loggedAt: Date }>>}
+ * @returns {Promise<Array<{ date: string, enacted: boolean, loggedAt: Date, inCueContext: string|null }>>}
  */
 export async function getLogs({ db, intentionId, userId, from, to }) {
   const oid = new ObjectId(intentionId);
@@ -67,6 +102,7 @@ export async function getLogs({ db, intentionId, userId, from, to }) {
     date: d.date,
     enacted: d.enacted,
     loggedAt: d.loggedAt,
+    inCueContext: d.inCueContext ?? null,
   }));
 }
 

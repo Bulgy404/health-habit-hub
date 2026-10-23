@@ -737,6 +737,72 @@ test('POST /habits/intentions/:id/logs returns 201 with valid payload', async ()
   assert.strictEqual(body.logged, true);
 });
 
+// ── PATCH logs/:date (cue context, #64) ──────────────────────────────────────
+
+test('PATCH /habits/intentions/:id/logs/:date records the cue-context answer', async () => {
+  const token = makeToken(['user'], 'cue-context-user');
+  const createRes = await post(INTENTIONS, validBody, token);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+  await post(
+    `${INTENTIONS}/${id}/logs`,
+    { date: '2026-06-02', enacted: true },
+    token
+  );
+
+  const res = await patch(
+    `${INTENTIONS}/${id}/logs/2026-06-02`,
+    { inCueContext: 'unsure' },
+    token
+  );
+  assert.strictEqual(res.status, 200);
+  const logs = await (await get(`${INTENTIONS}/${id}/logs`, token)).json();
+  assert.strictEqual(logs[0].inCueContext, 'unsure');
+});
+
+test('PATCH /habits/intentions/:id/logs/:date returns 400 for an unknown answer', async () => {
+  const res = await patch(
+    `${INTENTIONS}/507f1f77bcf86cd799439011/logs/2026-06-02`,
+    { inCueContext: 'maybe' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('PATCH /habits/intentions/:id/logs/:date returns 404 when the day is not logged', async () => {
+  const token = makeToken(['user'], 'cue-context-nolog-user');
+  const createRes = await post(INTENTIONS, validBody, token);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+
+  const res = await patch(
+    `${INTENTIONS}/${id}/logs/2026-06-03`,
+    { inCueContext: 'yes' },
+    token
+  );
+  assert.strictEqual(res.status, 404);
+});
+
+test('PATCH /habits/intentions/:id/logs/:date returns 404 for an intention owned by another user', async () => {
+  const ownerToken = makeToken(['user'], 'idor-owner-cue');
+  const attackerToken = makeToken(['user'], 'idor-attacker-cue');
+  const createRes = await post(INTENTIONS, validBody, ownerToken);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+  await post(
+    `${INTENTIONS}/${id}/logs`,
+    { date: '2026-06-02', enacted: true },
+    ownerToken
+  );
+
+  const res = await patch(
+    `${INTENTIONS}/${id}/logs/2026-06-02`,
+    { inCueContext: 'no' },
+    attackerToken
+  );
+  assert.strictEqual(res.status, 404);
+});
+
 // ── IDOR: cross-user access to another user's daily logs ────────────────────
 
 test('GET /habits/intentions/:id/logs returns 404 for an intention owned by another user', async () => {

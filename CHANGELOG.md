@@ -54,6 +54,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- After ticking today's habit, the app asks an optional one-tap follow-up:
+  "In the planned situation? Yes / No, elsewhere / Not sure" (#64). It sits
+  on the habit card, names the planned cue, and can be skipped. The answer is
+  stored on the day's log (`daily_behavior_logs.inCueContext`, set through the
+  new `PATCH /habits/intentions/:id/logs/:date`), so analyses can tell
+  repetitions in the planned situation from repetitions elsewhere (Gardner,
+  Rebar & Lally 2022, M5/AI2), as the HABIRUPT study does. The daily-log CSV
+  export has an `inCueContext` column, and the admin analytics page shows the
+  share answered "yes" per condition and habit week. Re-logging a day as
+  missed clears its answer.
 - The website's Google Play badge now links to the live Play Store listing,
   using Google's official German and English badge artwork, and the footer
   links to Google Play next to the App Store. The badges share one height and

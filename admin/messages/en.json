@@ -694,6 +694,11 @@
         "empty": "No SRHI data yet.",
         "habitThreshold": "habit threshold"
       },
+      "cueContextShare": {
+        "title": "Habit Done in the Planned Situation",
+        "desc": "Share of logged habit days done in the planned cue situation, per habit week and condition. Only days where the participant answered the optional follow-up count.",
+        "empty": "No answers yet."
+      },
       "cumulativeDropout": {
         "title": "Cumulative Dropout",
         "desc": "Participants who dropped out over time, per condition",

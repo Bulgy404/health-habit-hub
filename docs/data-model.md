@@ -1401,16 +1401,29 @@ Indexes: `{userId, status}`, `{enrollmentId}` (sparse),
 
 One document per (intention, date) pair — idempotent upsert.
 
-| Field         | Type     | Description                               |
-| ------------- | -------- | ----------------------------------------- |
-| `_id`         | ObjectId |                                           |
-| `intentionId` | ObjectId |                                           |
-| `userId`      | String   |                                           |
-| `date`        | String   | `"YYYY-MM-DD"`                            |
-| `enacted`     | Boolean  | `true` = enacted, `false` = explicit miss |
-| `loggedAt`    | Date     |                                           |
+| Field          | Type         | Description                               |
+| -------------- | ------------ | ----------------------------------------- |
+| `_id`          | ObjectId     |                                           |
+| `intentionId`  | ObjectId     |                                           |
+| `userId`       | String       |                                           |
+| `date`         | String       | `"YYYY-MM-DD"`                            |
+| `enacted`      | Boolean      | `true` = enacted, `false` = explicit miss |
+| `loggedAt`     | Date         |                                           |
+| `inCueContext` | String\|null | `'yes'`/`'no'`/`'unsure'`, see below      |
 
 Indexes: `{intentionId, date}` unique, `{userId, date}`
+
+**In the planned situation? (#64).** Right after a participant ticks today's
+habit, the app shows an optional one-tap follow-up: "In the planned
+situation? Yes / No, elsewhere / Not sure". The answer is saved with
+`PATCH /habits/intentions/:id/logs/:date` as `inCueContext`, so analyses can
+separate context-consistent repetitions from repetitions elsewhere (Gardner,
+Rebar & Lally 2022, M5/AI2; the HABIRUPT study asks the same question daily).
+`null` or absent means not answered (the prompt is skippable), not asked
+(older logs, days logged from the backfill sheet), or a miss: re-logging a
+day as `enacted: false` clears the answer. The daily-log CSV export has an
+`inCueContext` column, and study analytics report the share of answered
+enacted logs that said yes, per group and habit week (`cueContextShare`).
 
 Logging is identical regardless of the intention's `cadence` — a weekly-cadence
 habit still gets one `daily_behavior_logs` document per logged day, same as a

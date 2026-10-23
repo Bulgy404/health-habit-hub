@@ -13,7 +13,13 @@ import {
   updateIntentionStatus,
   getIntention,
 } from '../services/intentionService.js';
-import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
+import {
+  upsertLog,
+  getLogs,
+  deleteLog,
+  setCueContext,
+} from '../services/dailyLogService.js';
+import { CUE_CONTEXT_ANSWERS } from '../models/dailyBehaviorLog.js';
 import { getPreferences } from '../services/userPreferencesService.js';
 import { generateWindows } from '../services/srhiService.js';
 import { generateHabitCreationWindows } from '../services/questionnaireScheduleService.js';
@@ -482,6 +488,43 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         intention_id: req.params.id,
         enacted,
       });
+    } catch (err) {
+      log.error({ err: err }, '[intentions] error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Answer to the optional "In the planned situation?" follow-up shown after
+  // logging a day as enacted (#64). A separate call rather than a field on
+  // POST /logs: the participant answers after the log already exists, and
+  // re-POSTing would bump loggedAt and count the log twice in analytics.
+  router.patch('/:id/logs/:date', async (req, res) => {
+    try {
+      const { inCueContext } = req.body;
+      if (inCueContext !== null && !CUE_CONTEXT_ANSWERS.includes(inCueContext))
+        return res.status(400).json({
+          error: `inCueContext must be one of ${CUE_CONTEXT_ANSWERS.join(', ')}, or null`,
+        });
+      const database = await getDb();
+      const userId = req.user.sub;
+      // Ownership check — same IDOR concern as GET/POST above.
+      const intention = await getIntention({
+        db: database,
+        id: req.params.id,
+        userId,
+      });
+      if (!intention)
+        return res.status(404).json({ error: 'Intention not found' });
+      const result = await setCueContext({
+        db: database,
+        intentionId: req.params.id,
+        userId,
+        date: req.params.date,
+        inCueContext,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'No enacted log for this date' });
+      res.json({ updated: true });
     } catch (err) {
       log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
