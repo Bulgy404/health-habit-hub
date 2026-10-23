@@ -6,8 +6,11 @@ import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/bubble_graph.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/bubble_graph_provider.dart';
+import 'package:hhh/providers/show_in_graph_provider.dart';
 import 'package:hhh/screens/explore_screen.dart';
 import 'package:hhh/services/auth_service.dart';
+import 'package:hhh/services/habit_service.dart';
+import 'package:hhh/widgets/bubble_graph/bubble_graph_painter.dart';
 import 'package:hhh/widgets/bubble_graph_widget.dart';
 
 class _FakeAuthService extends AuthService {
@@ -44,6 +47,14 @@ Widget _buildWithGraph(Future<BubbleGraph> Function() graphFactory) {
     overrides: [
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       bubbleGraphProvider.overrideWith((_) => graphFactory()),
+      // Keeps the Stats tab off the network, and its static error state lets
+      // pumpAndSettle finish when a test lands on that tab.
+      myStatsProvider.overrideWithValue(
+        AsyncError(Exception('offline'), StackTrace.empty),
+      ),
+      habitStatsProvider.overrideWithValue(
+        AsyncError(Exception('offline'), StackTrace.empty),
+      ),
     ],
     child: const MaterialApp(
       localizationsDelegates: [
@@ -177,5 +188,53 @@ void main() {
     await tester.tap(find.text('Low benefit'));
     await tester.pumpAndSettle();
     expect(find.text('1 habit'), findsOneWidget);
+  });
+
+  double tabPage(WidgetTester tester) =>
+      tester.widget<PageView>(find.byType(PageView)).controller!.page!;
+
+  testWidgets(
+      'dragging a bubble sideways moves the bubble under the finger '
+      'instead of swiping to the Stats tab', (tester) async {
+    await tester.pumpWidget(_buildWithGraph(() async => _sampleGraph()));
+    await tester.pumpAndSettle();
+
+    final chip = find.byType(BubbleChipWidget).first;
+    final gesture = await tester.startGesture(tester.getCenter(chip));
+    for (var i = 0; i < 12; i++) {
+      await gesture.moveBy(const Offset(-8, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+
+    // Before the fix the page swipe claimed the drag after 18 px, the
+    // bubble never moved, and the view slid toward Stats.
+    expect(tabPage(tester), 0);
+    final translation = tester
+        .widget<Transform>(
+          find.ancestor(of: chip, matching: find.byType(Transform)).first,
+        )
+        .transform
+        .getTranslation();
+    // The full 96 px, including the travel spent reaching the pan slop.
+    expect(translation.x, -96);
+    expect(translation.y, 0);
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tabPage(tester), 0);
+  });
+
+  testWidgets('swiping from the Stats tab still returns to the Graph tab',
+      (tester) async {
+    await tester.pumpWidget(_buildWithGraph(() async => _sampleGraph()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Stats'));
+    await tester.pumpAndSettle();
+    expect(tabPage(tester), 1);
+
+    await tester.fling(find.byType(TabBarView), const Offset(400, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(tabPage(tester), 0);
   });
 }

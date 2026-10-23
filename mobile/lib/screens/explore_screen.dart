@@ -144,11 +144,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   // Stats are fetched once and cached; re-pull them every time the user
   // revisits the Stats tab so newly donated/annotated habits show up without
-  // requiring a manual pull-to-refresh.
+  // requiring a manual pull-to-refresh. Also rebuilds so the TabBarView's
+  // swipe physics follow the active tab (swiping is off on the Graph tab).
   void _handleTabChange() {
     final index = _tabController.index;
     if (index == _lastTabIndex) return;
-    _lastTabIndex = index;
+    setState(() => _lastTabIndex = index);
     if (index == 1) {
       ref.invalidate(myStatsProvider);
       ref.invalidate(habitStatsProvider);
@@ -356,6 +357,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       ),
       body: TabBarView(
         controller: _tabController,
+        // The Graph tab is a draggable, pannable canvas. The page swipe claims
+        // a drag after 18 px of horizontal travel, but bubble drags and canvas
+        // pans only after 36 px, so any sideways drag on the graph slid over
+        // to Stats instead. Swiping stays on for Stats ↔ Saved and back to
+        // Graph; the TabBar still switches tabs from the Graph tab.
+        physics: _lastTabIndex == 0
+            ? const NeverScrollableScrollPhysics()
+            : null,
         children: [
           body,
           const StatsScreen(),

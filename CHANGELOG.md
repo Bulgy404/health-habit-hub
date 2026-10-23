@@ -94,6 +94,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Dragging a bubble sideways in the app's habit graph switched to the Stats
+  tab instead of moving the bubble. The Explore tabs' page swipe claims a drag
+  after 18 px of horizontal travel, while bubble drags and canvas pans need
+  36 px, so any horizontal or diagonal drag on the graph went to the tab
+  view. Swiping is now off while the Graph tab is open; the tab bar still
+  switches tabs, and swiping from Stats back to Graph and between Stats and
+  Saved still works. Dragged bubbles also stay under the finger instead of
+  trailing it by about 36 px.
 - The analytics stack did not survive a host reboot. Upstream's compose sets
   `restart: on-failure` on nearly every service, which only covers a crash — a
   reboot stops containers cleanly, they exit 0, and Docker leaves them down.

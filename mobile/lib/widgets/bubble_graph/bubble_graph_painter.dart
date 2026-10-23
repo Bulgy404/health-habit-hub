@@ -4,6 +4,7 @@
 /// plays a scale-and-glow entrance animation when [BubbleNode.pulse] is true.
 library;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'bubble_graph_data.dart';
@@ -112,6 +113,10 @@ class _BubbleChipWidgetState extends State<BubbleChipWidget>
       excludeSemantics: true,
       onTap: widget.onTap,
       child: GestureDetector(
+        // Report the drag from the touch-down point, so the travel spent
+        // reaching the pan slop is applied too and the bubble stays under
+        // the finger instead of trailing it by ~36 px.
+        dragStartBehavior: DragStartBehavior.down,
         onTap: widget.onTap,
         onPanStart: (_) => widget.onDragStart(),
         onPanUpdate: (details) => widget.onDrag(details.delta),
