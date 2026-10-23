@@ -136,6 +136,16 @@ interface SrhiPoint {
   count: number;
 }
 
+interface CueContextPoint {
+  groupId: string | null;
+  weekNumber: number;
+  yes: number;
+  no: number;
+  unsure: number;
+  answered: number;
+  share: number;
+}
+
 interface DropoutPoint {
   groupId: string | null;
   date: string;
@@ -178,6 +188,7 @@ interface AnalyticsData {
   dailyActive: DailyActivePoint[];
   habitsByGroup: HabitsByGroupPoint[];
   engagement: Engagement | null;
+  cueContextShare?: CueContextPoint[];
 }
 
 interface Participant {
@@ -730,6 +741,27 @@ function AnalyticsView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analytics, study]);
 
+  // Habit done in the planned situation (#64): pivot to
+  // [{week, Group1: % yes, ...}], like the SRHI trajectory above.
+  const cueContextData = useMemo(() => {
+    const byWeek: Record<number, Record<string, number | string>> = {};
+    for (const p of analytics?.cueContextShare ?? []) {
+      byWeek[p.weekNumber] = byWeek[p.weekNumber] ?? { week: `W${p.weekNumber}` };
+      byWeek[p.weekNumber][groupLabel(p.groupId)] = Math.round(p.share * 100);
+    }
+    return Object.values(byWeek).sort((a, b) => {
+      const wa = parseInt(String(a.week).slice(1));
+      const wb = parseInt(String(b.week).slice(1));
+      return wa - wb;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analytics, study]);
+  const cueContextGroups = useMemo(
+    () => [...new Set((analytics?.cueContextShare ?? []).map((p) => groupLabel(p.groupId)))],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [analytics, study]
+  );
+
   // Dropout curve: pivot to [{date, Group1: cum, ...}]
   const dropoutData = useMemo(() => {
     const byDate: Record<string, Record<string, number | string>> = {};
@@ -1079,6 +1111,59 @@ function AnalyticsView() {
                   </div>
                   <div className={styles.legend}>
                     {srhiGroups.map((g, i) => (
+                      <span key={g} className={styles.legendItem}>
+                        <span
+                          className={styles.legendDot}
+                          style={{ background: GROUP_COLORS[i % GROUP_COLORS.length] }}
+                        />
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Habit done in the planned situation (#64) */}
+            <div className={styles.chartCard}>
+              <p className={styles.chartTitle}>{t("charts.cueContextShare.title")}</p>
+              <p className={styles.chartDesc}>{t("charts.cueContextShare.desc")}</p>
+              {cueContextData.length === 0 ? (
+                <div className={styles.emptyState}>{t("charts.cueContextShare.empty")}</div>
+              ) : (
+                <div className={styles.chartWrap}>
+                  <div style={{ minWidth: timelineWidth(cueContextData.length) }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart
+                        data={cueContextData}
+                        margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                        <YAxis
+                          domain={[0, 100]}
+                          unit="%"
+                          tick={{ fontSize: 11 }}
+                          width={40}
+                        />
+                        <Tooltip content={<RcTooltip />} />
+                        {cueContextGroups.map((g, i) => (
+                          <Line
+                            key={g}
+                            type="monotone"
+                            dataKey={g}
+                            stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
+                            strokeWidth={2.5}
+                            dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+                            activeDot={{ r: 6 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className={styles.legend}>
+                    {cueContextGroups.map((g, i) => (
                       <span key={g} className={styles.legendItem}>
                         <span
                           className={styles.legendDot}

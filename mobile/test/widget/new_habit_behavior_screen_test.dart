@@ -36,22 +36,33 @@ class _FakeLocaleNotifier extends LocaleNotifier {
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _buildSubject(HabitConfig config, {String? recommendationId}) {
+Widget _buildSubject(
+  HabitConfig config, {
+  String? recommendationId,
+  PickBehaviorScreen? screen,
+}) {
   final router = GoRouter(
     initialLocation: '/habits/new/behavior',
     routes: [
       GoRoute(
         path: '/habits/new/behavior',
         builder: (context, state) =>
-            PickBehaviorScreen(recommendationId: recommendationId),
+            screen ?? PickBehaviorScreen(recommendationId: recommendationId),
       ),
       GoRoute(
         path: '/habits/new/cue',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return Scaffold(
-            body: Text(
-              'CUE:${extra['behaviorKey']}|${extra['behaviorLabel']}|${extra['recommendationId']}',
+            body: Column(
+              children: [
+                Text(
+                  'CUE:${extra['behaviorKey']}|${extra['behaviorLabel']}|${extra['recommendationId']}',
+                ),
+                Text(
+                  'COPY:${extra['habitType']}|${extra['initialCue']}|${extra['sourceHabitId']}',
+                ),
+              ],
             ),
           );
         },
@@ -334,5 +345,58 @@ void main() {
       find.text('Please describe your habit (min. 3 characters)'),
       findsNothing,
     );
+  });
+
+  testWidgets(
+    'a habit copied from Explore prefills the text and type, and carries '
+    'its cue and source id to the cue step (#4)',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(
+          _freeEntryConfig,
+          screen: const PickBehaviorScreen(
+            initialBehaviorLabel: 'Go for a run after work',
+            initialHabitType: HabitType.quit,
+            initialCue: 'after work',
+            sourceHabitId: 'habit-123',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Go for a run after work',
+      );
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('CUE:go_for_a_run_after_work|Go for a run after work|null'),
+        findsOneWidget,
+      );
+      expect(find.text('COPY:quit|after work|habit-123'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a copied habit longer than the field is cut at a word', (
+    tester,
+  ) async {
+    final long = List.filled(30, 'word').join(' '); // 149 characters
+    await tester.pumpWidget(
+      _buildSubject(
+        _freeEntryConfig,
+        screen: PickBehaviorScreen(initialBehaviorLabel: long),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final text = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!
+        .text;
+    expect(text.length, lessThanOrEqualTo(100));
+    expect(text.endsWith('word'), isTrue);
   });
 }

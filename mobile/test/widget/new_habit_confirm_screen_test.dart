@@ -125,6 +125,7 @@ class _FakeMyHabitsService extends MyHabitsService {
     String creationMode = 'standalone',
     Cadence cadence = Cadence.daily,
     String? recommendationId,
+    String? sourceHabitId,
   }) async {
     calls.add({
       'behaviorKey': behaviorKey,
@@ -139,6 +140,7 @@ class _FakeMyHabitsService extends MyHabitsService {
       'creationMode': creationMode,
       'cadence': cadence,
       'recommendationId': recommendationId,
+      'sourceHabitId': sourceHabitId,
     });
     switch (_mode) {
       case _Mode.success:
@@ -203,6 +205,7 @@ Widget _buildSubject({
   String? anchorText,
   bool alsoTrackAnchor = false,
   String? recommendationId,
+  String? sourceHabitId,
 }) {
   final router = GoRouter(
     initialLocation: '/habits/new/confirm',
@@ -221,6 +224,7 @@ Widget _buildSubject({
           anchorText: anchorText,
           alsoTrackAnchor: alsoTrackAnchor,
           recommendationId: recommendationId,
+          sourceHabitId: sourceHabitId,
         ),
       ),
       GoRoute(
@@ -624,6 +628,30 @@ void main() {
       expect(
         service.lastCall!['recommendationId'],
         'f81d4fae-7dec-4f01-a765-00a0c91e6bf6',
+      );
+    },
+  );
+
+  testWidgets(
+    'Create Habit forwards the copied community habit to the API service (#4)',
+    (tester) async {
+      final service = _FakeMyHabitsService.success();
+      await tester.pumpWidget(
+        _buildSubject(
+          config: _userControlledConfig,
+          myHabitsService: service,
+          sourceHabitId: '3b241101-e2bb-4255-8caf-4136c566a962',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Create habit'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 6));
+
+      expect(
+        service.lastCall!['sourceHabitId'],
+        '3b241101-e2bb-4255-8caf-4136c566a962',
       );
     },
   );

@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   buildSrhiCsv,
+  buildDailyLogsCsv,
   buildDropoutCsv,
   buildQuestionnaireResponsesCsv,
 } from '../../services/exportService.js';
@@ -64,6 +65,72 @@ test('buildSrhiCsv: includes header and a data row', async () => {
   assert.ok(csv.includes('userId'), 'missing header');
   assert.ok(csv.includes('u1'), 'missing data row');
   assert.ok(csv.includes('4.5'), 'missing score');
+});
+
+test('buildSrhiCsv: stemVariant column, legacy submissions reported as behaviour (#63)', async () => {
+  const base = {
+    intentionId: new ObjectId(),
+    userId: 'u1',
+    scheduledFor: new Date('2026-01-01'),
+    score: 4,
+    studyId: null,
+    groupId: null,
+  };
+  const db = makeDb({
+    srhi: [
+      { ...base, weekNumber: 1, submittedAt: new Date('2026-01-02') },
+      {
+        ...base,
+        weekNumber: 2,
+        submittedAt: new Date('2026-01-09'),
+        stemVariant: 'behaviour+cue',
+      },
+      { ...base, weekNumber: 3, submittedAt: null, score: null },
+    ],
+  });
+  const lines = (await buildSrhiCsv({ db, studyId: null })).trim().split('\n');
+  const header = lines[0].split(',');
+  const col = header.indexOf('stemVariant');
+  assert.ok(col >= 0, 'missing stemVariant header');
+  assert.deepStrictEqual(
+    lines.slice(1).map((l) => l.split(',')[col]),
+    ['behaviour', 'behaviour+cue', 'NA']
+  );
+});
+
+test('buildDailyLogsCsv: inCueContext column, NA when unanswered (#64)', async () => {
+  const intentionId = new ObjectId();
+  const db = makeDb({
+    intentions: [
+      { _id: intentionId, studyId: null, createdAt: new Date('2026-06-01') },
+    ],
+    logs: [
+      {
+        intentionId,
+        userId: 'u1',
+        date: '2026-06-01',
+        enacted: true,
+        loggedAt: new Date('2026-06-01T20:00:00Z'),
+        inCueContext: 'yes',
+      },
+      {
+        intentionId,
+        userId: 'u1',
+        date: '2026-06-02',
+        enacted: true,
+        loggedAt: new Date('2026-06-02T20:00:00Z'),
+      },
+    ],
+  });
+  const lines = (await buildDailyLogsCsv({ db, studyId: null }))
+    .trim()
+    .split('\n');
+  const col = lines[0].split(',').indexOf('inCueContext');
+  assert.ok(col >= 0, 'missing inCueContext header');
+  assert.deepStrictEqual(
+    lines.slice(1).map((l) => l.split(',')[col]),
+    ['yes', 'NA']
+  );
 });
 
 test('buildQuestionnaireResponsesCsv: includes header, one row per response, and flattens answers', async () => {

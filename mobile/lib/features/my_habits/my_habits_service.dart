@@ -136,6 +136,8 @@ class MyHabitsService {
     Cadence cadence = Cadence.daily,
     // Recommendation lineage — UUID returned by the recommendation service.
     String? recommendationId,
+    // Community lineage — the Explore habit this one was copied from (#4).
+    String? sourceHabitId,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -153,6 +155,7 @@ class MyHabitsService {
           'anchorLabel': ?anchorLabel,
           'reminderTime': ?reminderTime,
           'sourceRecommendationId': ?recommendationId,
+          'sourceHabitId': ?sourceHabitId,
         },
       );
       if (res.statusCode == 409) {
@@ -211,6 +214,24 @@ class MyHabitsService {
     }
   }
 
+  /// Records whether the habit logged as done on [date] happened in the
+  /// planned cue situation (#64). The day must already be logged as enacted.
+  Future<void> setCueContext({
+    required String intentionId,
+    required String date,
+    required CueContextAnswer answer,
+  }) async {
+    try {
+      await _dio.patch(
+        '$_base/habits/intentions/$intentionId/logs/$date',
+        data: {'inCueContext': answer.wire},
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      throw NetworkException(e.message ?? 'Network error');
+    }
+  }
+
   /// Removes the log entry for [intentionId] on [date] entirely, undoing a
   /// previous [logDay] call (as opposed to logging `enacted: false`, which
   /// would record an explicit miss instead of clearing the entry).
@@ -261,18 +282,26 @@ class MyHabitsService {
     }
   }
 
-  /// Submits SRHI [items] for [intentionId] at [weekNumber].
+  /// Submits SRHI [items] for [intentionId] at [weekNumber], with the
+  /// [stemVariant] (`SrhiStemVariant.wire`) and [stemText] the participant
+  /// saw above the items (#63).
   ///
   /// Returns the resulting [SrhiTrajectoryPoint] with the computed score.
   Future<SrhiTrajectoryPoint> submitSrhi({
     required String intentionId,
     required int weekNumber,
     required Map<String, int> items,
+    String? stemVariant,
+    String? stemText,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '$_base/srhi/$intentionId/week/$weekNumber',
-        data: {'items': items},
+        data: {
+          'items': items,
+          'stemVariant': ?stemVariant,
+          'stemText': ?stemText,
+        },
       );
       return SrhiTrajectoryPoint.fromJson(res.data!);
     } on DioException catch (e) {

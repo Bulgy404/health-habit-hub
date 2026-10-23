@@ -694,6 +694,11 @@
         "empty": "Noch keine SRHI-Daten vorhanden.",
         "habitThreshold": "Gewohnheitsschwelle"
       },
+      "cueContextShare": {
+        "title": "Gewohnheit in der geplanten Situation",
+        "desc": "Anteil der geloggten Gewohnheitstage, die in der geplanten Situation stattfanden, pro Gewohnheitswoche und Bedingung. Es zählen nur Tage, an denen die optionale Nachfrage beantwortet wurde.",
+        "empty": "Noch keine Antworten."
+      },
       "cumulativeDropout": {
         "title": "Kumulierte Studienabbrüche",
         "desc": "Teilnehmende, die im Zeitverlauf abgebrochen haben, je Bedingung",

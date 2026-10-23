@@ -749,6 +749,32 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String srhiStemWithCue(String behavior, String cue) {
+    return '$behavior $cue is something…';
+  }
+
+  @override
+  String get cueContextPrompt => 'In the planned situation?';
+
+  @override
+  String get cueContextYes => 'Yes';
+
+  @override
+  String get cueContextNo => 'No, elsewhere';
+
+  @override
+  String get cueContextUnsure => 'Not sure';
+
+  @override
+  String get cueContextSkip => 'Skip';
+
+  @override
+  String get cueContextSaveFailed => 'Could not save your answer';
+
+  @override
+  String get copyToMyHabits => 'Add to my habits';
+
+  @override
   String get srhiScaleMin => '1 = Strongly disagree';
 
   @override

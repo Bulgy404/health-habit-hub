@@ -8,7 +8,7 @@ final class AnalyticsPropertyRule {
   final Set<String>? values;
 }
 
-const analyticsSchemaVersion = 2;
+const analyticsSchemaVersion = 3;
 
 const analyticsCommonPropertyRegistry = <String, AnalyticsPropertyRule>{
   'study_id': AnalyticsPropertyRule(type: 'opaque_id', values: null),
@@ -72,7 +72,7 @@ const analyticsEventRegistry = <String, Map<String, AnalyticsPropertyRule>>{
   'habit_creation_started': <String, AnalyticsPropertyRule>{
     'entry_point': AnalyticsPropertyRule(
       type: 'enum',
-      values: <String>{'my_habits', 'recommendation', 'auto'},
+      values: <String>{'my_habits', 'recommendation', 'auto', 'community'},
     ),
   },
   'habit_behavior_selected': <String, AnalyticsPropertyRule>{
@@ -82,7 +82,7 @@ const analyticsEventRegistry = <String, Map<String, AnalyticsPropertyRule>>{
     ),
     'behavior_source': AnalyticsPropertyRule(
       type: 'enum',
-      values: <String>{'catalog', 'free_text', 'recommendation'},
+      values: <String>{'catalog', 'free_text', 'recommendation', 'community'},
     ),
   },
   'habit_cue_selected': <String, AnalyticsPropertyRule>{
@@ -114,6 +114,7 @@ const analyticsEventRegistry = <String, Map<String, AnalyticsPropertyRule>>{
       values: <String>{'standalone', 'stacked'},
     ),
     'from_recommendation': AnalyticsPropertyRule(type: 'boolean', values: null),
+    'from_community': AnalyticsPropertyRule(type: 'boolean', values: null),
   },
   'habit_creation_blocked': <String, AnalyticsPropertyRule>{
     'reason': AnalyticsPropertyRule(

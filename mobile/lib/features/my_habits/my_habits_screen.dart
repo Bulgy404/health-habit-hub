@@ -374,6 +374,14 @@ class _HabitCard extends ConsumerWidget {
     final today = DateTime.now();
     final todayStr = formatDateYmd(today);
     final todayLogged = logsMap.containsKey(todayStr);
+    final todayLog = logsAsync.value
+        ?.where((l) => l.date == todayStr)
+        .firstOrNull;
+    final showCuePrompt =
+        ref.watch(cueContextPromptProvider).contains(intention.id) &&
+        todayLog != null &&
+        todayLog.enacted &&
+        todayLog.inCueContext == null;
     final loggedColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.green.shade900.withAlpha(90)
         : Colors.green.shade50;
@@ -411,227 +419,241 @@ class _HabitCard extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           // Outer Row: habit content on the left, the log checkbox on the
           // right — centered on the *whole* card's height (title + subtitle
-          // + trend), not just squeezed into the title row.
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          // + trend), not just squeezed into the title row. The cue-context
+          // follow-up (#64), when shown, spans the full width below it.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // §7.5 Gamification — traffic-light of the
-                        // reminder-frequency tier (red = daily … green =
-                        // weekly/off), a direct read of the
-                        // fading-reminders signal.
-                        _TrafficLightDot(intentionId: intention.id),
-                        const SizedBox(width: 8),
-                        // §7.1 — a stacked habit shows a small link glyph.
-                        if (intention.isStacked) ...[
-                          const SizedBox(width: 4),
-                          Icon(Icons.link, size: 16, color: typeColor),
-                        ],
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            intention.behaviorLabel,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            // §7.5 Gamification — traffic-light of the
+                            // reminder-frequency tier (red = daily … green =
+                            // weekly/off), a direct read of the
+                            // fading-reminders signal.
+                            _TrafficLightDot(intentionId: intention.id),
+                            const SizedBox(width: 8),
+                            // §7.1 — a stacked habit shows a small link glyph.
+                            if (intention.isStacked) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.link, size: 16, color: typeColor),
+                            ],
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                intention.behaviorLabel,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          intention.intentionStatement,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(153),
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // § weekly-frequency habits — a "2 / 3 this week" summary
+                        // in place of (well, alongside — see _LogCheckbox) a
+                        // daily streak, which doesn't mean much for a habit
+                        // whose target is only a few days a week. Purely
+                        // client-derived from logsMap, already fully fetched.
+                        if (intention.cadence.isWeekly) ...[
+                          const SizedBox(height: 4),
+                          WeeklyProgressChip(
+                            logsMap: logsMap,
+                            targetPerWeek: intention.cadence.targetPerWeek!,
+                            color: typeColor,
+                          ),
+                        ],
+                        trajectoryAsync.when(
+                          data: (trajectory) {
+                            final submitted = trajectory
+                                .where((p) => p.score != null)
+                                .toList();
+                            if (submitted.length < 2) {
+                              return const SizedBox.shrink();
+                            }
+                            final latest = submitted.last.score!;
+                            final previous =
+                                submitted[submitted.length - 2].score!;
+                            final delta = latest - previous;
+                            final trendIcon = delta > 0.05
+                                ? Icons.trending_up
+                                : delta < -0.05
+                                ? Icons.trending_down
+                                : Icons.trending_flat;
+                            final trendColor = delta > 0.05
+                                ? Colors.green.shade700
+                                : delta < -0.05
+                                ? Colors.orange.shade800
+                                : Colors.grey;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        l10n.habitStrengthLabel,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelSmall,
+                                      ),
+                                      const Spacer(),
+                                      Icon(trendIcon, size: 16, color: trendColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${latest.toStringAsFixed(1)} / 7',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: trendColor,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  SrhiSparklineWidget(trajectory: trajectory),
+                                ],
+                              ),
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      intention.intentionStatement,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withAlpha(153),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // § weekly-frequency habits — a "2 / 3 this week" summary
-                    // in place of (well, alongside — see _LogCheckbox) a
-                    // daily streak, which doesn't mean much for a habit
-                    // whose target is only a few days a week. Purely
-                    // client-derived from logsMap, already fully fetched.
-                    if (intention.cadence.isWeekly) ...[
-                      const SizedBox(height: 4),
-                      WeeklyProgressChip(
-                        logsMap: logsMap,
-                        targetPerWeek: intention.cadence.targetPerWeek!,
-                        color: typeColor,
-                      ),
-                    ],
-                    trajectoryAsync.when(
-                      data: (trajectory) {
-                        final submitted = trajectory
-                            .where((p) => p.score != null)
-                            .toList();
-                        if (submitted.length < 2) {
-                          return const SizedBox.shrink();
-                        }
-                        final latest = submitted.last.score!;
-                        final previous =
-                            submitted[submitted.length - 2].score!;
-                        final delta = latest - previous;
-                        final trendIcon = delta > 0.05
-                            ? Icons.trending_up
-                            : delta < -0.05
-                            ? Icons.trending_down
-                            : Icons.trending_flat;
-                        final trendColor = delta > 0.05
-                            ? Colors.green.shade700
-                            : delta < -0.05
-                            ? Colors.orange.shade800
-                            : Colors.grey;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    l10n.habitStrengthLabel,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall,
-                                  ),
-                                  const Spacer(),
-                                  Icon(trendIcon, size: 16, color: trendColor),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${latest.toStringAsFixed(1)} / 7',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: trendColor,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              SrhiSparklineWidget(trajectory: trajectory),
-                            ],
-                          ),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Moved here (from the title row, then from its own full-width
-              // row below the card) so it stays vertically centered against
-              // the card's full content height regardless of how tall the
-              // trend section makes the card. A checkbox rather than a
-              // labelled button — logging today is the single most frequent
-              // action on this screen, so it reads faster as an at-a-glance
-              // on/off toggle than as text.
-              Tooltip(
-                message: todayLogged ? l10n.loggedToday : l10n.logToday,
-                // Tooltip's default touch trigger is long-press, which would
-                // otherwise fight with _LogCheckbox's own onLongPress (opens
-                // the backfill sheet) for the same gesture-arena pointer.
-                // Manual keeps hover-to-show on desktop/web but disables the
-                // touch long-press trigger, leaving long-press exclusively
-                // for the backfill sheet on mobile.
-                triggerMode: TooltipTriggerMode.manual,
-                child: _LogCheckbox(
-                  checked: todayLogged,
-                  color: typeColor,
-                  // Tapping again while logged un-logs today, so the
-                  // checkbox is always tappable and always does something
-                  // visible.
-                  onTap: () async {
-                    // Capture the messenger before the await so feedback
-                    // still shows if the widget rebuilds.
-                    final messenger = ScaffoldMessenger.of(context);
-                    final wasLogged = todayLogged;
-                    try {
-                      final service = ref.read(myHabitsServiceProvider);
-                      if (wasLogged) {
-                        await service.deleteLog(
-                          intentionId: intention.id,
-                          date: todayStr,
-                        );
-                      } else {
-                        await service.logDay(
-                          intentionId: intention.id,
-                          date: todayStr,
-                          enacted: true,
-                        );
-                      }
-                      // The checkbox itself flips to reflect the new state,
-                      // so a haptic tap is enough confirmation — a snackbar
-                      // on top of that for the single most frequent action
-                      // on this screen was just noise.
-                      unawaited(HapticFeedback.lightImpact());
-                      _refreshAfterLogChange(ref);
-                      _resyncReminderAfterLogChange(
-                        ref,
-                        intentionId: intention.id,
-                        justLogged: !wasLogged,
-                      );
-                    } catch (e) {
-                      // A dead session already gets ShellScreen's global
-                      // "session expired, sign in again" prompt (triggered
-                      // by the same 401 via sessionExpiredProvider) —
-                      // showing this generic snackbar too would just be a
-                      // confusing second, contradictory-looking toast on
-                      // top of it.
-                      if (e is UnauthorisedException) return;
-                      // Otherwise surface the real reason so failures are
-                      // diagnosable instead of silently doing nothing.
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.couldNotLogToday(e.toString())),
-                        ),
-                      );
-                    }
-                  },
-                  // A long press opens the "log a different day" sheet, for
-                  // participants who forgot to check a habit off a day or
-                  // two ago — the tap gesture stays reserved for the single
-                  // most frequent action (today), so this doesn't slow it
-                  // down or risk an accidental sheet open on a normal tap.
-                  onLongPress: () {
-                    unawaited(HapticFeedback.selectionClick());
-                    showBackfillLogSheet(
-                      context: context,
-                      service: ref.read(myHabitsServiceProvider),
-                      intentionId: intention.id,
-                      logsMap: logsMap,
-                      typeColor: typeColor,
-                      onChanged: (date, justLogged) {
-                        _refreshAfterLogChange(ref);
-                        // #12 — the backfill window includes today, so
-                        // toggling today's row here needs the same reminder
-                        // resync as the on-card checkbox.
-                        if (date == todayStr) {
+                  ),
+                  const SizedBox(width: 12),
+                  // Moved here (from the title row, then from its own full-width
+                  // row below the card) so it stays vertically centered against
+                  // the card's full content height regardless of how tall the
+                  // trend section makes the card. A checkbox rather than a
+                  // labelled button — logging today is the single most frequent
+                  // action on this screen, so it reads faster as an at-a-glance
+                  // on/off toggle than as text.
+                  Tooltip(
+                    message: todayLogged ? l10n.loggedToday : l10n.logToday,
+                    // Tooltip's default touch trigger is long-press, which would
+                    // otherwise fight with _LogCheckbox's own onLongPress (opens
+                    // the backfill sheet) for the same gesture-arena pointer.
+                    // Manual keeps hover-to-show on desktop/web but disables the
+                    // touch long-press trigger, leaving long-press exclusively
+                    // for the backfill sheet on mobile.
+                    triggerMode: TooltipTriggerMode.manual,
+                    child: _LogCheckbox(
+                      checked: todayLogged,
+                      color: typeColor,
+                      // Tapping again while logged un-logs today, so the
+                      // checkbox is always tappable and always does something
+                      // visible.
+                      onTap: () async {
+                        // Capture the messenger before the await so feedback
+                        // still shows if the widget rebuilds.
+                        final messenger = ScaffoldMessenger.of(context);
+                        final wasLogged = todayLogged;
+                        try {
+                          final service = ref.read(myHabitsServiceProvider);
+                          final prompt = ref.read(
+                            cueContextPromptProvider.notifier,
+                          );
+                          if (wasLogged) {
+                            await service.deleteLog(
+                              intentionId: intention.id,
+                              date: todayStr,
+                            );
+                            prompt.dismiss(intention.id);
+                          } else {
+                            await service.logDay(
+                              intentionId: intention.id,
+                              date: todayStr,
+                              enacted: true,
+                            );
+                            prompt.show(intention.id);
+                          }
+                          // The checkbox itself flips to reflect the new state,
+                          // so a haptic tap is enough confirmation — a snackbar
+                          // on top of that for the single most frequent action
+                          // on this screen was just noise.
+                          unawaited(HapticFeedback.lightImpact());
+                          _refreshAfterLogChange(ref);
                           _resyncReminderAfterLogChange(
                             ref,
                             intentionId: intention.id,
-                            justLogged: justLogged,
+                            justLogged: !wasLogged,
+                          );
+                        } catch (e) {
+                          // A dead session already gets ShellScreen's global
+                          // "session expired, sign in again" prompt (triggered
+                          // by the same 401 via sessionExpiredProvider) —
+                          // showing this generic snackbar too would just be a
+                          // confusing second, contradictory-looking toast on
+                          // top of it.
+                          if (e is UnauthorisedException) return;
+                          // Otherwise surface the real reason so failures are
+                          // diagnosable instead of silently doing nothing.
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.couldNotLogToday(e.toString())),
+                            ),
                           );
                         }
                       },
-                    );
-                  },
-                ),
+                      // A long press opens the "log a different day" sheet, for
+                      // participants who forgot to check a habit off a day or
+                      // two ago — the tap gesture stays reserved for the single
+                      // most frequent action (today), so this doesn't slow it
+                      // down or risk an accidental sheet open on a normal tap.
+                      onLongPress: () {
+                        unawaited(HapticFeedback.selectionClick());
+                        showBackfillLogSheet(
+                          context: context,
+                          service: ref.read(myHabitsServiceProvider),
+                          intentionId: intention.id,
+                          logsMap: logsMap,
+                          typeColor: typeColor,
+                          onChanged: (date, justLogged) {
+                            _refreshAfterLogChange(ref);
+                            // #12 — the backfill window includes today, so
+                            // toggling today's row here needs the same reminder
+                            // resync as the on-card checkbox.
+                            if (date == todayStr) {
+                              _resyncReminderAfterLogChange(
+                                ref,
+                                intentionId: intention.id,
+                                justLogged: justLogged,
+                              );
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
+              // #64 — optional one-tap follow-up right after logging today.
+              if (showCuePrompt)
+                _CueContextPrompt(intention: intention, date: todayStr),
             ],
           ),
         ),
@@ -735,6 +757,122 @@ void _resyncReminderAfterLogChange(
     intentionId: intentionId,
     justLogged: justLogged,
   );
+}
+
+/// "In the planned situation? Yes / No, elsewhere / Not sure" — the optional
+/// follow-up shown on a habit card right after today is logged as done
+/// (#64). One tap answers it; the close button skips it. Mirrors the daily
+/// question in the HABIRUPT study (Edgren et al. 2025), so the logs show
+/// whether repetitions actually happened in the cue situation the plan names.
+class _CueContextPrompt extends ConsumerStatefulWidget {
+  const _CueContextPrompt({required this.intention, required this.date});
+
+  final Intention intention;
+
+  /// The logged day being asked about, `'YYYY-MM-DD'`.
+  final String date;
+
+  @override
+  ConsumerState<_CueContextPrompt> createState() => _CueContextPromptState();
+}
+
+class _CueContextPromptState extends ConsumerState<_CueContextPrompt> {
+  bool _saving = false;
+
+  Future<void> _answer(CueContextAnswer answer) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final intentionId = widget.intention.id;
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(myHabitsServiceProvider)
+          .setCueContext(
+            intentionId: intentionId,
+            date: widget.date,
+            answer: answer,
+          );
+      unawaited(HapticFeedback.selectionClick());
+      ref.read(cueContextPromptProvider.notifier).dismiss(intentionId);
+      ref.invalidate(intentionLogsProvider(intentionId));
+    } catch (e) {
+      if (mounted) setState(() => _saving = false);
+      // A dead session already gets ShellScreen's global sign-in prompt.
+      if (e is UnauthorisedException) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.cueContextSaveFailed)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    // Remind the participant which situation the plan names. A stacked habit
+    // without its own cue uses its anchor habit as the situation.
+    final cueTexts = widget.intention.cues
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty && t != kAnchorRoutineCueText)
+        .toList();
+    final situation = cueTexts.isNotEmpty
+        ? cueTexts.join(' · ')
+        : widget.intention.anchorLabel;
+    final answers = {
+      CueContextAnswer.yes: l10n.cueContextYes,
+      CueContextAnswer.no: l10n.cueContextNo,
+      CueContextAnswer.unsure: l10n.cueContextUnsure,
+    };
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.cueContextPrompt,
+                  style: tt.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ),
+              IconButton(
+                onPressed: _saving
+                    ? null
+                    : () => ref
+                          .read(cueContextPromptProvider.notifier)
+                          .dismiss(widget.intention.id),
+                icon: const Icon(Icons.close, size: 18),
+                tooltip: l10n.cueContextSkip,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          if (situation != null && situation.isNotEmpty)
+            Text(
+              situation,
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in answers.entries)
+                ActionChip(
+                  label: Text(entry.value),
+                  onPressed: _saving ? null : () => _answer(entry.key),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Big, tappable on/off checkbox for "did you do this today", shown on each

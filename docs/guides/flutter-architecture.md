@@ -309,9 +309,9 @@ abstract final class AppConfig {
 | `KEYCLOAK_URL`      | `http://localhost:8080`        | `https://habit.wiwi.tu-dresden.de/auth`       |
 | `WS_BASE_URL`       | `ws://localhost:3000/ws`       | `wss://habit.wiwi.tu-dresden.de/ws`           |
 
-**Why mode-dependent:** an Xcode archive (*Product → Archive*) cannot pass Flutter `--dart-define` flags. When release defaulted to localhost, such a build shipped pointing at localhost and rendered a **blank white screen** on device. Defaulting release to production makes `flutter build ipa` and Xcode archives correct with no flags; `flutter run` still uses localhost for local development.
+**Why mode-dependent:** an Xcode archive (_Product → Archive_) cannot pass Flutter `--dart-define` flags. When release defaulted to localhost, such a build shipped pointing at localhost and rendered a **blank white screen** on device. Defaulting release to production makes `flutter build ipa` and Xcode archives correct with no flags; `flutter run` still uses localhost for local development.
 
-Passing `--dart-define` (or `--dart-define-from-file=dart_defines_prod.json`) still works and overrides either default — use it for a staging server. If a *release* build is explicitly pointed at localhost, `AppConfig.productionConfigError()` returns a message and `main()` renders it on screen instead of starting the app (see `_ConfigErrorApp` in `main.dart`) — never a silent white screen.
+Passing `--dart-define` (or `--dart-define-from-file=dart_defines_prod.json`) still works and overrides either default — use it for a staging server. If a _release_ build is explicitly pointed at localhost, `AppConfig.productionConfigError()` returns a message and `main()` renders it on screen instead of starting the app (see `_ConfigErrorApp` in `main.dart`) — never a silent white screen.
 
 **Do not use hardcoded URLs in service files.** Always reference `AppConfig` constants.
 
@@ -395,21 +395,22 @@ Colours derive from `Theme.of(context).colorScheme` (empty cells: `surfaceContai
 
 ### API endpoints
 
-| Endpoint                                     | Direction | Purpose                                                                                                                                                          |
-| -------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/me/habit-config`                | read      | Load `HabitConfig` (cues, items, options, maxHabits)                                                                                                             |
-| `GET /api/v1/habits/intentions`              | read      | List user intentions                                                                                                                                             |
-| `POST /api/v1/habits/intentions`             | write     | Create new intention                                                                                                                                             |
-| `PATCH /api/v1/habits/intentions/:id/status` | write     | Abandon / pause intention                                                                                                                                        |
-| `GET /api/v1/habits/intentions/:id/logs`     | read      | Daily log history (each entry includes `intentionId`)                                                                                                            |
-| `POST /api/v1/habits/intentions/:id/logs`    | write     | Record daily enactment                                                                                                                                           |
-| `GET /api/v1/srhi/due`                       | read      | Pending SRHI windows                                                                                                                                             |
-| `POST /api/v1/srhi/:id/week/:n`              | write     | Submit SRHI check-in                                                                                                                                             |
-| `GET /api/v1/srhi/:id/trajectory`            | read      | SRHI score history (each point includes `scheduledFor`, used for the next-due-date display)                                                                      |
-| `GET /api/v1/onboarding/enrollment`          | read      | Current study/group — powers the Study membership section on `/settings/profile`                                                                                 |
-| `POST /api/v1/onboarding/switch-study`       | write     | Move to a different study via code — see `docs/architecture.md`'s _Study Enrollment, Switching & Leaving_                                                        |
-| `POST /api/v1/onboarding/leave-study`        | write     | Move back to the default study                                                                                                                                   |
-| `GET /api/v1/questionnaires/due`             | read      | Also drives the post-startup in-app reminder snackbar (`dueQuestionnaireProvider`, `ShellScreen`) in addition to the existing local push-notification scheduling |
+| Endpoint                                         | Direction | Purpose                                                                                                                                                          |
+| ------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/me/habit-config`                    | read      | Load `HabitConfig` (cues, items, options, maxHabits)                                                                                                             |
+| `GET /api/v1/habits/intentions`                  | read      | List user intentions                                                                                                                                             |
+| `POST /api/v1/habits/intentions`                 | write     | Create new intention                                                                                                                                             |
+| `PATCH /api/v1/habits/intentions/:id/status`     | write     | Abandon / pause intention                                                                                                                                        |
+| `GET /api/v1/habits/intentions/:id/logs`         | read      | Daily log history (each entry includes `intentionId`)                                                                                                            |
+| `POST /api/v1/habits/intentions/:id/logs`        | write     | Record daily enactment                                                                                                                                           |
+| `PATCH /api/v1/habits/intentions/:id/logs/:date` | write     | Answer to the optional "In the planned situation?" follow-up after logging (#64)                                                                                 |
+| `GET /api/v1/srhi/due`                           | read      | Pending SRHI windows                                                                                                                                             |
+| `POST /api/v1/srhi/:id/week/:n`                  | write     | Submit SRHI check-in                                                                                                                                             |
+| `GET /api/v1/srhi/:id/trajectory`                | read      | SRHI score history (each point includes `scheduledFor`, used for the next-due-date display)                                                                      |
+| `GET /api/v1/onboarding/enrollment`              | read      | Current study/group — powers the Study membership section on `/settings/profile`                                                                                 |
+| `POST /api/v1/onboarding/switch-study`           | write     | Move to a different study via code — see `docs/architecture.md`'s _Study Enrollment, Switching & Leaving_                                                        |
+| `POST /api/v1/onboarding/leave-study`            | write     | Move back to the default study                                                                                                                                   |
+| `GET /api/v1/questionnaires/due`                 | read      | Also drives the post-startup in-app reminder snackbar (`dueQuestionnaireProvider`, `ShellScreen`) in addition to the existing local push-notification scheduling |
 
 ---
 

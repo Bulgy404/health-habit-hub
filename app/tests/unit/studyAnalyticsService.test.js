@@ -5,6 +5,7 @@ import {
   getWeeklyActiveRate,
   getMeanSrhiTrajectory,
   getDropoutCurve,
+  getCueContextShare,
 } from '../../services/studyAnalyticsService.js';
 import { ObjectId } from 'mongodb';
 
@@ -191,4 +192,98 @@ test('getDropoutCurve: returns cumulative dropouts per group by date', async () 
   // Verify cumulative ordering
   assert.equal(aDropouts[0].cumulative, 1);
   assert.equal(aDropouts[1].cumulative, 2);
+});
+
+test('getCueContextShare: share of answered enacted logs in the planned situation, per group and habit week (#64)', async () => {
+  const habitA = new ObjectId();
+  const habitB = new ObjectId();
+  const otherStudyHabit = new ObjectId();
+  const intentions = [
+    {
+      _id: habitA,
+      studyId,
+      groupId: groupA,
+      createdAt: new Date('2026-06-01T15:30:00Z'),
+    },
+    {
+      _id: habitB,
+      studyId,
+      groupId: groupB,
+      createdAt: new Date('2026-06-01T08:00:00Z'),
+    },
+    { _id: otherStudyHabit, studyId: new ObjectId(), groupId: groupA },
+  ];
+  const log = (intentionId, date, inCueContext, enacted = true) => ({
+    intentionId,
+    date,
+    enacted,
+    inCueContext,
+  });
+  const logs = [
+    // habit A, week 1 (creation day is day 0, even though it was afternoon)
+    log(habitA, '2026-06-01', 'yes'),
+    log(habitA, '2026-06-03', 'no'),
+    log(habitA, '2026-06-07', 'yes'),
+    // habit A, week 2
+    log(habitA, '2026-06-08', 'unsure'),
+    // left out: unanswered, a miss, another study
+    log(habitA, '2026-06-02', null),
+    log(habitA, '2026-06-04', 'yes', false),
+    log(otherStudyHabit, '2026-06-02', 'yes'),
+    // habit B, week 1
+    log(habitB, '2026-06-02', 'yes'),
+  ];
+  const db = {
+    collection(name) {
+      if (name === 'implementation_intentions')
+        return {
+          find: (q) => ({
+            toArray: async () =>
+              intentions.filter(
+                (i) => i.studyId.toString() === q.studyId.toString()
+              ),
+          }),
+        };
+      if (name === 'daily_behavior_logs')
+        return {
+          find: (q) => ({
+            toArray: async () => {
+              const ids = q.intentionId.$in.map(String);
+              return logs.filter(
+                (l) =>
+                  ids.includes(String(l.intentionId)) &&
+                  l.enacted === q.enacted &&
+                  q.inCueContext.$in.includes(l.inCueContext)
+              );
+            },
+          }),
+        };
+      throw new Error(`unexpected collection ${name}`);
+    },
+  };
+
+  const rows = await getCueContextShare({ db, studyId: studyId.toString() });
+  const byKey = Object.fromEntries(
+    rows.map((r) => [`${r.groupId}|${r.weekNumber}`, r])
+  );
+  assert.deepStrictEqual(byKey[`${groupA}|1`], {
+    groupId: groupA.toString(),
+    weekNumber: 1,
+    yes: 2,
+    no: 1,
+    unsure: 0,
+    answered: 3,
+    share: 0.67,
+  });
+  assert.strictEqual(byKey[`${groupA}|2`].share, 0);
+  assert.strictEqual(byKey[`${groupA}|2`].answered, 1);
+  assert.strictEqual(byKey[`${groupB}|1`].share, 1);
+  assert.strictEqual(rows.length, 3);
+});
+
+test('getCueContextShare: an invalid study id returns no rows', async () => {
+  assert.deepStrictEqual(
+    await getCueContextShare({ db: {}, studyId: 'not-an-id' }),
+    []
+  );
 });

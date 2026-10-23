@@ -206,6 +206,12 @@ class HabitConfig {
   );
 }
 
+/// Placeholder cue given to an anchor habit the app creates on the
+/// participant's behalf when they stack onto a free-typed anchor (§7.1). It
+/// marks the habit as already established rather than naming a situation, so
+/// the SRHI stem ignores it.
+const kAnchorRoutineCueText = 'Already part of my daily routine';
+
 /// A single cue attached to an implementation intention.
 class IntentionCue {
   /// Creates an [IntentionCue].
@@ -589,6 +595,28 @@ class EarnedBadge {
   );
 }
 
+/// Answer to the optional "In the planned situation?" follow-up after
+/// logging a habit as done (#64).
+enum CueContextAnswer {
+  /// Done in the planned cue situation.
+  yes('yes'),
+
+  /// Done, but in a different situation.
+  no('no'),
+
+  /// The participant is not sure.
+  unsure('unsure');
+
+  const CueContextAnswer(this.wire);
+
+  /// Value sent to and stored by the backend.
+  final String wire;
+
+  /// Parses a backend value; null for anything else (not asked/answered).
+  static CueContextAnswer? fromWire(String? value) =>
+      values.where((a) => a.wire == value).firstOrNull;
+}
+
 /// A single daily behavior log entry.
 class DailyLog {
   /// Creates a [DailyLog].
@@ -597,6 +625,7 @@ class DailyLog {
     required this.date,
     required this.enacted,
     required this.loggedAt,
+    this.inCueContext,
   });
 
   /// Identifier of the intention this log belongs to.
@@ -611,12 +640,17 @@ class DailyLog {
   /// Timestamp when the log was submitted.
   final DateTime loggedAt;
 
+  /// Whether the habit was done in the planned cue situation (#64). Null
+  /// when the follow-up was skipped, not asked, or the day is a miss.
+  final CueContextAnswer? inCueContext;
+
   /// Deserialises from the daily logs API response.
   factory DailyLog.fromJson(Map<String, dynamic> json) => DailyLog(
     intentionId: json['intentionId'] as String? ?? '',
     date: json['date'] as String,
     enacted: json['enacted'] as bool,
     loggedAt: DateTime.parse(json['loggedAt'] as String),
+    inCueContext: CueContextAnswer.fromWire(json['inCueContext'] as String?),
   );
 }
 

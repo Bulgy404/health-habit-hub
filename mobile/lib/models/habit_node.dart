@@ -37,6 +37,10 @@ class HabitNode {
   /// category badge. Empty when nothing was matched.
   final String contextText;
 
+  /// `'build'` or `'quit'` (§7.4), as the donor set it. Carried over when a
+  /// participant copies this habit into their own habits (#4).
+  final String habitType;
+
   /// Creates a [HabitNode].
   const HabitNode({
     required this.id,
@@ -48,6 +52,7 @@ class HabitNode {
     this.language = '',
     this.hasTranslation = true,
     this.contextText = '',
+    this.habitType = 'build',
   });
 
   /// Sum of all annotation counts across all annotation types.

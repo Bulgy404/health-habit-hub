@@ -54,6 +54,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- After ticking today's habit, the app asks an optional one-tap follow-up:
+  "In the planned situation? Yes / No, elsewhere / Not sure" (#64). It sits
+  on the habit card, names the planned cue, and can be skipped. The answer is
+  stored on the day's log (`daily_behavior_logs.inCueContext`, set through the
+  new `PATCH /habits/intentions/:id/logs/:date`), so analyses can tell
+  repetitions in the planned situation from repetitions elsewhere (Gardner,
+  Rebar & Lally 2022, M5/AI2), as the HABIRUPT study does. The daily-log CSV
+  export has an `inCueContext` column, and the admin analytics page shows the
+  share answered "yes" per condition and habit week. Re-logging a day as
+  missed clears its answer.
+- An "Add to my habits" button on a community habit in Explore copies it into
+  your own habits (#4). It opens the normal new-habit flow with the habit's
+  text (editable), its build/quit type and, when the classifier found one,
+  its situation as the suggested cue. The new habit records which community
+  habit it came from (`implementation_intentions.sourceHabitId`). The button
+  is hidden when habit creation is off or the study limits habits to its
+  activity catalog. Analytics schema v3 marks these flows with
+  `entry_point`/`behavior_source: 'community'` and `habit_created.from_community`.
 - The website's Google Play badge now links to the live Play Store listing,
   using Google's official German and English badge artwork, and the footer
   links to Google Play next to the App Store. The badges share one height and
@@ -61,6 +79,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed
+
+- The weekly SRHI check-in now names the habit's planned cue in its question
+  wording, e.g. "Go for a walk after dinner each evening is something…"
+  instead of "Go for a walk is something…" (#63). This makes the habit
+  measure specific to the planned situation, following Gardner, Rebar & Lally
+  (2022, criteria M4/M5). Habits without a cue keep the old wording. Every
+  submission now stores which wording was shown (`srhi_responses.stemVariant`,
+  plus the exact `stemText`), and the SRHI CSV export has a `stemVariant`
+  column so analyses can separate old and new measurements. Check-ins
+  submitted before this change are reported as `behaviour`.
 
 - Production no longer builds images. Portainer 2.29.2+ cannot run compose
   `build:` steps on a remote (agent) environment, so every deploy failed with
@@ -94,6 +122,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Dragging a bubble sideways in the app's habit graph switched to the Stats
+  tab instead of moving the bubble. The Explore tabs' page swipe claims a drag
+  after 18 px of horizontal travel, while bubble drags and canvas pans need
+  36 px, so any horizontal or diagonal drag on the graph went to the tab
+  view. Swiping is now off while the Graph tab is open; the tab bar still
+  switches tabs, and swiping from Stats back to Graph and between Stats and
+  Saved still works. Dragged bubbles also stay under the finger instead of
+  trailing it by about 36 px.
 - The analytics stack did not survive a host reboot. Upstream's compose sets
   `restart: on-failure` on nearly every service, which only covers a crash — a
   reboot stops containers cleanly, they exit 0, and Docker leaves them down.

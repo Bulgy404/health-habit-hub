@@ -15,7 +15,7 @@ import {
  *   - { limitReached: true, unlockTier, currentTier }     — §7.3 Information
  *     Overload per-type build/quit cap (see checkOverloadGuard)
  *
- * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, anchorLabel?: string|null, creationMode?: string, cadence?: {type: string, targetPerWeek?: number}|null, sourceRecommendationId?: string|null, cueConfig?: object, overload?: object|null }} deps
+ * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, anchorLabel?: string|null, creationMode?: string, cadence?: {type: string, targetPerWeek?: number}|null, sourceRecommendationId?: string|null, sourceHabitId?: string|null, cueConfig?: object, overload?: object|null }} deps
  * @returns {Promise<object|{ limitReached: boolean }>} Serialized intention or limit indicator.
  */
 export async function createIntention({
@@ -36,6 +36,7 @@ export async function createIntention({
   reminderTime = null,
   cadence = null,
   sourceRecommendationId = null,
+  sourceHabitId = null,
   cueConfig,
   overload = null,
 }) {
@@ -92,6 +93,7 @@ export async function createIntention({
     // absent-field fallback going forward.
     cadence: normalizeCadence(cadence),
     sourceRecommendationId,
+    sourceHabitId,
     earnedBadges: [],
     reminderTime,
     status: 'active',
@@ -266,6 +268,7 @@ function serialize(doc) {
     // reminderPlanService.normalizeCadence.
     cadence: normalizeCadence(doc.cadence),
     sourceRecommendationId: doc.sourceRecommendationId ?? null,
+    sourceHabitId: doc.sourceHabitId ?? null,
     earnedBadges: (doc.earnedBadges ?? []).map((b) => ({
       badgeKey: b.badgeKey,
       earnedAt: b.earnedAt,

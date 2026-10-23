@@ -169,6 +169,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                       final extra = state.extra as Map<String, dynamic>?;
                       return PickBehaviorScreen(
                         recommendationId: extra?['recommendationId'] as String?,
+                        initialBehaviorLabel:
+                            extra?['initialBehaviorLabel'] as String?,
+                        initialHabitType: HabitType.fromWire(
+                          extra?['habitType'] as String?,
+                        ),
+                        initialCue: extra?['initialCue'] as String?,
+                        sourceHabitId: extra?['sourceHabitId'] as String?,
                       );
                     },
                   ),
@@ -185,6 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                         initialCue: extra['initialCue'] as String?,
                         recommendationId: extra['recommendationId'] as String?,
+                        sourceHabitId: extra['sourceHabitId'] as String?,
                       );
                     },
                   ),
@@ -208,6 +216,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
                         recommendationId: extra['recommendationId'] as String?,
+                        sourceHabitId: extra['sourceHabitId'] as String?,
                       );
                     },
                   ),
@@ -232,6 +241,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                             .cast<IntentionCue>(),
                         stitchedSentence: extra['stitchedSentence'] as String?,
                         recommendationId: extra['recommendationId'] as String?,
+                        sourceHabitId: extra['sourceHabitId'] as String?,
                       );
                     },
                   ),

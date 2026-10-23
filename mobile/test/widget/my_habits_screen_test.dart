@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/core/dio_provider.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_screen.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
@@ -40,6 +41,9 @@ class _FakeMyHabitsService extends MyHabitsService {
   /// stale cached value) after a log is recorded.
   bool loggedToday = false;
 
+  /// Set by [setCueContext] and returned by [fetchLogs] (#64).
+  CueContextAnswer? cueContextAnswer;
+
   @override
   Future<HabitConfig> fetchHabitConfig(String lang) async => config;
 
@@ -61,8 +65,18 @@ class _FakeMyHabitsService extends MyHabitsService {
         date: todayStr,
         enacted: true,
         loggedAt: now,
+        inCueContext: cueContextAnswer,
       ),
     ];
+  }
+
+  @override
+  Future<void> setCueContext({
+    required String intentionId,
+    required String date,
+    required CueContextAnswer answer,
+  }) async {
+    cueContextAnswer = answer;
   }
 
   @override
@@ -80,6 +94,7 @@ class _FakeMyHabitsService extends MyHabitsService {
     required String date,
   }) async {
     loggedToday = false;
+    cueContextAnswer = null;
   }
 
   @override
@@ -91,6 +106,7 @@ Widget _buildSubject({
   required List<Intention> intentions,
   List<SrhiWindow> dueSrhi = const [],
   _FakeMyHabitsService? service,
+  bool emptyReminderPlans = false,
 }) {
   final fakeService = service ??
       _FakeMyHabitsService(
@@ -101,6 +117,21 @@ Widget _buildSubject({
   return ProviderScope(
     overrides: [
       myHabitsServiceProvider.overrideWithValue(fakeService),
+      if (emptyReminderPlans)
+        dioProvider.overrideWithValue(
+          Dio()
+            ..interceptors.add(
+              InterceptorsWrapper(
+                onRequest: (options, handler) => handler.resolve(
+                  Response(
+                    requestOptions: options,
+                    statusCode: 200,
+                    data: <String, dynamic>{'plans': <dynamic>[]},
+                  ),
+                ),
+              ),
+            ),
+        ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -250,6 +281,95 @@ void main() {
       ).counts,
       isNotEmpty,
     );
+  });
+
+  group('#64 "In the planned situation?" follow-up', () {
+    _FakeMyHabitsService makeService() => _FakeMyHabitsService(
+          config: const HabitConfig(
+            cueCount: 'single',
+            cueSource: 'high_quality',
+            behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+            maxHabits: null,
+            srhiItems: [],
+          ),
+          intentions: [_activeIntention],
+        );
+
+    Future<void> pumpAndLogToday(
+      WidgetTester tester,
+      _FakeMyHabitsService service, {
+      bool emptyReminderPlans = false,
+    }) async {
+      await tester.pumpWidget(_buildSubject(
+        config: service.config,
+        intentions: service.intentions,
+        service: service,
+        emptyReminderPlans: emptyReminderPlans,
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('In the planned situation?'), findsNothing);
+      await tester.tap(find.byTooltip('Log today'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('appears after logging today, naming the cue, and one tap '
+        'answers it', (tester) async {
+      final service = makeService();
+      await pumpAndLogToday(tester, service);
+
+      expect(find.text('In the planned situation?'), findsOneWidget);
+      expect(find.text('After dinner'), findsOneWidget);
+
+      await tester.tap(find.text('No, elsewhere'));
+      await tester.pumpAndSettle();
+
+      expect(service.cueContextAnswer, CueContextAnswer.no);
+      expect(find.text('In the planned situation?'), findsNothing);
+    });
+
+    testWidgets('can be skipped without answering', (tester) async {
+      final service = makeService();
+      await pumpAndLogToday(tester, service);
+
+      await tester.tap(find.byTooltip('Skip'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('In the planned situation?'), findsNothing);
+      expect(service.cueContextAnswer, isNull);
+    });
+
+    testWidgets('goes away when today is un-logged', (tester) async {
+      // Un-logging runs a full reminder resync. With the notification and
+      // timezone channels mocked and no reminder plans to schedule, it
+      // finishes inside this test instead of hanging and leaving
+      // ReminderSchedulerService's static in-flight guard set for the #12
+      // test below.
+      FlutterLocalNotificationsPlatform.instance =
+          MethodChannelFlutterLocalNotificationsPlugin();
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(_notificationsChannel, (call) async {
+        if (call.method == 'pendingNotificationRequests') return <dynamic>[];
+        return null;
+      });
+      messenger.setMockMethodCallHandler(_timezoneChannel, (call) async {
+        if (call.method == 'getLocalTimezone') return 'UTC';
+        return null;
+      });
+      addTearDown(() {
+        messenger.setMockMethodCallHandler(_notificationsChannel, null);
+        messenger.setMockMethodCallHandler(_timezoneChannel, null);
+      });
+
+      final service = makeService();
+      await pumpAndLogToday(tester, service, emptyReminderPlans: true);
+      expect(find.text('In the planned situation?'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Logged ✓').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('In the planned situation?'), findsNothing);
+    });
   });
 
   testWidgets(

@@ -111,6 +111,84 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
 }
 
 /**
+ * Share of context-consistent repetitions per group per habit week (#64):
+ * of the enacted logs whose "In the planned situation?" follow-up was
+ * answered, how many said yes. Weeks count from each habit's creation day
+ * (week 1 = days 0–6), the same anchor as SRHI's weekNumber, so the two can be
+ * read side by side. Unanswered logs are left out of the denominator, since
+ * the prompt is skippable.
+ * @param {{ db: object, studyId: string }} deps
+ * @returns {Promise<Array<{ groupId: string|null, weekNumber: number, yes: number, no: number, unsure: number, answered: number, share: number }>>}
+ */
+export async function getCueContextShare({ db, studyId }) {
+  let oid;
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return [];
+  }
+
+  const intentions = await db
+    .collection(INTENTIONS)
+    .find(
+      { studyId: oid },
+      { projection: { _id: 1, groupId: 1, createdAt: 1 } }
+    )
+    .toArray();
+  if (intentions.length === 0) return [];
+  const byId = new Map(intentions.map((i) => [i._id.toString(), i]));
+
+  const logs = await db
+    .collection(DAILY_LOGS)
+    .find(
+      {
+        intentionId: { $in: intentions.map((i) => i._id) },
+        enacted: true,
+        inCueContext: { $in: ['yes', 'no', 'unsure'] },
+      },
+      { projection: { intentionId: 1, date: 1, inCueContext: 1 } }
+    )
+    .toArray();
+
+  const buckets = new Map();
+  for (const l of logs) {
+    const intention = byId.get(l.intentionId.toString());
+    if (!intention?.createdAt) continue;
+    const created = new Date(intention.createdAt);
+    const createdDay = Date.UTC(
+      created.getUTCFullYear(),
+      created.getUTCMonth(),
+      created.getUTCDate()
+    );
+    const day = Math.floor((new Date(l.date) - createdDay) / 86400000);
+    if (Number.isNaN(day) || day < 0) continue;
+    const groupId = intention.groupId?.toString() ?? null;
+    const weekNumber = Math.floor(day / 7) + 1;
+    const key = `${groupId}|${weekNumber}`;
+    const b = buckets.get(key) ?? {
+      groupId,
+      weekNumber,
+      yes: 0,
+      no: 0,
+      unsure: 0,
+    };
+    b[l.inCueContext] += 1;
+    buckets.set(key, b);
+  }
+
+  return [...buckets.values()]
+    .map((b) => {
+      const answered = b.yes + b.no + b.unsure;
+      return {
+        ...b,
+        answered,
+        share: Math.round((b.yes / answered) * 100) / 100,
+      };
+    })
+    .sort((a, b) => a.weekNumber - b.weekNumber);
+}
+
+/**
  * Return cumulative dropout count per group by date, sorted ascending.
  * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ groupId: string, date: string, cumulative: number }>>}

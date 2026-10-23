@@ -55,6 +55,18 @@ export const SRHI_ITEMS = [
 
 export const SRHI_ITEM_IDS = SRHI_ITEMS.map((i) => i.id);
 
+/**
+ * Which stem the participant saw above the items (#63). 'behaviour' is the
+ * generic "{behaviour} is something…"; 'behaviour+cue' names the planned cue
+ * too ("{behaviour} {cue} is something…"), which makes the measure
+ * context-specific (Gardner, Rebar & Lally 2022, criteria M4/M5). Stored on
+ * every submission so analyses can separate the two kinds of measurement.
+ */
+export const SRHI_STEM_VARIANTS = /** @type {const} */ ([
+  'behaviour',
+  'behaviour+cue',
+]);
+
 export const CUE_SOURCES = /** @type {const} */ ([
   'low_quality',
   'high_quality',

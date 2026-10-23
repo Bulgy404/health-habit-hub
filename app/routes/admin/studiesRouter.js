@@ -29,6 +29,7 @@ import {
   getDailyActive,
   getHabitsByGroup,
   getEngagementSummary,
+  getCueContextShare,
 } from '../../services/studyAnalyticsService.js';
 import {
   listAssignments,
@@ -732,6 +733,7 @@ export function createStudiesRouter({
         dailyActive,
         habitsByGroup,
         engagement,
+        cueContextShare,
       ] = await Promise.all([
         getWeeklyActiveRate({ db: database, studyId: req.params.id, neo4jRun }),
         getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
@@ -749,6 +751,7 @@ export function createStudiesRouter({
           studyId: req.params.id,
           neo4jRun,
         }),
+        getCueContextShare({ db: database, studyId: req.params.id }),
       ]);
       res.json({
         weeklyActiveRate,
@@ -759,6 +762,7 @@ export function createStudiesRouter({
         dailyActive,
         habitsByGroup,
         engagement,
+        cueContextShare,
       });
     } catch (err) {
       log.error({ err: err }, '[studies] error');
