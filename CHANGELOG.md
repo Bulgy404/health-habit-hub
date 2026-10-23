@@ -62,6 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The weekly SRHI check-in now names the habit's planned cue in its question
+  wording, e.g. "Go for a walk after dinner each evening is something…"
+  instead of "Go for a walk is something…" (#63). This makes the habit
+  measure specific to the planned situation, following Gardner, Rebar & Lally
+  (2022, criteria M4/M5). Habits without a cue keep the old wording. Every
+  submission now stores which wording was shown (`srhi_responses.stemVariant`,
+  plus the exact `stemText`), and the SRHI CSV export has a `stemVariant`
+  column so analyses can separate old and new measurements. Check-ins
+  submitted before this change are reported as `behaviour`.
+
 - Production no longer builds images. Portainer 2.29.2+ cannot run compose
   `build:` steps on a remote (agent) environment, so every deploy failed with
   `failed to dial gRPC: unable to upgrade to h2c, received 400`. CI now builds

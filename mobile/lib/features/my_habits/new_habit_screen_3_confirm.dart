@@ -221,7 +221,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             durationMinutes: 5,
             cues: const [
               IntentionCue(
-                text: 'Already part of my daily routine',
+                text: kAnchorRoutineCueText,
                 source: 'self_selected',
               ),
             ],

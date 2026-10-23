@@ -236,6 +236,61 @@ test('submitSrhi: computes mean score from 12 items', async () => {
   assert.ok(result.submittedAt);
 });
 
+function openSrhiWindow(intentionId) {
+  const now = new Date();
+  return {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 1,
+    scheduledFor: now,
+    submittedAt: null,
+    score: null,
+    studyId: null,
+    groupId: null,
+    items: null,
+    createdAt: now,
+  };
+}
+
+test('submitSrhi: stores the cue-specific stem the participant saw (#63)', async () => {
+  const intentionId = new ObjectId();
+  const window = openSrhiWindow(intentionId);
+  const db = makeDb([window]);
+  const items = Object.fromEntries(SRHI_ITEM_IDS.map((id) => [id, 4]));
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 1,
+    items,
+    stemVariant: 'behaviour+cue',
+    stemText: 'Go for a walk after dinner each evening is something…',
+  });
+  assert.equal(result.stemVariant, 'behaviour+cue');
+  assert.equal(window.stemVariant, 'behaviour+cue');
+  assert.equal(
+    window.stemText,
+    'Go for a walk after dinner each evening is something…'
+  );
+});
+
+test('submitSrhi: a client that sends no stem is recorded as the behaviour-only stem', async () => {
+  const intentionId = new ObjectId();
+  const window = openSrhiWindow(intentionId);
+  const db = makeDb([window]);
+  const items = Object.fromEntries(SRHI_ITEM_IDS.map((id) => [id, 4]));
+  await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 1,
+    items,
+  });
+  assert.equal(window.stemVariant, 'behaviour');
+  assert.equal(window.stemText, null);
+});
+
 test('topUpSrhiWindows: extends the buffer when the intention is still active', async () => {
   const intentionId = new ObjectId();
   const now = new Date();

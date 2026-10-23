@@ -1454,6 +1454,54 @@ abstract class AppLocalizations {
   /// **'{behavior} is something…'**
   String srhiStem(String behavior);
 
+  /// Stem sentence for SRHI items when the habit has a planned cue (#63): the behaviour followed by its cue, e.g. "Go for a walk after dinner each evening is something…"
+  ///
+  /// In en, this message translates to:
+  /// **'{behavior} {cue} is something…'**
+  String srhiStemWithCue(String behavior, String cue);
+
+  /// Optional follow-up question on a habit card right after logging today: was the habit done in the cue situation from the plan? (#64)
+  ///
+  /// In en, this message translates to:
+  /// **'In the planned situation?'**
+  String get cueContextPrompt;
+
+  /// Answer to cueContextPrompt: done in the planned situation
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get cueContextYes;
+
+  /// Answer to cueContextPrompt: done, but in a different situation
+  ///
+  /// In en, this message translates to:
+  /// **'No, elsewhere'**
+  String get cueContextNo;
+
+  /// Answer to cueContextPrompt: participant is not sure
+  ///
+  /// In en, this message translates to:
+  /// **'Not sure'**
+  String get cueContextUnsure;
+
+  /// Tooltip for the button that dismisses cueContextPrompt without answering
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get cueContextSkip;
+
+  /// Snackbar when saving the cueContextPrompt answer fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your answer'**
+  String get cueContextSaveFailed;
+
+  /// Button in the Explore habit detail sheet that starts the new-habit flow prefilled with this community habit (#4)
+  ///
+  /// In en, this message translates to:
+  /// **'Add to my habits'**
+  String get copyToMyHabits;
+
   /// Label for the lowest point of the SRHI 1-7 agreement scale
   ///
   /// In en, this message translates to:

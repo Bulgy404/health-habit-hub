@@ -242,7 +242,12 @@ export async function getUpcomingSrhiQuestionnaireItems({
 
 /**
  * Submit SRHI item responses for a given intention week, computing the mean score.
- * @param {{ db: object, intentionId: string, userId: string, weekNumber: number, items: object, neo4jRun?: Function }} deps
+ *
+ * `stemVariant`/`stemText` record which stem the participant saw (#63). A
+ * client that predates the cue-specific stem sends neither, and always showed
+ * the generic behaviour-only stem, so a missing variant is stored as
+ * 'behaviour' rather than left unknown.
+ * @param {{ db: object, intentionId: string, userId: string, weekNumber: number, items: object, stemVariant?: string|null, stemText?: string|null, neo4jRun?: Function }} deps
  * @returns {Promise<object|{ invalid: boolean, missing: Array }|{ notFound: boolean }>} Serialized window or error indicator.
  */
 export async function submitSrhi({
@@ -251,6 +256,8 @@ export async function submitSrhi({
   userId,
   weekNumber,
   items,
+  stemVariant = null,
+  stemText = null,
   neo4jRun,
 }) {
   const oid = new ObjectId(intentionId);
@@ -270,7 +277,15 @@ export async function submitSrhi({
       weekNumber: parseInt(weekNumber, 10),
       submittedAt: null,
     },
-    { $set: { items, score, submittedAt: now } },
+    {
+      $set: {
+        items,
+        score,
+        submittedAt: now,
+        stemVariant: stemVariant ?? 'behaviour',
+        stemText: stemText ?? null,
+      },
+    },
     { returnDocument: 'after' }
   );
   if (!result) return { notFound: true };
@@ -517,5 +532,6 @@ function serialize(doc) {
     scheduledFor: doc.scheduledFor,
     submittedAt: doc.submittedAt,
     score: doc.score,
+    stemVariant: doc.stemVariant ?? null,
   };
 }

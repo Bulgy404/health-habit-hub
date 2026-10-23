@@ -75,6 +75,10 @@ export async function buildSrhiCsv({ db, studyId }) {
       submittedAt: r.submittedAt?.toISOString() ?? 'NA',
       score: r.score ?? 'NA',
       missed: r.submittedAt == null ? 'TRUE' : 'FALSE',
+      // #63 — which stem was shown. Submissions from before the field existed
+      // all used the generic behaviour-only stem.
+      stemVariant:
+        r.submittedAt == null ? 'NA' : (r.stemVariant ?? 'behaviour'),
     };
   });
 

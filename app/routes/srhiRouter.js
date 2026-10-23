@@ -7,8 +7,12 @@ import {
   submitSrhi,
   getTrajectory,
 } from '../services/srhiService.js';
+import { SRHI_STEM_VARIANTS } from '../utils/srhi.js';
 
 const log = logger.child({ module: 'srhiRouter' });
+
+// A behaviour label (≤ 100 chars in the app) plus up to two cues; generous.
+const MAX_STEM_TEXT = 500;
 
 export function createSrhiRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
@@ -27,9 +31,20 @@ export function createSrhiRouter({ db, neo4jRun } = {}) {
 
   router.post('/:intentionId/week/:weekNumber', async (req, res) => {
     try {
-      const { items } = req.body;
+      const { items, stemVariant, stemText } = req.body;
       if (!items || typeof items !== 'object')
         return res.status(400).json({ error: 'items object required' });
+      if (stemVariant != null && !SRHI_STEM_VARIANTS.includes(stemVariant))
+        return res.status(400).json({
+          error: `stemVariant must be one of ${SRHI_STEM_VARIANTS.join(', ')}`,
+        });
+      if (
+        stemText != null &&
+        (typeof stemText !== 'string' || stemText.length > MAX_STEM_TEXT)
+      )
+        return res.status(400).json({
+          error: `stemText must be a string of at most ${MAX_STEM_TEXT} characters`,
+        });
       const database = await getDb();
       const result = await submitSrhi({
         db: database,
@@ -37,6 +52,8 @@ export function createSrhiRouter({ db, neo4jRun } = {}) {
         userId: req.user.sub,
         weekNumber: parseInt(req.params.weekNumber, 10),
         items,
+        stemVariant,
+        stemText,
         neo4jRun,
       });
       if (result.invalid)

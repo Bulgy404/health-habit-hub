@@ -1437,11 +1437,23 @@ One document per (intention, weekNumber) — SRHI measurement window.
 | `submittedAt`  | Date\|null     | `null` = pending                            |
 | `items`        | Object\|null   | `{srhi_1: 1-7, ..., srhi_12: 1-7}`          |
 | `score`        | Double\|null   | Mean of 12 items (1–7 scale)                |
+| `stemVariant`  | String\|null   | Stem shown above the items, see below       |
+| `stemText`     | String\|null   | Exact stem text shown, in the app language  |
 | `createdAt`    | Date           |                                             |
 
 Indexes: `{intentionId, weekNumber}` unique, `{userId, submittedAt}`
 
 The 12 SRHI items are the validated Self-Report Habit Index (Verplanken & Orbell, 2003) — item text is returned by `GET /api/v1/me/habit-config` as `srhiItems`.
+
+**Stem.** When the habit has a cue, the app names it in the stem so the
+measure is specific to the planned situation (Gardner, Rebar & Lally 2022,
+criteria M4/M5): `"{behaviour} {cue} is something…"`, e.g. "Go for a walk
+after dinner each evening is something…". Two cues are joined in order. A
+habit without a usable cue keeps the generic `"{behaviour} is something…"`.
+`stemVariant` records which one was shown: `'behaviour+cue'` or
+`'behaviour'`. Windows submitted before this field existed have no
+`stemVariant`; they all showed the generic stem, and the CSV export reports
+them as `behaviour`.
 
 4 weekly windows are pre-generated unconditionally on every habit creation
 (`POST /habits/intentions` → `srhiService.generateWindows`) — there is no

@@ -206,6 +206,12 @@ class HabitConfig {
   );
 }
 
+/// Placeholder cue given to an anchor habit the app creates on the
+/// participant's behalf when they stack onto a free-typed anchor (§7.1). It
+/// marks the habit as already established rather than naming a situation, so
+/// the SRHI stem ignores it.
+const kAnchorRoutineCueText = 'Already part of my daily routine';
+
 /// A single cue attached to an implementation intention.
 class IntentionCue {
   /// Creates an [IntentionCue].

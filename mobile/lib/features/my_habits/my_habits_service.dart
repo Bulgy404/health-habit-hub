@@ -261,18 +261,26 @@ class MyHabitsService {
     }
   }
 
-  /// Submits SRHI [items] for [intentionId] at [weekNumber].
+  /// Submits SRHI [items] for [intentionId] at [weekNumber], with the
+  /// [stemVariant] (`SrhiStemVariant.wire`) and [stemText] the participant
+  /// saw above the items (#63).
   ///
   /// Returns the resulting [SrhiTrajectoryPoint] with the computed score.
   Future<SrhiTrajectoryPoint> submitSrhi({
     required String intentionId,
     required int weekNumber,
     required Map<String, int> items,
+    String? stemVariant,
+    String? stemText,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
         '$_base/srhi/$intentionId/week/$weekNumber',
-        data: {'items': items},
+        data: {
+          'items': items,
+          'stemVariant': ?stemVariant,
+          'stemText': ?stemText,
+        },
       );
       return SrhiTrajectoryPoint.fromJson(res.data!);
     } on DioException catch (e) {
