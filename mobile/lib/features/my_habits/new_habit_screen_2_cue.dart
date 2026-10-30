@@ -149,7 +149,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       } else {
         cues = [
           IntentionCue(
-            text: 'Your assigned cue for ${widget.behaviorLabel}',
+            text: '$kPreRatedFallbackCuePrefix${widget.behaviorLabel}',
             source: 'pre_rated',
           ),
         ];
@@ -181,10 +181,12 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
 
     setState(() => _error = null);
 
+    // A prefilled cue comes from a recommendation, or from a community habit
+    // copied in Explore (#4).
     final cueSource = isStacked
         ? 'stacked'
         : widget.initialCue?.trim().isNotEmpty == true
-        ? 'recommendation'
+        ? (widget.sourceHabitId != null ? 'community' : 'recommendation')
         : isPreRated
         ? 'pre_rated'
         : 'self_selected';

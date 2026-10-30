@@ -94,7 +94,13 @@
       "properties": {
         "cue_source": {
           "type": "enum",
-          "values": ["self_selected", "pre_rated", "recommendation", "stacked"]
+          "values": [
+            "self_selected",
+            "pre_rated",
+            "recommendation",
+            "community",
+            "stacked"
+          ]
         }
       }
     },

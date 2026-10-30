@@ -241,7 +241,9 @@ validated study/group IDs; all other person properties are forbidden.
 - **Copied community habits (schema v3):** `habit_creation_started` gains
   `entry_point: 'community'` and `habit_behavior_selected` gains
   `behavior_source: 'community'` for habits copied from Explore with "Add to
-  my habits" (#4), and `habit_created` gains `from_community`. No new events.
+  my habits" (#4), `habit_cue_selected` gains `cue_source: 'community'` when
+  the copied habit's situation was kept as the cue, and `habit_created` gains
+  `from_community`. No new events.
 
 The registry intentionally excludes generic screen views, background/session
 events and every API error. Those remain candidates after the live

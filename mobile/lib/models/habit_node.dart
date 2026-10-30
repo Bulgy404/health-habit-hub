@@ -59,6 +59,30 @@ class HabitNode {
   int get totalAnnotations =>
       annotationCounts.values.fold(0, (sum, c) => sum + c);
 
+  /// Splits [name] for copying into the participant's own habits (#4): the
+  /// [contextText] phrase becomes the cue and the rest the behaviour, so the
+  /// plan does not name the situation twice ("No phone after 10pm" → "No
+  /// phone" + "after 10pm"). When the phrase is empty, not in [name] (which
+  /// is then a translation), or the whole of it, [name] is the behaviour and
+  /// there is no cue.
+  ({String behavior, String? cue}) splitForCopy() {
+    final phrase = contextText.trim();
+    final at = phrase.isEmpty ? -1 : name.indexOf(phrase);
+    if (at < 0) return (behavior: name, cue: null);
+    final rest =
+        '${name.substring(0, at)} ${name.substring(at + phrase.length)}'
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .replaceAllMapped(RegExp(r' ([,;:.!?])'), (m) => m[1]!)
+            .replaceAll(RegExp(r'^[\s,;:.–—-]+|[\s,;:.–—-]+$'), '');
+    if (rest.isEmpty) return (behavior: name, cue: null);
+    // A phrase that opened a capitalised sentence ("After work, go for a
+    // walk") leaves the behaviour starting mid-sentence.
+    final behavior = at == 0 && name[0] != name[0].toLowerCase()
+        ? rest[0].toUpperCase() + rest.substring(1)
+        : rest;
+    return (behavior: behavior, cue: phrase);
+  }
+
   static Map<String, int> _parseCounts(dynamic raw) {
     if (raw is! Map) return {};
     return raw.map((k, v) => MapEntry(k as String, (v as num).toInt()));

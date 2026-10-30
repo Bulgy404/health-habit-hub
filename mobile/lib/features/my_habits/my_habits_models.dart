@@ -212,6 +212,11 @@ class HabitConfig {
 /// the SRHI stem ignores it.
 const kAnchorRoutineCueText = 'Already part of my daily routine';
 
+/// Start of the fallback cue given to a pre-rated habit when the study group
+/// has no assigned cues: "Your assigned cue for {behaviour}". Like
+/// [kAnchorRoutineCueText] it names no situation.
+const kPreRatedFallbackCuePrefix = 'Your assigned cue for ';
+
 /// A single cue attached to an implementation intention.
 class IntentionCue {
   /// Creates an [IntentionCue].
@@ -225,6 +230,17 @@ class IntentionCue {
 
   /// Backend ID of the cue when sourced from a cue pool.
   final String? cueId;
+
+  /// Whether this cue names an actual situation, rather than being empty or
+  /// one of the app's placeholders ([kAnchorRoutineCueText],
+  /// [kPreRatedFallbackCuePrefix]). The SRHI stem (#63) and the "In the
+  /// planned situation?" follow-up (#64) only use situation cues.
+  bool get namesSituation {
+    final t = text.trim();
+    return t.isNotEmpty &&
+        t != kAnchorRoutineCueText &&
+        !(source == 'pre_rated' && t.startsWith(kPreRatedFallbackCuePrefix));
+  }
 
   /// Deserialises from JSON.
   factory IntentionCue.fromJson(Map<String, dynamic> json) => IntentionCue(

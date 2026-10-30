@@ -67,4 +67,21 @@ void main() {
     expect(stem.text, 'Drink coffee is something…');
     expect(stem.variant, SrhiStemVariant.behaviour);
   });
+
+  test('the pre-rated fallback cue is not a situation', () {
+    // Given when a pre-rated study group has no assigned cues.
+    final stem = buildSrhiStem(
+      l10n: lookupAppLocalizations(const Locale('en')),
+      languageCode: 'en',
+      behaviorLabel: 'Walking',
+      cues: const [
+        IntentionCue(
+          text: '${kPreRatedFallbackCuePrefix}Walking',
+          source: 'pre_rated',
+        ),
+      ],
+    );
+    expect(stem.text, 'Walking is something…');
+    expect(stem.variant, SrhiStemVariant.behaviour);
+  });
 }

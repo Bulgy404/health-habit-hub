@@ -92,6 +92,7 @@ const analyticsEventRegistry = <String, Map<String, AnalyticsPropertyRule>>{
         'self_selected',
         'pre_rated',
         'recommendation',
+        'community',
         'stacked',
       },
     ),

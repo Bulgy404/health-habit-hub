@@ -270,6 +270,7 @@ void main() {
               'language': 'en',
               'annotationCounts': {'helpful': 0, 'iDoThis': 0},
               'habitType': 'quit',
+              'contextText': 'after 10pm',
             },
           ],
         },
@@ -296,7 +297,7 @@ void main() {
               return Scaffold(
                 body: Text(
                   'NEW:${extra['initialBehaviorLabel']}|${extra['habitType']}'
-                  '|${extra['sourceHabitId']}',
+                  '|${extra['sourceHabitId']}|${extra['initialCue']}',
                 ),
               );
             },
@@ -332,7 +333,7 @@ void main() {
     }
 
     testWidgets('the detail sheet starts the new-habit flow with the copied '
-        'text, type and id', (tester) async {
+        'text, type and id, its situation moved into the cue', (tester) async {
       await openHabitSheet(tester, freeEntry);
 
       final button = find.text('Add to my habits');
@@ -340,7 +341,10 @@ void main() {
       await tester.tap(button);
       await tester.pumpAndSettle();
 
-      expect(find.text('NEW:No phone after 10pm|quit|habit-123'), findsOneWidget);
+      expect(
+        find.text('NEW:No phone|quit|habit-123|after 10pm'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('no copy button when the study restricts habits to a catalog',

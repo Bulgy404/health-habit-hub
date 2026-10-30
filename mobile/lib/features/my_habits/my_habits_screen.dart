@@ -377,6 +377,7 @@ class _HabitCard extends ConsumerWidget {
     final todayLog = logsAsync.value
         ?.where((l) => l.date == todayStr)
         .firstOrNull;
+    final situation = _plannedSituation(intention);
     final showCuePrompt =
         ref.watch(cueContextPromptProvider).contains(intention.id) &&
         todayLog != null &&
@@ -652,8 +653,14 @@ class _HabitCard extends ConsumerWidget {
                 ],
               ),
               // #64 — optional one-tap follow-up right after logging today.
-              if (showCuePrompt)
-                _CueContextPrompt(intention: intention, date: todayStr),
+              // A habit whose plan names no situation (e.g. an app-created
+              // anchor habit with only a placeholder cue) has nothing to ask.
+              if (showCuePrompt && situation != null)
+                _CueContextPrompt(
+                  intention: intention,
+                  situation: situation,
+                  date: todayStr,
+                ),
             ],
           ),
         ),
@@ -759,15 +766,36 @@ void _resyncReminderAfterLogChange(
   );
 }
 
+/// The situation [intention]'s plan names, for the cue-context follow-up
+/// (#64): its situation cues, or for a stacked habit without its own cue, its
+/// anchor habit. Null when the plan names none, so there is nothing to ask.
+String? _plannedSituation(Intention intention) {
+  final cueTexts = intention.cues
+      .where((c) => c.namesSituation)
+      .map((c) => c.text.trim())
+      .toList();
+  if (cueTexts.isNotEmpty) return cueTexts.join(' · ');
+  final anchor = intention.anchorLabel?.trim();
+  return anchor == null || anchor.isEmpty ? null : anchor;
+}
+
 /// "In the planned situation? Yes / No, elsewhere / Not sure" — the optional
 /// follow-up shown on a habit card right after today is logged as done
 /// (#64). One tap answers it; the close button skips it. Mirrors the daily
 /// question in the HABIRUPT study (Edgren et al. 2025), so the logs show
 /// whether repetitions actually happened in the cue situation the plan names.
 class _CueContextPrompt extends ConsumerStatefulWidget {
-  const _CueContextPrompt({required this.intention, required this.date});
+  const _CueContextPrompt({
+    required this.intention,
+    required this.situation,
+    required this.date,
+  });
 
   final Intention intention;
+
+  /// The situation the plan names, shown under the question as a reminder
+  /// (see [_plannedSituation]).
+  final String situation;
 
   /// The logged day being asked about, `'YYYY-MM-DD'`.
   final String date;
@@ -810,15 +838,6 @@ class _CueContextPromptState extends ConsumerState<_CueContextPrompt> {
     final l10n = AppLocalizations.of(context)!;
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-    // Remind the participant which situation the plan names. A stacked habit
-    // without its own cue uses its anchor habit as the situation.
-    final cueTexts = widget.intention.cues
-        .map((c) => c.text.trim())
-        .where((t) => t.isNotEmpty && t != kAnchorRoutineCueText)
-        .toList();
-    final situation = cueTexts.isNotEmpty
-        ? cueTexts.join(' · ')
-        : widget.intention.anchorLabel;
     final answers = {
       CueContextAnswer.yes: l10n.cueContextYes,
       CueContextAnswer.no: l10n.cueContextNo,
@@ -850,13 +869,12 @@ class _CueContextPromptState extends ConsumerState<_CueContextPrompt> {
               ),
             ],
           ),
-          if (situation != null && situation.isNotEmpty)
-            Text(
-              situation,
-              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(
+            widget.situation,
+            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,

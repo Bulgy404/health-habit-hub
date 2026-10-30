@@ -59,8 +59,8 @@ SrhiStem buildSrhiStem({
   required List<IntentionCue> cues,
 }) {
   final cuePhrase = cues
+      .where((c) => c.namesSituation)
       .map((c) => c.text.trim())
-      .where((t) => t.isNotEmpty && t != kAnchorRoutineCueText)
       .map((t) => t.replaceFirst(RegExp(r'[\s.,;:!?…]+$'), ''))
       .where((t) => t.isNotEmpty)
       .toList();

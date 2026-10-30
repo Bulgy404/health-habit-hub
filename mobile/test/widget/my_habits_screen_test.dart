@@ -284,7 +284,8 @@ void main() {
   });
 
   group('#64 "In the planned situation?" follow-up', () {
-    _FakeMyHabitsService makeService() => _FakeMyHabitsService(
+    _FakeMyHabitsService makeService([Intention? intention]) =>
+        _FakeMyHabitsService(
           config: const HabitConfig(
             cueCount: 'single',
             cueSource: 'high_quality',
@@ -292,7 +293,7 @@ void main() {
             maxHabits: null,
             srhiItems: [],
           ),
-          intentions: [_activeIntention],
+          intentions: [intention ?? _activeIntention],
         );
 
     Future<void> pumpAndLogToday(
@@ -336,6 +337,30 @@ void main() {
 
       expect(find.text('In the planned situation?'), findsNothing);
       expect(service.cueContextAnswer, isNull);
+    });
+
+    testWidgets('is not asked for a habit whose plan names no situation',
+        (tester) async {
+      // An anchor habit the app created when the participant stacked onto a
+      // free-typed routine: its only cue is the placeholder.
+      final service = makeService(
+        Intention(
+          id: 'anchor-1',
+          behaviorKey: 'coffee',
+          behaviorLabel: 'Morning coffee',
+          durationMinutes: 5,
+          cues: const [
+            IntentionCue(text: kAnchorRoutineCueText, source: 'self_selected'),
+          ],
+          intentionStatement: 'I drink my morning coffee.',
+          status: 'active',
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      );
+      await pumpAndLogToday(tester, service);
+
+      expect(find.byTooltip('Logged ✓'), findsWidgets);
+      expect(find.text('In the planned situation?'), findsNothing);
     });
 
     testWidgets('goes away when today is un-logged', (tester) async {

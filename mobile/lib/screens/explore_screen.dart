@@ -212,6 +212,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           habitType: h.habitType,
           healthBenefit: h.healthBenefit,
           wellbeingImpact: h.wellbeingImpact,
+          contextText: h.contextText,
         );
       }).toList();
 
@@ -546,19 +547,19 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   /// Starts the new-habit flow prefilled with this community habit (#4):
   /// its text as the behaviour (editable on the first step), its build/quit
   /// type, and its classified context phrase as the cue when that phrase is
-  /// in the same language as the shown text. The new intention records
-  /// `sourceHabitId` so copies can be traced back.
+  /// in the same language as the shown text — taken out of the behaviour, so
+  /// the plan names it once (see [HabitNode.splitForCopy]). The new
+  /// intention records `sourceHabitId` so copies can be traced back.
   void _copyToMyHabits() {
     final router = GoRouter.of(context);
-    final contextText = _node.contextText.trim();
+    final copy = _node.splitForCopy();
     Navigator.of(context).pop();
     router.push(
       '/habits/new/behavior',
       extra: {
-        'initialBehaviorLabel': _node.name,
+        'initialBehaviorLabel': copy.behavior,
         'habitType': _node.habitType,
-        if (contextText.isNotEmpty && _node.name.contains(contextText))
-          'initialCue': contextText,
+        'initialCue': ?copy.cue,
         'sourceHabitId': _node.id,
       },
     );
