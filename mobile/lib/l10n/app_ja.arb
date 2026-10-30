@@ -958,6 +958,46 @@
       }
     }
   },
+  "srhiStemWithCue": "{behavior}（{cue}）は…",
+  "@srhiStemWithCue": {
+    "description": "Stem sentence for SRHI items when the habit has a planned cue (#63): the behaviour followed by its cue, e.g. \"Go for a walk after dinner each evening is something…\"",
+    "placeholders": {
+      "behavior": {
+        "type": "String"
+      },
+      "cue": {
+        "type": "String"
+      }
+    }
+  },
+  "cueContextPrompt": "予定した状況で行いましたか？",
+  "@cueContextPrompt": {
+    "description": "Optional follow-up question on a habit card right after logging today: was the habit done in the cue situation from the plan? (#64)"
+  },
+  "cueContextYes": "はい",
+  "@cueContextYes": {
+    "description": "Answer to cueContextPrompt: done in the planned situation"
+  },
+  "cueContextNo": "いいえ、別の状況で",
+  "@cueContextNo": {
+    "description": "Answer to cueContextPrompt: done, but in a different situation"
+  },
+  "cueContextUnsure": "わからない",
+  "@cueContextUnsure": {
+    "description": "Answer to cueContextPrompt: participant is not sure"
+  },
+  "cueContextSkip": "スキップ",
+  "@cueContextSkip": {
+    "description": "Tooltip for the button that dismisses cueContextPrompt without answering"
+  },
+  "cueContextSaveFailed": "回答を保存できませんでした",
+  "@cueContextSaveFailed": {
+    "description": "Snackbar when saving the cueContextPrompt answer fails"
+  },
+  "copyToMyHabits": "マイ習慣に追加",
+  "@copyToMyHabits": {
+    "description": "Button in the Explore habit detail sheet that starts the new-habit flow prefilled with this community habit (#4)"
+  },
   "srhiScaleMin": "1 = まったくそう思わない",
   "@srhiScaleMin": {
     "description": "Label for the lowest point of the SRHI 1-7 agreement scale"

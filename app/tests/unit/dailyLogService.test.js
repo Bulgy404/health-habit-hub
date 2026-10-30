@@ -5,6 +5,7 @@ import {
   upsertLog,
   getLogs,
   deleteLog,
+  setCueContext,
 } from '../../services/dailyLogService.js';
 
 function makeDb() {
@@ -45,6 +46,18 @@ function makeDb() {
                 return results;
               },
             };
+          },
+          async updateOne(filter, update) {
+            const idx = logs.findIndex(
+              (d) =>
+                d.intentionId?.toString() === filter.intentionId?.toString() &&
+                d.date === filter.date &&
+                (filter.userId === undefined || d.userId === filter.userId) &&
+                (filter.enacted === undefined || d.enacted === filter.enacted)
+            );
+            if (idx === -1) return { matchedCount: 0 };
+            Object.assign(logs[idx], update.$set);
+            return { matchedCount: 1 };
           },
           async deleteOne(filter) {
             const idx = logs.findIndex(
@@ -217,4 +230,96 @@ test('deleteLog: does not delete an entry belonging to a different userId (IDOR)
     userId: 'u1',
   });
   assert.equal(logs.length, 1, 'entry owned by u1 must survive a u2 delete');
+});
+
+async function logDay(db, intentionId, enacted, userId = 'u1') {
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId,
+    date: '2026-06-01',
+    enacted,
+  });
+}
+
+test('setCueContext: records the answer on an enacted log (#64)', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await logDay(db, intentionId, true);
+  const result = await setCueContext({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    inCueContext: 'no',
+  });
+  assert.equal(result.notFound, false);
+  const [log] = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+  assert.equal(log.inCueContext, 'no');
+});
+
+test('setCueContext: never creates a log, and refuses a miss or another user', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  const args = {
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    inCueContext: 'yes',
+  };
+  assert.equal((await setCueContext(args)).notFound, true);
+
+  await logDay(db, intentionId, false);
+  assert.equal((await setCueContext(args)).notFound, true);
+
+  await logDay(db, intentionId, true);
+  assert.equal(
+    (await setCueContext({ ...args, userId: 'someone-else' })).notFound,
+    true
+  );
+});
+
+test('upsertLog: re-logging a day as missed clears its cue-context answer', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await logDay(db, intentionId, true);
+  await setCueContext({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    inCueContext: 'yes',
+  });
+  await logDay(db, intentionId, true);
+  let [log] = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+  assert.equal(log.inCueContext, 'yes', 're-logging as enacted keeps it');
+
+  await logDay(db, intentionId, false);
+  [log] = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+  assert.equal(log.inCueContext, null);
+});
+
+test('getLogs: a log without an answer reports inCueContext as null', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await logDay(db, intentionId, true);
+  const [log] = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+  assert.equal(log.inCueContext, null);
 });

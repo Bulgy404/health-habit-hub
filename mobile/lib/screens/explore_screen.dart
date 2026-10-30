@@ -2,7 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../features/my_habits/my_habits_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
@@ -30,6 +32,7 @@ HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
     hasTranslation:
         bubble.originalText.isNotEmpty && bubble.originalText != bubble.label,
     contextText: bubble.contextText,
+    habitType: bubble.habitType,
   );
 }
 
@@ -144,11 +147,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   // Stats are fetched once and cached; re-pull them every time the user
   // revisits the Stats tab so newly donated/annotated habits show up without
-  // requiring a manual pull-to-refresh.
+  // requiring a manual pull-to-refresh. Also rebuilds so the TabBarView's
+  // swipe physics follow the active tab (swiping is off on the Graph tab).
   void _handleTabChange() {
     final index = _tabController.index;
     if (index == _lastTabIndex) return;
-    _lastTabIndex = index;
+    setState(() => _lastTabIndex = index);
     if (index == 1) {
       ref.invalidate(myStatsProvider);
       ref.invalidate(habitStatsProvider);
@@ -208,6 +212,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           habitType: h.habitType,
           healthBenefit: h.healthBenefit,
           wellbeingImpact: h.wellbeingImpact,
+          contextText: h.contextText,
         );
       }).toList();
 
@@ -356,6 +361,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       ),
       body: TabBarView(
         controller: _tabController,
+        // The Graph tab is a draggable, pannable canvas. The page swipe claims
+        // a drag after 18 px of horizontal travel, but bubble drags and canvas
+        // pans only after 36 px, so any sideways drag on the graph slid over
+        // to Stats instead. Swiping stays on for Stats ↔ Saved and back to
+        // Graph; the TabBar still switches tabs from the Graph tab.
+        physics: _lastTabIndex == 0
+            ? const NeverScrollableScrollPhysics()
+            : null,
         children: [
           body,
           const StatsScreen(),
@@ -531,6 +544,27 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
     }
   }
 
+  /// Starts the new-habit flow prefilled with this community habit (#4):
+  /// its text as the behaviour (editable on the first step), its build/quit
+  /// type, and its classified context phrase as the cue when that phrase is
+  /// in the same language as the shown text — taken out of the behaviour, so
+  /// the plan names it once (see [HabitNode.splitForCopy]). The new
+  /// intention records `sourceHabitId` so copies can be traced back.
+  void _copyToMyHabits() {
+    final router = GoRouter.of(context);
+    final copy = _node.splitForCopy();
+    Navigator.of(context).pop();
+    router.push(
+      '/habits/new/behavior',
+      extra: {
+        'initialBehaviorLabel': copy.behavior,
+        'habitType': _node.habitType,
+        'initialCue': ?copy.cue,
+        'sourceHabitId': _node.id,
+      },
+    );
+  }
+
   Future<void> _annotate(String type) async {
     if (_loadingType != null) return;
     final notifier = ref.read(annotationStateProvider.notifier);
@@ -553,6 +587,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         language: _node.language,
         hasTranslation: _node.hasTranslation,
         contextText: _node.contextText,
+        habitType: _node.habitType,
       );
       widget.onNodeUpdated(updated);
       if (mounted) setState(() => _node = updated);
@@ -585,6 +620,13 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationState[_node.id]?.contains('helpful') ?? false;
     final busy = _loadingType != null;
     final commentsEnabled = ref.watch(commentsEnabledProvider);
+    // Copying needs free-text habit entry: a study that restricts habits to
+    // its activity catalog would have to drop the copied text anyway.
+    final habitConfig = ref.watch(habitConfigProvider).value;
+    final canCopy =
+        habitConfig != null &&
+        habitConfig.selfHabitCreationEnabled &&
+        habitConfig.behaviorOptions.isEmpty;
     final viewerLang = ref.watch(localeProvider).languageCode;
     // The habit's own donation language matching the viewer's language means
     // the displayed text already IS that original — nothing is missing, so
@@ -797,6 +839,14 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               ),
             ],
           ),
+          if (canCopy) ...[
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: _copyToMyHabits,
+              icon: const Icon(Icons.add_task),
+              label: Text(l10n.copyToMyHabits),
+            ),
+          ],
 
           // ── Community comments ─────────────────────────────────────
           const SizedBox(height: 20),

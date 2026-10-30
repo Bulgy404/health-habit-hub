@@ -11,21 +11,49 @@ import 'package:hhh/l10n/app_localizations.dart';
 final _fakeDio = Dio();
 
 class _FakeMyHabitsService extends MyHabitsService {
-  _FakeMyHabitsService() : super(dio: _fakeDio);
+  _FakeMyHabitsService({this.cues = const []}) : super(dio: _fakeDio);
+
+  final List<IntentionCue> cues;
+  String? submittedStemVariant;
+  String? submittedStemText;
+
+  @override
+  Future<List<Intention>> listIntentions() async => [
+        Intention(
+          id: 'intent-1',
+          behaviorKey: 'walking',
+          behaviorLabel: 'Walking',
+          durationMinutes: 20,
+          cues: cues,
+          intentionStatement: 'After dinner, I will walk.',
+          status: 'active',
+          createdAt: DateTime(2026, 10, 1),
+        ),
+      ];
 
   @override
   Future<SrhiTrajectoryPoint> submitSrhi({
     required String intentionId,
     required int weekNumber,
     required Map<String, int> items,
-  }) async =>
-      SrhiTrajectoryPoint(weekNumber: weekNumber, score: 5.0);
+    String? stemVariant,
+    String? stemText,
+  }) async {
+    submittedStemVariant = stemVariant;
+    submittedStemText = stemText;
+    return SrhiTrajectoryPoint(weekNumber: weekNumber, score: 5.0);
+  }
 }
 
-Widget _buildSubject(List<SrhiItem> items) {
+Widget _buildSubject(
+  List<SrhiItem> items, {
+  _FakeMyHabitsService? service,
+}) {
   return ProviderScope(
     overrides: [
-      myHabitsServiceProvider.overrideWithValue(_FakeMyHabitsService()),
+      myHabitsServiceProvider.overrideWithValue(
+        service ?? _FakeMyHabitsService(),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -108,5 +136,41 @@ void main() {
     );
     expect(questionText.maxLines, isNull);
     expect(questionText.overflow, isNot(TextOverflow.ellipsis));
+  });
+
+  testWidgets(
+      'stem names the planned cue and the submission records that variant '
+      '(#63)', (tester) async {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final service = _FakeMyHabitsService(
+      cues: const [
+        IntentionCue(text: 'After dinner each evening', source: 'self_selected'),
+      ],
+    );
+    await tester.pumpWidget(_buildSubject(_twelveItems, service: service));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Walking after dinner each evening is something…'),
+      findsOneWidget,
+    );
+
+    final sliders = find.byType(Slider);
+    for (int i = 0; i < 12; i++) {
+      await tester.drag(sliders.at(i), const Offset(300, 0));
+      await tester.pump();
+    }
+    await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
+    await tester.pump();
+
+    expect(service.submittedStemVariant, 'behaviour+cue');
+    expect(
+      service.submittedStemText,
+      'Walking after dinner each evening is something…',
+    );
   });
 }

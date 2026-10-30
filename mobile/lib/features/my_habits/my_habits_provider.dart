@@ -116,6 +116,29 @@ final intentionLogsProvider = FutureProvider.family<List<DailyLog>, String>((
   return ref.watch(myHabitsServiceProvider).fetchLogs(intentionId);
 });
 
+/// Habits whose card should show the optional "In the planned situation?"
+/// follow-up (#64), by intention id. A habit is added right after today is
+/// logged as done, and removed once answered, skipped, or un-logged. Kept in
+/// memory only: the question is about the moment just logged, so it is not
+/// re-asked after an app restart.
+class CueContextPromptNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  /// Shows the follow-up on [intentionId]'s card.
+  void show(String intentionId) => state = {...state, intentionId};
+
+  /// Hides the follow-up on [intentionId]'s card.
+  void dismiss(String intentionId) =>
+      state = {...state}..remove(intentionId);
+}
+
+/// See [CueContextPromptNotifier].
+final cueContextPromptProvider =
+    NotifierProvider<CueContextPromptNotifier, Set<String>>(
+      CueContextPromptNotifier.new,
+    );
+
 /// SRHI trajectory (submitted weeks) for a specific intention. Keyed by intentionId.
 final srhiTrajectoryProvider =
     FutureProvider.family<List<SrhiTrajectoryPoint>, String>((

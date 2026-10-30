@@ -1391,6 +1391,7 @@ One document per implementation intention (habit plan) created by a user.
 | `createdAt`              | Date           |                                                                                                                                                                                                                                                                                                                                                          |
 | `updatedAt`              | Date           |                                                                                                                                                                                                                                                                                                                                                          |
 | `sourceRecommendationId` | String\|null   | UUID v4 of the recommendation that opened this creation flow; absent/null for independently created habits. This is the authoritative adoption lineage and replaces the unwritten legacy `recommendations_log` acceptance counter.                                                                                                                       |
+| `sourceHabitId`          | String\|null   | Id of the community habit this one was copied from in Explore ("Add to my habits", #4); null for habits not copied.                                                                                                                                                                                                                                      |
 
 Indexes: `{userId, status}`, `{enrollmentId}` (sparse),
 `{sourceRecommendationId}` (sparse)
@@ -1401,16 +1402,29 @@ Indexes: `{userId, status}`, `{enrollmentId}` (sparse),
 
 One document per (intention, date) pair — idempotent upsert.
 
-| Field         | Type     | Description                               |
-| ------------- | -------- | ----------------------------------------- |
-| `_id`         | ObjectId |                                           |
-| `intentionId` | ObjectId |                                           |
-| `userId`      | String   |                                           |
-| `date`        | String   | `"YYYY-MM-DD"`                            |
-| `enacted`     | Boolean  | `true` = enacted, `false` = explicit miss |
-| `loggedAt`    | Date     |                                           |
+| Field          | Type         | Description                               |
+| -------------- | ------------ | ----------------------------------------- |
+| `_id`          | ObjectId     |                                           |
+| `intentionId`  | ObjectId     |                                           |
+| `userId`       | String       |                                           |
+| `date`         | String       | `"YYYY-MM-DD"`                            |
+| `enacted`      | Boolean      | `true` = enacted, `false` = explicit miss |
+| `loggedAt`     | Date         |                                           |
+| `inCueContext` | String\|null | `'yes'`/`'no'`/`'unsure'`, see below      |
 
 Indexes: `{intentionId, date}` unique, `{userId, date}`
+
+**In the planned situation? (#64).** Right after a participant ticks today's
+habit, the app shows an optional one-tap follow-up: "In the planned
+situation? Yes / No, elsewhere / Not sure". The answer is saved with
+`PATCH /habits/intentions/:id/logs/:date` as `inCueContext`, so analyses can
+separate context-consistent repetitions from repetitions elsewhere (Gardner,
+Rebar & Lally 2022, M5/AI2; the HABIRUPT study asks the same question daily).
+`null` or absent means not answered (the prompt is skippable), not asked
+(older logs, days logged from the backfill sheet), or a miss: re-logging a
+day as `enacted: false` clears the answer. The daily-log CSV export has an
+`inCueContext` column, and study analytics report the share of answered
+enacted logs that said yes, per group and habit week (`cueContextShare`).
 
 Logging is identical regardless of the intention's `cadence` — a weekly-cadence
 habit still gets one `daily_behavior_logs` document per logged day, same as a
@@ -1437,11 +1451,23 @@ One document per (intention, weekNumber) — SRHI measurement window.
 | `submittedAt`  | Date\|null     | `null` = pending                            |
 | `items`        | Object\|null   | `{srhi_1: 1-7, ..., srhi_12: 1-7}`          |
 | `score`        | Double\|null   | Mean of 12 items (1–7 scale)                |
+| `stemVariant`  | String\|null   | Stem shown above the items, see below       |
+| `stemText`     | String\|null   | Exact stem text shown, in the app language  |
 | `createdAt`    | Date           |                                             |
 
 Indexes: `{intentionId, weekNumber}` unique, `{userId, submittedAt}`
 
 The 12 SRHI items are the validated Self-Report Habit Index (Verplanken & Orbell, 2003) — item text is returned by `GET /api/v1/me/habit-config` as `srhiItems`.
+
+**Stem.** When the habit has a cue, the app names it in the stem so the
+measure is specific to the planned situation (Gardner, Rebar & Lally 2022,
+criteria M4/M5): `"{behaviour} {cue} is something…"`, e.g. "Go for a walk
+after dinner each evening is something…". Two cues are joined in order. A
+habit without a usable cue keeps the generic `"{behaviour} is something…"`.
+`stemVariant` records which one was shown: `'behaviour+cue'` or
+`'behaviour'`. Windows submitted before this field existed have no
+`stemVariant`; they all showed the generic stem, and the CSV export reports
+them as `behaviour`.
 
 4 weekly windows are pre-generated unconditionally on every habit creation
 (`POST /habits/intentions` → `srhiService.generateWindows`) — there is no

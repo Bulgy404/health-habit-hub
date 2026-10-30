@@ -13,6 +13,7 @@ import '../../theme/app_colors.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
+import 'srhi_stem.dart';
 
 /// Screen for completing the weekly SRHI habit strength questionnaire.
 ///
@@ -63,6 +64,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
   // copy) can use them without re-deriving from providers mid-callback.
   List<SrhiItem>? _resolvedItems;
   String _resolvedLabel = '';
+  SrhiStem? _resolvedStem;
 
   bool _allAnswered(List<SrhiItem> items) =>
       _touched.length == items.length;
@@ -83,6 +85,8 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
             intentionId: widget.intentionId,
             weekNumber: widget.weekNumber,
             items: Map<String, int>.from(_answers),
+            stemVariant: _resolvedStem?.variant.wire,
+            stemText: _resolvedStem?.text,
           );
       ref.invalidate(dueSrhiProvider);
       ref.invalidate(srhiTrajectoryProvider(widget.intentionId));
@@ -138,24 +142,34 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Both paths need the intention: its cues go into the stem (#63).
+    final intentionsAsync = ref.watch(intentionsProvider);
 
     // The normal in-app path: my_habits_screen.dart's `_SrhiPromptCard`
-    // already has both values on hand and passes them via router `extra`.
+    // already has the label and items on hand and passes them via router
+    // `extra`. The intentions are already loaded by the screen this was
+    // opened from, so this rarely waits; if they failed to load, the generic
+    // stem is shown, and recorded as such.
     if (widget.srhiItems != null) {
-      _resolvedItems = widget.srhiItems;
-      _resolvedLabel = widget.behaviorLabel ?? '';
-      return _buildForm(context, widget.srhiItems!, _resolvedLabel);
+      if (intentionsAsync.isLoading && !intentionsAsync.hasValue) {
+        return _loadingScaffold(l10n);
+      }
+      final intention = intentionsAsync.value
+          ?.where((i) => i.id == widget.intentionId)
+          .firstOrNull;
+      return _resolveAndBuild(
+        context,
+        widget.srhiItems!,
+        widget.behaviorLabel ?? intention?.behaviorLabel ?? '',
+        intention?.cues ?? const [],
+      );
     }
 
     // Deep-link path (a tapped SRHI notification carries only a route
     // string) — resolve the same data from providers instead.
     final configAsync = ref.watch(habitConfigProvider);
-    final intentionsAsync = ref.watch(intentionsProvider);
     if (configAsync.isLoading || intentionsAsync.isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.srhiFormTitle)),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+      return _loadingScaffold(l10n);
     }
     if (configAsync.hasError || intentionsAsync.hasError) {
       return Scaffold(
@@ -165,21 +179,44 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
         ),
       );
     }
-    final items = configAsync.value!.srhiItems;
-    final label = intentionsAsync.value!
-            .where((i) => i.id == widget.intentionId)
-            .firstOrNull
-            ?.behaviorLabel ??
-        '';
+    final intention = intentionsAsync.value!
+        .where((i) => i.id == widget.intentionId)
+        .firstOrNull;
+    return _resolveAndBuild(
+      context,
+      configAsync.value!.srhiItems,
+      intention?.behaviorLabel ?? '',
+      intention?.cues ?? const [],
+    );
+  }
+
+  Widget _loadingScaffold(AppLocalizations l10n) => Scaffold(
+    appBar: AppBar(title: Text(l10n.srhiFormTitle)),
+    body: const Center(child: CircularProgressIndicator()),
+  );
+
+  Widget _resolveAndBuild(
+    BuildContext context,
+    List<SrhiItem> items,
+    String behaviorLabel,
+    List<IntentionCue> cues,
+  ) {
+    final stem = buildSrhiStem(
+      l10n: AppLocalizations.of(context)!,
+      languageCode: Localizations.localeOf(context).languageCode,
+      behaviorLabel: behaviorLabel,
+      cues: cues,
+    );
     _resolvedItems = items;
-    _resolvedLabel = label;
-    return _buildForm(context, items, label);
+    _resolvedLabel = behaviorLabel;
+    _resolvedStem = stem;
+    return _buildForm(context, items, stem.text);
   }
 
   Widget _buildForm(
     BuildContext context,
     List<SrhiItem> items,
-    String behaviorLabel,
+    String stemText,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).languageCode;
@@ -197,7 +234,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.srhiStem(behaviorLabel),
+                    stemText,
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge

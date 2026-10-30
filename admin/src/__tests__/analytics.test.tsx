@@ -171,6 +171,35 @@ describe("AnalyticsInsightsPage", () => {
     expect(screen.getByText("7")).toBeInTheDocument();
   });
 
+  it("cue-context chart shows its empty state until participants answer (#64)", async () => {
+    global.fetch = mockFetchImplementation();
+
+    render(<AnalyticsInsightsPage />);
+
+    expect(await screen.findByText("Habit Done in the Planned Situation")).toBeInTheDocument();
+    expect(screen.getByText("No answers yet.")).toBeInTheDocument();
+  });
+
+  it("cue-context chart renders when the API returns answers (#64)", async () => {
+    const withAnswers = {
+      ...mockAnalytics,
+      cueContextShare: [
+        { groupId: "g1", weekNumber: 1, yes: 2, no: 1, unsure: 0, answered: 3, share: 0.67 },
+      ],
+    };
+    const base = mockFetchImplementation();
+    global.fetch = jest.fn().mockImplementation((url: string) =>
+      url.includes("/analytics")
+        ? Promise.resolve({ ok: true, json: async () => withAnswers } as unknown as Response)
+        : base(url)
+    );
+
+    render(<AnalyticsInsightsPage />);
+
+    expect(await screen.findByText("Habit Done in the Planned Situation")).toBeInTheDocument();
+    expect(screen.queryByText("No answers yet.")).not.toBeInTheDocument();
+  });
+
   it("clicking a participant table row opens the detail drawer and it closes again", async () => {
     const user = userEvent.setup();
     global.fetch = mockFetchImplementation();

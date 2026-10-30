@@ -337,6 +337,51 @@ test('POST /srhi/:intentionId/week/:weekNumber submits and scores window', async
   assert.strictEqual(body.score, 5);
 });
 
+test('POST /srhi/:intentionId/week/:weekNumber stores the stem variant (#63)', async () => {
+  const userId = 'srhi-stem-user';
+  const intentionId = new ObjectId();
+  await mockDb.collection('srhi_responses').insertOne({
+    intentionId,
+    userId,
+    studyId: null,
+    groupId: null,
+    weekNumber: 1,
+    scheduledFor: new Date(Date.now() - 86400000),
+    submittedAt: null,
+    items: null,
+    score: null,
+    createdAt: new Date(),
+  });
+
+  const validItems = Object.fromEntries(
+    Array.from({ length: 12 }, (_, i) => [`srhi_${i + 1}`, 5])
+  );
+  const res = await post(
+    `${SRHI}/${intentionId}/week/1`,
+    {
+      items: validItems,
+      stemVariant: 'behaviour+cue',
+      stemText: 'Walk after dinner is something…',
+    },
+    makeToken(['user'], userId)
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.stemVariant, 'behaviour+cue');
+});
+
+test('POST /srhi/:intentionId/week/:weekNumber rejects an unknown stem variant', async () => {
+  const validItems = Object.fromEntries(
+    Array.from({ length: 12 }, (_, i) => [`srhi_${i + 1}`, 5])
+  );
+  const res = await post(
+    `${SRHI}/507f1f77bcf86cd799439011/week/1`,
+    { items: validItems, stemVariant: 'cue-only' },
+    makeToken(['user'], 'stem-variant-user')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
 // ── GET trajectory ────────────────────────────────────────────────────────────
 
 test('GET /srhi/:intentionId/trajectory returns 200 with history', async () => {

@@ -23,12 +23,35 @@ import 'my_habits_provider.dart';
 /// free text instead.
 class PickBehaviorScreen extends ConsumerStatefulWidget {
   /// Creates a [PickBehaviorScreen].
-  const PickBehaviorScreen({this.recommendationId, super.key});
+  const PickBehaviorScreen({
+    this.recommendationId,
+    this.initialBehaviorLabel,
+    this.initialHabitType = HabitType.build,
+    this.initialCue,
+    this.sourceHabitId,
+    super.key,
+  });
 
   /// Recommendation that opened this flow, if any. It is deliberately kept
   /// separate from the selected catalog behaviour so restricted studies retain
   /// lineage without accepting the recommendation's free-text title.
   final String? recommendationId;
+
+  /// Prefill for the free-text behaviour field — the community habit's text
+  /// when the participant copies one from Explore (#4). They can edit it
+  /// before continuing.
+  final String? initialBehaviorLabel;
+
+  /// Preselected build/quit choice, taken from a copied habit (#4).
+  final HabitType initialHabitType;
+
+  /// Prefill for the cue step — the copied habit's classified context
+  /// phrase (e.g. "after work"), when it has one (#4).
+  final String? initialCue;
+
+  /// Community habit this one is copied from in Explore (#4), stored on the
+  /// new intention as `sourceHabitId`.
+  final String? sourceHabitId;
 
   @override
   ConsumerState<PickBehaviorScreen> createState() => _PickBehaviorScreenState();
@@ -49,13 +72,15 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   // because it changes downstream cue guidance (build → trigger cues; quit →
   // disruption/removal cues, per Verplanken & Wood 2006) and is a standard
   // research covariate. Defaults to build.
-  HabitType _habitType = HabitType.build;
+  late HabitType _habitType = widget.initialHabitType;
 
   @override
   void initState() {
     super.initState();
     ref.read(analyticsProvider).capture('habit_creation_started', {
-      'entry_point': widget.recommendationId == null
+      'entry_point': widget.sourceHabitId != null
+          ? 'community'
+          : widget.recommendationId == null
           ? 'my_habits'
           : 'recommendation',
     });
@@ -146,6 +171,9 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                         config: config,
                         habitType: _habitType,
                         recommendationId: widget.recommendationId,
+                        initialLabel: widget.initialBehaviorLabel,
+                        initialCue: widget.initialCue,
+                        sourceHabitId: widget.sourceHabitId,
                       )
                     : _BehaviorList(
                         config: config,
@@ -371,11 +399,17 @@ class _FreeEntryBehaviorForm extends ConsumerStatefulWidget {
     required this.config,
     required this.habitType,
     this.recommendationId,
+    this.initialLabel,
+    this.initialCue,
+    this.sourceHabitId,
   });
 
   final HabitConfig config;
   final HabitType habitType;
   final String? recommendationId;
+  final String? initialLabel;
+  final String? initialCue;
+  final String? sourceHabitId;
 
   @override
   ConsumerState<_FreeEntryBehaviorForm> createState() =>
@@ -384,8 +418,22 @@ class _FreeEntryBehaviorForm extends ConsumerStatefulWidget {
 
 class _FreeEntryBehaviorFormState
     extends ConsumerState<_FreeEntryBehaviorForm> {
-  final _controller = TextEditingController();
+  static const _maxLabelLength = 100;
+
+  // A copied community habit (#4) can be longer than the field allows, so
+  // the prefill is cut at the last word that fits; the participant is
+  // expected to edit it into their own words anyway.
+  late final _controller = TextEditingController(
+    text: _fitLabel(widget.initialLabel?.trim() ?? ''),
+  );
   String? _error;
+
+  static String _fitLabel(String text) {
+    if (text.length <= _maxLabelLength) return text;
+    final cut = text.substring(0, _maxLabelLength);
+    final lastSpace = cut.lastIndexOf(' ');
+    return (lastSpace > 0 ? cut.substring(0, lastSpace) : cut).trimRight();
+  }
 
   @override
   void dispose() {
@@ -412,7 +460,9 @@ class _FreeEntryBehaviorFormState
     }
     ref.read(analyticsProvider).capture('habit_behavior_selected', {
       'habit_type': widget.habitType.wire,
-      'behavior_source': widget.recommendationId == null
+      'behavior_source': widget.sourceHabitId != null
+          ? 'community'
+          : widget.recommendationId == null
           ? 'free_text'
           : 'recommendation',
     });
@@ -424,6 +474,8 @@ class _FreeEntryBehaviorFormState
         'habitType': widget.habitType.wire,
         'config': widget.config,
         'recommendationId': ?widget.recommendationId,
+        'initialCue': ?widget.initialCue,
+        'sourceHabitId': ?widget.sourceHabitId,
       },
     );
   }
@@ -453,7 +505,7 @@ class _FreeEntryBehaviorFormState
               border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
-            maxLength: 100,
+            maxLength: _maxLabelLength,
             onChanged: (_) => setState(() => _error = null),
             onSubmitted: (_) => _onNext(l10n),
           ),

@@ -28,6 +28,7 @@ class SetCueScreen extends ConsumerStatefulWidget {
     required this.habitType,
     this.initialCue,
     this.recommendationId,
+    this.sourceHabitId,
     super.key,
   });
 
@@ -50,6 +51,9 @@ class SetCueScreen extends ConsumerStatefulWidget {
 
   /// Recommendation that initiated this habit flow, if any.
   final String? recommendationId;
+
+  /// Community habit this one was copied from in Explore (#4), if any.
+  final String? sourceHabitId;
 
   @override
   ConsumerState<SetCueScreen> createState() => _SetCueScreenState();
@@ -145,7 +149,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       } else {
         cues = [
           IntentionCue(
-            text: 'Your assigned cue for ${widget.behaviorLabel}',
+            text: '$kPreRatedFallbackCuePrefix${widget.behaviorLabel}',
             source: 'pre_rated',
           ),
         ];
@@ -177,10 +181,12 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
 
     setState(() => _error = null);
 
+    // A prefilled cue comes from a recommendation, or from a community habit
+    // copied in Explore (#4).
     final cueSource = isStacked
         ? 'stacked'
         : widget.initialCue?.trim().isNotEmpty == true
-        ? 'recommendation'
+        ? (widget.sourceHabitId != null ? 'community' : 'recommendation')
         : isPreRated
         ? 'pre_rated'
         : 'self_selected';
@@ -195,6 +201,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       'habitType': widget.habitType.wire,
       'cues': cues,
       'recommendationId': ?widget.recommendationId,
+      'sourceHabitId': ?widget.sourceHabitId,
       // §7.1 Habit Stacking — anchor reference (when tracked), free-typed
       // anchor text (donated as an anchor), the opt-in to also track the
       // anchor as its own habit, and the creation mode.

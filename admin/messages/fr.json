@@ -694,6 +694,11 @@
         "empty": "Aucune donnée SRHI pour le moment.",
         "habitThreshold": "seuil d'habitude"
       },
+      "cueContextShare": {
+        "title": "Habitude dans la situation prévue",
+        "desc": "Part des jours enregistrés où l'habitude a eu lieu dans la situation prévue, par semaine d'habitude et par condition. Seuls les jours où la question facultative a reçu une réponse sont comptés.",
+        "empty": "Pas encore de réponses."
+      },
       "cumulativeDropout": {
         "title": "Abandon cumulé",
         "desc": "Participants ayant abandonné au fil du temps, par condition",

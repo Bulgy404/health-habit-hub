@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "commonProperties": {
     "study_id": { "type": "opaque_id" },
     "group_id": { "type": "opaque_id" },
@@ -74,7 +74,7 @@
       "properties": {
         "entry_point": {
           "type": "enum",
-          "values": ["my_habits", "recommendation", "auto"]
+          "values": ["my_habits", "recommendation", "auto", "community"]
         }
       }
     },
@@ -86,7 +86,7 @@
         },
         "behavior_source": {
           "type": "enum",
-          "values": ["catalog", "free_text", "recommendation"]
+          "values": ["catalog", "free_text", "recommendation", "community"]
         }
       }
     },
@@ -94,7 +94,13 @@
       "properties": {
         "cue_source": {
           "type": "enum",
-          "values": ["self_selected", "pre_rated", "recommendation", "stacked"]
+          "values": [
+            "self_selected",
+            "pre_rated",
+            "recommendation",
+            "community",
+            "stacked"
+          ]
         }
       }
     },
@@ -120,7 +126,8 @@
           "type": "enum",
           "values": ["standalone", "stacked"]
         },
-        "from_recommendation": { "type": "boolean" }
+        "from_recommendation": { "type": "boolean" },
+        "from_community": { "type": "boolean" }
       }
     },
     "habit_creation_blocked": {

@@ -694,6 +694,11 @@
         "empty": "Nog geen SRHI-gegevens.",
         "habitThreshold": "gewoontedrempel"
       },
+      "cueContextShare": {
+        "title": "Gewoonte in de geplande situatie",
+        "desc": "Aandeel van de gelogde gewoontedagen in de geplande situatie, per gewoonteweek en conditie. Alleen dagen waarop de optionele vervolgvraag is beantwoord tellen mee.",
+        "empty": "Nog geen antwoorden."
+      },
       "cumulativeDropout": {
         "title": "Cumulatieve uitval",
         "desc": "Deelnemers die in de loop van de tijd zijn uitgevallen, per conditie",

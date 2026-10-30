@@ -12,6 +12,15 @@
  *   submittedAt  Date       Optional. When the survey was submitted.
  *   items        object     Optional. Survey response items.
  *   score        double     Optional. Computed SRHI score.
+ *   stemVariant  string     Optional. Stem shown above the items, set on
+ *                           submission: 'behaviour' ("{behaviour} is
+ *                           something…") or 'behaviour+cue' ("{behaviour}
+ *                           {cue} is something…", #63). Absent on windows
+ *                           submitted before the field existed, which all
+ *                           showed the 'behaviour' stem.
+ *   stemText     string     Optional. The exact stem text shown, in the
+ *                           participant's app language. Null when the client
+ *                           did not send it.
  *   createdAt    Date       Required.
  */
 
@@ -39,6 +48,11 @@ export const VALIDATOR = {
       submittedAt: { bsonType: ['date', 'null'] },
       items: { bsonType: ['object', 'null'] },
       score: { bsonType: ['double', 'null'] },
+      stemVariant: {
+        bsonType: ['string', 'null'],
+        enum: ['behaviour', 'behaviour+cue', null],
+      },
+      stemText: { bsonType: ['string', 'null'] },
       createdAt: { bsonType: 'date' },
     },
   },

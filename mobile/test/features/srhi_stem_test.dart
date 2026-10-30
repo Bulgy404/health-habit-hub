@@ -1,0 +1,135 @@
+// mobile/test/features/srhi_stem_test.dart
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/features/my_habits/my_habits_models.dart';
+import 'package:hhh/features/my_habits/srhi_stem.dart';
+import 'package:hhh/l10n/app_localizations.dart';
+
+SrhiStem _stem(String lang, String behavior, List<String> cues) =>
+    buildSrhiStem(
+      l10n: lookupAppLocalizations(Locale(lang)),
+      languageCode: lang,
+      behaviorLabel: behavior,
+      cues: [
+        for (final c in cues) IntentionCue(text: c, source: 'self_selected'),
+      ],
+    );
+
+void main() {
+  test('no cue keeps the generic behaviour-only stem', () {
+    final stem = _stem('en', 'Walking', []);
+    expect(stem.text, 'Walking is something…');
+    expect(stem.variant, SrhiStemVariant.behaviour);
+    expect(stem.variant.wire, 'behaviour');
+  });
+
+  test('a cue follows the behaviour, lower-cased mid-sentence', () {
+    final stem = _stem('en', 'Walking', ['After dinner each evening.']);
+    expect(stem.text, 'Walking after dinner each evening is something…');
+    expect(stem.variant.wire, 'behaviour+cue');
+  });
+
+  test('two cues are joined in order', () {
+    final stem = _stem('en', 'Walking', [
+      'After dinner each evening',
+      'at home on weekdays',
+    ]);
+    expect(
+      stem.text,
+      'Walking after dinner each evening at home on weekdays is something…',
+    );
+  });
+
+  test('words written in capitals keep their case', () {
+    expect(
+      _stem('en', 'Watching', ['TV news starts']).text,
+      'Watching TV news starts is something…',
+    );
+  });
+
+  test('a cue typed as a clause gets "when" in front of it', () {
+    expect(
+      _stem('en', 'Stretching', ['I get out of bed']).text,
+      'Stretching when I get out of bed is something…',
+    );
+    expect(
+      _stem('en', 'Get up', ['My alarm goes off']).text,
+      'Get up when my alarm goes off is something…',
+    );
+    expect(
+      _stem('en', 'Stretching', ["I'm out of bed"]).text,
+      "Stretching when I'm out of bed is something…",
+    );
+  });
+
+  test('a phrase cue gets no "when"', () {
+    expect(
+      _stem('en', 'Walking', ['Every morning']).text,
+      'Walking every morning is something…',
+    );
+  });
+
+  test('each cue is handled on its own when joined', () {
+    expect(
+      _stem('en', 'Walking', ['After dinner', 'my partner is home']).text,
+      'Walking after dinner when my partner is home is something…',
+    );
+  });
+
+  test('"when" is translated, and the clause lower-cased', () {
+    expect(
+      _stem('de', 'Aufstehen', ['Mein Wecker klingelt']).text,
+      'Aufstehen wenn mein Wecker klingelt ist etwas,',
+    );
+    expect(
+      _stem('fr', 'Marcher', ['Je rentre du travail']).text,
+      'Marcher quand je rentre du travail est quelque chose…',
+    );
+    expect(
+      _stem('fr', 'Marcher', ["J'arrive au bureau"]).text,
+      "Marcher quand j'arrive au bureau est quelque chose…",
+    );
+    expect(
+      _stem('nl', 'Opstaan', ['Mijn wekker gaat']).text,
+      'Opstaan wanneer mijn wekker gaat is iets…',
+    );
+  });
+
+  test('German only lower-cases function words, never nouns', () {
+    expect(
+      _stem('de', 'Spazieren gehen', ['Nach dem Abendessen']).text,
+      'Spazieren gehen nach dem Abendessen ist etwas,',
+    );
+    expect(
+      _stem('de', 'Dehnen', ['Mittagspause im Büro']).text,
+      'Dehnen Mittagspause im Büro ist etwas,',
+    );
+  });
+
+  test('Japanese puts the cue in parentheses after the behaviour', () {
+    expect(_stem('ja', '散歩', ['毎晩夕食の後に']).text, '散歩（毎晩夕食の後に）は…');
+  });
+
+  test('the stacked-anchor placeholder cue is not a situation', () {
+    final stem = _stem('en', 'Drink coffee', [kAnchorRoutineCueText]);
+    expect(stem.text, 'Drink coffee is something…');
+    expect(stem.variant, SrhiStemVariant.behaviour);
+  });
+
+  test('the pre-rated fallback cue is not a situation', () {
+    // Given when a pre-rated study group has no assigned cues.
+    final stem = buildSrhiStem(
+      l10n: lookupAppLocalizations(const Locale('en')),
+      languageCode: 'en',
+      behaviorLabel: 'Walking',
+      cues: const [
+        IntentionCue(
+          text: '${kPreRatedFallbackCuePrefix}Walking',
+          source: 'pre_rated',
+        ),
+      ],
+    );
+    expect(stem.text, 'Walking is something…');
+    expect(stem.variant, SrhiStemVariant.behaviour);
+  });
+}
