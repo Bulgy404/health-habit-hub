@@ -42,8 +42,56 @@ void main() {
 
   test('words written in capitals keep their case', () {
     expect(
+      _stem('en', 'Watching', ['TV news starts']).text,
+      'Watching TV news starts is something…',
+    );
+  });
+
+  test('a cue typed as a clause gets "when" in front of it', () {
+    expect(
       _stem('en', 'Stretching', ['I get out of bed']).text,
-      'Stretching I get out of bed is something…',
+      'Stretching when I get out of bed is something…',
+    );
+    expect(
+      _stem('en', 'Get up', ['My alarm goes off']).text,
+      'Get up when my alarm goes off is something…',
+    );
+    expect(
+      _stem('en', 'Stretching', ["I'm out of bed"]).text,
+      "Stretching when I'm out of bed is something…",
+    );
+  });
+
+  test('a phrase cue gets no "when"', () {
+    expect(
+      _stem('en', 'Walking', ['Every morning']).text,
+      'Walking every morning is something…',
+    );
+  });
+
+  test('each cue is handled on its own when joined', () {
+    expect(
+      _stem('en', 'Walking', ['After dinner', 'my partner is home']).text,
+      'Walking after dinner when my partner is home is something…',
+    );
+  });
+
+  test('"when" is translated, and the clause lower-cased', () {
+    expect(
+      _stem('de', 'Aufstehen', ['Mein Wecker klingelt']).text,
+      'Aufstehen wenn mein Wecker klingelt ist etwas,',
+    );
+    expect(
+      _stem('fr', 'Marcher', ['Je rentre du travail']).text,
+      'Marcher quand je rentre du travail est quelque chose…',
+    );
+    expect(
+      _stem('fr', 'Marcher', ["J'arrive au bureau"]).text,
+      "Marcher quand j'arrive au bureau est quelque chose…",
+    );
+    expect(
+      _stem('nl', 'Opstaan', ['Mijn wekker gaat']).text,
+      'Opstaan wanneer mijn wekker gaat is iets…',
     );
   });
 

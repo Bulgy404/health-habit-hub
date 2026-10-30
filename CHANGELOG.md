@@ -89,9 +89,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wording, e.g. "Go for a walk after dinner each evening is something…"
   instead of "Go for a walk is something…" (#63). This makes the habit
   measure specific to the planned situation, following Gardner, Rebar & Lally
-  (2022, criteria M4/M5). Habits without a cue, or with only a placeholder
-  cue (an app-created anchor habit, or a pre-rated group's fallback cue),
-  keep the old wording. Every
+  (2022, criteria M4/M5). A cue typed as a clause gets "when" in front of it
+  ("Stretch when I get out of bed is something…"; "wenn", "quand", "wanneer"
+  in German, French and Dutch). Habits without a cue, or with only a
+  placeholder cue (an app-created anchor habit, or a pre-rated group's
+  fallback cue), keep the old wording. Every
   submission now stores which wording was shown (`srhi_responses.stemVariant`,
   plus the exact `stemText`), and the SRHI CSV export has a `stemVariant`
   column so analyses can separate old and new measurements. Check-ins
