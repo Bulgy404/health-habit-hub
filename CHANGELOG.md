@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with no enrolments yet put every user's questionnaire answers in
   `questionnaire_responses.csv`, because an empty id list fell back to an
   unfiltered query. Both now export no rows in that case.
-
 - `anyio` bumped from 4.14.1 to 4.14.2 in `API-service` and `knowledge-mcp`,
   clearing CVE-2026-63374, CVE-2026-64847 and CVE-2026-63349. The dependency
   audit in CI fails on every branch until this lands.
@@ -54,6 +53,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     2026.6.17 → 2026.10.19 in `API-service` and `knowledge-mcp`
     (PYSEC-2026-4320), and pymongo 4.17.0 → 4.18.3 in `API-service` (four
     advisories, PYSEC-2026-4294 to -4297).
+- A third sweep for advisories published since then, which turned CI red on
+  every branch (lockfiles written with npm 10, which CI uses):
+  - `app`, `identity-service`, `backup-service/api`: body-parser 1.20.9
+    (high, DoS via trailing bytes after a compressed body,
+    GHSA-27r3-jxmh-p828), multer 2.5.0 (high, DoS via a pending async
+    fileFilter, GHSA-q7qp-rjg7-q26m), express 4.22.3 and qs 6.17.1
+    (GHSA-6pq8-jhm2-2vcw). `app` and `identity-service` also get ip-address
+    10.7.5 (GHSA-rxp7-6hxx-x8q5).
+  - `app`: zod 4.4.3 → 4.6.7 (high, memory exhaustion on oversized
+    constrained collections, GHSA-mrhx-c7xc-m3w5) and fast-uri 3.1.9 (four
+    URI-parsing advisories).
+  - `identity-service`, `website`: nodemailer 10.0.14 → 10.3.1, fixing three
+    address-parser bugs that could turn display text into a recipient
+    (GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h).
+  - `website`: astro 7.2.9 → 7.4.4 (XSS via unescaped script/style content,
+    GHSA-98hj-9722-w3j8), undici 8.12.3 (four high advisories, including a
+    TLS certificate-validation bypass, GHSA-2m5v-pch6-74hx) and zod 4.6.7.
+  - `API-service`, `knowledge-mcp`: dnspython 2.8.0 → 2.9.0
+    (CVE-2026-114605).
+  - `knowledge-mcp`: Authlib 1.7.2 → 1.9.1 (eight advisories,
+    PYSEC-2026-4354 to -4360 and CVE-2026-96760), fastmcp 3.4.4 → 3.4.11
+    (GHSA-7xgj-8392-5q4r; the newest 3.x, which keeps mcp on 1.x), joserfc
+    1.7.3 → 1.7.6 (CVE-2026-119283, CVE-2026-119284) and opentelemetry-api
+    1.43.0 → 1.45.1 (CVE-2026-114603). CI never reached these, because its
+    pip-audit stopped at the API-service failure.
 - Known and accepted: `braces` still reaches `admin` through
   `eslint-config-next`, which has no release without it. It is a dev-only
   linter that globs our own source files, so it is not reachable at runtime.
