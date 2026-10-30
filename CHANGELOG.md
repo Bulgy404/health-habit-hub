@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- A study export could include other studies' data. Exporting a study that
+  had no habits yet put every study's daily logs in `daily_logs.csv`, and one
+  with no enrolments yet put every user's questionnaire answers in
+  `questionnaire_responses.csv`, because an empty id list fell back to an
+  unfiltered query. Both now export no rows in that case.
+
 - `anyio` bumped from 4.14.1 to 4.14.2 in `API-service` and `knowledge-mcp`,
   clearing CVE-2026-63374, CVE-2026-64847 and CVE-2026-63349. The dependency
   audit in CI fails on every branch until this lands.

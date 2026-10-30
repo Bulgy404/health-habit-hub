@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   buildSrhiCsv,
+  buildDailyLogsCsv,
   buildDropoutCsv,
   buildQuestionnaireResponsesCsv,
 } from '../../services/exportService.js';
@@ -111,6 +112,74 @@ test('buildQuestionnaireResponsesCsv: returns empty CSV when no responses', asyn
   });
   const csv = await buildQuestionnaireResponsesCsv({ db, studyId: null });
   assert.ok(typeof csv === 'string', 'should return a string');
+});
+
+// A db whose finds apply `field: { $in: [...] }` filters, so the tests below
+// can tell a study-scoped query from an unfiltered one.
+function makeFilteringDb({ logs = [], formResponses = [] } = {}) {
+  const matches = (doc, filter) =>
+    Object.entries(filter).every(([field, cond]) =>
+      cond?.$in ? cond.$in.some((v) => String(v) === String(doc[field])) : true
+    );
+  return {
+    collection(name) {
+      if (name === 'daily_behavior_logs')
+        return {
+          find: (f) => ({
+            toArray: async () => logs.filter((d) => matches(d, f)),
+          }),
+        };
+      if (name === 'form_responses')
+        return {
+          find: (f) => ({
+            sort: () => ({
+              toArray: async () => formResponses.filter((d) => matches(d, f)),
+            }),
+          }),
+        };
+      if (name === 'enrollments' || name === 'implementation_intentions')
+        return { find: () => ({ toArray: async () => [] }) };
+      if (name === 'studies') return { findOne: async () => null };
+      throw new Error(`unexpected: ${name}`);
+    },
+  };
+}
+
+test("buildDailyLogsCsv: a study with no habits yet exports no other study's logs", async () => {
+  const db = makeFilteringDb({
+    logs: [
+      {
+        intentionId: new ObjectId(),
+        userId: 'other-study-user',
+        date: '2026-01-02',
+        enacted: true,
+        loggedAt: new Date('2026-01-02T08:00:00Z'),
+      },
+    ],
+  });
+  const csv = await buildDailyLogsCsv({
+    db,
+    studyId: new ObjectId().toString(),
+  });
+  assert.ok(!csv.includes('other-study-user'), "leaked another study's log");
+});
+
+test("buildQuestionnaireResponsesCsv: a study with no enrollments yet exports no other user's answers", async () => {
+  const db = makeFilteringDb({
+    formResponses: [
+      {
+        userId: 'other-study-user',
+        questionnaireSlug: 'baseline',
+        submittedAt: new Date('2026-01-02T08:00:00Z'),
+        answers: { q1: 'private' },
+      },
+    ],
+  });
+  const csv = await buildQuestionnaireResponsesCsv({
+    db,
+    studyId: new ObjectId().toString(),
+  });
+  assert.ok(!csv.includes('other-study-user'), "leaked another user's answers");
 });
 
 test('buildSrhiCsv: missing windows appear as NA rows', async () => {

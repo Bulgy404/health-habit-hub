@@ -96,9 +96,13 @@ export async function buildDailyLogsCsv({ db, studyId }) {
     .toArray();
   const intentionIds = intentions.map((i) => i._id);
 
-  const logFilter = intentionIds.length
-    ? { intentionId: { $in: intentionIds } }
-    : {};
+  // A study export always filters by that study's intentions, so a study with
+  // none yet exports no logs: an empty $in matches nothing, while falling back
+  // to {} would export every other study's logs.
+  const logFilter =
+    studyId || intentionIds.length
+      ? { intentionId: { $in: intentionIds } }
+      : {};
   const logs = await db.collection(LOGS).find(logFilter).toArray();
 
   const iMap = Object.fromEntries(intentions.map((i) => [i._id.toString(), i]));
@@ -141,7 +145,9 @@ export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
   const verified = await isVerified(db, studyId);
   const userIds = Object.keys(eMap);
 
-  const filter = userIds.length ? { userId: { $in: userIds } } : {};
+  // As in buildDailyLogsCsv: a study with no enrollments yet exports no
+  // responses, not every user's.
+  const filter = studyId || userIds.length ? { userId: { $in: userIds } } : {};
   const rows = await db
     .collection(FORM_RESPONSES)
     .find(filter)
