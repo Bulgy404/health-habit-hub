@@ -86,6 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   assignments, the ZIP export and the participant detail behind the analytics
   page were open to every researcher. All of them now need membership too
   (#66).
+- `minimatch` 11.0.3 in `app` and `identity-service`, and `glob` 14.0.3 in
+  `app`, via `overrides` (GHSA-g3hv-75wg-m249, a ReDoS through glob-part
+  amplification, and GHSA-3g3m-2fjr-6pw4, a glob walk that outlives its
+  AbortSignal). Both patched lines are new majors with the same API, and
+  nothing upstream allows them yet. In `app` they reach runtime only through
+  `swagger-jsdoc`, which globs our own route files. Known and accepted, both
+  dev-only in `admin`: `minimatch` 3 through ESLint 8 (needed by
+  `eslint-config-next`), and `deepmerge` 4.3.1 through Jest, which has no
+  patched release (GHSA-gcqx-w48m-w2h4).
 
 ### Added
 
