@@ -174,4 +174,4 @@ export function createAuthMiddleware({
 }
 
 export { requireRole } from './requireRole.js';
-export { ROLES, isPrivileged } from './roles.js';
+export { ROLES, PORTAL_ROLES, isPrivileged, isStudyScoped } from './roles.js';

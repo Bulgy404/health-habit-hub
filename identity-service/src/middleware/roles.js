@@ -18,6 +18,7 @@ export const IDENTITY_ROLES = Object.freeze({
 /** Roles from the research platform. Present here only to be excluded. */
 export const RESEARCH_ROLES = Object.freeze({
   RESEARCHER: 'researcher',
+  STUDY_RESEARCHER: 'study-researcher',
   ADMIN: 'admin',
 });
 
@@ -30,6 +31,8 @@ const ALL_IDENTITY_ROLES = Object.values(IDENTITY_ROLES);
  * research data must not also be able to resolve those pseudonyms to people.
  * That is what makes the data genuinely pseudonymous rather than
  * pseudonymous-in-name-only, and it is the property an ethics board looks for.
+ * `study-researcher` analyses the same data for fewer studies, so the same
+ * rule applies to it.
  *
  * `admin` is deliberately NOT here. An admin may hold `monitor` (approving a
  * re-identification is a reasonable operational duty), but is barred from the
@@ -37,6 +40,7 @@ const ALL_IDENTITY_ROLES = Object.values(IDENTITY_ROLES);
  */
 export const MUTUALLY_EXCLUSIVE_WITH_IDENTITY = Object.freeze([
   RESEARCH_ROLES.RESEARCHER,
+  RESEARCH_ROLES.STUDY_RESEARCHER,
 ]);
 
 /**

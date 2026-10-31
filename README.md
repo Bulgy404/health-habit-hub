@@ -69,7 +69,7 @@ Better participation  →  Richer graph  →  Better recommendations  →  More 
 
 Health Habit Hub is a research platform for studying health habits. Participants describe their personal health habits through a mobile app. The system stores, classifies, and organises those habits using a knowledge graph, then generates personalised recommendations using LLMs grounded in a researcher-curated knowledge base.
 
-Researchers and admins manage studies, questionnaires, and the knowledge base through a web portal.
+Researchers and admins manage studies, questionnaires, and the knowledge base through a web portal. A researcher can be given the whole research side of the portal, or only the studies an admin assigns them — useful for a partner from another institution who should see their own study and nothing else.
 
 **Verified identity mode (optional, per study).** Anonymity is the default and
 is unchanged: accounts carry no name, email or phone, and every existing study
@@ -147,6 +147,7 @@ permanently recorded. See
 | ------------ | -------------------------------------------------------------------------------------------------------------- |
 | `user`       | Mobile app participant — donates habits, fills questionnaires, receives recommendations, takes part in studies |
 | `researcher` | Admin portal — studies, questionnaires, cue pools, analytics, exports, notification campaigns                  |
+| `study-researcher` | Admin portal limited to the studies an admin assigned them (each study's **Access** tab) — no other studies, no shared configuration |
 | `admin`      | Admin portal — everything above plus participants, knowledge base, and platform settings                       |
 
 The full actor/use-case mapping lives in the [use case overview](docs/diagrams/use-cases/use-case-overview.md).

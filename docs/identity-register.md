@@ -42,14 +42,15 @@ A realm role says **what** someone may do. An assignment in the register says
 | `identity-manager` | register config, roster CRUD and CSV import, mint/revoke codes, send invites, raise re-identification requests | approve their own request; see research data |
 | `study-nurse` | read the roster for assigned sites, print code sheets, mark in-person verification, issue replacement codes | edit register config, import CSV, raise requests |
 | `monitor` | subject codes, verification status, all audit logs, audit export, **approve** re-identification | plaintext PII outside an approved reveal; research data |
-| `researcher` | **nothing here** | — |
+| `researcher`, `study-researcher` | **nothing here** | — |
 | `admin` | set `identity.mode` on a study; may hold `monitor` | `identity-manager`, `study-nurse` |
 
 **Two combinations are refused at runtime**, not merely discouraged:
 
-- `researcher` + any identity role → `403 role_separation_violation`.
-  This is the property that makes the research data genuinely pseudonymous:
-  the person analysing it cannot resolve the pseudonyms.
+- `researcher` or `study-researcher` + any identity role →
+  `403 role_separation_violation`. This is the property that makes the
+  research data genuinely pseudonymous: the person analysing it cannot
+  resolve the pseudonyms.
 - `admin` + `identity-manager`/`study-nurse` → `403 admin_role_separation_violation`.
   An admin may approve, never request.
 
@@ -92,9 +93,9 @@ identity provider the operator does not control; see the plan's §5.
    someone is assigned they see nothing, whatever realm role they hold — the
    creator is assigned automatically so the register is never orphaned, and
    removing the last `identity-manager` is refused for the same reason.
-7. On a verified study, researchers are **scoped**: name them under *Researcher
-   access* on the study's Identity tab, choosing read or read + export. Without
-   an entry the `researcher` role grants nothing on that study.
+7. On a verified study, researchers are **scoped**: name them on the study's
+   **Access** tab, choosing read or read + export. Without an entry the
+   `researcher` role grants nothing on that study.
 
 > A consent slug with no matching document 404s the participant **after** they
 > have enrolled. Attaching one that is not ready is therefore **refused**
@@ -274,9 +275,11 @@ Anonymous studies stay **open**, exactly as before, so nothing existing changed
 the day this shipped. Admins always pass: scoping limits researchers to their
 own studies, it does not lock operators out of the platform they run.
 
-Members are managed under *Researcher access* on the study's **Identity** tab.
-Adding someone to an anonymous study is allowed and simply has no effect yet;
-the panel says so rather than letting it look as though nothing happened.
+Members are managed on the study's **Access** tab (admins only). On an
+anonymous study the list matters only for accounts with the `study-researcher`
+role, which see a study only if they are listed; the panel says so rather than
+letting it look as though nothing happened. `study-researcher`, like
+`researcher`, may not be combined with an identity role.
 
 Study existence is deliberately **not** secret — a non-member sees the study in
 the list and a 403 on its detail. Hiding it would make the studies page look

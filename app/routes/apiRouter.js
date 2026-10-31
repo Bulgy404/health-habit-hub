@@ -2,7 +2,11 @@ import cors from 'cors';
 import express from 'express';
 import neo4j from 'neo4j-driver';
 import swaggerUi from 'swagger-ui-express';
-import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
+import {
+  createAuthMiddleware,
+  ROLES,
+  PORTAL_ROLES,
+} from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
 import {
   apiRateLimiter,
@@ -243,10 +247,12 @@ export function createApiRouter({
   // while it's being dropped and reloaded underneath it.
   router.use(maintenanceModeGuard({ getDb: makeGetDb(db) }));
 
-  // Admin routes: require admin or researcher role
+  // Admin routes: require admin, researcher or study-researcher role. What a
+  // study-researcher may reach inside is decided by the admin router's
+  // studyScopeGuard (#66).
   router.use(
     '/admin',
-    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    requireRole(...PORTAL_ROLES),
     createAdminRouter({
       db,
       neo4jRun: runNeo4j,
@@ -319,14 +325,15 @@ export function createApiRouter({
   // handler was unreachable.
   router.use(
     '/admin/studies/:id/export/zip',
-    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    requireRole(...PORTAL_ROLES),
     createStudyExportRouter({ db })
   );
 
-  // Researcher notification campaigns (admin + researcher only)
+  // Researcher notification campaigns (admin + researcher; a study-researcher
+  // only for their own studies, enforced by studyScopeGuard)
   router.use(
     '/admin/notifications',
-    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    requireRole(...PORTAL_ROLES),
     createNotificationCampaignRouter({ db, neo4jRun: runNeo4j })
   );
 

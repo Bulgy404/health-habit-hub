@@ -81,8 +81,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Known and accepted: `braces` still reaches `admin` through
   `eslint-config-next`, which has no release without it. It is a dev-only
   linter that globs our own source files, so it is not reachable at runtime.
+- On a verified study, membership protected only the study's detail page and
+  its JSON export. Its participants, codes, analytics, questionnaire
+  assignments, the ZIP export and the participant detail behind the analytics
+  page were open to every researcher. All of them now need membership too
+  (#66).
 
 ### Added
+
+- Researchers who see only their own studies (#66). A new realm role,
+  `study-researcher` ("Assigned studies only" in the portal), opens the admin
+  portal but shows only the studies an admin has added the account to on the
+  study's new **Access** tab, which used to sit inside the Identity tab. On
+  those studies it works like a researcher (settings, groups, codes,
+  participants, questionnaire assignments, analytics, notification
+  campaigns), and export needs an export membership. It cannot create,
+  delete or default a study, change its identity mode, or reach anything
+  shared across studies: participants list, cue pools, questionnaire editing,
+  comments, insights, settings, team, backups, audit log. The backend uses an
+  allowlist, so an admin route added later stays closed to the role until
+  someone opens it. Existing `researcher` accounts keep their access. The
+  Team & Roles page grants the role, and the identity service refuses it
+  alongside an identity-register role, like `researcher`. Keycloak gets the
+  role from the realm file on a fresh install and from `keycloak-init` on an
+  existing one.
 
 - After ticking today's habit, the app asks an optional one-tap follow-up:
   "In the planned situation? Yes / No, elsewhere / Not sure" (#64). It sits

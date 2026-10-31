@@ -71,6 +71,13 @@ describe("middleware", () => {
     expect(res.status).toBe(200);
   });
 
+  it("passes through when user has study-researcher role (#66)", async () => {
+    mockedGetToken.mockResolvedValueOnce({ roles: ["study-researcher"] } as never);
+    const req = makeRequest("/studies");
+    const res = await middleware(req);
+    expect(res.status).toBe(200);
+  });
+
   it("redirects to /access-denied when user has wrong role", async () => {
     mockedGetToken.mockResolvedValueOnce({ roles: ["user"] } as never);
     const req = makeRequest("/dashboard");

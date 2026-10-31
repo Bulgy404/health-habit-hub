@@ -261,10 +261,10 @@
   },
   "team": {
     "title": "Team & Rollen",
-    "subtitle": "Verwalten Sie, wer Admin- oder Forschungszugriff hat. Rollenänderungen wirken sofort.",
+    "subtitle": "Verwalten Sie, wer Admin- oder Forschungszugriff hat. Rollenänderungen wirken bei der nächsten Anmeldung oder Token-Erneuerung (innerhalb weniger Minuten).",
     "manageRoles": "Rollen verwalten",
     "assignRole": "Rolle zuweisen",
-    "assignRoleSubtitle": "Suchen Sie ein bestehendes Konto und gewähren oder ändern Sie dessen Admin- oder Forschungsrolle.",
+    "assignRoleSubtitle": "Suchen Sie ein bestehendes Konto und weisen Sie ihm eine Rolle zu. „Nur zugewiesene Studien“ beschränkt eine Forscherin oder einen Forscher auf die Studien, zu denen Sie sie im Tab „Zugang“ der jeweiligen Studie hinzufügen.",
     "searchPlaceholder": "Nach Benutzername oder E-Mail suchen",
     "searchButton": "Suchen",
     "noSearchResults": "Keine passenden Konten gefunden.",
@@ -273,10 +273,12 @@
     "actions": "Aktionen",
     "grantAdmin": "Admin gewähren",
     "grantResearcher": "Forschungszugriff gewähren",
+    "grantStudyResearcher": "Nur zugewiesene Studien gewähren",
     "revoke": "Entziehen",
     "revokeConfirm": "{role} von {username} entziehen?",
     "roleAdmin": "Admin",
     "roleResearcher": "Forschung",
+    "roleStudyResearcher": "Nur zugewiesene Studien",
     "noMembers": "Aktuell hat niemand Admin- oder Forschungszugriff.",
     "loadFailed": "Team konnte nicht geladen werden",
     "searchFailed": "Suche fehlgeschlagen",
@@ -856,7 +858,8 @@
       "default": "Standard",
       "groups": "Gruppen",
       "participants": "Teilnehmende",
-      "noStudiesYet": "Noch keine Studien. Klicke auf „{button}“, um eine zu erstellen."
+      "noStudiesYet": "Noch keine Studien. Klicke auf „{button}“, um eine zu erstellen.",
+      "noStudiesAssigned": "Dir wurde noch keine Studie zugewiesen. Bitte eine Administratorin oder einen Administrator, dich zu einer Studie hinzuzufügen."
     },
     "modal": {
       "editTitle": "Studie bearbeiten",
@@ -873,7 +876,8 @@
         "reminders": "Erinnerungen",
         "behaviorChange": "Verhaltensänderung",
         "gamification": "Gamification",
-        "identity": "Identität"
+        "identity": "Identität",
+        "access": "Zugang"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -1443,7 +1447,7 @@
     "members": {
       "title": "Zugriff für Forschende",
       "enforced": "Diese Studie ist zugriffsbeschränkt: die Rolle researcher allein genügt hier nicht. Nur die unten genannten Personen können sie öffnen, und nur mit „Export“ auch den Datensatz herunterladen. Administratoren haben immer Zugriff.",
-      "open": "Diese Studie ist offen — alle Forschenden können sie bereits lesen, Einträge hier haben daher noch keine Wirkung. Sie greifen, sobald die Studie auf Identitätsprüfung umgestellt wird.",
+      "open": "Diese Studie ist offen: Alle mit der vollen Rolle „Forschung“ können sie bereits lesen. Konten mit „Nur zugewiesene Studien“ sehen sie nur, wenn sie hier eingetragen sind, und können ihre Daten nur mit Export herunterladen.",
       "user": "Person",
       "role": "Rolle",
       "access": "Zugriff",

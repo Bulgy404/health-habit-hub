@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { Modal } from "@/components/modal";
 import { useAdminGuard } from "@/lib/useAdminGuard";
+import { STUDY_RESEARCHER } from "@/lib/roles";
 import styles from "@/components/admin-page.module.css";
 
 interface Member {
@@ -20,12 +21,20 @@ interface SearchResult {
   email: string | null;
 }
 
-const MANAGEABLE_ROLES = ["admin", "researcher"];
+const MANAGEABLE_ROLES = ["admin", "researcher", STUDY_RESEARCHER];
+
+/** Message-key suffix for a role: "study-researcher" → "StudyResearcher". */
+function roleKey(role: string): string {
+  return role
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
 
 /**
- * Team & Roles — surfaces and edits who holds the admin/researcher realm
- * roles, which otherwise live entirely in the Keycloak console with no
- * in-app visibility.
+ * Team & Roles — surfaces and edits who holds the admin/researcher/
+ * study-researcher realm roles, which otherwise live entirely in the Keycloak
+ * console with no in-app visibility.
  */
 export default function TeamPage() {
   const { token } = useAdminGuard();
@@ -96,7 +105,7 @@ export default function TeamPage() {
 
   async function handleRevoke(userId: string, username: string, role: string) {
     if (!token) return;
-    if (!window.confirm(t("revokeConfirm", { role: t(`role${cap(role)}`), username }))) return;
+    if (!window.confirm(t("revokeConfirm", { role: t(`role${roleKey(role)}`), username }))) return;
     setBusyUserId(userId);
     try {
       await apiFetch(apiUrl(`/admin/team/${userId}/roles/${role}`), token, {
@@ -108,10 +117,6 @@ export default function TeamPage() {
     } finally {
       setBusyUserId(null);
     }
-  }
-
-  function cap(s: string): string {
-    return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
   return (
@@ -171,7 +176,7 @@ export default function TeamPage() {
                   <td>
                     {m.roles.map((r) => (
                       <span key={r} className={styles.badge} style={{ marginRight: 6 }}>
-                        {t(`role${cap(r)}`)}
+                        {t(`role${roleKey(r)}`)}
                       </span>
                     ))}
                   </td>
@@ -184,7 +189,7 @@ export default function TeamPage() {
                         onClick={() => handleRevoke(m.id, m.username, r)}
                         style={{ marginRight: 6 }}
                       >
-                        {t("revoke")} {t(`role${cap(r)}`)}
+                        {t("revoke")} {t(`role${roleKey(r)}`)}
                       </button>
                     ))}
                   </td>
@@ -248,7 +253,7 @@ export default function TeamPage() {
                       onClick={() => handleGrant(u.id, role)}
                       style={{ marginLeft: 6 }}
                     >
-                      {t(`grant${cap(role)}`)}
+                      {t(`grant${roleKey(role)}`)}
                     </button>
                   ))}
                 </span>

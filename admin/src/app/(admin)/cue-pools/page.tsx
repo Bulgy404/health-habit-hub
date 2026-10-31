@@ -9,6 +9,7 @@ import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
 import sharedStyles from "@/components/admin-page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
+import { useResearcherGuard } from "@/lib/useResearcherGuard";
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
 type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
@@ -37,6 +38,7 @@ const API_BASE = apiUrl("/admin/cue-pools");
  * @returns The cue pools management page.
  */
 export default function CuePoolsPage() {
+  useResearcherGuard();
   const { data: session } = useSession();
   const t = useTranslations("cuePools");
   const tc = useTranslations("common");

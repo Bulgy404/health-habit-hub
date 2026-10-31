@@ -261,10 +261,10 @@
   },
   "team": {
     "title": "Team & rollen",
-    "subtitle": "Beheer wie admin- of onderzoekerstoegang heeft. Rolwijzigingen gaan direct in.",
+    "subtitle": "Beheer wie admin- of onderzoekerstoegang heeft. Rolwijzigingen gaan in bij de volgende aanmelding of tokenvernieuwing (binnen enkele minuten).",
     "manageRoles": "Rollen beheren",
     "assignRole": "Rol toewijzen",
-    "assignRoleSubtitle": "Zoek een bestaand account en ken de admin- of onderzoekersrol toe of wijzig deze.",
+    "assignRoleSubtitle": "Zoek een bestaand account en ken het een rol toe. “Alleen toegewezen studies” beperkt een onderzoeker tot de studies waaraan je hem of haar toevoegt op het tabblad Toegang van elke studie.",
     "searchPlaceholder": "Zoeken op gebruikersnaam of e-mail",
     "searchButton": "Zoeken",
     "noSearchResults": "Geen bijpassende accounts gevonden.",
@@ -273,10 +273,12 @@
     "actions": "Acties",
     "grantAdmin": "Admin toekennen",
     "grantResearcher": "Onderzoeker toekennen",
+    "grantStudyResearcher": "Alleen toegewezen studies toekennen",
     "revoke": "Intrekken",
     "revokeConfirm": "{role} van {username} intrekken?",
     "roleAdmin": "Admin",
     "roleResearcher": "Onderzoeker",
+    "roleStudyResearcher": "Alleen toegewezen studies",
     "noMembers": "Niemand heeft momenteel admin- of onderzoekerstoegang.",
     "loadFailed": "Kan het team niet laden",
     "searchFailed": "Zoeken mislukt",
@@ -856,7 +858,8 @@
       "default": "Standaard",
       "groups": "Groepen",
       "participants": "Deelnemers",
-      "noStudiesYet": "Nog geen studies. Klik op \"{button}\" om er een aan te maken."
+      "noStudiesYet": "Nog geen studies. Klik op \"{button}\" om er een aan te maken.",
+      "noStudiesAssigned": "Er zijn nog geen studies aan je toegewezen. Vraag een beheerder om je aan een studie toe te voegen."
     },
     "modal": {
       "editTitle": "Studie bewerken",
@@ -873,7 +876,8 @@
         "reminders": "Herinneringen",
         "behaviorChange": "Gedragsverandering",
         "gamification": "Gamification",
-        "identity": "Identiteit"
+        "identity": "Identiteit",
+        "access": "Toegang"
       },
       "fields": {
         "nameLabel": "Naam *",
@@ -1443,7 +1447,7 @@
     "members": {
       "title": "Toegang voor onderzoekers",
       "enforced": "Deze studie is afgeschermd: de rol researcher alleen geeft hier niets. Alleen de personen hieronder kunnen haar openen, en alleen wie export heeft kan de dataset downloaden. Beheerders hebben altijd toegang.",
-      "open": "Deze studie is open — alle onderzoekers kunnen haar al lezen, dus vermeldingen hier hebben nog geen effect. Ze gaan gelden zodra de studie op geverifieerde identiteit wordt gezet.",
+      "open": "Deze studie is open: iedereen met de volledige rol Onderzoeker kan haar al lezen. Accounts met “Alleen toegewezen studies” zien haar alleen als ze hier vermeld staan, en kunnen haar gegevens alleen met export downloaden.",
       "user": "Persoon",
       "role": "Rol",
       "access": "Toegang",

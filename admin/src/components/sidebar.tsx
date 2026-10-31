@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
 import { signOutOfKeycloak } from "@/lib/keycloakSignOut";
+import { isStudyScoped } from "@/lib/roles";
 import { ThemeToggle } from "./theme-toggle";
 import styles from "./sidebar.module.css";
 
@@ -50,6 +51,12 @@ interface NavItem {
    * and a `study-nurse` is not an admin.
    */
   identityOnly?: boolean;
+  /**
+   * Shown to a `study-researcher` too (#66). Everything else in the research
+   * and configuration sections is shared across studies, so it stays hidden
+   * from an account limited to its member studies.
+   */
+  studyScoped?: boolean;
 }
 
 interface NavSection {
@@ -61,8 +68,8 @@ const NAV_SECTIONS: NavSection[] = [
   {
     titleKey: "research",
     items: [
-      { href: "/studies", labelKey: "studies", Icon: FlaskConical },
-      { href: "/analytics", labelKey: "analytics", Icon: BarChart2 },
+      { href: "/studies", labelKey: "studies", Icon: FlaskConical, studyScoped: true },
+      { href: "/analytics", labelKey: "analytics", Icon: BarChart2, studyScoped: true },
       {
         href: "/identity",
         labelKey: "identity",
@@ -123,7 +130,7 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     titleKey: "support",
-    items: [{ href: "/help", labelKey: "help", Icon: HelpCircle }],
+    items: [{ href: "/help", labelKey: "help", Icon: HelpCircle, studyScoped: true }],
   },
 ];
 
@@ -154,6 +161,7 @@ export function Sidebar() {
   const hasIdentityRole = ["identity-manager", "study-nurse", "monitor"].some(
     (r) => (session?.roles ?? []).includes(r)
   );
+  const studyScoped = isStudyScoped(session?.roles);
 
   // Close the drawer automatically on navigation (small-screen use case).
   useEffect(() => {
@@ -222,7 +230,8 @@ export function Sidebar() {
             const visible = section.items.filter(
               (item) =>
                 (!item.adminOnly || isAdmin) &&
-                (!item.identityOnly || hasIdentityRole)
+                (!item.identityOnly || hasIdentityRole) &&
+                (!studyScoped || item.studyScoped)
             );
             if (visible.length === 0) return null;
             return (

@@ -6,12 +6,16 @@ import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'teamRouter' });
 
-const MANAGEABLE_ROLES = [ROLES.ADMIN, ROLES.RESEARCHER];
+const MANAGEABLE_ROLES = [
+  ROLES.ADMIN,
+  ROLES.RESEARCHER,
+  ROLES.STUDY_RESEARCHER,
+];
 
 /**
  * Admin "Team & Roles" management — surfaces and edits who holds the
- * `admin`/`researcher` realm roles, which today live entirely in the
- * Keycloak console with no in-app visibility.
+ * `admin`/`researcher`/`study-researcher` realm roles, which otherwise live
+ * entirely in the Keycloak console with no in-app visibility.
  *
  * @param {{ db?: import('mongodb').Db, keycloak?: object }} deps
  */
@@ -19,8 +23,8 @@ export function createTeamRouter({ keycloak } = {}) {
   const router = express.Router();
   const kcAdmin = keycloak || createKeycloakAdminClient();
 
-  // GET /api/v1/admin/team — list current admin+researcher role holders,
-  // merged by user id (a user can hold both roles).
+  // GET /api/v1/admin/team — list current holders of MANAGEABLE_ROLES,
+  // merged by user id (a user can hold several of them).
   router.get('/team', requireRole(ROLES.ADMIN), async (req, res) => {
     try {
       const byRole = await Promise.all(
@@ -66,7 +70,7 @@ export function createTeamRouter({ keycloak } = {}) {
     }
   });
 
-  // POST /api/v1/admin/team/:userId/roles — grant admin or researcher.
+  // POST /api/v1/admin/team/:userId/roles — grant one of MANAGEABLE_ROLES.
   router.post(
     '/team/:userId/roles',
     requireRole(ROLES.ADMIN),
@@ -91,7 +95,7 @@ export function createTeamRouter({ keycloak } = {}) {
     }
   );
 
-  // DELETE /api/v1/admin/team/:userId/roles/:role — revoke admin or researcher.
+  // DELETE /api/v1/admin/team/:userId/roles/:role — revoke one of MANAGEABLE_ROLES.
   router.delete(
     '/team/:userId/roles/:role',
     requireRole(ROLES.ADMIN),

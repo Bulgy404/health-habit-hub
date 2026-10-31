@@ -221,6 +221,9 @@ services:
       /opt/keycloak/bin/kcadm.sh update realms/hhh -s sslRequired=none &&
       /opt/keycloak/bin/kcadm.sh update realms/hhh -s offlineSessionIdleTimeout=15552000 -s offlineSessionMaxLifespanEnabled=false &&
       /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
+      for R in study-researcher identity-manager study-nurse monitor; do
+        /opt/keycloak/bin/kcadm.sh create roles -r hhh -s name=$$R 2>/dev/null || true;
+      done &&
       BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
       ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
