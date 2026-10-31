@@ -252,6 +252,21 @@ describe('study-researcher', () => {
     assert.equal((await call('GET', '/questionnaires')).status, 200);
   });
 
+  test('may read the activity-type catalog but not change it', async () => {
+    // The study page labels a structured-entry study's activities from it;
+    // the catalog itself is shared by every study.
+    asPartner();
+    assert.equal((await call('GET', '/activity-types')).status, 200);
+    for (const [method, path] of [
+      ['POST', '/activity-types'],
+      ['PATCH', '/activity-types/walking'],
+      ['DELETE', '/activity-types/walking'],
+    ]) {
+      const r = await call(method, path, method === 'DELETE' ? undefined : {});
+      assert.equal(r.status, 403, `${method} ${path}`);
+    }
+  });
+
   test('lists notification campaigns only for a member study', async () => {
     asPartner();
     assert.equal(

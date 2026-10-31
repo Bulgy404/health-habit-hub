@@ -1042,7 +1042,8 @@
       },
       "directDefault": "direct/standaard",
       "errors": {
-        "loadFailed": "Deelnemers konden niet worden geladen"
+        "loadFailed": "Deelnemers konden niet worden geladen",
+        "exportNotPermitted": "Je toegang tot deze studie omvat geen export van de gegevens. Vraag een beheerder om exporttoegang."
       }
     },
     "notificationsTab": {

@@ -65,7 +65,8 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [x] Toggle onboarding on/off
 - [ ] Toggle self-service habit creation on/off
 - [ ] Switch habit entry mode between free-text and structured; when structured, manage the
-      activity-type catalog (`ActivityTypesManager`)
+      activity-type catalog (`ActivityTypesManager`, shown to admins only; researchers pick
+      from the catalog but cannot change it)
 - [ ] Set/clear the study end date
 - [ ] Change the number of groups (G1–Gn) and edit group labels; confirm the
       removal-warning appears when shrinking group count

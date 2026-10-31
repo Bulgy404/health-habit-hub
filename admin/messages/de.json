@@ -859,7 +859,7 @@
       "groups": "Gruppen",
       "participants": "Teilnehmende",
       "noStudiesYet": "Noch keine Studien. Klicke auf „{button}“, um eine zu erstellen.",
-      "noStudiesAssigned": "Dir wurde noch keine Studie zugewiesen. Bitte eine Administratorin oder einen Administrator, dich zu einer Studie hinzuzufügen."
+      "noStudiesAssigned": "Ihnen wurde noch keine Studie zugewiesen. Bitten Sie eine Administratorin oder einen Administrator, Sie zu einer Studie hinzuzufügen."
     },
     "modal": {
       "editTitle": "Studie bearbeiten",
@@ -1093,7 +1093,8 @@
       },
       "directDefault": "direkt/Standard",
       "errors": {
-        "loadFailed": "Teilnehmende konnten nicht geladen werden"
+        "loadFailed": "Teilnehmende konnten nicht geladen werden",
+        "exportNotPermitted": "Ihr Zugang zu dieser Studie erlaubt keinen Datenexport. Bitten Sie eine Administratorin oder einen Administrator um Exportzugriff."
       }
     },
     "notificationsTab": {

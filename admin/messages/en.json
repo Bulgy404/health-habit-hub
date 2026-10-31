@@ -1093,7 +1093,8 @@
       },
       "directDefault": "direct/default",
       "errors": {
-        "loadFailed": "Failed to load participants"
+        "loadFailed": "Failed to load participants",
+        "exportNotPermitted": "Your access to this study doesn't include exporting its data. Ask an administrator for export access."
       }
     },
     "notificationsTab": {

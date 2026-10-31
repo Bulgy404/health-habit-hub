@@ -1042,7 +1042,8 @@
       },
       "directDefault": "direct/par défaut",
       "errors": {
-        "loadFailed": "Échec du chargement des participants"
+        "loadFailed": "Échec du chargement des participants",
+        "exportNotPermitted": "Votre accès à cette étude ne permet pas d'exporter ses données. Demandez un accès à l'export à un administrateur."
       }
     },
     "notificationsTab": {

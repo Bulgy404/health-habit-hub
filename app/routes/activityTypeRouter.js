@@ -3,6 +3,8 @@ import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
 import { validate } from '../middleware/validate.js';
+import { requireRole } from '../middleware/requireRole.js';
+import { ROLES } from '../middleware/roles.js';
 import {
   createActivityTypeSchema,
   updateActivityTypeSchema,
@@ -19,11 +21,15 @@ const log = logger.child({ module: 'activityTypeRouter' });
 /**
  * Activity Type router — manages the platform-wide catalog of activity types.
  *
- * Routes (all require admin role, enforced in adminRouter):
+ * Routes:
  *   GET    /api/v1/admin/activity-types           — list all activity types
  *   POST   /api/v1/admin/activity-types           — create a new activity type
  *   PATCH  /api/v1/admin/activity-types/:key      — update label or isDefault flag
  *   DELETE /api/v1/admin/activity-types/:key      — delete an activity type
+ *
+ * Any portal role may list the catalog, because a study's habit-creation
+ * settings label its activities from it. Changing it is admin-only, since
+ * every study shares it.
  */
 export function createActivityTypeRouter({ db } = {}) {
   const router = express.Router();
@@ -42,39 +48,45 @@ export function createActivityTypeRouter({ db } = {}) {
   });
 
   // POST /api/v1/admin/activity-types
-  router.post('/', validate(createActivityTypeSchema), async (req, res) => {
-    try {
-      const {
-        key,
-        label_en,
-        label_de,
-        label_ja,
-        label_fr,
-        label_nl,
-        isDefault,
-      } = req.body;
-      const database = await getDb();
-      const result = await createActivityType(database, {
-        key,
-        label_en,
-        label_de,
-        label_ja,
-        label_fr,
-        label_nl,
-        isDefault,
-      });
-      if (result.error)
-        return res.status(result.status ?? 400).json({ error: result.error });
-      res.status(201).json(result);
-    } catch (err) {
-      log.error({ err }, '[activity-types] POST /');
-      res.status(500).json({ error: 'Internal server error' });
+  router.post(
+    '/',
+    requireRole(ROLES.ADMIN),
+    validate(createActivityTypeSchema),
+    async (req, res) => {
+      try {
+        const {
+          key,
+          label_en,
+          label_de,
+          label_ja,
+          label_fr,
+          label_nl,
+          isDefault,
+        } = req.body;
+        const database = await getDb();
+        const result = await createActivityType(database, {
+          key,
+          label_en,
+          label_de,
+          label_ja,
+          label_fr,
+          label_nl,
+          isDefault,
+        });
+        if (result.error)
+          return res.status(result.status ?? 400).json({ error: result.error });
+        res.status(201).json(result);
+      } catch (err) {
+        log.error({ err }, '[activity-types] POST /');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // PATCH /api/v1/admin/activity-types/:key
   router.patch(
     '/:key',
+    requireRole(ROLES.ADMIN),
     validate(updateActivityTypeSchema),
     async (req, res) => {
       try {
@@ -92,7 +104,7 @@ export function createActivityTypeRouter({ db } = {}) {
   );
 
   // DELETE /api/v1/admin/activity-types/:key
-  router.delete('/:key', async (req, res) => {
+  router.delete('/:key', requireRole(ROLES.ADMIN), async (req, res) => {
     try {
       const database = await getDb();
       const result = await deleteActivityType(database, req.params.key);

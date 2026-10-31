@@ -34,8 +34,10 @@ const STUDY_ROUTES = [
   ['GET', /^\/analytics$/],
 ];
 
-// Outside a study: the study list (filtered below) and the questionnaire
-// library, which the study page reads to offer questionnaires for assignment.
+// Outside a study: the study list (filtered below), the questionnaire library,
+// which the study page reads to offer questionnaires for assignment, and the
+// activity-type catalog, which it reads to label a structured-entry study's
+// activities. Both are read only and hold no study's data.
 // Notification campaigns are handled separately because the study they belong
 // to is in the query, the body or the stored campaign rather than the path.
 const OTHER_ROUTES = [
@@ -43,6 +45,7 @@ const OTHER_ROUTES = [
   ['GET', /^\/studies\/?$/],
   ['GET', /^\/questionnaires\/?$/],
   ['GET', /^\/questionnaires\/[^/]+$/],
+  ['GET', /^\/activity-types\/?$/],
 ];
 
 // One participant's detail, which the analytics page opens from a study's
@@ -85,8 +88,8 @@ function forbidden(res) {
  *
  * - A `study-researcher` is held to an allowlist: their member studies'
  *   pages, their participants' details, the filtered study list, the
- *   questionnaire library (read only) and notification campaigns for their
- *   studies. Anything else, including any admin route added later, is a 403
+ *   questionnaire library and activity-type catalog (read only) and
+ *   notification campaigns for their studies. Anything else, including any admin route added later, is a 403
  *   until someone decides otherwise.
  *
  * @param {{ getDb: () => Promise<import('mongodb').Db> }} deps

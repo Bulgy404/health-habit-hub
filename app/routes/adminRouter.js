@@ -1041,11 +1041,8 @@ export function createAdminRouter({
     createProfileFieldDefinitionsAdminRouter({ db })
   );
 
-  router.use(
-    '/activity-types',
-    requireRole(ROLES.ADMIN),
-    createActivityTypeRouter({ db })
-  );
+  // Listing is open to every portal role; the router keeps changes admin-only.
+  router.use('/activity-types', createActivityTypeRouter({ db }));
 
   // Role checks for these live on their own routes (scoped per-path) rather
   // than here — a requireRole gate on this catch-all '/' mount would run for

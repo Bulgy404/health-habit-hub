@@ -626,7 +626,7 @@ flowchart TD
     check -- not a member --> m403([403 not_a_study_member])
     study -- no --> scoped{study-researcher?}
     scoped -- no --> pass
-    scoped -- yes --> allow2{"study list, questionnaire library,<br/>own participants, own campaigns?"}
+    scoped -- yes --> allow2{"study list, questionnaire library,<br/>activity catalog (read),<br/>own participants, own campaigns?"}
     allow2 -- yes --> pass
     allow2 -- no --> r403
 ```

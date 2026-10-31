@@ -1538,6 +1538,7 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
   const [loadError, setLoadError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportingZip, setExportingZip] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const fetchPage = useCallback(
     async (p: number) => {
@@ -1563,6 +1564,7 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
 
   async function handleDownloadCsv() {
     setExporting(true);
+    setExportError("");
     try {
       // Fetch all records (up to 500)
       const data = await apiFetch(`${PARTICIPANTS_BASE}?page=1&limit=500`, token);
@@ -1586,7 +1588,7 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // silently fail on export errors
+      setExportError(t("modal.errors.downloadFailed"));
     } finally {
       setExporting(false);
     }
@@ -1596,11 +1598,20 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
 
   async function handleExportZip() {
     setExportingZip(true);
+    setExportError("");
     try {
       const res = await fetch(EXPORT_BASE, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // A 403 here is a study member whose access is read-only (#66).
+      if (res.status === 403) {
+        setExportError(t("participantsTab.errors.exportNotPermitted"));
+        return;
+      }
+      if (!res.ok) {
+        setExportError(t("modal.errors.exportFailedHttp", { status: res.status }));
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1609,7 +1620,7 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      // silently fail
+      setExportError(t("modal.errors.downloadFailed"));
     } finally {
       setExportingZip(false);
     }
@@ -1659,6 +1670,11 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
       </div>
 
       {loadError && <div className={styles.errorMsg}>{loadError}</div>}
+      {exportError && (
+        <div className={styles.errorMsg} role="alert">
+          {exportError}
+        </div>
+      )}
 
       {loading ? (
         <div className={styles.loadingState}>{tc("loading")}</div>
@@ -1916,7 +1932,15 @@ function summarizeEntryMode(
  * it applies even when self-serve habit creation is off for a study that
  * still accepts donations.
  */
-function HabitCreationTab({ study, token }: { study: StudySummary; token: string }) {
+function HabitCreationTab({
+  study,
+  token,
+  isAdmin = false,
+}: {
+  study: StudySummary;
+  token: string;
+  isAdmin?: boolean;
+}) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
   const { activityTypes } = useActivityTypes(token);
@@ -2319,10 +2343,13 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     }
   }
 
+  // The catalog is shared by every study: researchers pick from it, but only
+  // an admin can change it, so only an admin gets the editor.
   const showActivityTypesManager =
-    entryModeScope === "study"
+    isAdmin &&
+    (entryModeScope === "study"
       ? studyEntryMode.mode === "structured"
-      : study.groups.some((g) => groupEntryMode[g.id]?.mode === "structured");
+      : study.groups.some((g) => groupEntryMode[g.id]?.mode === "structured"));
 
   const overviewCards = [
     {
@@ -4742,7 +4769,9 @@ function StudyModal({
             ) : activeTab === "cue-config" ? (
               initial && <CueConfigTab study={initial} token={token} />
             ) : activeTab === "habit-creation" ? (
-              initial && <HabitCreationTab study={initial} token={token} />
+              initial && (
+                <HabitCreationTab study={initial} token={token} isAdmin={isAdmin} />
+              )
             ) : activeTab === "knowledge" ? (
               initial && (
                 <KnowledgeScopePanel

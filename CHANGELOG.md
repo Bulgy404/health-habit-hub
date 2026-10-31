@@ -199,6 +199,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Researchers could not load the activity-type catalog on a study's
+  **Habit Creation** tab. The catalog was admin-only, so for everyone else
+  the page fell back to five built-in activities, marked any other activity
+  the study uses as "(removed from catalog)", and showed a catalog editor
+  whose every action failed. Any portal role, `study-researcher` included,
+  can now read the catalog; changing it stays admin-only, and only admins see
+  the editor. Selected activities were never lost on save.
+- The **Export ZIP** and **Download CSV** buttons on a study's Participants
+  tab failed silently. A member whose access is read-only (#66) now sees
+  that their access doesn't include export, and other failures show an
+  error.
 - Dragging a bubble sideways in the app's habit graph switched to the Stats
   tab instead of moving the bubble. The Explore tabs' page swipe claims a drag
   after 18 px of horizontal travel, while bubble drags and canvas pans need

@@ -1684,7 +1684,7 @@ is closed to them until someone decides otherwise:
 | --- | --- |
 | Study list (filtered), and on a member study: details, settings, groups, cue config, codes, participants, questionnaire assignments and calendar, analytics | Creating, deleting, deactivating or defaulting a study; changing its identity mode; the member list |
 | Export, only with an `export` membership | Global participants, donations, comments, insights, settings, cue pools, questionnaire editing, knowledge base, team, backups, audit log |
-| The questionnaire library, read only (to assign from it) | Notification campaigns outside their studies, or aimed at groups or participants of another study |
+| The questionnaire library and the activity-type catalog, read only (to assign and label from them) | Notification campaigns outside their studies, or aimed at groups or participants of another study |
 | A participant's detail (progress, reminder plans) if they are enrolled in a member study | Any route not on the left |
 
 - `read` opens the study; `export` additionally downloads the bundle.
