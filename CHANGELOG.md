@@ -137,6 +137,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `flutter_appauth` 12 → 13 in the mobile app (AppAuth iOS SDK 3.0). Its
+  release on 2026-10-30 turned the Flutter dependency audit red on `main`.
+  The new minimums (Flutter 3.44, AGP 9.0.1, iOS 15) were already met, and
+  the one call the app makes, `authorizeAndExchangeCode`, is unchanged.
+  Swiping away the iOS sign-in sheet now throws
+  `FlutterAppAuthUserCancelledException`; only the dormant PKCE login path
+  (UC-01) reaches that code, not onboarding or restore.
 - The weekly SRHI check-in now names the habit's planned cue in its question
   wording, e.g. "Go for a walk after dinner each evening is something…"
   instead of "Go for a walk is something…" (#63). This makes the habit
