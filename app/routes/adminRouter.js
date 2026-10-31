@@ -42,6 +42,7 @@ import { createStudyMembersRouter } from './admin/studyMembersRouter.js';
 import { createRestoreAttemptsRouter } from './admin/restoreAttemptsRouter.js';
 import { createTeamRouter } from './admin/teamRouter.js';
 import { createAuditAdminActionsMiddleware } from '../middleware/auditAdminActions.js';
+import { createStudyScopeGuard } from '../middleware/studyScopeGuard.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -94,6 +95,13 @@ export function createAdminRouter({
   // Audits every mutating admin request (see auditAdminActions.js for why
   // this is mounted first, before any domain sub-router).
   router.use(createAuditAdminActionsMiddleware({ getDb }));
+
+  // Per-study access (#66): a `study-researcher` only reaches their member
+  // studies, and any non-admin needs membership on a study that asks for it.
+  // After the audit middleware so refused writes are logged too. Unlike a
+  // role gate, this one SHOULD run for requests that fall through to the
+  // admin resources apiRouter mounts separately — see studyScopeGuard.js.
+  router.use(createStudyScopeGuard({ getDb }));
 
   // Seed default settings, activity types, the questionnaire library, and the
   // default study asynchronously on router creation. Idempotent — safe to

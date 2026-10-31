@@ -90,6 +90,30 @@ describe('requireStudyAccess', () => {
     assert.equal((await run(guard, { roles: ['researcher'] })).nexted, true);
   });
 
+  it('BLOCKS a study-researcher with no membership even on an anonymous study', async () => {
+    // #66: that role exists to see only the studies an admin assigned.
+    const guard = requireStudyAccess({
+      getDb: async () => makeDb({ study: anonymousStudy }),
+    });
+    const r = await run(guard, { roles: ['study-researcher'] });
+    assert.equal(r.status, 403);
+    assert.equal(r.body.error, 'not_a_study_member');
+  });
+
+  it('allows a study-researcher who IS a member of an anonymous study', async () => {
+    const guard = requireStudyAccess({
+      getDb: async () =>
+        makeDb({
+          study: anonymousStudy,
+          memberships: [{ userId: 'u1', studyId: STUDY_ID, scope: 'read' }],
+        }),
+    });
+    assert.equal(
+      (await run(guard, { roles: ['study-researcher'] })).nexted,
+      true
+    );
+  });
+
   it('admins always pass — scoping limits researchers, not operators', async () => {
     const guard = requireStudyAccess({
       getDb: async () => makeDb({ study: verifiedStudy }),

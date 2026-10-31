@@ -13,6 +13,7 @@ skinparam usecase {
 
 actor "Participant\n(role: user)" as P
 actor "Researcher" as R
+actor "Study Researcher\n(role: study-researcher)" as SR
 actor "Admin" as A
 actor "AI Agent\n(MCP client)" as M
 actor "Backup Scheduler\n(cron)" as B
@@ -25,6 +26,10 @@ actor "FCM" as FCM <<system>>
 actor "PostHog" as PH <<system>>
 
 A --|> R : inherits
+
+' Study Researcher is NOT a specialisation of Researcher either: it sees only
+' the studies it is a member of (UC-19c), and on an account holding both roles
+' the narrower one wins (#66).
 
 ' The identity roles are NOT specialisations of Researcher or Admin. A
 ' `researcher` holding any of them is refused at runtime — the person analysing
@@ -82,6 +87,7 @@ rectangle "Admin Portal (Next.js)" {
   usecase "UC-36 Configure per-group\nstudy design" as UC36
   usecase "UC-37 View, trigger &\nrestore backups" as UC37
   usecase "UC-48 Explore product\nanalytics" as UC48
+  usecase "UC-50 Work on assigned\nstudies only" as UC50
 }
 
 rectangle "Identity Register (separate service, own PostgreSQL)" as IDENTITY {
@@ -137,6 +143,9 @@ P --> UC39
 
 ' --- Researcher (admin inherits) ---
 R --> UC17
+SR --> UC17
+SR --> UC50
+UC50 ..> UC19c : <<limited by>>
 R --> UC18
 R --> UC19
 R --> UC20

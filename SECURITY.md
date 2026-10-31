@@ -114,12 +114,20 @@ runbook.
 
 ## Scoped researcher access
 
-The `researcher` realm role historically granted access to **every** study and
-every export, with no way to narrow it. Where a study sets
-`identity.researcherScoping = 'scoped'` — which verified studies force on, and
-which everything else leaves open — the role alone is no longer sufficient: the
-researcher must additionally be named on that study, enforced by the
-`requireStudyAccess` middleware.
+The `researcher` realm role grants access to **every** study and every export.
+Two things narrow it, both enforced by `app/middleware/studyScopeGuard.js` on
+every admin request:
+
+- Where a study sets `identity.researcherScoping = 'scoped'` — which verified
+  studies force on, and which everything else leaves open — the role alone is
+  not sufficient: the researcher must additionally be named on that study.
+  This covers all of the study's pages (participants, codes, analytics,
+  export), not only its detail view.
+- The **`study-researcher`** role limits an account to the studies it is named
+  on, anonymous or verified. Everything else in the admin API is refused by an
+  allowlist that fails closed, so a route added later is not exposed to it by
+  accident. It is never "privileged" on the participant-facing API, and it may
+  not be combined with an identity-register role.
 
 - Access separates **reading** a study from **exporting** it, because
   downloading a bundle is materially more than viewing a page.

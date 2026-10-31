@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { IdentityTab, type IdentityConfig } from "./IdentityTab";
-import { StudyMembersPanel } from "./StudyMembersPanel";
 import styles from "@/components/admin-page.module.css";
 
 /**
@@ -113,8 +112,6 @@ export function IdentityTabPanel({
       >
         {saving ? t("config.saving") : t("config.save")}
       </button>
-
-      <StudyMembersPanel studyId={studyId} token={token} />
     </div>
   );
 }

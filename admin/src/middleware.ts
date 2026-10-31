@@ -25,9 +25,11 @@ export async function middleware(req: NextRequest) {
   // Identity roles are included so study nurses and monitors can load the
   // portal shell at all. Without this they cannot reach /identity even with
   // the correct realm role — per-page guards then decide what each may see.
+  // A study-researcher sees only their member studies (#66).
   const PORTAL_ROLES = [
     "admin",
     "researcher",
+    "study-researcher",
     "identity-manager",
     "study-nurse",
     "monitor",

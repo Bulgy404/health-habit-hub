@@ -404,6 +404,7 @@ are in [DOCUMENTATION.md §11 → Session & Token Lifetime](../DOCUMENTATION.md)
 | ------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `user`       | Study participants (end users of the Flutter app) | Donate habits, view recommendations, submit questionnaires                                                  |
 | `researcher` | Research staff                                    | All `user` permissions + admin panel access (excluding KB and Settings), questionnaire and study management |
+| `study-researcher` | Partners limited to some studies            | Admin panel limited to the studies they are a member of (`study_memberships`); no shared configuration — see *Scoped researcher access* below |
 | `admin`      | Platform administrators                           | All `researcher` permissions + full admin panel access including Knowledge Base and Settings                |
 
 > **Note:** The `user` role was previously named `participant`. It was renamed across `app/middleware/roles.js`, `keycloak/hhh-realm.json`, and `scripts/seed-local.js` to align with Keycloak terminology and to avoid clashing with the domain term "participant" used in study admin contexts.
@@ -420,7 +421,7 @@ The admin panel is a **Next.js 15** (App Router) / **React 18** application writ
 
 ### Admin Panel Auth
 
-The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs hhh-admin`). If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
+The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs hhh-admin`). If the decoded token's `realm_access.roles` array includes none of `admin`, `researcher`, `study-researcher` or the identity roles (`identity-manager`, `study-nurse`, `monitor`), the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
 
 #### Sub-path routing behind the reverse proxy (production)
 
@@ -461,6 +462,7 @@ Two production-only traps, both of which surface as `error=OAuthCallback` _after
 Beyond the middleware allow-list, the admin panel enforces fine-grained access control at the page level (`admin/src/lib/useAdminGuard.ts`):
 
 - `/studies`, `/analytics`, `/cue-pools`, `/questionnaires`, and `/help` are accessible to both `admin` and `researcher`
+- A `study-researcher` gets `/studies`, `/analytics` and `/help` only (`admin/src/lib/roles.ts`, `useResearcherGuard` on `/cue-pools` and `/questionnaires`). Their study list shows only member studies, without **New study**; the study dialog hides the Identity and Knowledge tabs and the set-default / deactivate / delete actions. The **Access** tab (the member list) is shown to admins only
 - Every other page is admin-only — `researcher` users are redirected to `/access-denied`: `/participants`, `/donations`, `/comments`, `/profile-fields`, `/knowledge-base`, `/system`, `/backups`, `/audit-log`, `/restore-attempts`, `/team`
 - `/participants` shows each participant's registered devices inline (a Devices column — one participant can have several) sourced from `GET /admin/devices`; clicking it opens a modal with each device's platform, model, app version, and last-seen time — `platform`/`model`/`appVersion` come from the mobile app itself (see `POST /participant/register-token` below), not from Keycloak, which has no concept of device metadata. Separately, a "Revoke Access" action force-signs-out the participant everywhere by revoking every one of their Keycloak sessions (`GET`/`DELETE /admin/sessions*`) — this is deliberately independent of the Devices column: a "device" (a `deviceTokens` registration) and a "session" (a Keycloak login) aren't reliably the same thing, so the two are tracked, displayed, and fetched separately even though both live on this one page. There is no longer a standalone Devices page — it was removed once device data moved here; the old page could only ever show Keycloak session metadata (no model/app version existed anywhere), which is what this change replaces.
 - `/donations` rows are clickable, opening a detail view (transcript, inline audio playback + download, self-report answers, linked post-donation questionnaire response) backed by the `/admin/habit-donations/:uuid[/audio]` routes above.
@@ -584,8 +586,9 @@ is unknown until the register resolves the code.
 
 ### Separation of duties
 
-`researcher` may never hold an identity role — that is what makes the research
-data genuinely pseudonymous rather than pseudonymous in name only. `admin` may
+`researcher` and `study-researcher` may never hold an identity role — that is
+what makes the research data genuinely pseudonymous rather than pseudonymous in
+name only. `admin` may
 hold `monitor` (approve) but never `identity-manager`/`study-nurse` (request).
 Both refusals are runtime `403`s, and the four-eyes rule on approval is a
 **database trigger**, so it survives a refactor of the service.
@@ -595,21 +598,52 @@ always mint a principal. What is guaranteed is that doing so is visible.
 
 ### Scoped researcher access
 
-Verified studies force `identity.researcherScoping` to `scoped`, and
-`app/middleware/requireStudyAccess.js` then requires an explicit
-`study_memberships` row rather than the bare `researcher` role. Membership
+Verified studies force `identity.researcherScoping` to `scoped`, and a
+`researcher` then needs an explicit `study_memberships` row rather than the
+bare role. A `study-researcher` (#66) needs one on **every** study. Membership
 separates **read** from **export**, because downloading a study bundle is
 materially more than opening a page.
 
-Three deliberate properties:
+`app/middleware/studyScopeGuard.js` enforces both. It is mounted once at the
+top of `createAdminRouter`, after the audit middleware, so it runs for every
+`/admin/*` request — including the admin routers `apiRouter.js` mounts
+separately, since those requests pass through the admin router first — and
+refused writes still reach `admin_audit_log`. Every `/studies/:id/...` request
+and every participant detail (judged by the participant's enrolled study) goes
+through `checkStudyAccess` (`requireStudyAccess.js`). Before this guard, a
+scoped study protected only its detail page and export; its participants,
+codes and analytics were open to every researcher.
+
+```mermaid
+flowchart TD
+    req["/admin/* request"] --> admin{admin?}
+    admin -- yes --> pass([next])
+    admin -- no --> study{"/studies/:id/…?"}
+    study -- yes --> allow1{"study-researcher:<br/>route on the allowlist?"}
+    allow1 -- no --> r403([403 not_permitted_for_role])
+    allow1 -- yes / researcher --> check["checkStudyAccess<br/>(membership needed if study-researcher<br/>or study is scoped; export scope for exports)"]
+    check -- ok --> pass
+    check -- not a member --> m403([403 not_a_study_member])
+    study -- no --> scoped{study-researcher?}
+    scoped -- no --> pass
+    scoped -- yes --> allow2{"study list, questionnaire library,<br/>own participants, own campaigns?"}
+    allow2 -- yes --> pass
+    allow2 -- no --> r403
+```
+
+Four deliberate properties:
 
 - **Admins always pass.** Scoping limits researchers to their own studies; it
   is not a way to lock operators out of the platform they run.
-- **Anonymous studies stay `open`**, exactly as before, so nothing that worked
-  the day before this shipped stopped working.
-- **Study existence is not secret.** A non-member sees the study in the list
-  and a 403 on its detail. Hiding it would make the studies page look broken
-  for no security gain — the sensitive thing is the data, not the name.
+- **For a full `researcher`, anonymous studies stay `open`**, exactly as
+  before, so nothing that worked the day before this shipped stopped working.
+- **A `study-researcher` is fenced by an allowlist.** Their study list is
+  filtered, and any admin route not explicitly allowed — including one added
+  later — is a 403. On an account holding both roles the narrower one wins.
+- **Study existence is not secret to a full researcher.** A non-member sees a
+  scoped study in the list and a 403 on its pages. Hiding it would make the
+  studies page look broken for no security gain. A `study-researcher` is a
+  partner from outside, so their list shows only their own studies.
 
 The guard fails **closed**: an error resolving access is a 500, never access.
 

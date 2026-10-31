@@ -1,0 +1,43 @@
+%% UC-50 — Work on assigned studies only (study-researcher, #66)
+%% Sources: app/middleware/studyScopeGuard.js, app/middleware/requireStudyAccess.js,
+%% app/routes/admin/studyMembersRouter.js, app/routes/admin/teamRouter.js,
+%% admin/src/lib/roles.ts, admin/src/app/(admin)/studies/page.tsx
+sequenceDiagram
+    autonumber
+    actor A as Admin
+    actor SR as Study researcher
+    participant AP as Admin Panel (Next.js)
+    participant B as Backend (adminRouter + studyScopeGuard)
+    participant KC as Keycloak
+    participant M as MongoDB
+
+    A->>AP: Team & Roles - grant "Assigned studies only"
+    AP->>B: POST /api/v1/admin/team/:userId/roles {role: study-researcher}
+    B->>KC: assign realm role study-researcher
+    B->>M: insert(admin_audit_log, grant_role_study-researcher)
+    A->>AP: Study - Access tab - add the account (read or read + export)
+    AP->>B: POST /api/v1/admin/studies/:id/members {userId, role, scope}
+    B->>KC: verify the account exists
+    B->>M: upsert(study_memberships) + admin_audit_log (who, at what scope)
+
+    SR->>AP: Sign in (UC-17) - token carries study-researcher
+    AP-->>SR: Sidebar shows Studies, Analytics, Help only
+    AP->>B: GET /api/v1/admin/studies
+    B->>M: find(study_memberships, {userId: sub})
+    B->>M: find(studies, {_id in member study ids})
+    B-->>AP: only the assigned studies, no New study button
+
+    SR->>AP: Open an assigned study (settings, codes, participants, analytics)
+    AP->>B: GET /api/v1/admin/studies/:id/...
+    B->>M: checkStudyAccess - findOne(study_memberships, {userId, studyId})
+    B-->>AP: 200
+
+    alt another study, or a route outside the allowlist
+        SR->>AP: e.g. /admin/studies/:otherId or /admin/participants
+        AP->>B: request
+        B-->>AP: 403 not_a_study_member / not_permitted_for_role
+    else export with a read-only membership
+        AP->>B: GET /api/v1/admin/studies/:id/export/zip
+        B-->>AP: 403 export_not_permitted
+    end
+    Note over B,M: Refused writes are still written to admin_audit_log

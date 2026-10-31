@@ -10,11 +10,15 @@ function makeFakeKeycloak() {
     { id: 'u1', username: 'alice', email: 'alice@x.test' },
     { id: 'u2', username: 'bob', email: 'bob@x.test' },
   ];
+  const studyResearchers = [
+    { id: 'u4', username: 'dana', email: 'dana@partner.test' },
+  ];
   const calls = [];
   return {
     calls,
     async listUsersByRole(role) {
       calls.push({ fn: 'listUsersByRole', role });
+      if (role === 'study-researcher') return studyResearchers;
       return role === 'admin' ? admins : researchers;
     },
     async searchUsers(q) {
@@ -64,15 +68,17 @@ beforeEach(() => {
   currentRoles = ['admin'];
 });
 
-test('GET /team merges admin and researcher role holders by user id', async () => {
+test('GET /team merges admin, researcher and study-researcher holders by user id', async () => {
   const res = await fetch(`${baseUrl}/api/v1/admin/team`);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
-  assert.strictEqual(body.members.length, 2);
+  assert.strictEqual(body.members.length, 3);
   const alice = body.members.find((m) => m.username === 'alice');
   assert.deepStrictEqual(alice.roles.sort(), ['admin', 'researcher']);
   const bob = body.members.find((m) => m.username === 'bob');
   assert.deepStrictEqual(bob.roles, ['researcher']);
+  const dana = body.members.find((m) => m.username === 'dana');
+  assert.deepStrictEqual(dana.roles, ['study-researcher']);
 });
 
 test('GET /team/search forwards the query and shapes the result', async () => {
@@ -99,6 +105,18 @@ test('POST /team/:userId/roles grants a valid role', async () => {
   assert.strictEqual(res.status, 200);
   assert.deepStrictEqual(kc.calls, [
     { fn: 'assignRole', userId: 'u3', role: 'researcher' },
+  ]);
+});
+
+test('POST /team/:userId/roles grants study-researcher (#66)', async () => {
+  const res = await fetch(`${baseUrl}/api/v1/admin/team/u4/roles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'study-researcher' }),
+  });
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(kc.calls, [
+    { fn: 'assignRole', userId: 'u4', role: 'study-researcher' },
   ]);
 });
 

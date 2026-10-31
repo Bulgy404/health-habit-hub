@@ -126,14 +126,17 @@ async function _reassignRemovedGroups({
 
 /**
  * List all studies with participant count per study (paginated).
- * @param {{ db: object, page?: number, limit?: number }} deps
+ * @param {{ db: object, page?: number, limit?: number, onlyIds?: Array }} deps
+ *   `onlyIds` limits the list to those study ids — the studies a
+ *   `study-researcher` is a member of (#66). Omitted means every study.
  * @returns {Promise<{ total: number, page: number, limit: number, studies: Array }>}
  */
-export async function listStudies({ db, page = 1, limit = 20 }) {
+export async function listStudies({ db, page = 1, limit = 20, onlyIds }) {
   const skip = (page - 1) * limit;
   // Exclude studies that were deleted from the admin UI (soft-deleted). Their
   // data is retained in the backend, but they are hidden from the studies list.
   const notDeleted = { deletedAt: { $exists: false } };
+  if (onlyIds) notDeleted._id = { $in: onlyIds };
   const studies = await db
     .collection(STUDIES)
     .find(notDeleted)

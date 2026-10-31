@@ -290,10 +290,12 @@ describe("StudyMembersPanel", () => {
     expect(await screen.findByText(/the researcher role alone grants nothing/)).toBeInTheDocument();
   });
 
-  it("warns that entries have no effect yet on an open study", async () => {
+  it("explains on an open study that only assigned-studies-only accounts are limited", async () => {
     global.fetch = mockMembersApi({ enforced: false });
     render(<StudyMembersPanel studyId="s1" token="t" />);
-    expect(await screen.findByText(/entries here have no effect yet/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/see it only if they are listed here/)
+    ).toBeInTheDocument();
   });
 
   it("spells out the read/export distinction rather than showing a bare enum", async () => {

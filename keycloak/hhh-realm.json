@@ -46,6 +46,13 @@
         "containerId": "hhh"
       },
       {
+        "name": "study-researcher",
+        "description": "Researcher limited to the studies they are a member of (Access tab on each study in the admin portal). Outranks `researcher` on an account holding both. MUST NOT be combined with an identity role.",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "hhh"
+      },
+      {
         "name": "identity-manager",
         "description": "Identity register administration: roster, codes, and raising re-identification requests. MUST NOT be combined with `researcher`, and an `admin` may not hold it.",
         "composite": false,

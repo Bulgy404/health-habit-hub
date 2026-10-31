@@ -261,10 +261,10 @@
   },
   "team": {
     "title": "Team & Roles",
-    "subtitle": "Manage who has admin or researcher access. Role changes take effect immediately.",
+    "subtitle": "Manage who has admin or researcher access. Role changes take effect at the next sign-in or token refresh (within a few minutes).",
     "manageRoles": "Manage roles",
     "assignRole": "Assign a role",
-    "assignRoleSubtitle": "Search for an existing account and grant or change its admin or researcher role.",
+    "assignRoleSubtitle": "Search for an existing account and grant it a role. “Assigned studies only” limits a researcher to the studies you add them to on each study’s Access tab.",
     "searchPlaceholder": "Search by username or email",
     "searchButton": "Search",
     "noSearchResults": "No matching accounts found.",
@@ -273,10 +273,12 @@
     "actions": "Actions",
     "grantAdmin": "Grant admin",
     "grantResearcher": "Grant researcher",
+    "grantStudyResearcher": "Grant assigned studies only",
     "revoke": "Revoke",
     "revokeConfirm": "Revoke {role} from {username}?",
     "roleAdmin": "Admin",
     "roleResearcher": "Researcher",
+    "roleStudyResearcher": "Assigned studies only",
     "noMembers": "No one currently holds admin or researcher access.",
     "loadFailed": "Failed to load the team",
     "searchFailed": "Search failed",
@@ -856,7 +858,8 @@
       "default": "Default",
       "groups": "Groups",
       "participants": "Participants",
-      "noStudiesYet": "No studies yet. Click \"{button}\" to create one."
+      "noStudiesYet": "No studies yet. Click \"{button}\" to create one.",
+      "noStudiesAssigned": "No studies have been assigned to you yet. Ask an administrator to add you to a study."
     },
     "modal": {
       "editTitle": "Edit Study",
@@ -873,7 +876,8 @@
         "reminders": "Reminders",
         "behaviorChange": "Behavior Change",
         "gamification": "Gamification",
-        "identity": "Identity"
+        "identity": "Identity",
+        "access": "Access"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -1443,7 +1447,7 @@
     "members": {
       "title": "Researcher access",
       "enforced": "This study is scoped: the researcher role alone grants nothing here. Only the people below can open it, and only those with export can download the study bundle. Admins always have access.",
-      "open": "This study is open — every researcher can already read it, so entries here have no effect yet. They take effect if the study is switched to verified identity mode.",
+      "open": "This study is open: everyone with the full Researcher role can already read it. Accounts with “Assigned studies only” see it only if they are listed here, and can download its data only with export.",
       "user": "User",
       "role": "Role",
       "access": "Access",

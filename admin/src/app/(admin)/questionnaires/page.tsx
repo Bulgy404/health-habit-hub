@@ -10,6 +10,7 @@ import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
+import { useResearcherGuard } from "@/lib/useResearcherGuard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -709,6 +710,7 @@ function ConfirmDeleteDialog({
  * @returns The questionnaires management page.
  */
 export default function QuestionnairesPage() {
+  useResearcherGuard();
   const { data: session } = useSession();
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
   const t = useTranslations("questionnaires");

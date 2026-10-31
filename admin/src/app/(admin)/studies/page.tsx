@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { motion } from "motion/react";
 import styles from "./page.module.css";
 
@@ -16,6 +17,8 @@ import { SpinnerLabel } from "@/components/spinner";
 import { defaultSpring } from "@/lib/motion";
 import { IdentityTabPanel } from "./IdentityTabPanel";
 import { KnowledgeScopePanel } from "./KnowledgeScopePanel";
+import { StudyMembersPanel } from "./StudyMembersPanel";
+import { isStudyScoped } from "@/lib/roles";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -4359,7 +4362,8 @@ type ModalTab =
   | "reminders"
   | "behavior-change"
   | "gamification"
-  | "identity";
+  | "identity"
+  | "access";
 
 function StudyModal({
   initial,
@@ -4369,6 +4373,8 @@ function StudyModal({
   onSetDefault,
   onDeactivate,
   onDelete,
+  isAdmin = false,
+  studyScoped = false,
 }: {
   initial: StudySummary | null;
   token: string;
@@ -4377,6 +4383,13 @@ function StudyModal({
   onSetDefault: (id: string) => Promise<void>;
   onDeactivate: (id: string) => Promise<{ error?: string } | void>;
   onDelete: (id: string, confirmName: string) => Promise<{ error?: string } | void>;
+  /** Shows the Access tab, where admins assign researchers to the study. */
+  isAdmin?: boolean;
+  /**
+   * A study-researcher (#66): no identity or knowledge-base settings, and no
+   * set-default / deactivate / delete — the backend refuses those for them.
+   */
+  studyScoped?: boolean;
 }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
@@ -4585,23 +4598,30 @@ function StudyModal({
                 ["behavior-change", t("modal.tabs.behaviorChange")],
                 ["gamification", t("modal.tabs.gamification")],
                 ["identity", t("modal.tabs.identity")],
+                ["access", t("modal.tabs.access")],
               ] as [ModalTab, string][]
-            ).map(([tabKey, tabLabel]) => (
-              <button
-                key={tabKey}
-                className={`${styles.tab} ${activeTab === tabKey ? styles.tabActive : ""}`}
-                onClick={() => setActiveTab(tabKey)}
-              >
-                {tabLabel}
-                {activeTab === tabKey && (
-                  <motion.div
-                    className={styles.tabIndicator}
-                    layoutId="studyTabIndicator"
-                    transition={defaultSpring}
-                  />
-                )}
-              </button>
-            ))}
+            )
+              .filter(
+                ([tabKey]) =>
+                  !(studyScoped && (tabKey === "identity" || tabKey === "knowledge")) &&
+                  (tabKey !== "access" || isAdmin)
+              )
+              .map(([tabKey, tabLabel]) => (
+                <button
+                  key={tabKey}
+                  className={`${styles.tab} ${activeTab === tabKey ? styles.tabActive : ""}`}
+                  onClick={() => setActiveTab(tabKey)}
+                >
+                  {tabLabel}
+                  {activeTab === tabKey && (
+                    <motion.div
+                      className={styles.tabIndicator}
+                      layoutId="studyTabIndicator"
+                      transition={defaultSpring}
+                    />
+                  )}
+                </button>
+              ))}
           </div>
         )}
 
@@ -4744,6 +4764,8 @@ function StudyModal({
                   token={token}
                 />
               )
+            ) : activeTab === "access" ? (
+              initial && <StudyMembersPanel studyId={initial.id} token={token} />
             ) : (
               initial && <GamificationTab study={initial} token={token} />
             )}
@@ -4820,7 +4842,7 @@ function StudyModal({
 
         {activeTab === "details" && (
           <div className={styles.modalFooter}>
-            {isEdit && (
+            {isEdit && !studyScoped && (
               <div className={styles.modalFooterLeft}>
                 {!initial?.isDefault && (
                   <button
@@ -4898,6 +4920,10 @@ export default function StudiesPage() {
   const tc = useTranslations("common");
   const { studies, loading, error, token, refetch: fetchList } = useStudiesData();
   const [actionError, setActionError] = useState("");
+  const { data: session } = useSession();
+  const isAdmin = (session?.roles ?? []).includes("admin");
+  // A study-researcher sees only their studies and cannot create new ones.
+  const studyScoped = isStudyScoped(session?.roles);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StudySummary | null>(null);
@@ -4958,9 +4984,11 @@ export default function StudiesPage() {
           <h1 className={styles.title}>{t("title")}</h1>
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
-        <button className={styles.addButton} onClick={handleOpenCreate}>
-          {t("newStudy")}
-        </button>
+        {!studyScoped && (
+          <button className={styles.addButton} onClick={handleOpenCreate}>
+            {t("newStudy")}
+          </button>
+        )}
       </div>
 
       {actionError && <div className={styles.errorMsg}>{actionError}</div>}
@@ -4987,7 +5015,9 @@ export default function StudiesPage() {
                 <tr>
                   <td colSpan={6}>
                     <div className={styles.emptyState}>
-                      {t("table.noStudiesYet", { button: t("newStudy") })}
+                      {studyScoped
+                        ? t("table.noStudiesAssigned")
+                        : t("table.noStudiesYet", { button: t("newStudy") })}
                     </div>
                   </td>
                 </tr>
@@ -5040,6 +5070,8 @@ export default function StudiesPage() {
           onSetDefault={handleSetDefault}
           onDeactivate={handleDeactivate}
           onDelete={handleDelete}
+          isAdmin={isAdmin}
+          studyScoped={studyScoped}
         />
       )}
     </div>

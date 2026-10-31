@@ -98,7 +98,13 @@ export function createStudiesRouter({
         Math.max(1, parseInt(req.query.limit, 10) || 20)
       );
       const database = await getDb();
-      const result = await listStudies({ db: database, page, limit });
+      // Set by studyScopeGuard for a study-researcher: their studies only.
+      const result = await listStudies({
+        db: database,
+        page,
+        limit,
+        onlyIds: req.studyScope?.studyIds,
+      });
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

@@ -54,6 +54,17 @@ describe('checkRoleSeparation', () => {
     }
   });
 
+  it('REFUSES study-researcher combined with any identity role', () => {
+    // Fewer studies, same pseudonymous data — the same separation applies.
+    for (const role of Object.values(IDENTITY_ROLES)) {
+      const r = checkRoleSeparation(
+        user(RESEARCH_ROLES.STUDY_RESEARCHER, role)
+      );
+      assert.equal(r.ok, false, `study-researcher + ${role} must be refused`);
+      assert.equal(r.code, 'role_separation_violation');
+    }
+  });
+
   it('refuses the combination regardless of role order', () => {
     assert.equal(
       checkRoleSeparation(

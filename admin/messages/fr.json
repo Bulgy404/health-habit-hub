@@ -261,10 +261,10 @@
   },
   "team": {
     "title": "Équipe et rôles",
-    "subtitle": "Gérez qui a un accès admin ou chercheur. Les changements de rôle prennent effet immédiatement.",
+    "subtitle": "Gérez qui a un accès admin ou chercheur. Les changements de rôle prennent effet à la prochaine connexion ou au prochain renouvellement du jeton (en quelques minutes).",
     "manageRoles": "Gérer les rôles",
     "assignRole": "Attribuer un rôle",
-    "assignRoleSubtitle": "Recherchez un compte existant et accordez ou modifiez son rôle admin ou chercheur.",
+    "assignRoleSubtitle": "Recherchez un compte existant et attribuez-lui un rôle. « Études attribuées uniquement » limite un chercheur aux études auxquelles vous l’ajoutez dans l’onglet Accès de chaque étude.",
     "searchPlaceholder": "Rechercher par nom d'utilisateur ou e-mail",
     "searchButton": "Rechercher",
     "noSearchResults": "Aucun compte correspondant trouvé.",
@@ -273,10 +273,12 @@
     "actions": "Actions",
     "grantAdmin": "Accorder admin",
     "grantResearcher": "Accorder chercheur",
+    "grantStudyResearcher": "Accorder études attribuées uniquement",
     "revoke": "Révoquer",
     "revokeConfirm": "Révoquer {role} de {username} ?",
     "roleAdmin": "Admin",
     "roleResearcher": "Chercheur",
+    "roleStudyResearcher": "Études attribuées uniquement",
     "noMembers": "Personne n'a actuellement d'accès admin ou chercheur.",
     "loadFailed": "Impossible de charger l'équipe",
     "searchFailed": "Recherche échouée",
@@ -856,7 +858,8 @@
       "default": "Par défaut",
       "groups": "Groupes",
       "participants": "Participants",
-      "noStudiesYet": "Aucune étude pour le moment. Cliquez sur « {button} » pour en créer une."
+      "noStudiesYet": "Aucune étude pour le moment. Cliquez sur « {button} » pour en créer une.",
+      "noStudiesAssigned": "Aucune étude ne vous a encore été attribuée. Demandez à un administrateur de vous ajouter à une étude."
     },
     "modal": {
       "editTitle": "Modifier l'étude",
@@ -873,7 +876,8 @@
         "reminders": "Rappels",
         "behaviorChange": "Changement de comportement",
         "gamification": "Gamification",
-        "identity": "Identité"
+        "identity": "Identité",
+        "access": "Accès"
       },
       "fields": {
         "nameLabel": "Nom *",
@@ -1443,7 +1447,7 @@
     "members": {
       "title": "Accès des chercheurs",
       "enforced": "Cette étude est restreinte : le rôle researcher seul ne donne rien ici. Seules les personnes ci-dessous peuvent l'ouvrir, et seules celles disposant de l'export peuvent télécharger le jeu de données. Les administrateurs y ont toujours accès.",
-      "open": "Cette étude est ouverte — tous les chercheurs peuvent déjà la lire, les entrées ci-dessous n'ont donc pas encore d'effet. Elles s'appliqueront si l'étude passe en mode identité vérifiée.",
+      "open": "Cette étude est ouverte : toute personne ayant le rôle Chercheur complet peut déjà la lire. Les comptes « Études attribuées uniquement » ne la voient que s’ils figurent ici, et ne peuvent télécharger ses données qu’avec l’export.",
       "user": "Personne",
       "role": "Rôle",
       "access": "Accès",

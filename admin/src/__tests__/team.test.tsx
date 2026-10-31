@@ -82,6 +82,28 @@ describe("TeamPage", () => {
     });
   });
 
+  it("grants and labels the assigned-studies-only role (#66)", async () => {
+    const user = userEvent.setup();
+    render(<TeamPage />);
+    await screen.findByText("alice");
+
+    await user.click(screen.getByRole("button", { name: /manage roles/i }));
+    await user.type(screen.getByPlaceholderText(/search by username or email/i), "carol");
+    await user.click(screen.getByRole("button", { name: /^search$/i }));
+    await screen.findByText("carol");
+    await user.click(screen.getByRole("button", { name: /grant assigned studies only/i }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/team/u3/roles"),
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ role: "study-researcher" }),
+        })
+      );
+    });
+  });
+
   it("revoking a role calls the revoke endpoint after confirmation", async () => {
     const user = userEvent.setup();
     render(<TeamPage />);

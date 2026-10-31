@@ -1237,7 +1237,7 @@ section is the orientation.
 | Identifying data | none stored anywhere | in `identity-service` only, encrypted |
 | Keycloak `sub` | the research pseudonym | still the research pseudonym |
 | Researcher CSV export | raw Keycloak sub | study-local subject code; sub withheld entirely |
-| Researcher access | the `researcher` role suffices | must also be named on the study |
+| Researcher access | the `researcher` role suffices; a `study-researcher` must be named on the study | everyone except admins must be named on the study |
 
 Anonymous studies are **byte-identical to before**. Mongo and Neo4j never hold a
 name, a date of birth or an email for a verified participant either; HHH stores
@@ -1289,7 +1289,9 @@ its analysable data, and the link to a person is gone permanently.
 
 On a verified study the `researcher` realm role is **not sufficient** — a
 researcher must be named on the study. Managed in the admin portal under
-**Study → Identity → Researcher access**.
+**Study → Access** (admins only). The same list decides what a
+`study-researcher` sees on any study, anonymous or verified — see
+[Per-study researcher scoping](#per-study-researcher-scoping).
 
 - `read` opens the study; `export` additionally downloads the study bundle,
   because downloading a bundle is materially more than viewing a page.
@@ -1299,9 +1301,10 @@ researcher must be named on the study. Managed in the admin portal under
 - People are picked from existing Keycloak accounts and the server verifies each
   id against the realm. A mistyped `sub` is refused rather than stored — it
   would otherwise render like any other grant while gating access for nobody.
-- Admins always pass. Anonymous studies are unaffected: scoping is enforced only
-  where `identity.researcherScoping === 'scoped'`, which verified studies force
-  on and everything else leaves open.
+- Admins always pass. For a full `researcher`, anonymous studies are
+  unaffected: scoping is enforced only where
+  `identity.researcherScoping === 'scoped'`, which verified studies force on
+  and everything else leaves open.
 
 Every grant and revocation records **who** was affected and **at what scope** in
 the admin audit log, not merely which study was touched.
@@ -1414,9 +1417,10 @@ The Next.js 15 / React 18 admin application (`admin/`) provides a web dashboard 
 Access to the admin application requires one of the following Keycloak realm roles in the `hhh` realm:
 
 - `admin` — full access
-- `researcher` — full access (same permissions as admin within the dashboard)
+- `researcher` — the research side of the portal (studies, analytics, questionnaires, cue pools) for every study
+- `study-researcher` — only the studies an admin assigned them on each study's **Access** tab; Studies, Analytics and Help only (#66)
 
-Users without these roles see the `/access-denied` page. The Next.js edge middleware (`src/middleware.ts`) enforces authentication on all admin routes. Server components and API routes additionally check for the required role via the NextAuth session.
+The identity roles (`identity-manager`, `study-nurse`, `monitor`) also open the portal shell, for the identity-register pages only. Users without any of these roles see the `/access-denied` page. The Next.js edge middleware (`src/middleware.ts`) enforces authentication on all admin routes. Server components and API routes additionally check for the required role via the NextAuth session.
 
 ### Features
 
@@ -1424,6 +1428,7 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 - **Donation review** — click a habit donation to see its voice transcript, play back or download the recorded audio, its donation-form self-report answers, and any linked post-donation questionnaire response
 - **Questionnaire authoring** — create and publish questionnaires
 - **Study configuration** — manage study groups, per-group cue config, and enrollment codes
+- **Per-study researcher access** — each study's **Access** tab lists who may open it (read, or read + export); a `study-researcher` sees only those studies, and the **Team & Roles** page grants the role
 - **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s _Community Signals_ section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment
 - **Restore-attempts monitoring** — security view over every passphrase-based account-recovery attempt (success/failure/rate-limited), with IPs flagged for repeated non-success attempts
 - **Backups** — last-backup status per component, on-demand trigger, and restore from an existing or uploaded archive
@@ -1606,13 +1611,14 @@ If the study protocol needs a hard cap on session age (e.g. for consent-renewal 
 
 ### Roles
 
-The realm (`keycloak/hhh-realm.json`) defines three roles: `user`, `researcher`, `admin`.
+The realm (`keycloak/hhh-realm.json`) defines four research-platform roles: `user`, `researcher`, `study-researcher`, `admin` (plus the identity-register roles described above).
 
-| Role         | Granted to              | Access                                                    |
-| ------------ | ----------------------- | --------------------------------------------------------- |
-| `user`       | Study participants      | Own data only — surveys, habits, recommendations, profile |
-| `researcher` | Research staff          | All participant data (read), admin APIs, knowledge base   |
-| `admin`      | Platform administrators | Full access including user management; internal-tool SSO  |
+| Role               | Granted to                      | Access                                                                                  |
+| ------------------ | ------------------------------- | --------------------------------------------------------------------------------------- |
+| `user`             | Study participants              | Own data only — surveys, habits, recommendations, profile                               |
+| `researcher`       | Research staff                  | All participant data (read), admin APIs, knowledge base                                 |
+| `study-researcher` | Partners limited to some studies | Only the studies they are a member of; every other admin route refused (see below)     |
+| `admin`            | Platform administrators         | Full access including user management; internal-tool SSO                                |
 
 ### Password Storage
 
@@ -1652,20 +1658,50 @@ security-relevant summary:
 
 ### Per-study researcher scoping
 
-The `researcher` realm role historically granted access to **every** study and
-every export, with no way to narrow it. On a study where
-`identity.researcherScoping === 'scoped'` — which verified studies force on and
-everything else leaves open — a researcher must additionally be named on the
-study in `study_memberships`, enforced by the `requireStudyAccess` middleware.
+The `researcher` realm role grants access to **every** study and every export.
+Two things narrow it, both backed by `study_memberships` (the **Access** tab on
+each study, admins only):
+
+- **A study that asks for it.** Where `identity.researcherScoping === 'scoped'`
+  — which verified studies force on and everything else leaves open — a
+  `researcher` must additionally be named on the study.
+- **The `study-researcher` role** (#66). An account with it must be named on
+  **every** study it opens, anonymous or verified, and sees only those studies
+  in the list. It is meant for a partner who should see their own study and
+  nothing else.
+
+Enforcement is `app/middleware/studyScopeGuard.js`, mounted once at the top of
+the admin router so it covers every `/admin/*` request, including the routers
+`apiRouter.js` mounts separately (notification campaigns, the ZIP export, cue
+pools). It judges every `/studies/:id/...` request — and every participant
+detail, by the study the participant is enrolled in — through
+`checkStudyAccess` in `requireStudyAccess.js`.
+
+A `study-researcher` is held to an **allowlist**, so an admin route added later
+is closed to them until someone decides otherwise:
+
+| Allowed | Refused |
+| --- | --- |
+| Study list (filtered), and on a member study: details, settings, groups, cue config, codes, participants, questionnaire assignments and calendar, analytics | Creating, deleting, deactivating or defaulting a study; changing its identity mode; the member list |
+| Export, only with an `export` membership | Global participants, donations, comments, insights, settings, cue pools, questionnaire editing, knowledge base, team, backups, audit log |
+| The questionnaire library, read only (to assign from it) | Notification campaigns outside their studies, or aimed at groups or participants of another study |
+| A participant's detail (progress, reminder plans) if they are enrolled in a member study | Any route not on the left |
 
 - `read` opens the study; `export` additionally downloads the bundle.
 - Grantee ids are verified against Keycloak before the membership is written, so
   a mistyped `sub` is refused rather than stored as a grant that gates nobody.
 - The member list is admin-only. `lead` is a label, not a capability.
+- On an account holding both, `study-researcher` wins over `researcher`, and
+  `isPrivileged()` is false for it — routes outside `/admin` that let a
+  privileged caller read other users' data are not study-scoped.
+- Refused writes are recorded in the admin audit log like any other.
+- Role changes reach the portal when the access token refreshes (minutes) or at
+  the next sign-in, since both the backend and the portal read roles from it.
 
-Rolled out deliberately narrowly: turning scoping on globally would have broken
-every existing researcher on the day it shipped. It applies exactly where
-identity data exists.
+The scoped-study rule was rolled out narrowly — turning it on globally would
+have broken every existing researcher on the day it shipped. The role is
+opt-in for the same reason: existing `researcher` accounts keep exactly the
+access they had.
 
 ### Admin audit log
 
