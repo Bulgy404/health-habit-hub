@@ -312,7 +312,7 @@ jobs:
         working-directory: mobile
         run: flutter analyze lib/ test/
 
-      - name: Validate iOS native patch contexts and cache isolation
+      - name: Validate maintained native packages and patch isolation
         working-directory: mobile
         run: |
           python3 tool/patch_ios_plugins.py --check

@@ -1,0 +1,213 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../models/survey_appearance.dart';
+import '../models/posthog_display_survey_text_content_type.dart';
+import 'question_header.dart';
+import 'survey_button.dart';
+import 'survey_choice_button.dart';
+
+class ChoiceQuestionWidget extends StatefulWidget {
+  const ChoiceQuestionWidget({
+    super.key,
+    required this.question,
+    required this.description,
+    this.descriptionContentType,
+    required this.choices,
+    required this.appearance,
+    this.buttonText,
+    this.optional = false,
+    this.hasOpenChoice = false,
+    required this.onSubmit,
+    this.isMultipleChoice = false,
+    this.shuffleOptions = false,
+    this.skipSubmitButton = false,
+  });
+
+  final String question;
+  final String? description;
+  final PostHogDisplaySurveyTextContentType? descriptionContentType;
+  final List<String> choices;
+  final SurveyAppearance appearance;
+  final String? buttonText;
+  final bool optional;
+  final bool hasOpenChoice;
+  final ValueChanged<dynamic> onSubmit;
+  final bool isMultipleChoice;
+  final bool shuffleOptions;
+  final bool skipSubmitButton;
+
+  @override
+  State<ChoiceQuestionWidget> createState() => _ChoiceQuestionWidgetState();
+}
+
+class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
+  Set<String> _selectedChoices = {};
+  late final List<int> _displayOrder = _createDisplayOrder();
+
+  List<int> _createDisplayOrder() {
+    final indices = List.generate(widget.choices.length, (index) => index);
+    if (!widget.shuffleOptions) return indices;
+    final openChoice = widget.hasOpenChoice && indices.isNotEmpty
+        ? indices.removeLast()
+        : null;
+    final shuffled = List<int>.of(indices)..shuffle();
+    // Match web/RN: force a changed order when randomness leaves labels unchanged.
+    final unchanged = listEquals(
+      shuffled.map((index) => widget.choices[index]).toList(),
+      indices.map((index) => widget.choices[index]).toList(),
+    );
+    return [
+      ...(unchanged ? shuffled.reversed : shuffled),
+      if (openChoice != null) openChoice,
+    ];
+  }
+
+  String _openChoiceInput = '';
+  final TextEditingController _openChoiceController = TextEditingController();
+
+  void _handleOpenChoiceInput(String value) {
+    setState(() {
+      _openChoiceInput = value;
+    });
+  }
+
+  bool get _shouldAutoSubmit =>
+      widget.skipSubmitButton &&
+      !widget.isMultipleChoice &&
+      !widget.hasOpenChoice;
+
+  bool get _canSubmit {
+    if (widget.optional) return true;
+    if (_selectedChoices.isEmpty) return false;
+    if (widget.hasOpenChoice &&
+        _selectedChoices.contains(widget.choices.last) &&
+        _openChoiceInput.trim().isEmpty) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _isOpenChoice(String choice) {
+    return widget.hasOpenChoice && choice == widget.choices.last;
+  }
+
+  void _onSubmit() {
+    if (!_canSubmit) return;
+
+    final List<String> result = [];
+
+    // For both single and multiple choice, create a list of selected choices
+    for (final choice in _selectedChoices) {
+      if (_isOpenChoice(choice)) {
+        result.add(_openChoiceInput.trim());
+      } else {
+        result.add(choice);
+      }
+    }
+
+    // A selection is a list (one entry for single choice). An empty optional
+    // skip is null so native records no answer. An empty list is stored.
+    widget.onSubmit(result.isEmpty ? null : result);
+  }
+
+  @override
+  void dispose() {
+    _openChoiceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final headerFooterHeight = 350; //estimated
+    final availableHeight =
+        screenHeight - headerFooterHeight - keyboardHeight - bottomPadding;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Fixed header
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            QuestionHeader(
+              question: widget.question,
+              description: widget.description,
+              descriptionContentType: widget.descriptionContentType,
+              appearance: widget.appearance,
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+        // Scrollable choices - use full screen height minus insets
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: availableHeight, minHeight: 0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ..._displayOrder.map((index) {
+                  final choice = widget.choices[index];
+                  final isSelected = _selectedChoices.contains(choice);
+                  final isOpenChoice = _isOpenChoice(choice);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SurveyChoiceButton(
+                      label: choice,
+                      isSelected: isSelected,
+                      onTap: () {
+                        if (_shouldAutoSubmit) {
+                          setState(() => _selectedChoices = {choice});
+                          _onSubmit();
+                          return;
+                        }
+                        setState(() {
+                          if (widget.isMultipleChoice) {
+                            if (_selectedChoices.contains(choice)) {
+                              _selectedChoices.remove(choice);
+                            } else {
+                              _selectedChoices.add(choice);
+                            }
+                          } else {
+                            if (_selectedChoices.contains(choice)) {
+                              _selectedChoices.clear();
+                            } else {
+                              _selectedChoices = {choice};
+                            }
+                          }
+                        });
+                      },
+                      appearance: widget.appearance,
+                      isOpenChoice: isOpenChoice,
+                      openChoiceInput: _openChoiceInput,
+                      onOpenChoiceChanged:
+                          isOpenChoice ? _handleOpenChoiceInput : null,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        if (!_shouldAutoSubmit) ...[
+          const SizedBox(height: 16),
+          // Fixed submit button
+          SurveyButton(
+            onPressed: _canSubmit ? _onSubmit : null,
+            text: surveyQuestionButtonLabel(
+              widget.buttonText,
+              widget.appearance.submitButtonText,
+            ),
+            appearance: widget.appearance,
+          ),
+        ],
+      ],
+    );
+  }
+}

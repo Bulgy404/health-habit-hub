@@ -56,7 +56,7 @@ flutter clean
 flutter pub get
 flutter analyze
 flutter test
-bash tool/build_ios.sh ipa
+flutter build ipa --release --dart-define-from-file=dart_defines_prod.json
 flutter build appbundle --release --dart-define-from-file=dart_defines_prod.json
 ```
 
@@ -74,27 +74,36 @@ optional because typed/structured donations work without recording. Compare
 code 6 and code 7 in Play's device catalog to distinguish Android-version,
 hardware and ABI exclusions; the excluded-device count alone is insufficient.
 
-iOS now uses Swift Package Manager for all native plugins, following
-[Flutter’s migration instructions](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers#how-to-remove-cocoapods-integration). The iOS build helper applies `tool/ios_plugin_patches.json` through
-`tool/patch_ios_plugins.py` before Xcode resolves its dependency graph, using
-transient local package overrides. It restores the hosted lockfile and removes
-the overrides on exit. Use `bash tool/build_ios.sh ipa` for release builds; a
-plain Flutter build on a fresh checkout compiles the original upstream packages. These small fixes are applied to **build-local copies**, never the
-shared pub cache. They address missing nullability, integer truncation, old
-window APIs, obsolete login fallbacks, Bluetooth naming and replay helpers.
-FCM token registration and Sentry's legacy app-hang channel calls retain their
-existing behavior with narrowly scoped deprecation exceptions. FID registration
-is a different server protocol, so replacing FCM token calls just to silence
-warnings would break notification delivery.
+## Building directly in Xcode
 
-The patches are tied to reviewed source hashes. When updating a patched
-dependency, review and update its patch rather than bypassing the check. CI
-checks both the original source contexts and cache isolation:
+The native fixes are regular maintained package dependencies under
+`third_party/`; Xcode and Flutter use the same sources. The custom build helper
+is no longer required. All seven upstream licenses are retained. The package
+catalog and update procedure are documented in `third_party/README.md`.
+
+After a fresh checkout or dependency update, prepare the normal Flutter
+configuration once from this directory:
 
 ```bash
-python3 tool/patch_ios_plugins.py --check
-python3 -m unittest discover -s tool -p 'test_*.py'
+flutter pub get
+flutter build ios --config-only --release --dart-define-from-file=dart_defines_prod.json
+open ios/Runner.xcworkspace
 ```
 
-Before uploading, validate the iOS archive in Xcode and test login/cancellation,
-push-token refresh and notifications, voice input and sharing on real devices.
+In Xcode select **Runner**, choose **Any iOS Device (arm64)** (or a connected
+physical device), then choose **Product → Archive**. Use Organizer to validate
+and distribute the archive. Debug builds use **Product → Run** as usual; the
+selected scheme configuration controls debug versus release.
+
+After changing the app version in `pubspec.yaml`, run the configuration command
+again so Xcode receives the new version and build number. Xcode signing stays
+under **Runner → Signing & Capabilities**. Archive builds use the production
+settings; the initial configuration command explicitly loads the production
+settings file.
+
+Xcode's **Quoted Include In Framework Header** style warning is disabled in
+Debug, Profile and Release because Flutter's supplied framework uses quoted
+header imports. This setting applies to that one diagnostic; it does not change
+header resolution or turn off other compiler warnings. After updating the
+project, use **Product → Clean Build Folder** before archiving in Xcode to
+replace the old archive diagnostics.

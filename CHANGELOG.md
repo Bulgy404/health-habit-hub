@@ -154,6 +154,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- iOS builds and archives now work directly in Xcode with the maintained native
+  plugin fixes installed as normal project dependencies. The temporary build
+  helper is optional. Disable only the quoted-framework-header style diagnostic
+  emitted by Flutter's supplied framework in Debug, Profile and Release.
 - `flutter_appauth` 12 → 13 in the mobile app (AppAuth iOS SDK 3.0). Its
   release on 2026-10-30 turned the Flutter dependency audit red on `main`.
   The new minimums (Flutter 3.44, AGP 9.0.1, iOS 15) were already met, and

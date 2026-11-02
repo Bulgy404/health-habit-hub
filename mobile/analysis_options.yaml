@@ -10,6 +10,9 @@
 include: package:flutter_lints/flutter.yaml
 analyzer:
   exclude:
+    # Maintained dependency sources are compiled as packages, not app code.
+    - third_party/**
+    - .native_plugins/**
     - build/**
     - ios/Pods/**
     - ios/.symlinks/**

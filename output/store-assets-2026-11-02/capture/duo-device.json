@@ -1,0 +1,7 @@
+{
+  "name": "iPhone Duo",
+  "udid": "68B12B79-32CD-4CC6-8C31-960E6B6C5FC7",
+  "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-27-1",
+  "runtime_build": "24A94425",
+  "build_toolchain": "Xcode 27.2 (27B52)"
+}

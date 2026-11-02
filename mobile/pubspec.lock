@@ -180,10 +180,9 @@ packages:
   device_info_plus:
     dependency: "direct main"
     description:
-      name: device_info_plus
-      sha256: ade1c36f8355d6284c98e4a47992ea263887ed3d1acb281e37635dd45f04c4aa
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/device_info_plus-13.3.0"
+      relative: true
+    source: path
     version: "13.3.0"
   device_info_plus_platform_interface:
     dependency: transitive
@@ -276,10 +275,9 @@ packages:
   firebase_messaging:
     dependency: "direct main"
     description:
-      name: firebase_messaging
-      sha256: e19c73b369ae83f4580a0676597f9ac3a0cd91e1b18be69ea16299c153dd9310
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/firebase_messaging-17.0.1"
+      relative: true
+    source: path
     version: "17.0.1"
   firebase_messaging_platform_interface:
     dependency: transitive
@@ -321,10 +319,9 @@ packages:
   flutter_appauth:
     dependency: "direct main"
     description:
-      name: flutter_appauth
-      sha256: "6482ea76a8c617782574c33991bee0317fa1e699ddc833ce4fc3df88a672c7cb"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/flutter_appauth-13.0.0"
+      relative: true
+    source: path
     version: "13.0.0"
   flutter_appauth_platform_interface:
     dependency: transitive
@@ -358,10 +355,9 @@ packages:
   flutter_local_notifications:
     dependency: "direct main"
     description:
-      name: flutter_local_notifications
-      sha256: fd5fc8966a8b34337ac182dc394f3506139b69d8138d4e9e174a13d6468adcd4
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/flutter_local_notifications-22.3.3"
+      relative: true
+    source: path
     version: "22.3.3"
   flutter_local_notifications_linux:
     dependency: transitive
@@ -839,10 +835,9 @@ packages:
   posthog_flutter:
     dependency: "direct main"
     description:
-      name: posthog_flutter
-      sha256: e4f2f4f8fabb98c1c3c93a975bb8636531a42031f7eb09f47a69f2a73b153acf
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/posthog_flutter-5.58.3"
+      relative: true
+    source: path
     version: "5.58.3"
   process:
     dependency: transitive
@@ -877,12 +872,11 @@ packages:
     source: hosted
     version: "2.1.2"
   record_ios:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: record_ios
-      sha256: "21d189f49a598af4697dac4cc9e48389ac0a1fb3e916622b5504a58d9b96313e"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/record_ios-2.1.1"
+      relative: true
+    source: path
     version: "2.1.1"
   record_linux:
     dependency: transitive
@@ -951,10 +945,9 @@ packages:
   sentry_flutter:
     dependency: "direct main"
     description:
-      name: sentry_flutter
-      sha256: a4dd14fee180b0a6dfd16133bc617a8cfc8c7cbc2e991851e5765ebcbbfcc9a8
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/sentry_flutter-10.2.0"
+      relative: true
+    source: path
     version: "10.2.0"
   share_plus:
     dependency: "direct main"

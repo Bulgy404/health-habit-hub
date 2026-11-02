@@ -1,0 +1,42 @@
+[
+  {
+    "file": "health-habit-hub-play-teaser-concept-en-25s.mp4",
+    "validation": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "30/1",
+          "nb_frames": "750"
+        }
+      ],
+      "format": {
+        "duration": "25.000000"
+      }
+    }
+  },
+  {
+    "file": "health-habit-hub-play-teaser-concept-de-25s.mp4",
+    "validation": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "30/1",
+          "nb_frames": "750"
+        }
+      ],
+      "format": {
+        "duration": "25.000000"
+      }
+    }
+  }
+]

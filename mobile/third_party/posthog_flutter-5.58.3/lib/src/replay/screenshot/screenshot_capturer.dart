@@ -1,0 +1,1106 @@
+import 'dart:async';
+import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart'
+    show VoidCallback, visibleForTesting, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart' show Element, WidgetsBinding;
+import 'package:posthog_flutter/posthog_flutter.dart';
+import 'package:posthog_flutter/src/replay/element_parsers/element_data.dart';
+import 'package:posthog_flutter/src/replay/image_extension.dart';
+import 'package:posthog_flutter/src/replay/mask/image_mask_painter.dart';
+import 'package:posthog_flutter/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_flutter/src/replay/native_communicator.dart';
+import 'package:posthog_flutter/src/replay/screenshot/snapshot_manager.dart';
+import 'package:posthog_flutter/src/replay/size_extension.dart';
+import 'package:posthog_flutter/src/replay/session_replay_config_extension.dart';
+import 'package:posthog_flutter/src/util/logging.dart';
+
+class ImageInfo {
+  final int id;
+  final int x;
+  final int y;
+  final int width;
+  final int height;
+  final bool shouldSendMetaEvent;
+  final Uint8List imageBytes;
+
+  /// Which run of the capturer's per-session state this frame was built in.
+  /// A frame naming no session cannot be told apart from a fresh one by id
+  /// alone, so the generation is what separates them.
+  final int generation;
+
+  /// The replay session this frame was captured under, so the sender can drop
+  /// it if the session rotates mid-flight.
+  final String? sessionId;
+
+  /// Whether the Android window had FLAG_SECURE when this frame was captured,
+  /// so the native side masks it even if the flag clears before the send.
+  final bool secureAtCapture;
+
+  ImageInfo(
+    this.id,
+    this.x,
+    this.y,
+    this.width,
+    this.height,
+    this.shouldSendMetaEvent,
+    this.imageBytes, {
+    required this.sessionId,
+    required this.generation,
+    this.secureAtCapture = false,
+  });
+}
+
+class ViewTreeSnapshotStatus {
+  bool sentMetaEvent = false;
+
+  /// The size the last delivered meta event reported. A rotation or a fold
+  /// resizes the same view, and the player sizes the replay from the latest
+  /// meta event, so a new size needs a new one.
+  Size? metaEventSize;
+
+  /// Hash of the last captured raw RGBA image bytes.
+  /// We store only a hash instead of the full byte array to avoid
+  /// holding ~8MB+ of raw pixel data in memory permanently.
+  int? imageBytesHash;
+
+  int? compositedBytesHash;
+
+  ViewTreeSnapshotStatus(this.sentMetaEvent);
+}
+
+/// A revealed platform view. [data] carries the view's own bounds, which the
+/// native side uses to find and crop it; [visibleRect] is the part an ancestor
+/// clip leaves visible, which is all we are allowed to paint. Both are in the
+/// view's own coordinates and share [data]'s transform.
+class _CapturedView {
+  final ElementData data;
+  final Rect visibleRect;
+  const _CapturedView({required this.data, required this.visibleRect});
+}
+
+class _PlatformViewRects {
+  final List<ElementData> masked;
+  final List<_CapturedView> captured;
+  const _PlatformViewRects({required this.masked, required this.captured});
+}
+
+class ScreenshotCapturer {
+  final PostHogConfig _config;
+
+  /// Called when a capture tick reads a session id different from the one it
+  /// last tracked, i.e. the native SDK rotated the session behind Dart's back.
+  final VoidCallback? onSessionRotated;
+
+  final ImageMaskPainter _imageMaskPainter = ImageMaskPainter();
+  final _nativeCommunicator = NativeCommunicator();
+  final _snapshotManager = SnapshotManager();
+
+  bool _cancelled = false;
+
+  bool hasCapturedPlatformViews = false;
+
+  // Bumped whenever the per-session state is dropped. Frames name a session,
+  // but a frame built before the first state read names none, and so does one
+  // built right after a forced reset — the generation is what tells those two
+  // apart.
+  int _sessionGeneration = 0;
+
+  // Held so confirmDelivered/onOcclusionEnded act on the exact status a frame
+  // was built against, avoiding a containerKey re-lookup that can transiently fail.
+  int? _lastTargetViewId;
+  ViewTreeSnapshotStatus? _lastTargetStatus;
+
+  // Dedup hashes of the latest capture, held until the sender confirms delivery.
+  // Committing at capture time would poison dedup against a dropped frame,
+  // freezing the replay until the pixels next change.
+  int? _pendingImageBytesHash;
+  int? _pendingCompositedBytesHash;
+  Size? _pendingMetaEventSize;
+  // A declined view is retried every tick, so each decline logs once per session.
+  final _loggedDeclines = <String>{};
+
+  /// The replay session the tracked snapshot state belongs to, read from native
+  /// on every capture tick. Null until the first read, and after a forced reset.
+  String? _replaySessionId;
+
+  @visibleForTesting
+  ViewTreeSnapshotStatus? get debugLastTargetStatus => _lastTargetStatus;
+
+  @visibleForTesting
+  String? get debugReplaySessionId => _replaySessionId;
+
+  ScreenshotCapturer(this._config, {this.onSessionRotated});
+
+  /// Resolves the live config at read time so masking flags never trail a
+  /// close()/setup() reconfigure.
+  @visibleForTesting
+  PostHogConfig get effectiveConfig => Posthog().config ?? _config;
+
+  void cancel() {
+    _cancelled = true;
+  }
+
+  /// Drops all per-session snapshot state when [currentSessionId] differs from
+  /// the session that state was built under: the new session needs its own meta
+  /// event, and its first frame must not be deduped against the previous
+  /// session's pixels.
+  ///
+  /// [force] resets even when the id is unchanged, for a restart the platform
+  /// performs without rotating. The new id is unknown then, so it is left null
+  /// until the next tick reads it.
+  void resetSessionStateIfNeeded(
+    String? currentSessionId, {
+    bool force = false,
+  }) {
+    if (!force && _replaySessionId == currentSessionId) {
+      return;
+    }
+    // Adopting an id for the first time is the same generation: an occlusion
+    // placeholder built before any state read belongs to the session that read
+    // then names, and must survive it. Every other reset starts a new one.
+    if (force || _replaySessionId != null) {
+      _sessionGeneration++;
+    }
+    _replaySessionId = currentSessionId;
+    _snapshotManager.clear();
+    _lastTargetViewId = null;
+    _lastTargetStatus = null;
+    _pendingImageBytesHash = null;
+    _pendingCompositedBytesHash = null;
+    _pendingMetaEventSize = null;
+    _loggedDeclines.clear();
+  }
+
+  /// Whether [imageInfo] still belongs to the session the capturer is tracking
+  /// — the session-level counterpart of the occlusion episode check. A frame
+  /// outliving its session would land in the new session ahead of that
+  /// session's meta event.
+  ///
+  /// It catches a forced reset landing mid-send, and a rotation adopted by a
+  /// capture tick that was already in flight when an occlusion placeholder was
+  /// built — that path is not serialized against tick captures. It does not
+  /// catch a rotation observed by the same tick that produced the frame: that
+  /// tick writes the tracked id before building it.
+  ///
+  /// The id alone cannot judge a frame naming no session, and there are two of
+  /// those: an occlusion placeholder built before any state read, and anything
+  /// built after a forced reset, which leaves the tracked id null until the
+  /// next read. Hence the generation — the first must survive the read that
+  /// names its session (dropping it would leave the episode showing the
+  /// uncovered Flutter tree instead of the cover), the second must not survive
+  /// the reset that ended its recording.
+  bool sessionStillCurrent(ImageInfo imageInfo) =>
+      imageInfo.generation == _sessionGeneration &&
+      (imageInfo.sessionId == null || _replaySessionId == imageInfo.sessionId);
+
+  /// Called when an occlusion episode ends: invalidates the dedup hashes (else
+  /// the first Flutter frame matches the placeholder/bridged hash and freezes
+  /// the replay) and re-arms meta (the bridge sent the native screen's meta).
+  /// Uses the held status so it can't no-op on a transient lookup failure.
+  void onOcclusionEnded() {
+    final statusView = _lastTargetStatus;
+    if (statusView == null) {
+      return;
+    }
+    statusView.imageBytesHash = null;
+    statusView.compositedBytesHash = null;
+    statusView.sentMetaEvent = false;
+  }
+
+  /// Re-arms the meta latch for [viewId] before its meta event is sent. The
+  /// player takes its viewport from that meta even if the full snapshot after
+  /// it fails, so the latch stays open until [confirmDelivered] commits both.
+  void rearmMetaEvent(int viewId) {
+    if (viewId != _lastTargetViewId) {
+      return;
+    }
+    _lastTargetStatus?.sentMetaEvent = false;
+  }
+
+  /// Commits delivery state for [viewId]: the pending dedup hashes, and the meta
+  /// latch when [metaSent]. Only the sender calls this, after actual delivery —
+  /// capture paths must not self-commit, or a dropped frame poisons dedup and
+  /// swallows the meta. An id mismatch means the RepaintBoundary was recreated.
+  void confirmDelivered(int viewId, {required bool metaSent}) {
+    if (viewId != _lastTargetViewId) {
+      return;
+    }
+    final statusView = _lastTargetStatus;
+    if (statusView == null) {
+      return;
+    }
+    if (_pendingImageBytesHash != null) {
+      statusView.imageBytesHash = _pendingImageBytesHash;
+    }
+    if (_pendingCompositedBytesHash != null) {
+      statusView.compositedBytesHash = _pendingCompositedBytesHash;
+    }
+    if (metaSent) {
+      statusView.sentMetaEvent = true;
+      statusView.metaEventSize = _pendingMetaEventSize;
+    }
+  }
+
+  double get _screenshotScale => defaultTargetPlatform == TargetPlatform.android
+      ? effectiveConfig.sessionReplayConfig.screenshotScale
+      : 1.0;
+
+  int _imageDimension(double dimension, double scale) => scale == 1.0
+      ? dimension.toInt()
+      : max(1, (dimension.toInt() * scale).ceil());
+
+  Future<Uint8List?> _getImageBytes(
+    ui.Image img, {
+    ui.ImageByteFormat format = ui.ImageByteFormat.png,
+  }) async {
+    try {
+      final ByteData? byteData = await img.toByteData(format: format);
+      if (byteData == null || byteData.lengthInBytes == 0) {
+        printIfDebug('Error: Failed to convert image to byte data.');
+        return null;
+      }
+      return byteData.buffer.asUint8List();
+    } catch (e) {
+      printIfDebug('Error converting image to byte data: $e');
+      return null;
+    }
+  }
+
+  bool _isPlatformViewRenderObject(RenderObject ro) =>
+      ro is PlatformViewRenderBox ||
+      ro is RenderDarwinPlatformView ||
+      ro is TextureBox;
+
+  /// Null when a view that must be masked could not be measured; the caller
+  /// drops the frame rather than ship it unmasked.
+  _PlatformViewRects? _collectPlatformViewRects(
+      PostHogPlatformViewPrivacy defaultPolicy,
+      [RenderObject? ancestorOverride]) {
+    final masked = <ElementData>[];
+    final captured = <_CapturedView>[];
+    final ancestor = ancestorOverride ??
+        PostHogMaskController.instance.containerKey.currentContext
+            ?.findRenderObject();
+    final seen = <int>{};
+
+    final rootElement = WidgetsBinding.instance.rootElement;
+    if (rootElement != null &&
+        !_visitElementForPlatformViews(
+            rootElement, ancestor, masked, captured, seen, defaultPolicy)) {
+      return null;
+    }
+
+    if (masked.isNotEmpty || captured.isNotEmpty) {
+      printIfDebug(
+          'Found ${masked.length} masked and ${captured.length} captured platform view rect(s)');
+    }
+    return _PlatformViewRects(masked: masked, captured: captured);
+  }
+
+  bool _visitElementForPlatformViews(
+    Element element,
+    RenderObject? ancestor,
+    List<ElementData> masked,
+    List<_CapturedView> captured,
+    Set<int> seen,
+    PostHogPlatformViewPrivacy inheritedPolicy,
+  ) {
+    final policy = resolvePrivacyPolicyForElement(element, inheritedPolicy);
+
+    var safe = true;
+    final ro = element.renderObject;
+    if (ro is RenderBox &&
+        ro.hasSize &&
+        ro.size.isValidSize &&
+        _isPlatformViewRenderObject(ro)) {
+      safe = _addIfNew(ro, ancestor, masked, captured, seen, policy);
+    }
+    element.visitChildren((child) {
+      if (!_visitElementForPlatformViews(
+          child, ancestor, masked, captured, seen, policy)) {
+        safe = false;
+      }
+    });
+    return safe;
+  }
+
+  /// Returns false when a view that must be masked could not be measured, so
+  /// the caller drops the frame rather than ship it with the mask missing.
+  bool _addIfNew(
+    RenderBox ro,
+    RenderObject? ancestor,
+    List<ElementData> masked,
+    List<_CapturedView> captured,
+    Set<int> seen,
+    PostHogPlatformViewPrivacy policy,
+  ) {
+    if (!seen.add(identityHashCode(ro))) return true;
+    // TextureBox content is already composited into the Flutter image, so no
+    // native screenshot is needed when revealing. Only mask it when requested.
+    if (ro is TextureBox && policy == PostHogPlatformViewPrivacy.capture) {
+      return true;
+    }
+    try {
+      final transform = ro.getTransformTo(ancestor);
+      final visible = clippedPaintBounds(ro, ancestor);
+      if (visible.isEmpty) return true;
+      if (policy == PostHogPlatformViewPrivacy.capture) {
+        captured.add(_CapturedView(
+          data: ElementData(
+            rect: ro.paintBounds,
+            type: 'platformView',
+            transform: transform,
+          ),
+          visibleRect: visible,
+        ));
+      } else {
+        masked.add(ElementData(
+          rect: visible,
+          type: 'platformView',
+          transform: transform,
+        ));
+      }
+      return true;
+    } catch (e) {
+      printIfDebug('Error collecting platform view rect: $e');
+      // A revealed view loses nothing here — it has no mask to place. A masked
+      // one does, and a texture-backed view's pixels are already in the
+      // screenshot, so the frame cannot be shipped without its mask.
+      return policy == PostHogPlatformViewPrivacy.capture;
+    }
+  }
+
+  /// Masks a revealed view whose native capture came back empty, so a test can
+  /// check the fallback covers only the visible region.
+  @visibleForTesting
+  Future<void> debugMaskFailedCapture(
+          Canvas canvas, Rect viewRect, Rect visibleRect, Matrix4 transform) =>
+      _compositeRevealedView(
+        canvas,
+        _CapturedView(
+          data: ElementData(
+              rect: viewRect, type: 'platformView', transform: transform),
+          visibleRect: visibleRect,
+        ),
+        null,
+        0,
+        0,
+        1.0,
+      );
+
+  /// The rects the mask painter is handed for the platform views on screen,
+  /// and the visible region each revealed view is clipped to.
+  @visibleForTesting
+  ({List<Rect> masked, List<Rect> revealed})? debugPlatformViewRects(
+          PostHogPlatformViewPrivacy defaultPolicy) =>
+      debugPlatformViewRectsAgainst(defaultPolicy, null);
+
+  /// As [debugPlatformViewRects], but measured against [ancestor] so a test can
+  /// force the walk to fail.
+  @visibleForTesting
+  ({List<Rect> masked, List<Rect> revealed})? debugPlatformViewRectsAgainst(
+      PostHogPlatformViewPrivacy defaultPolicy, RenderObject? ancestor) {
+    final rects = _collectPlatformViewRects(defaultPolicy, ancestor);
+    if (rects == null) return null;
+    return (
+      masked: rects.masked.map((e) => e.rect).toList(),
+      revealed: rects.captured.map((v) => v.visibleRect).toList(),
+    );
+  }
+
+  Map<String, int> _viewSpec(ElementData viewRect, Offset globalPosition) {
+    final transform = viewRect.transform;
+    if (transform == null) return {'x': 0, 'y': 0, 'width': 0, 'height': 0};
+    final rect = MatrixUtils.transformRect(transform, viewRect.rect);
+    return {
+      'x': (globalPosition.dx + rect.left).round(),
+      'y': (globalPosition.dy + rect.top).round(),
+      'width': rect.width.round(),
+      'height': rect.height.round(),
+    };
+  }
+
+  Future<void> _compositeRevealedView(
+    Canvas canvas,
+    _CapturedView view,
+    Uint8List? bytes,
+    int nativeW,
+    int nativeH,
+    double pixelRatio,
+  ) async {
+    final viewRect = view.data;
+    final transform = viewRect.transform;
+    if (transform == null) return;
+    // The native crop covers the whole view; only the clipped part may be painted.
+    final fallbackMask = ElementData(
+      rect: view.visibleRect,
+      type: viewRect.type,
+      transform: transform,
+    );
+    void maskInstead(String reason) {
+      final hint = defaultTargetPlatform == TargetPlatform.iOS
+          ? ' On iOS only WKWebView-backed platform views can be captured.'
+          : '';
+      final message =
+          '$reason a platform view at ${viewRect.rect}; masked it instead.$hint';
+      if (_loggedDeclines.add(message)) printIfDebug(message);
+      _imageMaskPainter.drawMaskedImage(canvas, [fallbackMask], pixelRatio);
+    }
+
+    if (bytes == null) {
+      maskInstead('Native side declined to capture');
+      return;
+    }
+    final nativeImage = await _decodeRawPixels(bytes, nativeW, nativeH);
+    if (nativeImage == null) {
+      maskInstead('Failed to decode the native capture of');
+      return;
+    }
+    try {
+      compositeRevealedImage(
+        canvas,
+        nativeImage,
+        transform,
+        viewRect.rect,
+        view.visibleRect,
+        pixelRatio: pixelRatio,
+      );
+    } finally {
+      nativeImage.dispose();
+    }
+  }
+
+  Future<ui.Image?> _decodeRawPixels(Uint8List bytes, int width, int height) {
+    if (width <= 0 || height <= 0 || bytes.isEmpty) return Future.value(null);
+    final completer = Completer<ui.Image?>();
+    try {
+      ui.decodeImageFromPixels(
+        bytes,
+        width,
+        height,
+        ui.PixelFormat.rgba8888,
+        (image) => completer.complete(image),
+      );
+    } catch (e) {
+      printIfDebug('Error decoding raw pixels: $e');
+      completer.complete(null);
+    }
+    return completer.future;
+  }
+
+  /// Computes a hash of the full raw RGBA byte array for change detection.
+  /// This avoids retaining the full image bytes while still hashing every byte.
+  int _computeImageHash(Uint8List bytes) {
+    var hash = 0x811c9dc5; // FNV offset basis (32-bit)
+    final length = bytes.length;
+
+    // Always include the length in the hash.
+    hash ^= length;
+    hash = (hash * 0x01000193) & 0x7fffffff;
+
+    if (bytes.offsetInBytes % 4 == 0) {
+      final wordCount = length ~/ 4;
+      final words =
+          Uint32List.view(bytes.buffer, bytes.offsetInBytes, wordCount);
+      for (var i = 0; i < wordCount; i++) {
+        hash ^= words[i];
+        hash = (hash * 0x01000193) & 0x7fffffff;
+      }
+      for (var i = wordCount * 4; i < length; i++) {
+        hash ^= bytes[i];
+        hash = (hash * 0x01000193) & 0x7fffffff;
+      }
+    } else {
+      for (var i = 0; i < length; i++) {
+        hash ^= bytes[i];
+        hash = (hash * 0x01000193) & 0x7fffffff;
+      }
+    }
+
+    return hash;
+  }
+
+  /// Shared prologue of [captureScreenshot]/[buildOcclusionPlaceholder]: resolves
+  /// the container render object and per-view status, and resets [_cancelled] so a
+  /// prior stop's cancel() can't veto a fresh capture. Null when not ready.
+  ({
+    RenderRepaintBoundary renderObject,
+    ViewTreeSnapshotStatus statusView,
+    bool shouldSendMetaEvent,
+    Offset globalPosition,
+  })? _resolveCaptureTarget() {
+    _cancelled = false;
+
+    final context = PostHogMaskController.instance.containerKey.currentContext;
+    final renderObject = context?.findRenderObject() as RenderRepaintBoundary?;
+    if (renderObject == null ||
+        !renderObject.hasSize ||
+        !renderObject.size.isValidSize ||
+        renderObject.size.width < 1 ||
+        renderObject.size.height < 1) {
+      return null;
+    }
+
+    final statusView = _snapshotManager.getStatus(renderObject);
+    _lastTargetViewId = identityHashCode(renderObject);
+    _lastTargetStatus = statusView;
+    // A new capture owns the pending slots; a dropped predecessor's hashes
+    // must not commit on this frame's delivery.
+    _pendingImageBytesHash = null;
+    _pendingCompositedBytesHash = null;
+    // Truncated like the width and height the meta event reports.
+    final size = Size(
+      renderObject.size.width.truncateToDouble(),
+      renderObject.size.height.truncateToDouble(),
+    );
+    _pendingMetaEventSize = size;
+    return (
+      renderObject: renderObject,
+      statusView: statusView,
+      shouldSendMetaEvent:
+          !statusView.sentMetaEvent || statusView.metaEventSize != size,
+      globalPosition: renderObject.localToGlobal(Offset.zero),
+    );
+  }
+
+  /// Builds one black placeholder frame for an occlusion episode, shown when a
+  /// bridged capture can't be produced. Null when the view is not ready or
+  /// rendering fails — like [captureScreenshot], it never throws.
+  Future<ImageInfo?> buildOcclusionPlaceholder() async {
+    try {
+      return await _buildOcclusionPlaceholder();
+    } catch (error) {
+      printIfDebug('Error building occlusion placeholder: $error');
+      return null;
+    }
+  }
+
+  Future<ImageInfo?> _buildOcclusionPlaceholder() async {
+    final target = _resolveCaptureTarget();
+    if (target == null) {
+      return null;
+    }
+    // Read before the awaits below, so a rotation or a forced reset mid-build
+    // is visible to the sender as a stale frame.
+    final sessionId = _replaySessionId;
+    final generation = _sessionGeneration;
+    final renderObject = target.renderObject;
+    // Always with meta: a bridged episode already shipped the native screen's
+    // meta, so without re-sending, the placeholder renders against its viewport.
+    const shouldSendMetaEvent = true;
+    final globalPosition = target.globalPosition;
+    final srcWidth = renderObject.size.width;
+    final srcHeight = renderObject.size.height;
+    final width = srcWidth.toInt();
+    final height = srcHeight.toInt();
+    final scale = _screenshotScale;
+    final imageWidth = _imageDimension(srcWidth, scale);
+    final imageHeight = _imageDimension(srcHeight, scale);
+
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawRect(
+      Rect.fromLTWH(0, 0, imageWidth.toDouble(), imageHeight.toDouble()),
+      Paint()..color = const Color(0xFF000000),
+    );
+    final picture = recorder.endRecording();
+
+    ui.Image placeholderImage;
+    try {
+      placeholderImage = await picture.toImage(imageWidth, imageHeight);
+    } finally {
+      picture.dispose();
+    }
+
+    if (_cancelled || !placeholderImage.isValidSize) {
+      placeholderImage.dispose();
+      return null;
+    }
+
+    Uint8List? pngBytes;
+    try {
+      pngBytes = await _getImageBytes(placeholderImage);
+    } finally {
+      placeholderImage.dispose();
+    }
+
+    if (_cancelled || pngBytes == null || pngBytes.isEmpty) {
+      return null;
+    }
+
+    // No status update here — the sender commits via [confirmDelivered].
+    return ImageInfo(
+      identityHashCode(renderObject),
+      globalPosition.dx.toInt(),
+      globalPosition.dy.toInt(),
+      width,
+      height,
+      shouldSendMetaEvent,
+      pngBytes,
+      sessionId: sessionId,
+      generation: generation,
+    );
+  }
+
+  /// Captures one Flutter frame, or null when there is nothing to send. Never
+  /// throws.
+  Future<ImageInfo?> captureScreenshot() async {
+    // Cleared again in _resolveCaptureTarget, but that runs after the round trip
+    // below — whose post-await check would veto this capture on a prior flag.
+    _cancelled = false;
+    final state = await _nativeCommunicator.getSessionReplayState();
+    if (_cancelled) {
+      return null;
+    }
+    if (!state.isActive) {
+      _snapshotManager.clear();
+      return null;
+    }
+    final previousSessionId = _replaySessionId;
+    // Before the capture target reads the meta latch below: a rotated session
+    // must not inherit the previous session's latch or dedup hashes.
+    resetSessionStateIfNeeded(state.sessionId);
+    // Adopting an id for the first time (startup, or after a forced reset that
+    // already asked for a sample) is not a rotation.
+    if (previousSessionId != null && state.sessionId != previousSessionId) {
+      onSessionRotated?.call();
+    }
+    return _captureScreenshot(
+        state.sessionId, _sessionGeneration, state.secure);
+  }
+
+  Future<ImageInfo?> _captureScreenshot(
+      String? sessionId, int generation, bool secureAtCapture) {
+    final target = _resolveCaptureTarget();
+    if (target == null) {
+      return Future.value(null);
+    }
+    final renderObject = target.renderObject;
+    final statusView = target.statusView;
+    final shouldSendMetaEvent = target.shouldSendMetaEvent;
+    final globalPosition = target.globalPosition;
+
+    final viewId = identityHashCode(renderObject);
+
+    final Completer<ImageInfo?> completer = Completer<ImageInfo?>();
+
+    try {
+      final srcWidth = renderObject.size.width;
+      final srcHeight = renderObject.size.height;
+      final pixelRatio = _screenshotScale;
+      final imageWidth = _imageDimension(srcWidth, pixelRatio);
+      final imageHeight = _imageDimension(srcHeight, pixelRatio);
+
+      final replayConfig = effectiveConfig.sessionReplayConfig;
+      final maskAllContent = replayConfig.masksAnyContent;
+
+      ui.Image? image;
+      ui.PictureRecorder? recorder;
+      ui.Picture? picture;
+      ui.Image? finalImage;
+
+      Future(() async {
+        // wait the UI to settle
+        await SchedulerBinding.instance.endOfFrame;
+
+        // Walk the tree for mask rects here, with no await before toImage(),
+        // so the rects and the pixels come from the same frame. A walk done
+        // before the async body freezes frame N's positions and paints them
+        // onto frame N+k, which leaks content when the UI moves.
+        final maskElements = PostHogMaskController.instance.getMaskElements(
+          includeAllWidgets: maskAllContent,
+        );
+        // Fail closed: a failed walk must drop the frame, never ship an
+        // unmasked screenshot.
+        if (maskElements == null) {
+          printIfDebug(
+            'The widget mask walk failed, dropping the frame.',
+          );
+          completer.complete(null);
+          return;
+        }
+
+        image = await renderObject.toImage(pixelRatio: pixelRatio);
+
+        final currentImage = image;
+        if (_cancelled) {
+          currentImage?.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+
+        if (currentImage == null || !currentImage.isValidSize) {
+          _snapshotManager.clear();
+          currentImage?.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+
+        recorder = ui.PictureRecorder();
+        final currentRecorder = recorder;
+        if (currentRecorder == null) {
+          currentImage.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+        final canvas = Canvas(currentRecorder);
+
+        Uint8List? imageBytes = await _getImageBytes(
+          currentImage,
+          format: ui.ImageByteFormat.rawRgba,
+        );
+        if (_cancelled) {
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+          currentImage.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+
+        if (imageBytes == null || imageBytes.isEmpty) {
+          printIfDebug(
+            'Error: Failed to convert image byte data to Uint8List.',
+          );
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+          currentImage.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+
+        final preMaskHash = _computeImageHash(imageBytes);
+        imageBytes = null;
+
+        final defaultPolicy = replayConfig.maskAllPlatformViews
+            ? PostHogPlatformViewPrivacy.mask
+            : PostHogPlatformViewPrivacy.capture;
+        final pvRects = _collectPlatformViewRects(defaultPolicy);
+        // Fail closed, like the widget mask walk above: a platform view we
+        // could not measure would ship unmasked, and a texture-backed one's
+        // pixels are already in the screenshot.
+        if (pvRects == null) {
+          printIfDebug(
+            'The platform view mask walk failed, dropping the frame.',
+          );
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+          currentImage.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+        final hasCapturedViews = pvRects.captured.isNotEmpty;
+        hasCapturedPlatformViews = hasCapturedViews;
+
+        // A rotated uniform screen has the same bytes at a new size, and still
+        // needs its meta event.
+        if (!hasCapturedViews &&
+            !shouldSendMetaEvent &&
+            preMaskHash == statusView.imageBytesHash) {
+          printIfDebug(
+            'Snapshot is the same as the last one, nothing changed, do nothing.',
+          );
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+          currentImage.dispose();
+          image = null;
+          completer.complete(null);
+          return;
+        }
+
+        try {
+          canvas.drawImage(currentImage, Offset.zero, Paint());
+        } finally {
+          currentImage.dispose();
+          image = null;
+        }
+
+        if (_cancelled) {
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+          completer.complete(null);
+          return;
+        }
+
+        if (maskElements.isNotEmpty) {
+          _imageMaskPainter.drawMaskedImage(
+            canvas,
+            maskElements,
+            pixelRatio,
+          );
+        }
+
+        if (pvRects.masked.isNotEmpty) {
+          _imageMaskPainter.drawMaskedImage(
+            canvas,
+            pvRects.masked,
+            pixelRatio,
+          );
+        }
+        if (pvRects.captured.isNotEmpty) {
+          final specs = pvRects.captured
+              .map((v) => _viewSpec(v.data, globalPosition))
+              .toList();
+          final bytesList =
+              await _nativeCommunicator.captureNativeScreenshots(specs);
+          if (_cancelled) {
+            currentRecorder.endRecording().dispose();
+            recorder = null;
+            completer.complete(null);
+            return;
+          }
+          for (var i = 0; i < pvRects.captured.length; i++) {
+            final spec = specs[i];
+            final bytes = i < bytesList.length ? bytesList[i] : null;
+            await _compositeRevealedView(canvas, pvRects.captured[i], bytes,
+                spec['width']!, spec['height']!, pixelRatio);
+          }
+        }
+
+        picture = currentRecorder.endRecording();
+        recorder = null;
+
+        final currentPicture = picture;
+        if (currentPicture == null) {
+          completer.complete(null);
+          return;
+        }
+
+        try {
+          finalImage = await currentPicture.toImage(imageWidth, imageHeight);
+
+          final currentFinalImage = finalImage;
+          if (_cancelled) {
+            currentFinalImage?.dispose();
+            finalImage = null;
+            completer.complete(null);
+            return;
+          }
+
+          if (currentFinalImage == null || !currentFinalImage.isValidSize) {
+            currentFinalImage?.dispose();
+            finalImage = null;
+            completer.complete(null);
+            return;
+          }
+
+          try {
+            _pendingImageBytesHash = preMaskHash;
+
+            final pngBytes = await _getImageBytes(currentFinalImage);
+            if (_cancelled || pngBytes == null || pngBytes.isEmpty) {
+              completer.complete(null);
+              return;
+            }
+
+            if (hasCapturedViews) {
+              final compositedHash = _computeImageHash(pngBytes);
+              if (!shouldSendMetaEvent &&
+                  compositedHash == statusView.compositedBytesHash) {
+                printIfDebug(
+                  'Composited snapshot is the same as the last one, nothing changed, do nothing.',
+                );
+                completer.complete(null);
+                return;
+              }
+              _pendingCompositedBytesHash = compositedHash;
+            }
+
+            final imageInfo = ImageInfo(
+              viewId,
+              globalPosition.dx.toInt(),
+              globalPosition.dy.toInt(),
+              srcWidth.toInt(),
+              srcHeight.toInt(),
+              shouldSendMetaEvent,
+              pngBytes,
+              sessionId: sessionId,
+              generation: generation,
+              secureAtCapture: secureAtCapture,
+            );
+            // No status commit here: the sender may still drop this frame, and
+            // committing for a never-sent frame breaks playback / freezes dedup.
+            // The sender commits via [confirmDelivered] after delivery.
+            completer.complete(imageInfo);
+          } finally {
+            currentFinalImage.dispose();
+            finalImage = null;
+          }
+        } finally {
+          currentPicture.dispose();
+          picture = null;
+        }
+      }).catchError((error) {
+        finalImage?.dispose();
+        finalImage = null;
+        picture?.dispose();
+        picture = null;
+        final currentRecorder = recorder;
+        if (currentRecorder != null) {
+          currentRecorder.endRecording().dispose();
+          recorder = null;
+        }
+        image?.dispose();
+        image = null;
+
+        printIfDebug('Error capturing image: $error');
+        if (!completer.isCompleted) {
+          completer.complete(null);
+        }
+      });
+
+      return completer.future;
+    } catch (e) {
+      printIfDebug('Error initializing capture: $e');
+      return Future.value(null);
+    }
+  }
+}
+
+/// The region [node] actually clips to, when it is a clip render object whose
+/// app-supplied clipper may report a smaller approximation than it clips with.
+///
+/// Returns null when the node clips nothing, so a clipper attached with
+/// [Clip.none] cannot shrink a mask over content Flutter paints in full.
+Rect? _appClipperBounds(RenderObject node) {
+  if (node is! RenderBox || !node.hasSize) return null;
+  final size = node.size;
+  if (node is RenderClipRect) {
+    return node.clipBehavior == Clip.none ? null : node.clipper?.getClip(size);
+  }
+  if (node is RenderClipOval) {
+    return node.clipBehavior == Clip.none ? null : node.clipper?.getClip(size);
+  }
+  if (node is RenderClipRRect) {
+    return node.clipBehavior == Clip.none
+        ? null
+        : node.clipper?.getClip(size).outerRect;
+  }
+  if (node is RenderClipPath) {
+    return node.clipBehavior == Clip.none
+        ? null
+        : node.clipper?.getClip(size).getBounds();
+  }
+  return null;
+}
+
+/// Intersects [ro]'s paint bounds with every clip its ancestors apply, up to
+/// but not including [ancestor], and returns the visible rect in [ro]'s local
+/// coordinates.
+///
+/// A platform view reports its full, unclipped paint bounds, so a map inside a
+/// scroll view or a `ClipRect` would otherwise be masked past its visible edge
+/// and over the widgets outside that clip. Returns [Rect.zero] when the view is
+/// fully clipped away.
+///
+/// A viewport reports the region a viewer can see, which excludes the band an
+/// overlapping sliver header covers. That is what masking wants for the usual
+/// opaque header, and masking the band would black the header out of the
+/// replay. Under a translucent header the band stays visible, and for a
+/// [TextureBox] — whose content is already in the Flutter image — that means
+/// the view's own pixels reach the recording.
+@visibleForTesting
+Rect clippedPaintBounds(RenderBox ro, RenderObject? ancestor) {
+  var clipped = ro.paintBounds;
+  RenderObject child = ro;
+  RenderObject? node = ro.parent;
+  while (node != null && !identical(node, ancestor)) {
+    // A CustomClipper runs application code here; a throw would drop the mask
+    // entirely, so a failing clip is skipped and the wider bounds survive.
+    Rect? clip;
+    Matrix4? toRo;
+    try {
+      // An app-supplied clipper may report an approximation smaller than the
+      // region it actually clips to, which would mask less than the view shows.
+      clip =
+          _appClipperBounds(node) ?? node.describeApproximatePaintClip(child);
+      // A NaN rect is not empty, so it would pass every check below and leave
+      // the mask undrawn; an app clipper's arithmetic can produce one.
+      if (clip != null && !clip.isFinite) clip = null;
+      if (clip != null) {
+        final toNode = ro.getTransformTo(node);
+        // transformRect's four-corner hull only over-approximates for an
+        // affine matrix; under perspective it can be far smaller than the real
+        // region, which would shrink the mask or drop it.
+        final m = toNode.storage;
+        final projective = m[3] != 0 || m[7] != 0 || m[11] != 0;
+        toRo = projective ? null : Matrix4.tryInvert(toNode);
+      }
+    } catch (e) {
+      printIfDebug('Skipping an ancestor clip that could not be mapped: $e');
+      clip = null;
+      toRo = null;
+    }
+    if (clip != null && toRo != null) {
+      clipped = clipped.intersect(MatrixUtils.transformRect(toRo, clip));
+      if (clipped.isEmpty) return Rect.zero;
+    }
+    child = node;
+    node = node.parent;
+  }
+  return clipped;
+}
+
+/// Paints [image] — the platform view's native pixels — back over the region
+/// the view occupies, showing only the part [visibleRect] leaves. [viewRect]
+/// and [visibleRect] are in the view's own space and [transform] maps that
+/// space to the canvas.
+///
+/// Android crops an axis-aligned region of the screen, so the crop already
+/// holds the view's on-screen appearance and goes back into the same
+/// device-space rect; painting it in the view's own space would apply the
+/// view's rotation or flip a second time. iOS snapshots a `WKWebView` in the
+/// view's own space instead, so a rotated or scaled revealed view composites
+/// unrotated there — measured on a simulator, unchanged by this function, and
+/// tracked separately.
+@visibleForTesting
+void compositeRevealedImage(
+  Canvas canvas,
+  ui.Image image,
+  Matrix4 transform,
+  Rect viewRect,
+  Rect visibleRect, {
+  double pixelRatio = 1.0,
+}) {
+  final toDevice = Matrix4.tryInvert(transform);
+  if (toDevice == null) return;
+  canvas.save();
+  try {
+    canvas.scale(pixelRatio);
+    // The clip is set in the view's own space so a rotated or skewed edge
+    // stays exact; its device-space hull would let native pixels past it. An
+    // antialiased edge would blend them a hairline past it too. visibleRect is
+    // itself a hull of the ancestor clip, so a rotated view can still reveal a
+    // corner of native content outside that clip.
+    canvas.transform(transform.storage);
+    canvas.clipRect(visibleRect, doAntiAlias: false);
+    canvas.transform(toDevice.storage);
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      MatrixUtils.transformRect(transform, viewRect),
+      Paint()..blendMode = ui.BlendMode.srcOver,
+    );
+  } finally {
+    canvas.restore();
+  }
+}
+
+@visibleForTesting
+PostHogPlatformViewPrivacy resolvePrivacyPolicyForElement(
+  Element element,
+  PostHogPlatformViewPrivacy inherited,
+) {
+  if (element.widget is PostHogPlatformView) {
+    return (element.widget as PostHogPlatformView).privacy;
+  }
+  return inherited;
+}

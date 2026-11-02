@@ -1,0 +1,71 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:posthog_flutter/src/replay/element_parsers/element_parser.dart';
+import 'package:posthog_flutter/src/replay/mask/posthog_mask_controller.dart';
+import 'package:posthog_flutter/src/replay/size_extension.dart';
+import 'package:posthog_flutter/src/replay/image_extension.dart';
+
+import 'position_calculator.dart';
+import 'scaler.dart';
+
+class RenderImageParser extends ElementParser {
+  final Scaler _scaler;
+  final PositionCalculator _positionCalculator;
+
+  RenderImageParser({
+    required Scaler scaler,
+    required PositionCalculator positionCalculator,
+  })  : _scaler = scaler,
+        _positionCalculator = positionCalculator;
+
+  @override
+  ElementGeometry? buildElementData(Element element) {
+    final renderImage = element.renderObject as RenderImage;
+    final image = renderImage.image;
+    if (!renderImage.hasSize ||
+        !renderImage.size.isValidSize ||
+        image == null ||
+        !image.isValidSize) {
+      return null;
+    }
+
+    final fit = renderImage.fit ?? BoxFit.scaleDown;
+
+    final size = _scaler.getScaledSize(
+      image.width.toDouble(),
+      image.height.toDouble(),
+      renderImage.size,
+      fit,
+    );
+
+    if (!size.isValidSize) {
+      return null;
+    }
+
+    final alignment = renderImage.alignment;
+
+    // Calculate position within the container in local coordinates
+    final left = _positionCalculator.calculateLeftPosition(
+      alignment,
+      Offset.zero,
+      renderImage.size.width,
+      size.width,
+    );
+    final top = _positionCalculator.calculateTopPosition(
+      alignment,
+      Offset.zero,
+      renderImage.size.height,
+      size.height,
+    );
+
+    // Store rect in local coordinates - transform handles global positioning
+    final localRect = Rect.fromLTWH(left, top, size.width, size.height);
+
+    // Get the transform relative to the screenshot container (RepaintBoundary)
+    final ancestor = PostHogMaskController.instance.containerKey.currentContext
+        ?.findRenderObject();
+    final transform = renderImage.getTransformTo(ancestor);
+
+    return (rect: localRect, transform: transform);
+  }
+}

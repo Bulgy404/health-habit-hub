@@ -8,21 +8,7 @@ if [[ "$target" != "ipa" && "$target" != "ios" ]]; then
   echo "Usage: bash tool/build_ios.sh [ipa|ios] [Flutter build options]" >&2
   exit 1
 fi
-if [[ -e pubspec_overrides.yaml ]]; then
-  echo "An existing pubspec_overrides.yaml must be reviewed before this release build." >&2
-  exit 1
-fi
-
-flutter pub get
-release_tmp="$(mktemp -d "${TMPDIR:-/tmp}/hhh-ios-release.XXXXXX")"
-cp pubspec.lock "$release_tmp/pubspec.lock"
-cleanup() {
-  cp "$release_tmp/pubspec.lock" pubspec.lock
-  rm -f pubspec_overrides.yaml
-  rm -rf "$release_tmp"
-}
-trap cleanup EXIT
-
-python3 tool/patch_ios_plugins.py --prepare
+# Compatibility shortcut for earlier instructions. Native fixes are now regular
+# dependencies, so Xcode and plain `flutter build ipa` work without this helper.
 flutter pub get
 flutter build "$target" --release --dart-define-from-file=dart_defines_prod.json "$@"

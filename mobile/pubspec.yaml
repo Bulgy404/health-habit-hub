@@ -65,6 +65,24 @@ dev_dependencies:
   plugin_platform_interface: ^2.1.8
   flutter_local_notifications_platform_interface: ^12.0.0
 
+# Maintained native fixes are regular dependencies so Xcode Build/Archive,
+# Flutter CLI and CI all use identical sources. See third_party/README.md.
+dependency_overrides:
+  device_info_plus:
+    path: third_party/device_info_plus-13.3.0
+  flutter_appauth:
+    path: third_party/flutter_appauth-13.0.0
+  record_ios:
+    path: third_party/record_ios-2.1.1
+  firebase_messaging:
+    path: third_party/firebase_messaging-17.0.1
+  flutter_local_notifications:
+    path: third_party/flutter_local_notifications-22.3.3
+  sentry_flutter:
+    path: third_party/sentry_flutter-10.2.0
+  posthog_flutter:
+    path: third_party/posthog_flutter-5.58.3
+
 flutter_launcher_icons:
   image_path: 'assets/icon/app_icon.png'
   android: true

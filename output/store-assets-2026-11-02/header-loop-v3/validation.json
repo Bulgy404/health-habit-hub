@@ -1,0 +1,25 @@
+{
+  "programs": [],
+  "stream_groups": [],
+  "streams": [
+    {
+      "codec_name": "h264",
+      "codec_type": "video",
+      "width": 3840,
+      "height": 1646,
+      "pix_fmt": "yuv420p",
+      "r_frame_rate": "30/1",
+      "nb_frames": "240"
+    }
+  ],
+  "format": {
+    "duration": "8.000000"
+  },
+  "checks": {
+    "full_decode": true,
+    "loop_endpoint_pixel_match": true,
+    "brand_region_pixel_match": true,
+    "new_nodes": 10,
+    "new_connections": 12
+  }
+}

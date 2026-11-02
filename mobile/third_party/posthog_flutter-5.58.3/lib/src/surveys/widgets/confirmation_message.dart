@@ -1,0 +1,56 @@
+import 'package:flutter/material.dart';
+import '../models/survey_appearance.dart';
+import '../models/posthog_display_survey_text_content_type.dart';
+import 'survey_button.dart';
+
+class ConfirmationMessage extends StatelessWidget {
+  const ConfirmationMessage({
+    super.key,
+    required this.onClose,
+    this.appearance = SurveyAppearance.defaultAppearance,
+    this.thankYouMessageDescriptionContentType,
+  });
+
+  final VoidCallback onClose;
+  final SurveyAppearance appearance;
+  final PostHogDisplaySurveyTextContentType?
+      thankYouMessageDescriptionContentType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          appearance.thankYouMessageHeader,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: appearance.descriptionTextColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        if (appearance.thankYouMessageDescription?.isNotEmpty == true &&
+            thankYouMessageDescriptionContentType ==
+                PostHogDisplaySurveyTextContentType.text) ...[
+          const SizedBox(height: 16),
+          Text(
+            appearance.thankYouMessageDescription!,
+            style: TextStyle(
+              fontSize: 16,
+              color: appearance.descriptionTextColor,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+        const SizedBox(height: 20),
+        SurveyButton(
+          onPressed: onClose,
+          text: appearance.thankYouMessageCloseButtonText,
+          appearance: appearance,
+        ),
+      ],
+    );
+  }
+}

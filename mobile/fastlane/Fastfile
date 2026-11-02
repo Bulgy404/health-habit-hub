@@ -88,7 +88,8 @@ platform :ios do
 
     Dir.chdir("..") do
       sh(
-        "bash", "tool/build_ios.sh", "ipa",
+        "flutter", "build", "ipa", "--release",
+        "--dart-define-from-file=dart_defines_prod.json",
         "--build-number=#{build_number}",
         "--export-options-plist=ios/ExportOptions.plist"
       )

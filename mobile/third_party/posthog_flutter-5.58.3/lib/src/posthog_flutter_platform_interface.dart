@@ -1,0 +1,298 @@
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+import 'feature_flag_result.dart';
+import 'logs/posthog_log_severity.dart';
+import 'posthog_config.dart';
+import 'posthog_flutter_io.dart';
+
+/// Defines the callback signature for when feature flags are loaded.
+///
+/// Use [Posthog.getFeatureFlag] or [Posthog.isFeatureEnabled] within this
+/// callback to access the loaded flag values.
+typedef OnFeatureFlagsCallback = void Function();
+
+abstract class PosthogFlutterPlatformInterface extends PlatformInterface {
+  /// Constructs a PosthogFlutterPlatform.
+  PosthogFlutterPlatformInterface() : super(token: _token);
+
+  static final Object _token = Object();
+
+  static PosthogFlutterPlatformInterface _instance = PosthogFlutterIO();
+
+  /// The default instance of [PosthogFlutterPlatformInterface] to use.
+  ///
+  /// Defaults to [PosthogFlutterIO].
+  static PosthogFlutterPlatformInterface get instance => _instance;
+
+  /// Platform-specific implementations should set this with their own
+  /// platform-specific class that extends [PosthogFlutterPlatformInterface] when
+  /// they register themselves.
+  static set instance(PosthogFlutterPlatformInterface instance) {
+    PlatformInterface.verifyToken(instance, _token);
+    _instance = instance;
+  }
+
+  Future<void> setup(PostHogConfig config) {
+    throw UnimplementedError('setup() has not been implemented.');
+  }
+
+  /// Applies a runtime [PostHogSessionReplayConfig.captureNativeScreens]
+  /// change by starting or stopping the native occlusion detector.
+  ///
+  /// A no-op by default: only the mobile platforms have a detector, and web
+  /// must not throw when the config setter fires.
+  Future<void> setCaptureNativeScreens(bool enabled) async {}
+
+  Future<void> identify({
+    required String userId,
+    Map<String, Object>? userProperties,
+    Map<String, Object>? userPropertiesSetOnce,
+  }) {
+    throw UnimplementedError('identify() has not been implemented.');
+  }
+
+  Future<void> setPersonProperties({
+    Map<String, Object>? userPropertiesToSet,
+    Map<String, Object>? userPropertiesToSetOnce,
+  }) {
+    throw UnimplementedError('setPersonProperties() has not been implemented.');
+  }
+
+  Future<void> capture({
+    required String eventName,
+    Map<String, Object>? properties,
+    Map<String, Object>? userProperties,
+    Map<String, Object>? userPropertiesSetOnce,
+  }) {
+    throw UnimplementedError('capture() has not been implemented.');
+  }
+
+  Future<void> screen({
+    required String screenName,
+    Map<String, Object>? properties,
+  }) {
+    throw UnimplementedError('screen() has not been implemented.');
+  }
+
+  Future<void> captureLog({
+    required String body,
+    PostHogLogSeverity level = PostHogLogSeverity.info,
+    Map<String, Object>? attributes,
+    String? traceId,
+    String? spanId,
+    int? traceFlags,
+  }) {
+    throw UnimplementedError('captureLog() has not been implemented.');
+  }
+
+  /// Opens a URL using the platform's default browser
+  Future<void> openUrl(String url) {
+    throw UnimplementedError('openUrl() has not been implemented.');
+  }
+
+  Future<void> registerPushNotificationToken(
+    String deviceToken, {
+    String? appId,
+  }) {
+    throw UnimplementedError(
+      'registerPushNotificationToken() has not been implemented.',
+    );
+  }
+
+  Future<void> unregisterPushNotificationToken() {
+    throw UnimplementedError(
+      'unregisterPushNotificationToken() has not been implemented.',
+    );
+  }
+
+  Future<void> capturePushNotificationOpened({
+    String? title,
+    String? subtitle,
+    String? body,
+    Map<String, Object?>? payload,
+    String? action,
+  }) {
+    throw UnimplementedError(
+      'capturePushNotificationOpened() has not been implemented.',
+    );
+  }
+
+  Future<void> alias({required String alias}) {
+    throw UnimplementedError('alias() has not been implemented.');
+  }
+
+  Future<void> captureFeatureView({
+    required String flag,
+    String? flagVariant,
+  }) {
+    throw UnimplementedError('captureFeatureView() has not been implemented.');
+  }
+
+  Future<void> captureFeatureInteraction({
+    required String flag,
+    String? flagVariant,
+  }) {
+    throw UnimplementedError(
+      'captureFeatureInteraction() has not been implemented.',
+    );
+  }
+
+  Future<String> getDistinctId() {
+    throw UnimplementedError('getDistinctId() has not been implemented.');
+  }
+
+  Future<void> reset() {
+    throw UnimplementedError('reset() has not been implemented.');
+  }
+
+  Future<void> disable() {
+    throw UnimplementedError('disable() has not been implemented.');
+  }
+
+  Future<void> enable() {
+    throw UnimplementedError('enable() has not been implemented.');
+  }
+
+  Future<bool> isOptOut() {
+    throw UnimplementedError('isOptOut() has not been implemented.');
+  }
+
+  Future<void> debug(bool enabled) {
+    throw UnimplementedError('debug() has not been implemented.');
+  }
+
+  Future<void> register(String key, Object value) {
+    throw UnimplementedError('register() has not been implemented.');
+  }
+
+  Future<void> unregister(String key) {
+    throw UnimplementedError('unregister() has not been implemented.');
+  }
+
+  Future<bool> isFeatureEnabled(String key, {bool? sendFeatureFlagEvent}) {
+    throw UnimplementedError('isFeatureEnabled() has not been implemented.');
+  }
+
+  Future<void> reloadFeatureFlags() {
+    throw UnimplementedError('reloadFeatureFlags() has not been implemented.');
+  }
+
+  Future<void> setPersonPropertiesForFlags(Map<String, Object> userProperties) {
+    throw UnimplementedError(
+      'setPersonPropertiesForFlags() has not been implemented.',
+    );
+  }
+
+  Future<void> resetPersonPropertiesForFlags() {
+    throw UnimplementedError(
+      'resetPersonPropertiesForFlags() has not been implemented.',
+    );
+  }
+
+  Future<void> setGroupPropertiesForFlags(
+    String groupType,
+    Map<String, Object> groupProperties,
+  ) {
+    throw UnimplementedError(
+      'setGroupPropertiesForFlags() has not been implemented.',
+    );
+  }
+
+  Future<void> resetGroupPropertiesForFlags({String? groupType}) {
+    throw UnimplementedError(
+      'resetGroupPropertiesForFlags() has not been implemented.',
+    );
+  }
+
+  Future<void> showSurvey(Map<String, dynamic> survey) {
+    throw UnimplementedError('showSurvey() has not been implemented.');
+  }
+
+  Future<void> group({
+    required String groupType,
+    required String groupKey,
+    Map<String, Object>? groupProperties,
+  }) {
+    throw UnimplementedError('group() has not been implemented.');
+  }
+
+  Future<Object?> getFeatureFlag({
+    required String key,
+    bool? sendFeatureFlagEvent,
+  }) {
+    throw UnimplementedError('getFeatureFlag() has not been implemented.');
+  }
+
+  Future<Object?> getFeatureFlagPayload({required String key}) {
+    throw UnimplementedError(
+      'getFeatureFlagPayload() has not been implemented.',
+    );
+  }
+
+  Future<PostHogFeatureFlagResult?> getFeatureFlagResult({
+    required String key,
+    bool sendEvent = true,
+  }) {
+    throw UnimplementedError(
+      'getFeatureFlagResult() has not been implemented.',
+    );
+  }
+
+  Future<List<PostHogFeatureFlagResult>?> getAllFeatureFlags() {
+    throw UnimplementedError('getAllFeatureFlags() has not been implemented.');
+  }
+
+  Future<void> flush() {
+    throw UnimplementedError('flush() has not been implemented.');
+  }
+
+  Future<void> captureException({
+    required Object error,
+    StackTrace? stackTrace,
+    Map<String, Object>? properties,
+  }) {
+    throw UnimplementedError('captureException() has not been implemented.');
+  }
+
+  Future<void> addExceptionStep(
+    String message, {
+    Map<String, Object>? properties,
+  }) {
+    throw UnimplementedError('addExceptionStep() has not been implemented.');
+  }
+
+  Future<void> close() {
+    throw UnimplementedError('close() has not been implemented.');
+  }
+
+  Future<String?> getSessionId() async {
+    throw UnimplementedError('getSessionId() not implemented');
+  }
+
+  /// Starts session recording.
+  ///
+  /// [resumeCurrent] - If true, resumes recording of the current session.
+  /// If false, starts a new session and begins recording.
+  /// Defaults to true.
+  Future<void> startSessionRecording({bool resumeCurrent = true}) {
+    throw UnimplementedError(
+      'startSessionRecording() has not been implemented.',
+    );
+  }
+
+  /// Stops the current session recording if one is in progress.
+  Future<void> stopSessionRecording() {
+    throw UnimplementedError(
+      'stopSessionRecording() has not been implemented.',
+    );
+  }
+
+  /// Returns whether session replay is currently active.
+  Future<bool> isSessionReplayActive() {
+    throw UnimplementedError(
+      'isSessionReplayActive() has not been implemented.',
+    );
+  }
+
+  // TODO: missing capture with more parameters
+}
