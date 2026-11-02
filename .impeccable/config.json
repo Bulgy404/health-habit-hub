@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "fraunces",
+        "createdAt": "2026-11-02T05:12:44.073Z",
+        "reason": "Project design system: website/DESIGN.md specifies Fraunces Variable for headings and display numerals under Typography and The One Serif Rule; preserve the existing typography during the promo-video integration."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#050b08",
+        "createdAt": "2026-11-02T05:24:23.310Z",
+        "reason": "Promo video matte: this near-black matches the existing film background inside the decorative iPhone screen; retain the source-media color rather than tinting the footage surround with the page palette."
+      }
+    ]
+  }
+}

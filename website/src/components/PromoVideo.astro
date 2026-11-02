@@ -1,0 +1,52 @@
+---
+import { useT, type Lang } from '../i18n/ui';
+import phoneFrame from '../assets/device-mockups/iphone-17-pro-cosmic-orange.webp';
+
+interface Props {
+  lang: Lang;
+  audience: 'participants' | 'researchers';
+}
+const { lang, audience } = Astro.props;
+const t = useT(lang);
+const key = `${audience}-${lang}` as const;
+const base = `/videos/${key}`;
+const title = t(audience === 'participants' ? 'video_participants' : 'video_researchers');
+---
+
+<div id="film" class="promo">
+  <figure>
+    <div class="device">
+      <div class="device-screen">
+        <video data-promo-video controls muted playsinline preload="metadata" poster={`${base}.jpg`}
+          width="1080" height="1920" aria-label={title}>
+          <source src={`${base}.mp4`} type="video/mp4" />
+          <track kind="subtitles" src={`${base}.vtt`} srclang={lang}
+            label={lang === 'de' ? 'Deutsch' : 'English'} />
+          <p><a href={`${base}.mp4`}>{t('video_open')}</a></p>
+        </video>
+      </div>
+      <img class="device-frame" src={phoneFrame.src} width="1332" height="2748"
+        alt="" aria-hidden="true" decoding="async" />
+    </div>
+  </figure>
+</div>
+
+<script>
+  import { schedulePromoAutoplay } from '../lib/promo-video.mjs';
+
+  document.querySelectorAll<HTMLVideoElement>('[data-promo-video]').forEach((video) => {
+    schedulePromoAutoplay(video);
+  });
+</script>
+
+<style>
+  .promo{width:100%;max-width:315px;justify-self:center;scroll-margin-top:92px;min-width:0}
+  .device{position:relative;aspect-ratio:1332/2748;filter:drop-shadow(0 18px 30px rgba(15,23,42,.14))}
+  /* Screen opening: (63,63), 1206 × 2622 in the 1332 × 2748 frame.
+     Centre the original 9:16 film so its text never sits under the island. */
+  .device-screen{position:absolute;left:4.72973%;top:2.29258%;width:90.54054%;height:95.41485%;
+    display:flex;align-items:center;overflow:hidden;border-radius:15.42289% / 7.09382%;background:#050b08}
+  .device-frame{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  video{display:block;width:100%;height:auto;aspect-ratio:9/16;background:#050b08}
+  video:focus-visible{outline:2px solid var(--green-dark);outline-offset:4px}
+</style>

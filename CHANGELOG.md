@@ -98,6 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- German and English long promo films on the participant and researcher pages,
+  shown inside an orange iPhone frame with muted playback after two seconds
+  and optional subtitles. The GitHub README includes the two English previews.
+- Website autoplay tests, also run during the website Docker build in CI.
 - Researchers who see only their own studies (#66). A new realm role,
   `study-researcher` ("Assigned studies only" in the portal), opens the admin
   portal but shows only the studies an admin has added the account to on the

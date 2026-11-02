@@ -2,6 +2,7 @@
 import { useT, links, type Lang } from '../i18n/ui';
 import { Image } from 'astro:assets';
 import ContactForm from './ContactForm.astro';
+import PromoVideo from './PromoVideo.astro';
 import Cite from './Cite.astro';
 import References from './References.astro';
 import type { RefId } from '../data/references';
@@ -42,7 +43,8 @@ const sec = [
 ---
 <div class="rtheme">
 <header class="r-hero">
-  <div class="wrap r-hero-in reveal">
+  <div class="wrap r-hero-in">
+    <div class="reveal">
     <span class="eyebrow">{t('nav_research')}</span>
     <h1>{t('r_hero_title')}</h1>
     <p class="lead">{t('r_hero_lead')}</p>
@@ -50,6 +52,8 @@ const sec = [
       <a class="btn btn-primary btn-lg" href={links.admin}>{t('r_admin_btn')} &rarr;</a>
       <a class="btn btn-ghost btn-lg" href={links.github}>{t('r_docs_btn')}</a>
     </div>
+    </div>
+    <PromoVideo lang={lang} audience="researchers" />
   </div>
 </header>
 
@@ -186,6 +190,8 @@ const sec = [
 
 <style>
   .r-hero{padding:88px 0 36px}
+  .r-hero-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);align-items:center;gap:56px}
+  @media(max-width:900px){.r-hero-in{grid-template-columns:1fr;gap:32px}}
   .r-hero h1{font-size:clamp(34px,4.8vw,56px);margin:14px 0 0;max-width:20ch}
   .r-hero .lead{font-size:clamp(17px,1.9vw,20px);color:var(--muted);margin:22px 0 30px;max-width:90ch;line-height:1.65}
   .r-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch}

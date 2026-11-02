@@ -34,6 +34,7 @@ website/
 cd website
 npm install
 npm run dev        # runs sync:legal, then astro dev → http://localhost:4321
+npm test           # autoplay delay, visibility, cancellation, and blocked-playback tests
 ```
 
 `npm run build` produces `dist/`. Both `dev` and `build` first run
@@ -156,6 +157,40 @@ does allow editing.
   (`links.playStore`) once Android ships; the badge flips from "coming soon"
   automatically when a URL is present (wire-up is a one-line change).
 - Decide on analytics (Plausible / none).
+
+## Promo films
+
+The participant and researcher introductions each show their matching German or
+English long film through `src/components/PromoVideo.astro`. The four MP4s,
+poster frames, and WebVTT subtitle tracks live in `public/videos/` and ship with
+the website image. Each film plays inside a high-resolution Cosmic Orange
+iPhone 17 Pro frame, with its original 9:16 picture contained inside the screen
+without cropping. Playback starts muted after two seconds. Playback, sound, and
+subtitles use the native player controls, with no extra buttons or links below
+the film. A hidden browser tab waits until
+it becomes visible, and manual playback interaction cancels the delayed start.
+If autoplay is blocked, the native play button remains available. Subtitles
+are off by default and can be toggled in the native player controls.
+
+The source is `Final_EN_DE_v24` in the project's promo-material archive:
+
+- Participants: `DE` / `ENG` → `Voice with sounds and music - no burp` →
+  `Long version/Participants.mp4`.
+- Researchers: `DE` / `ENG` → `Voice with sounds and music` →
+  `Long version/Researchers.mp4`. These films have no burp effect.
+
+The video and audio streams are preserved without re-encoding; the MP4 metadata
+is moved to the front for web playback. Subtitles come from the matching `Long-NoBurp.srt`
+(participants) and `Long-Clean.srt` (researchers) scripts. Keep those files in
+sync when replacing a film. The repository README shows only the two English
+posters and links to the English pages' `#film` anchors, with repository MP4
+links as alternatives.
+
+The frame is `src/assets/device-mockups/iphone-17-pro-cosmic-orange.webp`
+(1332 × 2748), from [Hoverify](https://tryhoverify.com/tools/device-frames/iphone-17-pro/).
+The screen opening starts at (63, 63) and measures 1206 × 2622 pixels; these
+proportions are recorded in the component CSS. See `THIRD-PARTY-NOTICES.md`
+in the repository root for the frame's source and license.
 
 ## Adding a language
 

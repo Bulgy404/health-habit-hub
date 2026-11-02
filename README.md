@@ -36,6 +36,7 @@
 
 ## Table of Contents
 
+- [Watch Health Habit Hub](#watch-health-habit-hub)
 - [The Big Picture](#the-big-picture)
 - [What it is](#what-it-is)
 - [Roles](#roles)
@@ -48,6 +49,29 @@
 - [Documentation](#documentation)
 - [Releases](#releases)
 - [Contributing & Conventions](#contributing--conventions)
+
+---
+
+## Watch Health Habit Hub
+
+See how participants share and track everyday habits, and how researchers manage studies and explore the resulting data. Choose a preview to watch the full film on the website, with optional subtitles.
+
+<table>
+  <tr>
+    <th>For participants</th>
+    <th>For researchers</th>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <a href="https://healthhabithub.de/en/participate/#film"><img src="website/public/videos/participants-en.jpg" width="220" alt="Watch the English participant film: Your health. In the habits you repeat." /></a>
+      <p><a href="https://healthhabithub.de/en/participate/#film"><strong>▶ English · 57 seconds</strong></a><br/><a href="website/public/videos/participants-en.mp4">MP4</a></p>
+    </td>
+    <td align="center" valign="top">
+      <a href="https://healthhabithub.de/en/research/#film"><img src="website/public/videos/researchers-en.jpg" width="220" alt="Watch the English researcher film: Understand everyday behaviour." /></a>
+      <p><a href="https://healthhabithub.de/en/research/#film"><strong>▶ English · 52 seconds</strong></a><br/><a href="website/public/videos/researchers-en.mp4">MP4</a></p>
+    </td>
+  </tr>
+</table>
 
 ---
 

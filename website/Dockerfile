@@ -14,7 +14,7 @@ COPY --from=deps /repo/website/node_modules ./website/node_modules
 COPY website/ ./website/
 COPY app/language/ ./app/language/
 WORKDIR /repo/website
-RUN npm run build
+RUN npm test && npm run build
 
 # The site is now server-rendered (Astro's node adapter, standalone mode) so
 # that src/pages/api/contact.ts can send real email server-side — a static

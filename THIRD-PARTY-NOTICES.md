@@ -49,3 +49,20 @@ Habits, comments and questionnaire answers displayed in the app are authored by
 study participants. They remain the contribution of their authors and are
 processed under the consent obtained at study enrolment — see the
 [privacy policy](https://habit.wiwi.tu-dresden.de/en/privacy).
+
+---
+
+## Website device frame
+
+- **File:** `website/src/assets/device-mockups/iphone-17-pro-cosmic-orange.webp`
+- **Artwork:** iPhone 17 Pro, Cosmic Orange, 1332 × 2748 pixels
+- **Author:** Hoverify / UnveelWorks Private Limited
+- **Source:** <https://tryhoverify.com/tools/device-frames/iphone-17-pro/>
+- **License:** [Hoverify Device Frames License](https://tryhoverify.com/tools/device-frames/license/),
+  dated 16 September 2026; downloaded 2 November 2026.
+
+Used as a decorative frame for the project's own promo films on the website.
+The license permits website use without attribution and restricts redistribution
+as reusable frame files or use in mockup generators. The artwork retains its
+original license and is not offered as a reusable asset or under this project's
+license. iPhone is an Apple trademark; this use implies no endorsement.
