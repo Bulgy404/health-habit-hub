@@ -47,6 +47,9 @@ export const links = {
 type Dict = Record<string, string>;
 
 const de: Dict = {
+  video_participants: 'Für Teilnehmende',
+  video_researchers: 'Für Forschende',
+  video_open: 'Video öffnen (MP4)',
   // nav / chrome
   nav_participants: 'Teilnehmen', nav_research: 'Forschung', nav_github: 'GitHub', nav_portal: 'Zum Portal',
   foot_tagline: 'Eine Forschungsplattform für gesündere Gewohnheiten, entwickelt an der TU Dresden.',
@@ -201,6 +204,9 @@ const de: Dict = {
 };
 
 const en: Dict = {
+  video_participants: 'For participants',
+  video_researchers: 'For researchers',
+  video_open: 'Open video (MP4)',
   nav_participants: 'Take part', nav_research: 'Research', nav_github: 'GitHub', nav_portal: 'Go to portal',
   foot_tagline: 'A research platform for healthier habits, built at TU Dresden.',
   foot_h_part: 'Participants', foot_h_res: 'Researchers', foot_h_legal: 'Legal',
