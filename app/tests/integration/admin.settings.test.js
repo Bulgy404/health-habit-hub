@@ -282,8 +282,8 @@ test('PUT /api/v1/admin/settings/:key - 400 for missing value', async () => {
   assert.strictEqual(res.status, 400);
 });
 
-test('GET /api/v1/admin/settings - researcher role allowed', async () => {
+test('GET /api/v1/admin/settings - unassigned researcher is refused', async () => {
   const token = makeToken(['researcher']);
   const res = await get('/api/v1/admin/settings', token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 403);
 });

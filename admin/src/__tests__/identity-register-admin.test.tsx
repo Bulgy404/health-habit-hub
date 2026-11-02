@@ -290,12 +290,10 @@ describe("StudyMembersPanel", () => {
     expect(await screen.findByText(/the researcher role alone grants nothing/)).toBeInTheDocument();
   });
 
-  it("explains on an open study that only assigned-studies-only accounts are limited", async () => {
+  it("explains that legacy open studies require membership for both research roles", async () => {
     global.fetch = mockMembersApi({ enforced: false });
     render(<StudyMembersPanel studyId="s1" token="t" />);
-    expect(
-      await screen.findByText(/see it only if they are listed here/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Both research roles require membership/)).toBeInTheDocument();
   });
 
   it("spells out the read/export distinction rather than showing a bare enum", async () => {

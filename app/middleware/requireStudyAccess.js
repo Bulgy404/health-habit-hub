@@ -2,7 +2,6 @@ import { ObjectId } from 'mongodb';
 import { ROLES, isStudyScoped } from './roles.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION as MEMBERSHIPS } from '../models/studyMembership.js';
-import { resolveIdentityConfig } from '../services/identityConfig.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'requireStudyAccess' });
@@ -10,26 +9,10 @@ const log = logger.child({ module: 'requireStudyAccess' });
 /**
  * Decide whether the caller may use one study.
  *
- * Four deliberate properties:
- *
- * 1. **Admins always pass.** Scoping is about limiting researchers to their own
- *    studies, not about locking operators out of the platform they run.
- *
- * 2. **A `study-researcher` always needs membership** (#66). That role exists
- *    to see only the studies an admin assigned, so the study's own setting
- *    does not matter for them.
- *
- * 3. **For a full `researcher`, scoping applies only where the study asks for
- *    it.** Anonymous studies default to `open`, which is exactly the behaviour
- *    before memberships existed, so nothing existing breaks.
- *    `resolveIdentityConfig` forces `scoped` for verified studies, so
- *    protection lands precisely where identity data exists.
- *
- * 4. **Study existence is not secret to a full researcher.** One without
- *    membership gets 403 on a scoped study's pages and export, but the study
- *    still appears in the list — the sensitive thing is the data, not the
- *    name. A `study-researcher`'s list is filtered instead (studyScopeGuard),
- *    because a partner from outside should not learn what else runs here.
+ * Admins always pass. Both research roles require a current membership on
+ * every study, including anonymous studies and legacy studies marked `open`.
+ * The list is filtered by studyScopeGuard; knowing another study's ID grants
+ * no access to its details, mutations, participants, analytics or exports.
  *
  * @param {{ db: import('mongodb').Db, user: object, studyId: string,
  *   requireExport?: boolean }} args `requireExport` demands
@@ -48,6 +31,13 @@ export async function checkStudyAccess({
   if (roles.includes(ROLES.ADMIN)) {
     return { ok: true, study: null, membership: null };
   }
+  if (!isStudyScoped(user) || !user?.sub) {
+    return {
+      ok: false,
+      status: 403,
+      body: { error: 'not_permitted_for_role' },
+    };
+  }
 
   let oid;
   try {
@@ -59,13 +49,6 @@ export async function checkStudyAccess({
   const study = await db.collection(STUDIES).findOne({ _id: oid });
   if (!study) {
     return { ok: false, status: 404, body: { error: 'Study not found' } };
-  }
-
-  if (
-    !isStudyScoped(user) &&
-    resolveIdentityConfig(study).researcherScoping !== 'scoped'
-  ) {
-    return { ok: true, study, membership: null };
   }
 
   const membership = await db

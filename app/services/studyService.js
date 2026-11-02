@@ -128,7 +128,7 @@ async function _reassignRemovedGroups({
  * List all studies with participant count per study (paginated).
  * @param {{ db: object, page?: number, limit?: number, onlyIds?: Array }} deps
  *   `onlyIds` limits the list to those study ids — the studies a
- *   `study-researcher` is a member of (#66). Omitted means every study.
+ *   researcher is a member of. Omitted is reserved for administrators.
  * @returns {Promise<{ total: number, page: number, limit: number, studies: Array }>}
  */
 export async function listStudies({ db, page = 1, limit = 20, onlyIds }) {

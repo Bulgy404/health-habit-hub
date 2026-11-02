@@ -264,7 +264,7 @@
     "subtitle": "Beheer wie admin- of onderzoekerstoegang heeft. Rolwijzigingen gaan in bij de volgende aanmelding of tokenvernieuwing (binnen enkele minuten).",
     "manageRoles": "Rollen beheren",
     "assignRole": "Rol toewijzen",
-    "assignRoleSubtitle": "Zoek een bestaand account en ken het een rol toe. “Alleen toegewezen studies” beperkt een onderzoeker tot de studies waaraan je hem of haar toevoegt op het tabblad Toegang van elke studie.",
+    "assignRoleSubtitle": "Zoek een bestaand account en wijs een rol toe. Beide onderzoeksrollen hebben alleen toegang tot de studies waaraan u het account via het tabblad Toegang toevoegt.",
     "searchPlaceholder": "Zoeken op gebruikersnaam of e-mail",
     "searchButton": "Zoeken",
     "noSearchResults": "Geen bijpassende accounts gevonden.",
@@ -1448,7 +1448,7 @@
     "members": {
       "title": "Toegang voor onderzoekers",
       "enforced": "Deze studie is afgeschermd: de rol researcher alleen geeft hier niets. Alleen de personen hieronder kunnen haar openen, en alleen wie export heeft kan de dataset downloaden. Beheerders hebben altijd toegang.",
-      "open": "Deze studie is open: iedereen met de volledige rol Onderzoeker kan haar al lezen. Accounts met “Alleen toegewezen studies” zien haar alleen als ze hier vermeld staan, en kunnen haar gegevens alleen met export downloaden.",
+      "open": "Beide onderzoeksrollen hebben voor iedere studie een expliciet lidmaatschap nodig. Beheerders hebben altijd toegang.",
       "user": "Persoon",
       "role": "Rol",
       "access": "Toegang",
@@ -1500,7 +1500,7 @@
       "approversOption2": "2 — twee andere personen keuren goed",
       "approversHint": "Wie een verzoek indient, kan dit nooit zelf goedkeuren, bij beide instellingen. Twee goedkeurders is strenger maar vereist twee bereikbare personen — overweeg dekking buiten kantooruren voordat u dit kiest.",
       "revealLabel": "Openbaarmakingsvenster (minuten)",
-      "scopingNote": "Toegang voor onderzoekers wordt bij geverifieerde studies automatisch beperkt, dus een onderzoeker moet expliciet lid zijn om de gegevens van deze studie te zien. Dat is hier niet instelbaar."
+      "scopingNote": "Iedere studie vereist expliciet lidmaatschap voor onderzoekers. Wijs onderzoekers toe via het tabblad Toegang; niet-toegewezen studies zijn verborgen en ontoegankelijk."
     },
     "config": {
       "save": "Identiteitsinstellingen opslaan",

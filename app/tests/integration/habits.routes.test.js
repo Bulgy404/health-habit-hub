@@ -819,7 +819,7 @@ test('DELETE /admin/comments/:id removes node and ownership mapping', async () =
 
   const del = await fetch(`${baseUrl}/api/v1/admin/comments/${comment.id}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${makeToken(['researcher'])}` },
+    headers: { Authorization: `Bearer ${makeToken(['admin'])}` },
   });
   assert.strictEqual(del.status, 200);
 

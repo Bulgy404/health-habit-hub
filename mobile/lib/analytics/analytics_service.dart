@@ -246,7 +246,7 @@ Future<AnalyticsService> createConfiguredAnalyticsService() async {
     ..host = AppConfig.posthogHost
     ..captureApplicationLifecycleEvents = false
     ..rageClickConfig.enabled = false
-    ..sendFeatureFlagEvents = false
+    ..sendFeatureFlagEvent = false
     ..preloadFeatureFlags = false
     ..surveys = false
     ..sessionReplay = false

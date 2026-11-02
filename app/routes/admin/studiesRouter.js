@@ -98,7 +98,7 @@ export function createStudiesRouter({
         Math.max(1, parseInt(req.query.limit, 10) || 20)
       );
       const database = await getDb();
-      // Set by studyScopeGuard for a study-researcher: their studies only.
+      // Set by studyScopeGuard for both research roles: assigned studies only.
       const result = await listStudies({
         db: database,
         page,

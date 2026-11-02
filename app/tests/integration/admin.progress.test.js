@@ -525,13 +525,13 @@ test('GET /participants/:id/progress - 404 for unknown participant', async () =>
   assert.strictEqual(res.status, 404);
 });
 
-test('GET /participants/:id/progress - researcher role allowed', async () => {
+test('GET /participants/:id/progress - unassigned researcher is refused', async () => {
   const token = makeToken(['researcher']);
   const res = await get(
     `/api/v1/admin/participants/${PARTICIPANT_ID}/progress`,
     token
   );
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 403);
 });
 
 // ── GET habits feed ───────────────────────────────────────────────────────────
@@ -634,8 +634,8 @@ test('DELETE /api/v1/admin/sessions/:sessionId - revokes session', async () => {
   assert.strictEqual(found, undefined);
 });
 
-test('GET /api/v1/admin/sessions - researcher role allowed', async () => {
+test('GET /api/v1/admin/sessions - unassigned researcher is refused', async () => {
   const token = makeToken(['researcher']);
   const res = await get('/api/v1/admin/sessions', token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 403);
 });

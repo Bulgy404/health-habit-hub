@@ -22,27 +22,24 @@ export const PORTAL_ROLES = [
 ];
 
 /**
- * Returns true if the user has admin or researcher realm role.
- *
- * `study-researcher` is deliberately not privileged, and outranks
- * `researcher` on an account holding both: routes that let a privileged
- * caller read another user's data are not study-scoped, so the narrower role
- * gets the participant view there, not the researcher one.
+ * Only admins have unrestricted access to other users' data. Research roles
+ * must use the study-scoped routes, even when they hold both research roles.
  */
 export function isPrivileged(user) {
   const roles = user?.realm_access?.roles || [];
-  if (roles.includes(ROLES.ADMIN)) return true;
-  return (
-    roles.includes(ROLES.RESEARCHER) && !roles.includes(ROLES.STUDY_RESEARCHER)
-  );
+  return roles.includes(ROLES.ADMIN);
 }
 
 /**
- * Returns true if the user is limited to their member studies: they hold
- * `study-researcher` and are not an admin. The narrower role wins over
- * `researcher` when an account holds both, so granting it always restricts.
+ * Both research roles require explicit study membership. Only an admin role
+ * grants platform-wide access; legacy `researcher` tokens are scoped too.
  */
 export function isStudyScoped(user) {
   const roles = user?.realm_access?.roles || [];
-  return roles.includes(ROLES.STUDY_RESEARCHER) && !roles.includes(ROLES.ADMIN);
+  return (
+    !roles.includes(ROLES.ADMIN) &&
+    [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER].some((role) =>
+      roles.includes(role)
+    )
+  );
 }

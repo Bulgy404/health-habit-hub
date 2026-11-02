@@ -348,6 +348,10 @@ test('GET /admin/participants/:id/token-card - participant exists but no tokenCa
   ]);
   const noCardApp = express();
   noCardApp.use(express.json());
+  noCardApp.use((req, _res, next) => {
+    req.user = { sub: 'admin-test', realm_access: { roles: ['admin'] } };
+    next();
+  });
   noCardApp.use(
     '/admin',
     createAdminRouter({
@@ -423,6 +427,10 @@ test('PATCH /admin/participants/:id/group - malicious group string returns 400 a
   ]);
   const injectionApp = express();
   injectionApp.use(express.json());
+  injectionApp.use((req, _res, next) => {
+    req.user = { sub: 'admin-test', realm_access: { roles: ['admin'] } };
+    next();
+  });
   injectionApp.use(
     '/admin',
     createAdminRouter({

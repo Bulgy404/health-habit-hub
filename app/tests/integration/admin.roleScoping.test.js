@@ -5,15 +5,8 @@ import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
 import { createApiRouter } from '../../routes/apiRouter.js';
 
-// Regression coverage for a bug where researcher-role requests to
-// /admin/cue-pools got wrongly 403'd. Root cause: adminRouter.js mounted
-// createSystemRouter (and backupsRouter internally gated itself) with an
-// admin-only requireRole check applied to a catch-all '/' mount, so the
-// check ran for *every* request that fell through to that point in the
-// middleware chain — including sibling admin sub-resources mounted
-// separately in apiRouter.js, not just the routes those routers actually
-// own. See app/routes/admin/{systemRouter,backupsRouter}.js and
-// app/routes/adminRouter.js.
+// Research roles cannot use shared administration endpoints. Admins retain
+// access to separately mounted resources without catch-all sibling gates.
 
 // ── Key material ─────────────────────────────────────────────────────────────
 
@@ -153,10 +146,10 @@ async function get(path, token) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-test('GET /api/v1/admin/cue-pools - researcher is allowed (not swallowed by an unrelated admin-only gate)', async () => {
+test('GET /api/v1/admin/cue-pools - researcher cannot edit shared cross-study configuration', async () => {
   const token = makeToken(['researcher']);
   const res = await get('/api/v1/admin/cue-pools', token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 403);
 });
 
 test('GET /api/v1/admin/cue-pools - admin is allowed', async () => {

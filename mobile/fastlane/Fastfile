@@ -88,8 +88,7 @@ platform :ios do
 
     Dir.chdir("..") do
       sh(
-        "flutter", "build", "ipa",
-        "--release",
+        "bash", "tool/build_ios.sh", "ipa",
         "--build-number=#{build_number}",
         "--export-options-plist=ios/ExportOptions.plist"
       )

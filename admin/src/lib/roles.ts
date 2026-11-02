@@ -2,13 +2,10 @@
 export const STUDY_RESEARCHER = "study-researcher";
 
 /**
- * True when the account only sees its member studies: it holds
- * `study-researcher` and is not an admin. Mirrors `isStudyScoped` in the
- * backend's middleware/roles.js — the narrower role wins over `researcher`
- * on an account holding both. The backend enforces this; the portal only
- * hides what would fail anyway.
+ * Both research roles see only assigned studies. Mirrors the backend's
+ * middleware/roles.js; only admins have platform-wide access.
  */
 export function isStudyScoped(roles: readonly string[] | undefined): boolean {
   const r = roles ?? [];
-  return r.includes(STUDY_RESEARCHER) && !r.includes("admin");
+  return !r.includes("admin") && (r.includes("researcher") || r.includes(STUDY_RESEARCHER));
 }

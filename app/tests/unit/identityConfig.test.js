@@ -9,9 +9,6 @@ import {
 
 describe('resolveIdentityConfig', () => {
   it('treats a study with no identity field as anonymous', () => {
-    // Every study that predates this feature. This is the case that must
-    // never regress: it is the entire "existing studies are unaffected"
-    // guarantee, and there is no migration backing it up.
     for (const study of [undefined, null, {}, { identity: null }]) {
       assert.equal(resolveIdentityConfig(study).mode, 'anonymous');
       assert.equal(isVerifiedStudy(study), false);
@@ -45,22 +42,20 @@ describe('resolveIdentityConfig', () => {
   });
 
   it('forces researcher scoping on for verified studies', () => {
-    // Even if 'open' is stored. Scoping is enforced exactly where identity
-    // data exists, without breaking every existing researcher elsewhere.
     const cfg = resolveIdentityConfig({
       identity: { mode: 'verified', researcherScoping: 'open' },
     });
     assert.equal(cfg.researcherScoping, 'scoped');
   });
 
-  it('leaves anonymous studies open by default', () => {
-    assert.equal(resolveIdentityConfig({}).researcherScoping, 'open');
+  it('scopes anonymous studies including legacy open records', () => {
+    assert.equal(resolveIdentityConfig({}).researcherScoping, 'scoped');
     assert.equal(
       resolveIdentityConfig({
-        identity: { mode: 'anonymous', researcherScoping: 'scoped' },
+        identity: { mode: 'anonymous', researcherScoping: 'open' },
       }).researcherScoping,
       'scoped',
-      'an anonymous study may still opt in to scoping'
+      'legacy open records cannot bypass membership'
     );
   });
 

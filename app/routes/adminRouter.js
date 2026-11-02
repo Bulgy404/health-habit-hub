@@ -96,8 +96,7 @@ export function createAdminRouter({
   // this is mounted first, before any domain sub-router).
   router.use(createAuditAdminActionsMiddleware({ getDb }));
 
-  // Per-study access (#66): a `study-researcher` only reaches their member
-  // studies, and any non-admin needs membership on a study that asks for it.
+  // Both research roles only reach their assigned studies.
   // After the audit middleware so refused writes are logged too. Unlike a
   // role gate, this one SHOULD run for requests that fall through to the
   // admin resources apiRouter mounts separately — see studyScopeGuard.js.

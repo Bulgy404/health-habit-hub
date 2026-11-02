@@ -1,10 +1,10 @@
 /**
  * Per-study researcher membership.
  *
- * On a **verified** study the `researcher` realm role is not sufficient — a
+ * On every study, either research realm role alone is insufficient — a
  * researcher must be named here. `scope` separates reading a study from
  * exporting it, because downloading a bundle is materially more than viewing
- * a page. Admins always pass, and anonymous studies are unaffected.
+ * a page. Admins always pass; anonymous studies require membership too.
  */
 
 import { apiFetch, apiUrl } from "./api";
@@ -69,16 +69,13 @@ export interface TeamUser {
 export function listStudyMembers(
   token: string,
   studyId: string,
-  paging: { limit?: number; skip?: number } = {},
+  paging: { limit?: number; skip?: number } = {}
 ): Promise<StudyMembersResponse> {
   const params = new URLSearchParams({
     limit: String(paging.limit ?? MEMBERS_PAGE_SIZE),
     skip: String(paging.skip ?? 0),
   });
-  return apiFetch(
-    apiUrl(`/admin/studies/${studyId}/members?${params}`),
-    token,
-  );
+  return apiFetch(apiUrl(`/admin/studies/${studyId}/members?${params}`), token);
 }
 
 /**
@@ -92,7 +89,7 @@ export function listStudyMembers(
 export function addStudyMembers(
   token: string,
   studyId: string,
-  members: MemberInput[],
+  members: MemberInput[]
 ): Promise<{ ok: boolean; granted: number }> {
   return apiFetch(apiUrl(`/admin/studies/${studyId}/members`), token, {
     method: "POST",
@@ -103,12 +100,12 @@ export function addStudyMembers(
 export function removeStudyMember(
   token: string,
   studyId: string,
-  userId: string,
+  userId: string
 ): Promise<{ removed: boolean }> {
   return apiFetch(
     apiUrl(`/admin/studies/${studyId}/members/${encodeURIComponent(userId)}`),
     token,
-    { method: "DELETE" },
+    { method: "DELETE" }
   );
 }
 
@@ -121,12 +118,9 @@ export function removeStudyMember(
  */
 export function listMembershipsForUser(
   token: string,
-  userId: string,
+  userId: string
 ): Promise<UserMembershipsResponse> {
-  return apiFetch(
-    apiUrl(`/admin/study-memberships?userId=${encodeURIComponent(userId)}`),
-    token,
-  );
+  return apiFetch(apiUrl(`/admin/study-memberships?userId=${encodeURIComponent(userId)}`), token);
 }
 
 /**
@@ -134,12 +128,6 @@ export function listMembershipsForUser(
  * picking from here is what keeps a mistyped `sub` from becoming a grant that
  * looks live and gates nothing.
  */
-export function searchTeamUsers(
-  token: string,
-  query: string,
-): Promise<{ users: TeamUser[] }> {
-  return apiFetch(
-    apiUrl(`/admin/team/search?q=${encodeURIComponent(query)}`),
-    token,
-  );
+export function searchTeamUsers(token: string, query: string): Promise<{ users: TeamUser[] }> {
+  return apiFetch(apiUrl(`/admin/team/search?q=${encodeURIComponent(query)}`), token);
 }

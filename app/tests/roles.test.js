@@ -102,8 +102,8 @@ test('isPrivileged returns true for admin', () => {
   assert.ok(isPrivileged({ realm_access: { roles: [ROLES.ADMIN] } }));
 });
 
-test('isPrivileged returns true for researcher', () => {
-  assert.ok(isPrivileged({ realm_access: { roles: [ROLES.RESEARCHER] } }));
+test('isPrivileged returns false for researcher', () => {
+  assert.ok(!isPrivileged({ realm_access: { roles: [ROLES.RESEARCHER] } }));
 });
 
 test('isPrivileged returns false for user', () => {

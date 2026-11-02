@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Both research roles now require explicit membership on every study, including
+  anonymous and legacy open studies. Unassigned studies are hidden from lists
+  and inaccessible through direct URLs, edits, participant data and exports.
+  Shared administration stays admin-only; revocations apply on the next request.
 - A study export could include other studies' data. Exporting a study that
   had no habits yet put every study's daily logs in `daily_logs.csv`, and one
   with no enrolments yet put every user's questionnaire answers in

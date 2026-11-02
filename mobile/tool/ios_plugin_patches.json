@@ -1,0 +1,190 @@
+{
+  "device_info_plus-13.3.0": [
+    {
+      "file": "Sources/device_info_plus/FPPDeviceInfoPlusPlugin.m",
+      "replacements": [
+        {
+          "before": "natural_t mem_free = vm_stat.free_count * page_size;",
+          "after": "uint64_t mem_free = (uint64_t)vm_stat.free_count * (uint64_t)page_size;"
+        },
+        {
+          "before": "return mem_free / 1048576;",
+          "after": "return (int)(mem_free / 1048576);"
+        }
+      ],
+      "before_sha256": "db8195dc22e137e972c187a9b104be543ce0e82cd6ec10cf496c6ed53c36e800",
+      "after_sha256": "408d07a63b9b1b7af6571075bc29f761845606d439bc5f6ff6c7dc96bedb507c"
+    }
+  ],
+  "flutter_appauth-13.0.0": [
+    {
+      "file": "Sources/flutter_appauth/AppAuthIOSAuthorization.m",
+      "replacements": [
+        {
+          "before": "- (UIViewController *)rootViewController {\n  if (@available(iOS 13, *)) {\n    return [[UIApplication sharedApplication].windows\n               filteredArrayUsingPredicate:[NSPredicate\n                                               predicateWithBlock:^BOOL(\n                                                   id window,\n                                                   NSDictionary *bindings) {\n                                                 return [window isKeyWindow];\n                                               }]]\n        .firstObject.rootViewController;\n  }\n  return [UIApplication sharedApplication].delegate.window.rootViewController;\n}",
+          "after": "- (UIViewController *)rootViewController {\n  for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {\n    if (![scene isKindOfClass:[UIWindowScene class]] ||\n        scene.activationState != UISceneActivationStateForegroundActive) continue;\n    for (UIWindow *window in ((UIWindowScene *)scene).windows) {\n      if (window.isKeyWindow) return window.rootViewController;\n    }\n  }\n  return nil;\n}"
+        }
+      ],
+      "before_sha256": "153626ad76feb8dc26200e684ceb4ea52bf69355d943fa00ddde4bfa4f807ad6",
+      "after_sha256": "49edd7bfa3b840842b564af178396182cc8ad75fe59a0949205aa8f554f0a12c"
+    },
+    {
+      "file": "Sources/flutter_appauth/OIDExternalUserAgentIOSNoSSO.m",
+      "replacements": [
+        {
+          "before": "  SFAuthenticationSession *_authenticationVC;\n",
+          "after": ""
+        },
+        {
+          "before": "  // iOS 11, use SFAuthenticationSession\n  if (@available(iOS 11.0, *)) {\n    // SFAuthenticationSession doesn't work with guided access (rdar://40809553)\n    if (!openedUserAgent && !UIAccessibilityIsGuidedAccessEnabled()) {\n      __weak OIDExternalUserAgentIOSNoSSO *weakSelf = self;\n      NSString *redirectScheme = request.redirectScheme;\n      SFAuthenticationSession *authenticationVC =\n          [[SFAuthenticationSession alloc]\n                    initWithURL:requestURL\n              callbackURLScheme:redirectScheme\n              completionHandler:^(NSURL *_Nullable callbackURL,\n                                  NSError *_Nullable error) {\n                __strong OIDExternalUserAgentIOSNoSSO *strongSelf = weakSelf;\n                if (!strongSelf) {\n                  return;\n                }\n                strongSelf->_authenticationVC = nil;\n                if (callbackURL) {\n                  [strongSelf->_session\n                      resumeExternalUserAgentFlowWithURL:callbackURL\n                                                   error:nil];\n                } else {\n                  NSError *safariError = [OIDErrorUtilities\n                        errorWithCode:OIDErrorCodeUserCanceledAuthorizationFlow\n                      underlyingError:error\n                          description:@\"User cancelled.\"];\n                  [strongSelf->_session\n                      failExternalUserAgentFlowWithError:safariError];\n                }\n              }];\n      _authenticationVC = authenticationVC;\n      openedUserAgent = [authenticationVC start];\n    }\n  }\n",
+          "after": ""
+        },
+        {
+          "before": "  // iOS 8 and earlier, use mobile Safari\n  if (!openedUserAgent) {\n    openedUserAgent = [[UIApplication sharedApplication] openURL:requestURL];\n  }\n",
+          "after": ""
+        },
+        {
+          "before": "  SFAuthenticationSession *authenticationVC = _authenticationVC;\n",
+          "after": ""
+        },
+        {
+          "before": "  } else if (authenticationVC) {\n    // dismiss the SFAuthenticationSession\n    [authenticationVC cancel];\n    if (completion)\n      completion();",
+          "after": ""
+        },
+        {
+          "before": "  _authenticationVC = nil;\n",
+          "after": ""
+        }
+      ],
+      "before_sha256": "f2bb859bad09a2b464db0300be2772e5d8bec788d079c20dba32fcf122ffa720",
+      "after_sha256": "cdcfd25da00e2c64139fcd77594ce8af2667bd650819611179dbb7666a6a3379"
+    }
+  ],
+  "record_ios-2.1.1": [
+    {
+      "file": "Sources/record_ios/InputHelper.swift",
+      "replacements": [
+        {
+          "before": "      try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth])",
+          "after": "      #if compiler(>=6.2)\n      try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetoothHFP])\n      #else\n      try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth])\n      #endif"
+        }
+      ],
+      "before_sha256": "8457fe562d26e7b199e37ae44e66e38e0922849a96b90f6d51ed5d186f49d38c",
+      "after_sha256": "a0b317a6c6f193624701ab31bd9c3de8147c1feafa46a8c1e2ca504e347669b0"
+    }
+  ],
+  "firebase_messaging-17.0.1": [
+    {
+      "file": "Sources/firebase_messaging/FLTFirebaseMessagingPlugin.m",
+      "replacements": [
+        {
+          "before": "presentationOptions |= UNNotificationPresentationOptionAlert;",
+          "after": "presentationOptions |= UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionList;"
+        },
+        {
+          "before": "  bool refreshToken = messaging.FCMToken == nil ? YES : NO;",
+          "after": "  // HHH still delivers server-side messages to FCM tokens. FID registration\n  // is a different protocol; keep this compatibility call until both ends migrate.\n#pragma clang diagnostic push\n#pragma clang diagnostic ignored \"-Wdeprecated-declarations\"\n  bool refreshToken = messaging.FCMToken == nil ? YES : NO;"
+        },
+        {
+          "before": "- (void)messagingGetAPNSToken:",
+          "after": "#pragma clang diagnostic pop\n\n- (void)messagingGetAPNSToken:"
+        },
+        {
+          "before": "  [messaging deleteTokenWithCompletion:",
+          "after": "#pragma clang diagnostic push\n#pragma clang diagnostic ignored \"-Wdeprecated-declarations\"\n  [messaging deleteTokenWithCompletion:"
+        },
+        {
+          "before": "- (void)messagingRegister:",
+          "after": "#pragma clang diagnostic pop\n\n- (void)messagingRegister:"
+        }
+      ],
+      "before_sha256": "80639507fac21ff01e11442ee81ed17b8822b12f2225b08653c4c94cccd71b18",
+      "after_sha256": "8d0f0797a9123c34d28e53eb353ac84fcbd8cd7fdeeded73a1dc8ef9fb7c27e1"
+    }
+  ],
+  "flutter_local_notifications-22.3.3": [
+    {
+      "file": "Sources/flutter_local_notifications/FlutterLocalNotificationsPlugin.m",
+      "replacements": [
+        {
+          "before": "presentationOptions |= UNNotificationPresentationOptionAlert;",
+          "after": "presentationOptions |= UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionList;"
+        },
+        {
+          "before": "  NSMutableDictionary *userDict = [self buildUserDict:arguments[ID]\n                                                title:content.title\n                                         presentAlert:presentAlert\n                                         presentSound:presentSound\n                                         presentBadge:presentBadge\n                                        presentBanner:presentBanner\n                                          presentList:presentList\n                                              payload:arguments[PAYLOAD]];",
+          "after": "  NSMutableDictionary *userDict = [[self buildUserDict:arguments[ID]\n                                                title:content.title\n                                         presentAlert:presentAlert\n                                         presentSound:presentSound\n                                         presentBadge:presentBadge\n                                        presentBanner:presentBanner\n                                          presentList:presentList\n                                              payload:arguments[PAYLOAD]] mutableCopy];"
+        }
+      ],
+      "before_sha256": "523bec84eceb13912f26fa1accca76226fbf1d1e33a4670ccb0b81410d4003ef",
+      "after_sha256": "29a2638fe9171dbc3f3a4b82755f8a8e2d17c1f8cf6d9c2990c3f68226eaa5f0"
+    }
+  ],
+  "sentry_flutter-10.2.0": [
+    {
+      "file": "Sources/sentry_flutter_objc/include/SentryFlutterReplayScreenshotProvider.h",
+      "replacements": [
+        {
+          "before": "@import Sentry;",
+          "after": "@import Sentry;\n\n// Compatibility bridge: the Flutter SDK still exposes these channel methods.\n// Preserve their behavior while keeping legacy Cocoa calls out of Swift.\nFOUNDATION_EXPORT void HHHPauseAppHangTracking(void);\nFOUNDATION_EXPORT void HHHResumeAppHangTracking(void);"
+        },
+        {
+          "before": "@class SentryRRWebEvent;",
+          "after": "@class SentryRRWebEvent;\n@class FlutterMethodChannel;"
+        },
+        {
+          "before": "- (instancetype)initWithChannel:(id)FlutterMethodChannel",
+          "after": "- (instancetype _Nonnull)initWithChannel:(FlutterMethodChannel *_Nonnull)channel"
+        }
+      ],
+      "before_sha256": "f38cd3a31c83d6f53e7459f2555e7360735e538000d11974e8152e1ead8430ee",
+      "after_sha256": "895372e49fc968a4ddc0be8b27f7008d8e36515880524cf08358c7f3a6aa0123"
+    },
+    {
+      "file": "Sources/sentry_flutter_objc/SentryFlutterReplayScreenshotProvider.m",
+      "replacements": [
+        {
+          "before": "@import Sentry;",
+          "after": "@import Sentry;\n\n// Narrowly scoped legacy compatibility; app-hang behavior is unchanged.\n#pragma clang diagnostic push\n#pragma clang diagnostic ignored \"-Wdeprecated-declarations\"\nvoid HHHPauseAppHangTracking(void) { [SentrySDK pauseAppHangTracking]; }\nvoid HHHResumeAppHangTracking(void) { [SentrySDK resumeAppHangTracking]; }\n#pragma clang diagnostic pop"
+        }
+      ],
+      "before_sha256": "ce95e4b2d8df5af4ac997fe3e8b377fdee808f954a0940fad139a0fa64b236cb",
+      "after_sha256": "fee20be112d7b1d1d1c43b96d31999f2fc01cd92609bea91139ef9b4a42a1980"
+    },
+    {
+      "file": "Sources/sentry_flutter/SentryFlutterPlugin.swift",
+      "replacements": [
+        {
+          "before": "SentrySDK.pauseAppHangTracking()",
+          "after": "HHHPauseAppHangTracking()"
+        },
+        {
+          "before": "SentrySDK.resumeAppHangTracking()",
+          "after": "HHHResumeAppHangTracking()"
+        }
+      ],
+      "before_sha256": "8dabaa1c59a4dfa9d714e13cbeed3aab129ba06379f0f972a6452152f45b20c6",
+      "after_sha256": "20c5995cad70829d231f05efd1f0014033b7d94ab08cef020409e8e2c274c32c"
+    }
+  ],
+  "posthog_flutter-5.58.3": [
+    {
+      "file": "Sources/posthog_flutter/PosthogFlutterPlugin.swift",
+      "replacements": [
+        {
+          "before": "?? UIApplication.shared.windows.first",
+          "after": "?? windows.first"
+        },
+        {
+          "before": "let timestamp = dateToMillis(date)",
+          "after": "let timestamp = Int64(date.timeIntervalSince1970 * 1000)"
+        },
+        {
+          "before": "let base64 = imageToBase64(image)",
+          "after": "let base64 = image.jpegData(compressionQuality: 0.3).map({ \"data:image/jpeg;base64,\\($0.base64EncodedString())\" })"
+        }
+      ],
+      "before_sha256": "ca0a266b9421c316d3181b7b68c744a9b550eed65d5a102c1b6f7117ef388df9",
+      "after_sha256": "9faeb173ce63377fe3de9218b40d2d9ade5bf7290f65cdb332420960a6d14762"
+    }
+  ]
+}

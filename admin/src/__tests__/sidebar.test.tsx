@@ -40,7 +40,7 @@ jest.mock("next/link", () => {
 });
 
 describe("Sidebar", () => {
-  it("shows Studies, Analytics and Questionnaires for researcher", () => {
+  it("shows assigned-study navigation for researcher", () => {
     mockedUseSession.mockReturnValue({
       data: { roles: ["researcher"], accessToken: "", user: { email: "r@test.com" }, expires: "" },
       status: "authenticated",
@@ -49,7 +49,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(screen.getByText("Studies")).toBeInTheDocument();
     expect(screen.getByText("Analytics")).toBeInTheDocument();
-    expect(screen.getByText("Questionnaires")).toBeInTheDocument();
+    expect(screen.queryByText("Questionnaires")).not.toBeInTheDocument();
     expect(screen.queryByText("Knowledge Base")).not.toBeInTheDocument();
     expect(screen.queryByText("Activity Types")).not.toBeInTheDocument();
     expect(screen.queryByText("App Settings")).not.toBeInTheDocument();

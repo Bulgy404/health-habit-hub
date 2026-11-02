@@ -26,7 +26,7 @@ export const DEFAULT_IDENTITY = Object.freeze({
   reidentificationApprovers: 1,
   revealTtlMinutes: 60,
   auditReads: true,
-  researcherScoping: 'open',
+  researcherScoping: 'scoped',
 });
 
 /**
@@ -44,16 +44,8 @@ export function resolveIdentityConfig(study) {
 
   const mode = raw.mode === 'verified' ? 'verified' : 'anonymous';
 
-  // Researcher scoping is FORCED on for verified studies regardless of what is
-  // stored. Global per-study scoping does not exist yet and turning it on
-  // everywhere would break every current researcher; forcing it exactly where
-  // identity data exists gets the protection without the breakage.
-  const researcherScoping =
-    mode === 'verified'
-      ? 'scoped'
-      : raw.researcherScoping === 'scoped'
-        ? 'scoped'
-        : 'open';
+  // Membership is mandatory for every study, including legacy `open` records.
+  const researcherScoping = 'scoped';
 
   return {
     mode,

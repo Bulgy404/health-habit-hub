@@ -1,7 +1,5 @@
-import { test, describe, before, after } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import express from 'express';
 import { ObjectId } from 'mongodb';
 import { createStudyScopeGuard } from '../../middleware/studyScopeGuard.js';
 import { ROLES, isPrivileged, isStudyScoped } from '../../middleware/roles.js';
@@ -87,323 +85,337 @@ const fakeDb = {
   },
 };
 
-let server;
-let baseUrl;
 let caller;
+const scopeGuard = createStudyScopeGuard({ getDb: async () => fakeDb });
 
-before(async () => {
-  const app = express();
-  app.use(express.json());
-  app.use((req, _res, next) => {
-    req.user = { sub: caller.sub, realm_access: { roles: caller.roles } };
-    next();
-  });
-  app.use('/admin', createStudyScopeGuard({ getDb: async () => fakeDb }));
-  // Stands in for every admin route: reports that the guard let it through,
-  // and what the study list would be filtered to.
-  app.use('/admin', (req, res) =>
+// Exercise the actual middleware without binding a TCP port. The previous
+// HTTP fixture mounted only this guard and a next() sentinel, not domain routes.
+async function call(method, path, body) {
+  const url = new URL(path, 'http://unit.test');
+  const req = {
+    method,
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    body,
+    user: { sub: caller.sub, realm_access: { roles: caller.roles } },
+  };
+  let result;
+  const res = {
+    statusCode: 200,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(value) {
+      result = { status: this.statusCode, body: value };
+      return this;
+    },
+  };
+  await scopeGuard(req, res, () =>
     res.json({
       reached: true,
       studyIds: req.studyScope?.studyIds?.map(String) ?? null,
     })
   );
-  server = createServer(app);
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  baseUrl = `http://127.0.0.1:${server.address().port}`;
-});
-
-after(() => {
-  server.closeAllConnections();
-  server.close();
-});
-
-async function call(method, path, body) {
-  const res = await fetch(`${baseUrl}/admin${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  return { status: res.status, body: await res.json() };
+  return result;
 }
 
-const asPartner = () => {
-  caller = { sub: 'partner', roles: [ROLES.STUDY_RESEARCHER] };
-};
-const asResearcher = () => {
-  caller = { sub: 'staff', roles: [ROLES.RESEARCHER] };
-};
 const asAdmin = () => {
   caller = { sub: 'boss', roles: [ROLES.ADMIN] };
 };
 
-describe('study-researcher', () => {
-  test('sees only their member studies in the list', async () => {
-    asPartner();
-    const r = await call('GET', '/studies');
-    assert.equal(r.status, 200);
-    assert.deepEqual(
-      r.body.studyIds.sort(),
-      [OWN, EXPORTABLE].map(String).sort()
-    );
-  });
-
-  test('opens and edits a member study', async () => {
-    asPartner();
-    assert.equal((await call('GET', `/studies/${OWN}`)).status, 200);
-    assert.equal(
-      (await call('PUT', `/studies/${OWN}`, { name: 'x' })).status,
-      200
-    );
-    for (const path of [
-      '/participants',
-      '/codes',
-      '/analytics',
-      '/questionnaire-assignments',
-      '/questionnaire-calendar',
-    ]) {
-      assert.equal(
-        (await call('GET', `/studies/${OWN}${path}`)).status,
-        200,
-        path
+for (const role of [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER]) {
+  describe(role, () => {
+    test('sees only their member studies in the list', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      const r = await call('GET', '/studies');
+      assert.equal(r.status, 200);
+      assert.deepEqual(
+        r.body.studyIds.sort(),
+        [OWN, EXPORTABLE].map(String).sort()
       );
-    }
-    assert.equal(
-      (await call('PATCH', `/studies/${OWN}/groups/${OWN_GROUP}/config`, {}))
-        .status,
-      200
-    );
-  });
-
-  test('gets 403 on a study they are not a member of, anonymous or not', async () => {
-    asPartner();
-    for (const id of [OTHER, VERIFIED]) {
-      const r = await call('GET', `/studies/${id}/participants`);
-      assert.equal(r.status, 403);
-      assert.equal(r.body.error, 'not_a_study_member');
-    }
-  });
-
-  test('needs export scope to export', async () => {
-    asPartner();
-    const read = await call('GET', `/studies/${OWN}/export/zip`);
-    assert.equal(read.status, 403);
-    assert.equal(read.body.error, 'export_not_permitted');
-    assert.equal(
-      (await call('GET', `/studies/${EXPORTABLE}/export`)).status,
-      200
-    );
-    assert.equal(
-      (await call('GET', `/studies/${EXPORTABLE}/export/zip`)).status,
-      200
-    );
-  });
-
-  test('cannot make operator decisions on their own study', async () => {
-    asPartner();
-    for (const [method, path] of [
-      ['DELETE', ''],
-      ['POST', '/delete'],
-      ['PUT', '/default'],
-      ['GET', '/members'],
-      ['POST', '/members'],
-    ]) {
-      const r = await call(
-        method,
-        `/studies/${OWN}${path}`,
-        method === 'GET' ? undefined : {}
-      );
-      assert.equal(r.status, 403, `${method} ${path}`);
-      assert.equal(r.body.error, 'not_permitted_for_role');
-    }
-    const identity = await call('PUT', `/studies/${OWN}`, {
-      identity: { mode: 'verified' },
     });
-    assert.equal(identity.status, 403);
-  });
 
-  test('cannot create a study', async () => {
-    asPartner();
-    assert.equal((await call('POST', '/studies', { name: 'x' })).status, 403);
-  });
-
-  test('is refused every admin route outside their studies', async () => {
-    asPartner();
-    for (const [method, path] of [
-      ['GET', '/participants'],
-      ['GET', '/cue-pools'],
-      ['POST', '/questionnaires'],
-      ['GET', '/comments'],
-      ['GET', '/insights'],
-      ['GET', '/habits/feed'],
-      ['GET', '/settings'],
-      ['GET', '/team'],
-      ['GET', '/audit-log'],
-      ['GET', '/backups/status'],
-      ['POST', '/notifications/send'],
-      ['GET', '/some-route-added-next-year'],
-    ]) {
-      const r = await call(method, path, method === 'GET' ? undefined : {});
-      assert.equal(r.status, 403, `${method} ${path}`);
-    }
-  });
-
-  test('may read the questionnaire library to assign from it', async () => {
-    asPartner();
-    assert.equal((await call('GET', '/questionnaires')).status, 200);
-  });
-
-  test('may read the activity-type catalog but not change it', async () => {
-    // The study page labels a structured-entry study's activities from it;
-    // the catalog itself is shared by every study.
-    asPartner();
-    assert.equal((await call('GET', '/activity-types')).status, 200);
-    for (const [method, path] of [
-      ['POST', '/activity-types'],
-      ['PATCH', '/activity-types/walking'],
-      ['DELETE', '/activity-types/walking'],
-    ]) {
-      const r = await call(method, path, method === 'DELETE' ? undefined : {});
-      assert.equal(r.status, 403, `${method} ${path}`);
-    }
-  });
-
-  test('lists notification campaigns only for a member study', async () => {
-    asPartner();
-    assert.equal(
-      (await call('GET', `/notifications?studyId=${OWN}`)).status,
-      200
-    );
-    assert.equal(
-      (await call('GET', `/notifications?studyId=${OTHER}`)).status,
-      403
-    );
-    assert.equal((await call('GET', '/notifications')).status, 403);
-  });
-
-  test('sends a campaign only to people in their own study', async () => {
-    asPartner();
-    const base = { title: 't', body: 'b' };
-    const ok = [
-      { studyId: String(OWN), targetType: 'all_enrolled' },
-      {
-        studyId: String(OWN),
-        targetType: 'group',
-        targetIds: [String(OWN_GROUP)],
-      },
-      { studyId: String(OWN), targetType: 'individual', targetIds: ['p-own'] },
-    ];
-    for (const c of ok) {
+    test('opens and edits a member study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal((await call('GET', `/studies/${OWN}`)).status, 200);
       assert.equal(
-        (await call('POST', '/notifications', { ...base, ...c })).status,
-        200,
-        JSON.stringify(c)
+        (await call('PUT', `/studies/${OWN}`, { name: 'x' })).status,
+        200
       );
-    }
-    const refused = [
-      { targetType: 'all_enrolled' },
-      { studyId: String(OTHER), targetType: 'all_enrolled' },
-      {
-        studyId: String(OWN),
-        targetType: 'group',
-        targetIds: [String(OTHER_GROUP)],
-      },
-      {
-        studyId: String(OWN),
-        targetType: 'individual',
-        targetIds: ['p-own', 'p-other'],
-      },
-      { studyId: String(OWN), targetType: 'group', targetIds: [] },
-    ];
-    for (const c of refused) {
+      for (const path of [
+        '/participants',
+        '/codes',
+        '/analytics',
+        '/questionnaire-assignments',
+        '/questionnaire-calendar',
+      ]) {
+        assert.equal(
+          (await call('GET', `/studies/${OWN}${path}`)).status,
+          200,
+          path
+        );
+      }
       assert.equal(
-        (await call('POST', '/notifications', { ...base, ...c })).status,
-        403,
-        JSON.stringify(c)
+        (await call('PATCH', `/studies/${OWN}/groups/${OWN_GROUP}/config`, {}))
+          .status,
+        200
       );
-    }
-  });
+    });
 
-  test('cancels only campaigns of their own studies', async () => {
-    asPartner();
-    assert.equal(
-      (await call('DELETE', `/notifications/${OWN_CAMPAIGN}`)).status,
-      200
-    );
-    assert.equal(
-      (await call('DELETE', `/notifications/${OTHER_CAMPAIGN}`)).status,
-      403
-    );
-  });
+    test('gets 403 on a study they are not a member of, anonymous or not', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      for (const id of [OTHER, VERIFIED]) {
+        const r = await call('GET', `/studies/${id}/participants`);
+        assert.equal(r.status, 403);
+        assert.equal(r.body.error, 'not_a_study_member');
+      }
+    });
 
-  test('opens the detail of participants in their own study only', async () => {
-    // The analytics page opens these from a study's participant table.
-    asPartner();
-    for (const part of ['progress', 'reminder-plans']) {
+    test('cannot read, change or export any part of an unassigned study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      for (const [method, path] of [
+        ['GET', ''],
+        ['PUT', ''],
+        ['PATCH', '/allocation'],
+        ['PATCH', `/groups/${OTHER_GROUP}/config`],
+        ['GET', '/analytics'],
+        ['GET', '/export'],
+        ['GET', '/export/zip'],
+        ['GET', '/codes'],
+        ['POST', '/codes'],
+        ['DELETE', '/codes/code-1'],
+        ['POST', '/questionnaire-assignments'],
+        ['PUT', '/questionnaire-assignments/assignment-1'],
+        ['DELETE', '/questionnaire-assignments/assignment-1'],
+      ]) {
+        const r = await call(
+          method,
+          `/studies/${OTHER}${path}`,
+          method === 'GET' ? undefined : {}
+        );
+        assert.equal(r.status, 403, `${method} ${path}`);
+      }
+    });
+
+    test('an unassigned researcher sees an empty list and cannot open a study', async () => {
+      caller = { sub: 'unassigned', roles: [role] };
+      assert.deepEqual((await call('GET', '/studies')).body.studyIds, []);
+      assert.equal((await call('GET', `/studies/${OWN}`)).status, 403);
+    });
+
+    test('revoking membership takes effect with the same token on the next request', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal((await call('GET', `/studies/${OWN}`)).status, 200);
+      const index = memberships.findIndex((m) => same(m.studyId, OWN));
+      const [membership] = memberships.splice(index, 1);
+      try {
+        assert.equal((await call('GET', `/studies/${OWN}`)).status, 403);
+        assert.equal(
+          (await call('PUT', `/studies/${OWN}`, { name: 'denied' })).status,
+          403
+        );
+        assert.ok(
+          !(await call('GET', '/studies')).body.studyIds.includes(String(OWN))
+        );
+      } finally {
+        memberships.splice(index, 0, membership);
+      }
+    });
+
+    test('needs export scope to export', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      const read = await call('GET', `/studies/${OWN}/export/zip`);
+      assert.equal(read.status, 403);
+      assert.equal(read.body.error, 'export_not_permitted');
       assert.equal(
-        (await call('GET', `/participants/p-own/${part}`)).status,
-        200,
-        part
+        (await call('GET', `/studies/${EXPORTABLE}/export`)).status,
+        200
       );
       assert.equal(
-        (await call('GET', `/participants/p-other/${part}`)).status,
-        403,
-        part
+        (await call('GET', `/studies/${EXPORTABLE}/export/zip`)).status,
+        200
       );
-    }
-    assert.equal(
-      (await call('GET', '/participants/nobody/progress')).status,
-      403
-    );
-    assert.equal((await call('GET', '/participants/p-own')).status, 403);
-    assert.equal((await call('DELETE', '/participants/p-own')).status, 403);
-  });
+    });
 
-  test('the narrower role wins on an account that also holds researcher', async () => {
-    caller = {
-      sub: 'partner',
-      roles: [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER],
-    };
-    assert.equal((await call('GET', `/studies/${OTHER}`)).status, 403);
-    assert.equal((await call('GET', '/participants')).status, 403);
-  });
-});
+    test('cannot make operator decisions on their own study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      for (const [method, path] of [
+        ['DELETE', ''],
+        ['POST', '/delete'],
+        ['PUT', '/default'],
+        ['GET', '/members'],
+        ['POST', '/members'],
+      ]) {
+        const r = await call(
+          method,
+          `/studies/${OWN}${path}`,
+          method === 'GET' ? undefined : {}
+        );
+        assert.equal(r.status, 403, `${method} ${path}`);
+        assert.equal(r.body.error, 'not_permitted_for_role');
+      }
+      const identity = await call('PUT', `/studies/${OWN}`, {
+        identity: { mode: 'verified' },
+      });
+      assert.equal(identity.status, 403);
+    });
 
-describe('full researcher', () => {
-  test('keeps access to every anonymous study and every other route', async () => {
-    asResearcher();
-    assert.equal(
-      (await call('GET', `/studies/${OTHER}/participants`)).status,
-      200
-    );
-    assert.equal((await call('GET', '/participants')).status, 200);
-    assert.equal((await call('GET', '/cue-pools')).status, 200);
-    assert.equal((await call('GET', '/studies')).body.studyIds, null);
-  });
+    test('cannot create a study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal((await call('POST', '/studies', { name: 'x' })).status, 403);
+    });
 
-  test('needs membership to open a participant of a verified study', async () => {
-    asResearcher();
-    assert.equal(
-      (await call('GET', '/participants/p-verified/progress')).status,
-      403
-    );
-    assert.equal(
-      (await call('GET', '/participants/p-other/progress')).status,
-      200
-    );
-    assert.equal(
-      (await call('GET', '/participants/nobody/progress')).status,
-      200
-    );
-  });
+    test('is refused every admin route outside their studies', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      for (const [method, path] of [
+        ['GET', '/participants'],
+        ['GET', '/cue-pools'],
+        ['POST', '/questionnaires'],
+        ['GET', '/comments'],
+        ['GET', '/insights'],
+        ['GET', '/habits/feed'],
+        ['GET', '/settings'],
+        ['GET', '/team'],
+        ['GET', '/audit-log'],
+        ['GET', '/backups/status'],
+        ['POST', '/notifications/send'],
+        ['GET', '/some-route-added-next-year'],
+      ]) {
+        const r = await call(method, path, method === 'GET' ? undefined : {});
+        assert.equal(r.status, 403, `${method} ${path}`);
+      }
+    });
 
-  test('needs membership on every page of a verified study, not just detail and export', async () => {
-    asResearcher();
-    for (const path of ['', '/participants', '/codes', '/analytics']) {
-      const r = await call('GET', `/studies/${VERIFIED}${path}`);
-      assert.equal(r.status, 403, path);
-    }
+    test('may read the questionnaire library to assign from it', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal((await call('GET', '/questionnaires')).status, 200);
+    });
+
+    test('may read the activity-type catalog but not change it', async () => {
+      // The study page labels a structured-entry study's activities from it;
+      // the catalog itself is shared by every study.
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal((await call('GET', '/activity-types')).status, 200);
+      for (const [method, path] of [
+        ['POST', '/activity-types'],
+        ['PATCH', '/activity-types/walking'],
+        ['DELETE', '/activity-types/walking'],
+      ]) {
+        const r = await call(
+          method,
+          path,
+          method === 'DELETE' ? undefined : {}
+        );
+        assert.equal(r.status, 403, `${method} ${path}`);
+      }
+    });
+
+    test('lists notification campaigns only for a member study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal(
+        (await call('GET', `/notifications?studyId=${OWN}`)).status,
+        200
+      );
+      assert.equal(
+        (await call('GET', `/notifications?studyId=${OTHER}`)).status,
+        403
+      );
+      assert.equal((await call('GET', '/notifications')).status, 403);
+    });
+
+    test('sends a campaign only to people in their own study', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      const base = { title: 't', body: 'b' };
+      const ok = [
+        { studyId: String(OWN), targetType: 'all_enrolled' },
+        {
+          studyId: String(OWN),
+          targetType: 'group',
+          targetIds: [String(OWN_GROUP)],
+        },
+        {
+          studyId: String(OWN),
+          targetType: 'individual',
+          targetIds: ['p-own'],
+        },
+      ];
+      for (const c of ok) {
+        assert.equal(
+          (await call('POST', '/notifications', { ...base, ...c })).status,
+          200,
+          JSON.stringify(c)
+        );
+      }
+      const refused = [
+        { targetType: 'all_enrolled' },
+        { studyId: String(OTHER), targetType: 'all_enrolled' },
+        {
+          studyId: String(OWN),
+          targetType: 'group',
+          targetIds: [String(OTHER_GROUP)],
+        },
+        {
+          studyId: String(OWN),
+          targetType: 'individual',
+          targetIds: ['p-own', 'p-other'],
+        },
+        { studyId: String(OWN), targetType: 'group', targetIds: [] },
+      ];
+      for (const c of refused) {
+        assert.equal(
+          (await call('POST', '/notifications', { ...base, ...c })).status,
+          403,
+          JSON.stringify(c)
+        );
+      }
+    });
+
+    test('cancels only campaigns of their own studies', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      assert.equal(
+        (await call('DELETE', `/notifications/${OWN_CAMPAIGN}`)).status,
+        200
+      );
+      assert.equal(
+        (await call('DELETE', `/notifications/${OTHER_CAMPAIGN}`)).status,
+        403
+      );
+    });
+
+    test('opens the detail of participants in their own study only', async () => {
+      // The analytics page opens these from a study's participant table.
+      caller = { sub: 'partner', roles: [role] };
+      for (const part of ['progress', 'reminder-plans']) {
+        assert.equal(
+          (await call('GET', `/participants/p-own/${part}`)).status,
+          200,
+          part
+        );
+        assert.equal(
+          (await call('GET', `/participants/p-other/${part}`)).status,
+          403,
+          part
+        );
+      }
+      assert.equal(
+        (await call('GET', '/participants/nobody/progress')).status,
+        403
+      );
+      assert.equal((await call('GET', '/participants/p-own')).status, 403);
+      assert.equal((await call('DELETE', '/participants/p-own')).status, 403);
+    });
+
+    test('the narrower role wins on an account that also holds researcher', async () => {
+      caller = {
+        sub: 'partner',
+        roles: [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER],
+      };
+      assert.equal((await call('GET', `/studies/${OTHER}`)).status, 403);
+      assert.equal((await call('GET', '/participants')).status, 403);
+    });
   });
-});
+}
 
 describe('admin', () => {
   test('passes everywhere', async () => {
@@ -423,14 +435,15 @@ describe('admin', () => {
 describe('role helpers', () => {
   const as = (...roles) => ({ realm_access: { roles } });
 
-  test('isStudyScoped is true for study-researcher unless admin', () => {
+  test('both research roles are scoped unless admin', () => {
     assert.equal(isStudyScoped(as(ROLES.STUDY_RESEARCHER)), true);
     assert.equal(
       isStudyScoped(as(ROLES.STUDY_RESEARCHER, ROLES.RESEARCHER)),
       true
     );
     assert.equal(isStudyScoped(as(ROLES.STUDY_RESEARCHER, ROLES.ADMIN)), false);
-    assert.equal(isStudyScoped(as(ROLES.RESEARCHER)), false);
+    assert.equal(isStudyScoped(as(ROLES.RESEARCHER)), true);
+    assert.equal(isStudyScoped(as(ROLES.RESEARCHER, ROLES.ADMIN)), false);
   });
 
   test('a study-researcher is never privileged', () => {
@@ -441,7 +454,7 @@ describe('role helpers', () => {
       isPrivileged(as(ROLES.STUDY_RESEARCHER, ROLES.RESEARCHER)),
       false
     );
-    assert.equal(isPrivileged(as(ROLES.RESEARCHER)), true);
+    assert.equal(isPrivileged(as(ROLES.RESEARCHER)), false);
     assert.equal(isPrivileged(as(ROLES.ADMIN, ROLES.STUDY_RESEARCHER)), true);
   });
 });

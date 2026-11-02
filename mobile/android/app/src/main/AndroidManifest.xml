@@ -2,6 +2,9 @@
     <!-- Habit-donation voice input: recording a spoken habit sentence, sent
          off-device for speech-to-text transcription. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Voice input is optional; text/structured donation also works on devices
+         without a microphone. Avoid Play's implied required-microphone filter. -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false"/>
     <!-- flutter_local_notifications: required so scheduled notifications
          (habit reminders, SRHI/questionnaire check-ins, end-of-study) survive
          a device reboot — the plugin's own manifest only auto-merges

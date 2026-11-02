@@ -264,7 +264,7 @@
     "subtitle": "Verwalten Sie, wer Admin- oder Forschungszugriff hat. Rollenänderungen wirken bei der nächsten Anmeldung oder Token-Erneuerung (innerhalb weniger Minuten).",
     "manageRoles": "Rollen verwalten",
     "assignRole": "Rolle zuweisen",
-    "assignRoleSubtitle": "Suchen Sie ein bestehendes Konto und weisen Sie ihm eine Rolle zu. „Nur zugewiesene Studien“ beschränkt eine Forscherin oder einen Forscher auf die Studien, zu denen Sie sie im Tab „Zugang“ der jeweiligen Studie hinzufügen.",
+    "assignRoleSubtitle": "Suchen Sie ein bestehendes Konto und weisen Sie ihm eine Rolle zu. Beide Forschungsrollen sind auf die Studien beschränkt, denen Sie das Konto im Tab „Zugang“ zuweisen.",
     "searchPlaceholder": "Nach Benutzername oder E-Mail suchen",
     "searchButton": "Suchen",
     "noSearchResults": "Keine passenden Konten gefunden.",
@@ -1448,7 +1448,7 @@
     "members": {
       "title": "Zugriff für Forschende",
       "enforced": "Diese Studie ist zugriffsbeschränkt: die Rolle researcher allein genügt hier nicht. Nur die unten genannten Personen können sie öffnen, und nur mit „Export“ auch den Datensatz herunterladen. Administratoren haben immer Zugriff.",
-      "open": "Diese Studie ist offen: Alle mit der vollen Rolle „Forschung“ können sie bereits lesen. Konten mit „Nur zugewiesene Studien“ sehen sie nur, wenn sie hier eingetragen sind, und können ihre Daten nur mit Export herunterladen.",
+      "open": "Beide Forschungsrollen benötigen eine Mitgliedschaft für diese Studie. Administratoren haben immer Zugriff.",
       "user": "Person",
       "role": "Rolle",
       "access": "Zugriff",
@@ -1500,7 +1500,7 @@
       "approversOption2": "2 — zwei weitere Personen geben frei",
       "approversHint": "Wer eine Anfrage stellt, kann sie in keinem Fall selbst freigeben. Zwei Freigebende sind strenger, brauchen aber zwei erreichbare Personen — vor der Wahl an eine Abdeckung außerhalb der Regelarbeitszeit denken.",
       "revealLabel": "Offenlegungsfenster (Minuten)",
-      "scopingNote": "Der Forschendenzugriff wird bei verifizierten Studien automatisch eingeschränkt, sodass Forschende eine ausdrückliche Mitgliedschaft benötigen, um die Daten dieser Studie zu sehen. Das ist hier nicht konfigurierbar."
+      "scopingNote": "Jede Studie erfordert eine ausdrückliche Mitgliedschaft. Weisen Sie Forschende im Tab „Zugang“ zu; nicht zugewiesene Studien sind unsichtbar und unzugänglich."
     },
     "config": {
       "save": "Identitätseinstellungen speichern",

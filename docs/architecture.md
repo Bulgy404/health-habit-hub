@@ -598,52 +598,27 @@ always mint a principal. What is guaranteed is that doing so is visible.
 
 ### Scoped researcher access
 
-Verified studies force `identity.researcherScoping` to `scoped`, and a
-`researcher` then needs an explicit `study_memberships` row rather than the
-bare role. A `study-researcher` (#66) needs one on **every** study. Membership
-separates **read** from **export**, because downloading a study bundle is
-materially more than opening a page.
+Both `researcher` and `study-researcher` require a current
+`study_memberships` row for every study. This includes anonymous studies and
+legacy records with `identity.researcherScoping: open`. Only administrators
+have platform-wide access. The study list, pagination totals and analytics
+selectors contain only assigned studies; direct requests to another study's
+details, edits, codes, participants, analytics and exports are refused.
 
-`app/middleware/studyScopeGuard.js` enforces both. It is mounted once at the
-top of `createAdminRouter`, after the audit middleware, so it runs for every
-`/admin/*` request — including the admin routers `apiRouter.js` mounts
-separately, since those requests pass through the admin router first — and
-refused writes still reach `admin_audit_log`. Every `/studies/:id/...` request
-and every participant detail (judged by the participant's enrolled study) goes
-through `checkStudyAccess` (`requireStudyAccess.js`). Before this guard, a
-scoped study protected only its detail page and export; its participants,
-codes and analytics were open to every researcher.
+`app/middleware/studyScopeGuard.js` runs after the audit middleware on every
+`/admin/*` request, including separately mounted export and notification
+routers. Both research roles use the same route allowlist. They cannot create
+or delete studies, change identity settings, manage memberships, or use shared
+administration endpoints. Participant detail access is checked against the
+participant's enrolled study. Campaigns must remain within an assigned study.
+Membership scope separately controls CSV/ZIP exports. Non-admin access to
+other users' unscoped recommendation/survey endpoints is refused as well.
 
-```mermaid
-flowchart TD
-    req["/admin/* request"] --> admin{admin?}
-    admin -- yes --> pass([next])
-    admin -- no --> study{"/studies/:id/…?"}
-    study -- yes --> allow1{"study-researcher:<br/>route on the allowlist?"}
-    allow1 -- no --> r403([403 not_permitted_for_role])
-    allow1 -- yes / researcher --> check["checkStudyAccess<br/>(membership needed if study-researcher<br/>or study is scoped; export scope for exports)"]
-    check -- ok --> pass
-    check -- not a member --> m403([403 not_a_study_member])
-    study -- no --> scoped{study-researcher?}
-    scoped -- no --> pass
-    scoped -- yes --> allow2{"study list, questionnaire library,<br/>activity catalog (read),<br/>own participants, own campaigns?"}
-    allow2 -- yes --> pass
-    allow2 -- no --> r403
-```
-
-Four deliberate properties:
-
-- **Admins always pass.** Scoping limits researchers to their own studies; it
-  is not a way to lock operators out of the platform they run.
-- **For a full `researcher`, anonymous studies stay `open`**, exactly as
-  before, so nothing that worked the day before this shipped stopped working.
-- **A `study-researcher` is fenced by an allowlist.** Their study list is
-  filtered, and any admin route not explicitly allowed — including one added
-  later — is a 403. On an account holding both roles the narrower one wins.
-- **Study existence is not secret to a full researcher.** A non-member sees a
-  scoped study in the list and a 403 on its pages. Hiding it would make the
-  studies page look broken for no security gain. A `study-researcher` is a
-  partner from outside, so their list shows only their own studies.
+The portal mirrors these permissions, but the server enforces them on every
+request using the current memberships rather than token-time assignments.
+Removing a membership takes effect on the next request without signing out.
+Existing researchers must be assigned through each study's Access tab; there
+is no automatic grant to every legacy study.
 
 The guard fails **closed**: an error resolving access is a 500, never access.
 

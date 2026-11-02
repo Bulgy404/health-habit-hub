@@ -312,6 +312,12 @@ jobs:
         working-directory: mobile
         run: flutter analyze lib/ test/
 
+      - name: Validate iOS native patch contexts and cache isolation
+        working-directory: mobile
+        run: |
+          python3 tool/patch_ios_plugins.py --check
+          python3 -m unittest discover -s tool -p 'test_*.py'
+
   # ─────────────────────────────────────────────────────────────────────────────
   # 6. FLUTTER – widget tests + coverage
   # ─────────────────────────────────────────────────────────────────────────────

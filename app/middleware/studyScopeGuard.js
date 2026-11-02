@@ -12,7 +12,7 @@ const log = logger.child({ module: 'studyScopeGuard' });
 // /studies/:id and everything below it.
 const STUDY_PATH = /^\/studies\/([^/]+)(\/.*)?$/;
 
-// What a `study-researcher` may do on a study they are a member of: the same
+// What either research role may do on a study they are a member of: the same
 // study pages a researcher uses, minus the operator decisions — deleting a
 // study, making it the default, and managing who else is a member. Paths are
 // relative to /studies/:id.
@@ -78,15 +78,14 @@ function forbidden(res) {
  * since those requests pass through the admin router first.
  *
  * - Every `/studies/:id/...` request from a non-admin goes through
- *   {@link checkStudyAccess}. For a full `researcher` that only bites on
- *   studies that ask for scoping; before this, those studies protected their
- *   detail page and export but not their participants, codes or analytics.
+ *   {@link checkStudyAccess}. Both research roles require current membership,
+ *   irrespective of identity mode or legacy open settings.
  *
  * - The detail of one participant (`/participants/:id/progress` and the
  *   like) is judged by the study that participant is enrolled in, the same
  *   way.
  *
- * - A `study-researcher` is held to an allowlist: their member studies'
+ * - Both research roles are held to an allowlist: their member studies'
  *   pages, their participants' details, the filtered study list, the
  *   questionnaire library and activity-type catalog (read only) and
  *   notification campaigns for their studies. Anything else, including any admin route added later, is a 403
@@ -98,17 +97,17 @@ export function createStudyScopeGuard({ getDb }) {
   return async function studyScopeGuard(req, res, next) {
     const roles = req.user?.realm_access?.roles ?? [];
     if (roles.includes(ROLES.ADMIN)) return next();
-    const scoped = isStudyScoped(req.user);
+    if (!isStudyScoped(req.user) || !req.user?.sub) return forbidden(res);
 
     try {
       const studyMatch = STUDY_PATH.exec(req.path);
       if (studyMatch) {
         const subPath = studyMatch[2] ?? '';
-        if (scoped && !allowed(STUDY_ROUTES, req.method, subPath)) {
+        if (!allowed(STUDY_ROUTES, req.method, subPath)) {
           return forbidden(res);
         }
         // Whether the study is anonymous or verified is the operator's call.
-        if (scoped && req.method === 'PUT' && subPath === '' && req.body) {
+        if (req.method === 'PUT' && subPath === '' && req.body) {
           if (Object.hasOwn(req.body, 'identity')) return forbidden(res);
         }
         const result = await checkStudyAccess({
@@ -127,19 +126,26 @@ export function createStudyScopeGuard({ getDb }) {
         const enrollment = await db
           .collection(ENROLLMENTS)
           .findOne({ userId: participantMatch[1] });
-        // Not enrolled anywhere: no study to judge by, so only the
-        // unrestricted researcher keeps the access they had.
-        if (!enrollment) return scoped ? forbidden(res) : next();
+        // No enrollment means no assigned study can authorize access.
+        if (!enrollment) return forbidden(res);
         const result = await checkStudyAccess({
           db,
           user: req.user,
           studyId: String(enrollment.studyId),
         });
-        if (result.ok || (!scoped && result.status === 404)) return next();
+        if (result.ok) return next();
         return res.status(result.status).json(result.body);
       }
 
-      if (!scoped) return next();
+      // Reject unrelated routes before touching the database. Missing or
+      // unavailable membership storage must never turn a denial into access.
+      if (
+        !allowed(OTHER_ROUTES, req.method, req.path) &&
+        !NOTIFICATIONS_PATH.test(req.path) &&
+        !NOTIFICATION_PATH.test(req.path)
+      ) {
+        return forbidden(res);
+      }
 
       const db = await getDb();
       const memberships = await db
@@ -190,7 +196,7 @@ export function createStudyScopeGuard({ getDb }) {
 }
 
 /**
- * True when a new campaign from a `study-researcher` can only reach
+ * True when a new campaign from a researcher can only reach
  * participants of one of their studies: it names a member study, and any
  * groups or participants it targets belong to that study.
  */

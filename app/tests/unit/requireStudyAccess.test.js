@@ -62,12 +62,11 @@ const verifiedStudy = {
 };
 
 describe('requireStudyAccess', () => {
-  it('lets ANY researcher through for an anonymous study', async () => {
-    // Today's behaviour. Nothing existing may break the day this ships.
+  it('blocks an unassigned researcher even on an anonymous study', async () => {
     const guard = requireStudyAccess({
       getDb: async () => makeDb({ study: anonymousStudy }),
     });
-    assert.equal((await run(guard, { roles: ['researcher'] })).nexted, true);
+    assert.equal((await run(guard, { roles: ['researcher'] })).status, 403);
   });
 
   it('BLOCKS a researcher with no membership on a verified study', async () => {

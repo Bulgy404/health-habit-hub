@@ -193,12 +193,12 @@ test('lists members and reports that scoping is enforced on a verified study', a
   assert.strictEqual(body.total, 0);
 });
 
-test('reports scoping as NOT enforced on an anonymous study', async () => {
+test('enforces membership on anonymous studies too', async () => {
   // Members can still be added — they simply have no effect yet. Saying so
   // avoids the impression that adding someone silently did nothing.
   db.setStudy({ _id: STUDY_ID, name: 'Open study', identity: null });
   const body = await (await fetch(url(`/studies/${STUDY_ID}/members`))).json();
-  assert.strictEqual(body.enforced, false);
+  assert.strictEqual(body.enforced, true);
 });
 
 test('adds a member and returns them with role and scope', async () => {

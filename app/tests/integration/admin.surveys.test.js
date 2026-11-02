@@ -440,10 +440,10 @@ test('PUT /api/v1/admin/surveys/:id - 404 for unknown survey', async () => {
   assert.strictEqual(res.status, 404);
 });
 
-test('GET /api/v1/admin/surveys - researcher role allowed', async () => {
+test('GET /api/v1/admin/surveys - unassigned researcher is refused', async () => {
   const token = makeToken(['researcher']);
   const res = await get('/api/v1/admin/surveys', token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 403);
 });
 
 // ── Participant Survey List Tests ─────────────────────────────────────────────
