@@ -2,6 +2,7 @@
 import { useT, links, type Lang } from '../i18n/ui';
 import { Image } from 'astro:assets';
 import AppStoreBadges from './AppStoreBadges.astro';
+import PromoVideo from './PromoVideo.astro';
 import Cite from './Cite.astro';
 import References from './References.astro';
 import type { RefId } from '../data/references';
@@ -43,11 +44,14 @@ const pageRefs: RefId[] = [...new Set([...heroCite, ...bentoShots.slice(0, -1).f
 ---
 <header class="p-hero">
   <div class="hero-bg"></div>
-  <div class="wrap p-hero-in reveal">
+  <div class="wrap p-hero-in">
+    <div class="reveal">
     <span class="eyebrow">{t('nav_participants')}</span>
     <h1>{t('p_hero_title')}</h1>
     <p class="lead">{t('p_hero_lead')}<Cite ids={heroCite} order={pageRefs} /></p>
     <div class="p-cta"><AppStoreBadges lang={lang} /></div>
+    </div>
+    <PromoVideo lang={lang} audience="participants" />
   </div>
 </header>
 
@@ -95,7 +99,8 @@ const pageRefs: RefId[] = [...new Set([...heroCite, ...bentoShots.slice(0, -1).f
 <style>
   .p-hero{position:relative;overflow:hidden;padding:90px 0 72px}
   .hero-bg{position:absolute;inset:0;background:radial-gradient(760px 420px at 78% -14%,rgba(78,198,0,.14),transparent 60%)}
-  .p-hero-in{position:relative}
+  .p-hero-in{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);align-items:center;gap:56px}
+  @media(max-width:900px){.p-hero-in{grid-template-columns:1fr;gap:32px}}
   .p-hero h1{font-size:clamp(38px,6vw,68px);margin:14px 0 0;max-width:20ch}
   .p-hero .lead{font-size:clamp(17px,1.9vw,21px);color:var(--muted);margin:24px 0 32px;max-width:60ch}
   .p-cta{margin-bottom:20px}

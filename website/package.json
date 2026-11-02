@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
     "sync:legal": "node scripts/sync-legal.mjs",
     "dev": "npm run sync:legal && astro dev",
     "build": "npm run sync:legal && astro build",
