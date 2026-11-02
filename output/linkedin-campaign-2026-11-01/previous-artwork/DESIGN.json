@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "Health Habit Hub: ordinary days",
+  "date": "2026-10-31",
+  "artifactRoot": "/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31",
+  "pathBase": "All paths below are relative to artifactRoot unless absolute.",
+  "scope": {
+    "included": ["LinkedIn campaign artwork", "18-second motion post", "English and German post copy", "local review gallery"],
+    "designScope": "direction",
+    "mode": "persuade",
+    "direction": "conversational campus posters",
+    "websiteOrAppIdentityChanged": false,
+    "publishedOrScheduled": false
+  },
+  "derivation": {
+    "seedKey": "0a6aa0c6",
+    "candidateCount": 7,
+    "assignedIndex": 3,
+    "candidates": ["desk-calendar record", "if–then planning sheet", "conversational campus posters", "research invitation letter", "public-wayfinding decisions", "personal day log", "book-margin reminder"],
+    "catalogApiPool": "c3b204a1eed6",
+    "catalogLimitation": "Hypercardboard image returned HTTP 403 and could not be visually inspected. No composition-fidelity claim is made.",
+    "externalCatalogImageAdopted": false
+  },
+  "typography": {
+    "display": {"family": "Barlow Condensed", "weight": 800, "file": "fonts/BarlowCondensed-ExtraBold.ttf", "use": "Poster and video display typography, outlined in SVG masters"},
+    "body": {"family": "Figtree", "weights": [400, 700], "files": ["fonts/Figtree-Regular.ttf", "fonts/Figtree-Bold.ttf"], "use": "Brand, explanatory copy, gallery and controls"},
+    "additionalBundledFonts": ["fonts/BarlowCondensed-SemiBold.ttf", "fonts/Figtree-Semibold.ttf"],
+    "displayFontLicense": "fonts/OFL-Barlow.txt"
+  },
+  "colors": {
+    "artwork": {"ink": "#172126", "coolWhite": "#F5F7F2", "acidLeaf": "#C7F07A", "actionGreen": "#2E8C00", "footerLines": ["#AEB6AE", "#54605F", "#7A9D56"]},
+    "gallery": {"ground": "#EEF1EB", "line": "#B9C3B7", "secondaryText": "#4D5D50", "controlText": "#526255", "textareaBorder": "#D1D9CD", "textDownload": "#3F5843", "copyHover": "#304A36", "scrollbar": "#68796B"},
+    "brandExtension": "Acid leaf is limited to this campaign and does not change global brand tokens."
+  },
+  "composition": {"width": 1080, "height": 1350, "aspectRatio": "4:5", "orientation": "portrait", "edges": "square", "posterMarginPx": 64, "posterContentWidthPx": 952},
+  "exports": [
+    {"path": "images/01-ordinary-week.png", "master": "source/01-ordinary-week.svg", "title": "Tuesday got away. Wednesday is still here.", "width": 1080, "height": 1350, "background": "#172126"},
+    {"path": "images/02-give-it-a-when.png", "master": "source/02-give-it-a-when.svg", "title": "Give your habit a when.", "width": 1080, "height": 1350, "background": "#C7F07A"},
+    {"path": "images/03-ordinary-tuesday.png", "master": "source/03-ordinary-tuesday.svg", "title": "Researchers are interested in your ordinary Tuesday.", "width": 1080, "height": 1350, "background": "#F5F7F2"},
+    {"path": "video/01-give-it-a-when.mp4", "width": 1080, "height": 1350, "durationSeconds": 18, "fps": 30, "codec": "h264", "audio": false, "matchingPostStem": "02-give-it-a-when"}
+  ],
+  "paths": {
+    "gallery": "index.html",
+    "assetGuide": "README.md",
+    "designContract": "DESIGN.md",
+    "postCopy": "copy/linkedin-posts.md",
+    "copyFilePattern": "copy/{01-ordinary-week|02-give-it-a-when|03-ordinary-tuesday}-{en|de}.txt",
+    "campaignPreview": "campaign-preview.png",
+    "videoContactSheet": "video/contact-sheet.png",
+    "videoPreviews": ["video/preview-01-hook.png", "video/preview-02-plan.png", "video/preview-03-app.png", "video/preview-04-download.png"],
+    "artworkBuilder": "source/build_artwork.py",
+    "galleryBuilder": "source/build_gallery.py",
+    "videoBuilder": "source/video/build_motion_post.py",
+    "videoProductionNotes": "source/video/PRODUCTION.md",
+    "assetProvenance": "source/asset-provenance.json"
+  },
+  "sourceAssets": {
+    "appScreenshot": {"local": "source/Habits-original.png", "repositorySource": "website/src/assets/device-mockups/Habits.png", "treatment": "Original raster pixels inserted into SVG crops without repainting"},
+    "appIcon": {"local": "source/app-icon-original.png", "repositorySource": "website/public/app_icon.png", "treatment": "Existing icon unchanged"},
+    "videoFootage": {"repositorySource": "output/linkedin-campaign-2026-10-30/video/promostudio-native-source.mp4", "origin": "Existing PromoStudio export", "treatment": "App footage fitted into the campaign composition; studio backdrop keyed out"}
+  },
+  "galleryBehavior": {"languages": ["en", "de"], "copyPost": true, "downloadableCopyFallback": true, "textRevealDurationMs": 180, "reducedMotionDisablesTextReveal": true},
+  "contentContract": {"downloadDestination": "https://healthhabithub.de/", "freePlatforms": ["iOS", "Android"], "researchParticipation": "Optional sharing of habits for TU Dresden research", "previewValues": "App examples, not study results, testimonials or a particular person’s Tuesday", "syntheticPhotography": false, "regeneratedAppScreens": false}
+}

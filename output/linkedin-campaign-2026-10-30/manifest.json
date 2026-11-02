@@ -1,0 +1,76 @@
+{
+  "created": "2026-10-30",
+  "images": {
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "format": "PNG",
+    "language": "English",
+    "count": 3
+  },
+  "post_copy_languages": [
+    "English",
+    "German"
+  ],
+  "videos": {
+    "video/01-promostudio-product-voiced.mp4": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1350,
+          "avg_frame_rate": "30/1"
+        },
+        {
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "avg_frame_rate": "0/0"
+        }
+      ],
+      "format": {
+        "duration": "24.000000",
+        "size": "3065003"
+      }
+    },
+    "video/02-promostudio-product-silent.mp4": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1350,
+          "avg_frame_rate": "30/1"
+        }
+      ],
+      "format": {
+        "duration": "24.000000",
+        "size": "2509515"
+      }
+    },
+    "video/03-elevenlabs-presenter.mp4": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "width": 720,
+          "height": 1280,
+          "avg_frame_rate": "25/1"
+        },
+        {
+          "codec_name": "aac",
+          "sample_rate": "44100",
+          "avg_frame_rate": "0/0"
+        }
+      ],
+      "format": {
+        "duration": "22.040000",
+        "size": "2992899"
+      }
+    }
+  }
+}

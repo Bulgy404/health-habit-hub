@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-31",
+  "artwork": {
+    "images/01-ordinary-week.png": {
+      "dimensions": [
+        1080,
+        1350
+      ],
+      "sha256": "526dec4a05b3b3cad05641016061e7e29f9d120b96944b1b63253d4356d7665c"
+    },
+    "images/03-ordinary-tuesday.png": {
+      "dimensions": [
+        1080,
+        1350
+      ],
+      "sha256": "b20bb6e747b802e538c75f0c42410591faed52e144ae86424bb8170171e2bca1"
+    },
+    "images/02-give-it-a-when.png": {
+      "dimensions": [
+        1080,
+        1350
+      ],
+      "sha256": "a6b2efe3628d23aae76f42ef8c478ae6f0f577ebde4ea1e688cc17ab704d9550"
+    },
+    "images/details/illustrative-calendar.png": {
+      "dimensions": [
+        952,
+        292
+      ],
+      "sha256": "43cf0614bca4a444d1dc06235add799fadfab93f4717f4ab38bdd5e140351d2e"
+    },
+    "images/details/example-plan.png": {
+      "dimensions": [
+        952,
+        292
+      ],
+      "sha256": "46c9a82f5d5f2a7f3fd74282822e50b24360e58e8fa06e7b321a5524f5e55c46"
+    }
+  },
+  "copy_languages": [
+    "English",
+    "German"
+  ],
+  "video": {
+    "path": "video/01-give-it-a-when.mp4",
+    "duration": 18,
+    "dimensions": [
+      1080,
+      1350
+    ],
+    "audio": false
+  },
+  "design_direction": "Conversational campus posters",
+  "generated_lifestyle_photography": false,
+  "updated": "2026-11-01",
+  "static_graphics": "Explicitly labelled vector illustrations, not app screenshots or participant data"
+}

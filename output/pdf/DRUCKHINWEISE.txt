@@ -1,0 +1,33 @@
+HEALTH HABIT HUB - DRUCKHINWEISE
+
+FALTFLYER
+A4, Querformat, beidseitig, an der kurzen Kante wenden.
+Originalgröße / Tatsächliche Größe / 100 % wählen.
+Nicht "An Seite anpassen" wählen. Keine Broschürenfunktion aktivieren.
+
+Die PDF hat zwei Seiten:
+1. Außenseite: Einklappfeld links, Rückseite in der Mitte, Titel rechts.
+2. Innenseite: drei App-Ansichten.
+
+Die kurzen Striche am oberen und unteren Rand sind Falzmarken.
+Sie markieren auf der Außenseite 97 und 197 mm vom linken Blattrand.
+Die Innenseite ist entsprechend gespiegelt (100 und 200 mm).
+
+So faltest du: Innenseite nach oben legen. Zuerst das rechte, schmalere
+97-mm-Feld nach links einklappen. Danach das linke Feld darüberlegen.
+Der Titel "Dein Alltag. Deine Gewohnheiten." liegt anschließend vorn.
+Es sind zwei Falze, die drei Felder ergeben (Wickelfalz).
+
+Erst ein Exemplar als Probe drucken, um die Ausrichtung des Druckers
+und die Deckung der Falzmarken zu prüfen.
+Für den Flyer eignet sich etwa 120-160 g/m² mattes Papier,
+sofern dein Drucker dafür ausgelegt ist.
+
+A4-DOWNLOADSCHILDER
+A4, Hochformat, einseitig, Originalgröße / 100 %.
+Ein Schild führt zum App Store, eines zu Google Play.
+Für die Auslage eignen sich mattes Papier oder ein matter Aufsteller,
+damit Reflexionen den QR-Code nicht verdecken.
+
+Alle QR-Codes wurden aus den gerenderten PDFs erfolgreich ausgelesen.
+Die QR-Codes und die Webadresse sind in den PDFs auch anklickbar.
