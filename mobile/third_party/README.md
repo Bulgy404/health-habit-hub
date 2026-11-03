@@ -36,3 +36,21 @@ flutter pub get
 Review the native source diff and license files, then run analysis, the Flutter
 tests, an Xcode archive and an Android release build. Do not replace a native
 source hash just to bypass a changed-context error.
+
+## Review on November 3, 2026
+
+The fixes are a mix of functional corrections and compatibility maintenance:
+
+| Package | Reason for the local native changes |
+| --- | --- |
+| `device_info_plus` | Avoid 32-bit overflow when calculating free memory before converting to megabytes. |
+| `flutter_appauth` | Find the active scene's key window for sign-in presentation; remove authentication fallbacks below the app's minimum supported iOS version. |
+| `flutter_local_notifications` | Make a mutable copy before mutation; replace the deprecated foreground alert option with banner/list options. |
+| `record_ios` | Use the current Bluetooth HFP name on newer Swift compilers, with an older-compiler fallback. |
+| `firebase_messaging` | Update foreground presentation options and narrowly suppress warnings for FCM token calls still used by the backend. |
+| `sentry_flutter` | Correct Objective-C channel typing/nullability and bridge deprecated native app-hang calls while preserving Flutter channel behavior. |
+| `posthog_flutter` | Use scene windows and replace deprecated native replay conversion helpers. |
+
+Not every change fixes an app failure: several replace deprecated APIs or reduce compiler warnings. Full package copies are used because Flutter path dependencies must remain complete packages, and Xcode/Flutter/CI must compile the same sources.
+
+Sentry was updated to 10.3.0 and PostHog to 5.58.4. Their affected native source was compared with the previous release before reapplying the reviewed edits. The other five patched packages are already at their latest stable release. No patch was removed because the relevant upstream code still needs the recorded edit. This review does not enable analytics autocapture, session replay, or a new push-registration protocol.

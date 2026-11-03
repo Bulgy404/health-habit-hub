@@ -78,3 +78,12 @@ lightrag/knowledge/*
 
 # Generated marketing, screenshot, video, and document exports live in OneDrive.
 /output/
+
+# Gradle caches inside maintained plugins are generated, not package source.
+.gradle/
+
+# Kotlin compiler sessions and diagnostic caches.
+.kotlin/
+
+# Generated native CMake configuration.
+CMakeCache.txt

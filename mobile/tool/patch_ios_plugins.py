@@ -91,7 +91,7 @@ def main():
             shutil.copytree(source, local, ignore=shutil.ignore_patterns(
                 "example", "test", "integration_test", "docs", "doc", "screenshots",
                 ".github", ".idea", ".dart_tool", ".swiftpm", ".build", ".gradle",
-                "build", "AGENTS.md", "CLAUDE.md"))
+                "build", "CMakeCache.txt", "AGENTS.md", "CLAUDE.md"))
             patch_package(local / platform / plugin, changes)
             pubspec = local / "pubspec.yaml"
             pubspec.write_text(pubspec.read_text().replace("resolution: workspace\n", ""))
