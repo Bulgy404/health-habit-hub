@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -404,8 +405,7 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other:
           '$count habits shared. Individual habit details are available in the Habits Monitor.',
-      one:
-          '1 habit shared. Individual habit details are available in the Habits Monitor.',
+      one: '1 habit shared. Individual habit details are available in the Habits Monitor.',
     );
     return '$_temp0';
   }

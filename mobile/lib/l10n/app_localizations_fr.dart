@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -416,8 +417,7 @@ class AppLocalizationsFr extends AppLocalizations {
       locale: localeName,
       other:
           '$count habitudes partagées. Les détails de chaque habitude sont disponibles dans le moniteur des habitudes.',
-      one:
-          '1 habitude partagée. Les détails de chaque habitude sont disponibles dans le moniteur des habitudes.',
+      one: '1 habitude partagée. Les détails de chaque habitude sont disponibles dans le moniteur des habitudes.',
     );
     return '$_temp0';
   }
