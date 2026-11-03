@@ -1,7 +1,0 @@
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-00.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-01.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-02.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-03.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/03-app-shot.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-05.mp4'
-file '/Users/felixreinsch/Github/health-habit-hub-1/output/linkedin-campaign-2026-10-31/source/video/segment-06.mp4'

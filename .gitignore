@@ -75,3 +75,6 @@ paper/
 lightrag/knowledge/*
 !lightrag/knowledge/.gitkeep
 !lightrag/knowledge/README.md
+
+# Generated marketing, screenshot, video, and document exports live in OneDrive.
+/output/
