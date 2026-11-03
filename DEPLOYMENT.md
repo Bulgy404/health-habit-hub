@@ -42,6 +42,8 @@ Create a local `.env` file if you do not already have one:
 cp .env.example .env
 ```
 
+The files now group test accounts, core services, optional integrations and inactive legacy settings consistently. Follow [Environment configuration](docs/guides/environment-configuration.md) for the section map. Keep archived assignments commented; they are not required production secrets.
+
 At minimum, set these values in `.env` before first start:
 
 ```env

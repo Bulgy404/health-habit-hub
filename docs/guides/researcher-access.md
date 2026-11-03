@@ -52,6 +52,8 @@ Automated regression tests include `app/tests/integration/researcherWorkspace.te
 
 ## Local test researcher
 
+The [environment configuration guide](environment-configuration.md#local-test-logins) documents the matching test-account sections and inactive settings.
+
 Set `HHH_RESEARCHER_USER` and `HHH_RESEARCHER_PASSWORD` in the ignored local `.env`. `make dev` provisions this account after starting the services. Use `make seed-researcher` to provision or reset only the test researcher without rebuilding anything. Blank credentials skip provisioning.
 
 The script only connects to local Keycloak (`LOCAL_KEYCLOAK_URL`, default `http://localhost:8080`). It grants the researcher role, refuses operator/identity roles, and does not assign study memberships. The researcher can create their own study; the operator can assign existing studies. It refuses to overwrite an unrelated existing account with the same username. Passwords and access tokens are never printed.

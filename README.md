@@ -275,7 +275,7 @@ Local service URLs after `make dev`:
 | Flutter web           | http://localhost                                             |
 | Backend API           | http://localhost:3000                                        |
 | API docs (Swagger UI) | http://localhost:3000/api/v1/docs                            |
-| Admin UI              | http://admin.localhost                                       |
+| Admin UI              | http://admin.localhost/admin                                       |
 | Keycloak              | http://localhost:8080                                        |
 | Neo4j Browser         | http://localhost:7474                                        |
 | LightRAG (graph UI)   | http://localhost:9622                                        |
@@ -287,13 +287,16 @@ Local service URLs after `make dev`:
 
 Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new to the codebase? [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)
 
+Environment sections, optional integrations, archived settings and test logins: [environment configuration](docs/guides/environment-configuration.md). The private `.env` keeps actual credentials; `.env.example` contains placeholders. Researchers manage their own studies while the operator retains the central view: [researcher access](docs/guides/researcher-access.md).
+
 ### Common commands
 
 | Command           | Description                                           |
 | ----------------- | ----------------------------------------------------- |
 | `make help`       | List every available target (the default `make` goal) |
-| `make dev`        | Start all services                                    |
+| `make dev`        | Build/start local services and provision the configured test researcher                                    |
 | `make stop`       | Stop all services                                     |
+| `make seed-researcher` | Provision/reset only the local test researcher from `.env` |
 | `make seed`       | Seed databases                                        |
 | `make reset`      | Wipe volumes, restart, re-seed                        |
 | `make logs`       | Tail backend logs                                     |

@@ -1762,7 +1762,7 @@ enrolment* onto the person configuring the study.
 ## 11. Environment Variables
 
 
-All variables are defined in `stack.env`. In production, override sensitive values in Portainer's environment variables section — never commit real secrets to Git.
+For local development, copy `.env.example` to the ignored `.env`; both use matching sections. See [Environment configuration](docs/guides/environment-configuration.md) for the section map, test researcher credentials, optional integrations and inactive settings. Production uses `stack.env` and Portainer environment overrides. Never commit real secrets to Git.
 
 ### Domain & TLS
 
@@ -1832,7 +1832,10 @@ its own login. There are **no** per-tool htpasswd/basic-auth variables anymore
 | `NEO4J_URI`      | `bolt://neo4j:7687` | Neo4j Bolt connection URI                |
 | `NEO4J_USER`     | `neo4j`             | Neo4j username                           |
 | `NEO4J_PASSWORD` | —                   | Neo4j password **(change in Portainer)** |
-| `GRAPH_BACKEND`  | `neo4j`             | Graph backend selector                   |
+
+### Inactive root variables
+
+`GRAPH_BACKEND`, `FIREBASE_ANDROID_API_KEY` and `FIREBASE_IOS_API_KEY` are archived as comments at the bottom of `.env` and `.env.example`. The application uses Neo4j; Flutter Firebase configuration is in `mobile/lib/firebase_options.dart`. The backend's `FIREBASE_SERVICE_ACCOUNT_JSON` and LibreTranslate's `LT_*` settings remain active. Do not confuse the optional analytics or identity-register settings with obsolete features.
 
 ### Apache Fuseki _(retired — no longer in docker-compose.yml; variables kept for historical reference)_
 

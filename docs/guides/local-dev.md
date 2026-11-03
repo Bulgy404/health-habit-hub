@@ -67,18 +67,11 @@ git checkout ralph/hhh-platform-unified
 cp .env.example .env
 ```
 
-The default values in `.env.example` work for local development without changes. You do not need to fill in any `CHANGE_THIS_*` placeholders to run the local stack.
+Use the matching sections in `.env` and `.env.example` to configure the services you run. Replace required `CHANGE_THIS_*` values; production-only settings such as `DOMAIN` are unused by the local stack. Keep JSON values and `${...}` interpolation intact.
 
-Add the following variables to your `.env` if they are not already present:
+The **Local test accounts** section groups the portal admin username and test researcher credentials. Set `HHH_RESEARCHER_PASSWORD` to enable the researcher fixture; leaving it blank skips provisioning. The portal admin password remains `KEYCLOAK_ADMIN_PASSWORD` in the Keycloak section.
 
-```
-API_SERVICE_SECRET=dev-secret-change-in-production
-LIGHTRAG_URL=http://lightrag:9621
-LIGHTRAG_API_KEY=dev-lightrag-secret
-LIGHTRAG_HOST_PORT=9622
-```
-
-`API_SERVICE_SECRET` is the shared secret for internal service-to-service calls. The `LIGHTRAG_*` variables configure the knowledge base service — the defaults work for local development without changes. The graph visualization UI is served at `http://localhost:9622` when the stack is running.
+The **Inactive / legacy** section contains commented settings no longer read by the application. Optional integrations are labelled separately and remain supported. See [Environment configuration](environment-configuration.md) for the full section map and archived-variable replacements.
 
 ### Step 3 — Start all backend services
 
@@ -86,7 +79,7 @@ LIGHTRAG_HOST_PORT=9622
 make dev
 ```
 
-This runs `docker compose -f docker-compose.local.yml up -d`, starting:
+This builds/starts the local Compose stack and then runs `make seed-researcher` when researcher credentials are configured. The stack includes:
 
 | Service                 | Description                                                                          | Local address                                      |
 | ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
@@ -132,7 +125,7 @@ This seeds:
 
 - **MongoDB** — SLIQ and RAND-36 questionnaires
 - **Neo4j** — Group nodes, a test Donor, and sample Habit nodes
-- **Keycloak** — Test user `testuser` with password `testpass123` in the `hhh` realm
+- **Keycloak** — the QA participant fixture created by `make seed-user`; credentials are printed by the seeder. The baseline seed script does not create a fixed `testuser` account.
 
 The seed script is idempotent — running it again is safe.
 
@@ -208,7 +201,7 @@ When the local Docker stack is running (`make dev`), the admin app is available 
 
 ### Creating a local admin user in Keycloak
 
-The `testuser` seeded by `make seed` is a regular `user` (study participant) — it does not have access to the admin panel. The admin panel requires a user with the `admin` (or `researcher`) realm role in the `hhh` realm.
+Seeded QA participants are regular `user` accounts and do not have access to the admin panel. The admin panel requires a user with the `admin` (or `researcher`) realm role in the `hhh` realm.
 
 **This is now done automatically.** When you run `make dev`, the `keycloak-init` container creates an admin user in the `hhh` realm using values from your `.env`:
 
@@ -249,13 +242,22 @@ The backend and Keycloak containers must still be running (`make dev` with the `
 
 ## 5. Test Login Credentials
 
-After running `make seed`, these credentials work in both the app and the Keycloak admin UI:
+Portal accounts are provisioned during local startup; participant fixtures are seeded separately. Actual account passwords stay in your private `.env` or the participant seeder's output.
 
-| Account                       | Username                                     | Password                                     | Role                               | Where to log in               |
-| ----------------------------- | -------------------------------------------- | -------------------------------------------- | ---------------------------------- | ----------------------------- |
-| Test user (study participant) | `testuser`                                   | `testpass123`                                | `user` (hhh realm)                 | Flutter app                   |
-| Admin panel user              | value of `HHH_ADMIN_USER` (default: `admin`) | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | `admin` + `researcher` (hhh realm) | `http://admin.localhost`      |
-| Keycloak master admin         | `admin`                                      | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | master realm admin                 | `http://localhost:8080/admin` |
+| Account | Username | Password | Access | Login |
+| --- | --- | --- | --- | --- |
+| Portal admin | `HHH_ADMIN_USER` (default `admin`) | `KEYCLOAK_ADMIN_PASSWORD` | All studies, central data and platform administration | [Portal](http://admin.localhost/admin) |
+| Test researcher | `HHH_RESEARCHER_USER` (example `testresearcher`) | `HHH_RESEARCHER_PASSWORD` | Own/member studies; no infrastructure access | [Portal](http://admin.localhost/admin) |
+| QA participant | Printed by `make seed-user` | Printed by `make seed-user` | Participant app only | Flutter app |
+| Keycloak master admin | `KEYCLOAK_ADMIN` | `KEYCLOAK_ADMIN_PASSWORD` | Identity provider administration | [Keycloak](http://localhost:8080/admin) |
+
+To provision or reset only the local researcher after changing its password:
+
+```bash
+make seed-researcher
+```
+
+A blank researcher password skips provisioning. `HHH_RESEARCHER_ID` is recorded automatically; do not copy it between installations. Use a private browser window for researcher testing so the admin session stays open. New researchers start without study memberships and can create a study of their own. See [Researcher access](researcher-access.md).
 
 > **Note:** The admin panel user and the Keycloak master admin happen to share the same username (`admin`) by default, but they live in different realms. The admin panel user is created in the `hhh` realm by `keycloak-init`. The master admin lives in the `master` realm and only manages Keycloak itself.
 
@@ -263,11 +265,7 @@ Keycloak admin UI: `http://localhost:8080/admin`
 
 ### Rich QA personas (`make seed-user`)
 
-`testuser` above is a bare account with no habit history — useful for testing
-onboarding, but not for testing screens that depend on existing data (My
-Habits with real logs, the SRHI trajectory chart, achievements, the Explore
-graph's donated habits). `make seed-user` fills that gap by seeding one or
-more fully-fledged accounts with weeks of realistic history:
+`make seed-user` seeds one or more participant accounts with realistic history for testing My Habits, SRHI charts, achievements and the donation graph:
 
 ```bash
 make seed-user            # just the "steady" persona (default)
@@ -289,8 +287,7 @@ account. Credentials (userId, username, password, recovery phrase) print to
 the terminal at the end of the run — use them to log into the app or restore
 the account via the recovery-phrase flow.
 
-`make seed-user` needs the local Docker stack already running; it's a
-separate step from `make seed` and doesn't run automatically as part of it.
+`make seed-user` needs the local Docker stack running. `make seed` already invokes it for the default persona; run it separately to refresh fixtures or request additional personas.
 
 ---
 

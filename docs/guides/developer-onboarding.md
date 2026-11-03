@@ -85,12 +85,15 @@ The Docker stack reads all secrets and configuration from a `.env` file at the r
 cp .env.example .env
 ```
 
-`.env.example` is self-documenting — every variable has an inline comment, and every `CHANGE_THIS_*` placeholder must be replaced before starting services (any non-empty string works for local dev; use strong random values in production). Notably:
+`.env` and `.env.example` share a section layout, with test accounts near the top and unused root variables commented under **Inactive / legacy**. Replace required placeholders for the services you use. Use the documented formats for secrets such as the oauth2-proxy cookie key; arbitrary strings are not valid for every setting.
 
-- `API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender).
-- `LIGHTRAG_API_KEY` is the bearer token that protects the LightRAG REST API — it must match between the `lightrag`, `knowledge-mcp`, and `recommender` containers (`.env.example` uses the same placeholder for all three, so a single `sed` replace keeps them in sync).
-- `PATH_SUFFIX` (default `localhost`) controls the `*.localhost` subdomains Traefik routes locally (`app.localhost`, `admin.localhost`, etc.) — leave it as `localhost` unless you have a reason to change it.
-- `DOMAIN`/`ACME_EMAIL` only matter for `docker-compose.yml` (production, real TLS); they're unused locally.
+- `API_SERVICE_SECRET` protects calls between the backend and Python recommender.
+- `LIGHTRAG_API_KEY` protects internal LightRAG API access; `LIGHTRAG_AUTH_PASSWORD` is its separate operator WebUI password.
+- `PATH_SUFFIX=localhost` controls local subdomains. `DOMAIN`, `WEBSITE_DOMAIN` and `ACME_EMAIL` are production settings.
+- `HHH_RESEARCHER_USER` and `HHH_RESEARCHER_PASSWORD` configure the optional local researcher fixture. An empty password skips provisioning.
+- Archived graph-selector and mobile Firebase variables should remain commented. Optional PostHog, Sentry and identity-register settings are supported features, not legacy settings.
+
+See [Environment configuration](environment-configuration.md) for the complete section map, test account details and active replacements.
 
 > **Note:** Never commit `.env` to Git — it's covered by `.gitignore` (only `.env.example` is tracked). For production deployments, the same variables are supplied via Portainer's stack environment — see [`DEPLOYMENT.md`](../../DEPLOYMENT.md).
 
@@ -105,6 +108,8 @@ docker compose -f docker-compose.local.yml up -d --build
 # Watch logs during startup (Ctrl+C to stop following)
 docker compose -f docker-compose.local.yml logs -f
 ```
+
+`make dev` also provisions the configured test researcher. When starting Compose directly as above, run `make seed-researcher` after Keycloak is ready. Portal login: [http://admin.localhost/admin](http://admin.localhost/admin). Use a private window to test researcher access separately from the administrator.
 
 `docker-compose.local.yml` is the local-dev stack — plain HTTP, `*.localhost` subdomains via Traefik, no TLS. `docker-compose.yml` (no `-f` needed since it's the default) is the production stack (Traefik + Let's Encrypt, single domain) and should not be used for local development.
 
@@ -295,14 +300,14 @@ This runs the Jest + React Testing Library test suite located in `admin/src/__te
 
 ### Seed the local database
 
-After services are up, run the idempotent seed script to create test users, questionnaires, Neo4j constraints, and default groups:
+After services are up, run the idempotent baseline seed script to create questionnaires, Neo4j constraints, and default groups:
 
 ```bash
 cd app
 npm run seed
 ```
 
-This creates a Keycloak test account (`testuser` / `testpass123` in the `hhh` realm), seeds SLIQ, RAND-36, and SRHI questionnaires into MongoDB, creates the four `hhh__ExperimentalSetting` Group nodes in Neo4j, and applies Neo4j constraints. The script is safe to re-run — all steps use MERGE or upsert semantics.
+The baseline seed script creates no test accounts. Run `make seed-user` for QA participant accounts and use the credentials it prints. `make seed` combines baseline and participant seeding. Portal administrator and researcher fixtures are separate: see [Local test logins](environment-configuration.md#local-test-logins).
 
 > **Admin UI management:** After initial seeding, researchers can create and manage custom questionnaires entirely through the admin panel (web portal → **Questionnaires**, or Flutter admin → **Questionnaires**). No further seed script edits are needed. Library instruments (SLIQ, RAND-36, SRHI) are read-only and cannot be modified through the UI.
 
