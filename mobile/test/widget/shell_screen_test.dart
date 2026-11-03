@@ -131,8 +131,9 @@ void main() {
     expect(find.text('Account'), findsOneWidget);
   });
 
-  testWidgets('never shows an Admin tab (admin moved to web portal)',
-      (tester) async {
+  testWidgets('never shows an Admin tab (admin moved to web portal)', (
+    tester,
+  ) async {
     final router = _buildTestRouter();
     await tester.pumpWidget(_buildSubject(router, ['admin']));
     await tester.pump();
@@ -178,24 +179,25 @@ void main() {
   });
 
   testWidgets(
-      'hides My Habits tab when the study disables habit creation entirely',
-      (tester) async {
-    // Regression test: previously only the "add habit" button inside the My
-    // Habits screen was hidden, leaving a permanently-empty screen reachable
-    // via the tab — there's no other way for such a participant to ever get
-    // a habit. The whole tab should be hidden instead.
-    final router = _buildTestRouter();
-    await tester.pumpWidget(
-      _buildSubject(router, const [], habitCreationEnabled: false),
-    );
-    await tester.pump();
+    'hides My Habits tab when the study disables habit creation entirely',
+    (tester) async {
+      // Regression test: previously only the "add habit" button inside the My
+      // Habits screen was hidden, leaving a permanently-empty screen reachable
+      // via the tab — there's no other way for such a participant to ever get
+      // a habit. The whole tab should be hidden instead.
+      final router = _buildTestRouter();
+      await tester.pumpWidget(
+        _buildSubject(router, const [], habitCreationEnabled: false),
+      );
+      await tester.pump();
 
-    expect(find.text('My Habits'), findsNothing);
-    // Other tabs remain.
-    expect(find.text('Share'), findsOneWidget);
-    expect(find.text('Explore'), findsOneWidget);
-    expect(find.text('Account'), findsOneWidget);
-  });
+      expect(find.text('My Habits'), findsNothing);
+      // Other tabs remain.
+      expect(find.text('Share'), findsOneWidget);
+      expect(find.text('Explore'), findsOneWidget);
+      expect(find.text('Account'), findsOneWidget);
+    },
+  );
 
   testWidgets('shows loading state (NavigationBar still visible)', (
     tester,
@@ -233,5 +235,30 @@ void main() {
 
     // Even while loading roles, the NavigationBar renders (with empty roles = no admin tab)
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+  testWidgets('resizing switches navigation and preserves selected branch', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(466, 678);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final router = _buildTestRouter();
+    await tester.pumpWidget(_buildSubject(router, const []));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore'));
+    await tester.pumpAndSettle();
+    tester.view.physicalSize = const Size(951, 669);
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('Explore Tab'), findsOneWidget);
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Settings Tab'), findsOneWidget);
+    tester.view.physicalSize = const Size(466, 678);
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Settings Tab'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

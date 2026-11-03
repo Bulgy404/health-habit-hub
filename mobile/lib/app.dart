@@ -346,6 +346,15 @@ class _HhhAppState extends ConsumerState<HhhApp> {
     // ── Main layout ───────────────────────────────────────────────────────────
     return MaterialApp.router(
       title: 'Health Habit Hub',
+      // Duo system controls can reserve either side of the window.
+      builder: (context, child) => ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
       debugShowCheckedModeBanner: false,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
