@@ -2,7 +2,7 @@
 /// used on the onboarding walkthrough) + message + an optional primary CTA.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_colors.dart';
 

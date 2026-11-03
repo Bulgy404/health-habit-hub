@@ -1,6 +1,7 @@
+import 'package:hhh/l10n/ui_localizations.dart';
 // mobile/test/widget/habit_detail_screen_test.dart
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -69,7 +70,7 @@ Widget _buildSubject(_FakeMyHabitsService service) {
   return ProviderScope(
     overrides: [myHabitsServiceProvider.overrideWithValue(service)],
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const HabitDetailScreen(intentionId: 'intent-1'),
     ),
@@ -93,7 +94,7 @@ Widget _buildRoutedSubject(_FakeMyHabitsService service, {required String initia
   return ProviderScope(
     overrides: [myHabitsServiceProvider.overrideWithValue(service)],
     child: MaterialApp.router(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
     ),
@@ -288,7 +289,7 @@ void main() {
             ),
           ],
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),
@@ -447,7 +448,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp.router(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             routerConfig: router,
           ),

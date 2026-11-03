@@ -5,9 +5,9 @@
 // validation), the "none available" empty state for assigned cues, and that
 // Next routes to either the stitching screen or straight to Confirm
 // depending on the study's guidedHabitCreationEnabled flag.
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoSwitch;
+import 'package:material_ui/material_ui.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

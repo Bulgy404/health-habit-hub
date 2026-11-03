@@ -4,7 +4,7 @@
 /// Explore graph's habit detail sheet.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Renders [text], bolding the first case-insensitive occurrence of
 /// [highlight]. Falls back to a plain [Text] when [highlight] is empty or

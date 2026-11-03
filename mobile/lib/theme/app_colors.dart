@@ -3,7 +3,7 @@
 /// literals that silently break in dark mode.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({

@@ -4,7 +4,7 @@
 /// of the content that's about to appear instead of an indeterminate wait.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../theme/motion.dart';
 

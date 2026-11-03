@@ -5,8 +5,8 @@
 // the router redirect, not by the widget itself), so no ProviderScope or
 // secure-storage mock is needed here — just a GoRouter harness for the two
 // destinations the screen can navigate to.
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hhh/l10n/app_localizations.dart';

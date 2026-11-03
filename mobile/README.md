@@ -115,7 +115,10 @@ Use Flutter 3.47+ / Dart 3.13+. Android uses AGP 9 built-in Kotlin
 Android plugin. Keep `android.newDsl=false` until Flutter supports AGP's new
 extension types. These switches are independent.
 
-Compatible stable package releases are recorded in `pubspec.lock`. Google Fonts
-is intentionally on 8.2.1: version 9 changes its Material/Cupertino types and
-requires the separate app-wide UI library migration. See `third_party/README.md`
+Compatible stable package releases are recorded in `pubspec.lock`. The app uses
+Google Fonts 9 and the standalone `material_ui` / `cupertino_ui` libraries.
+Use `appLocalizationDelegates` from `lib/l10n/ui_localizations.dart` instead of
+the SDK UI delegates emitted by gen-l10n. `LegacyUiBridge` preserves theme and
+localizations for dependencies such as fl_chart that still use SDK Material;
+remove it when those dependencies have migrated. See `third_party/README.md`
 for the native fixes that remain necessary in current upstream plugin sources.

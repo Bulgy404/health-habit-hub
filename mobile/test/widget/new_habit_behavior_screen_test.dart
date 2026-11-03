@@ -5,8 +5,8 @@
 // for study participants vs free-text entry for public users, free-text
 // minimum-length validation, Enter-to-submit, and that tapping Next
 // navigates to the cue step with the right `extra` payload.
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

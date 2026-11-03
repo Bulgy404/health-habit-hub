@@ -10,7 +10,7 @@
 /// languages was judged not worth the translation-quality risk here.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';

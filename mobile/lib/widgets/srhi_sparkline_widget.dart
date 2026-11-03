@@ -3,7 +3,7 @@ library;
 
 // mobile/lib/widgets/srhi_sparkline_widget.dart
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../features/my_habits/my_habits_models.dart';
 
 /// A mini line chart showing the last N SRHI scores (1–7 scale).
