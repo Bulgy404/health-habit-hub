@@ -1,3 +1,4 @@
+import { studyResponseFilter } from './studyDataScope.js';
 import { stringify } from 'csv-stringify/sync';
 import { ObjectId } from 'mongodb';
 import { COLLECTION as SRHI } from '../models/srhiResponse.js';
@@ -146,14 +147,24 @@ export async function buildDailyLogsCsv({ db, studyId }) {
  * @param {{ db: object, studyId?: string }} deps
  * @returns {Promise<string>} CSV content including header row.
  */
-export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
+export async function buildQuestionnaireResponsesCsv({
+  db,
+  studyId,
+  strictStudy = false,
+}) {
   const eMap = await enrollmentMap(db, studyId);
   const verified = await isVerified(db, studyId);
   const userIds = Object.keys(eMap);
 
   // As in buildDailyLogsCsv: a study with no enrollments yet exports no
   // responses, not every user's.
-  const filter = studyId || userIds.length ? { userId: { $in: userIds } } : {};
+  const filter =
+    studyId || userIds.length
+      ? {
+          userId: { $in: userIds },
+          ...(strictStudy ? await studyResponseFilter(db, studyId) : {}),
+        }
+      : {};
   const rows = await db
     .collection(FORM_RESPONSES)
     .find(filter)

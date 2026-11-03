@@ -480,7 +480,16 @@
     "selfReportWellbeing": "Impact sur le bien-être",
     "detailQuestionnaire": "Questionnaire : {slug}",
     "detailNoExtras": "Aucune transcription, audio ou réponse au questionnaire pour ce don.",
-    "detailClose": "Fermer"
+    "detailClose": "Fermer",
+    "studyLabel": "Étude",
+    "allStudies": "Toutes les études accessibles",
+    "noStudy": "Sans étude",
+    "downloadTitle": "Télécharger les contributions",
+    "downloadHelp": "Les téléchargements incluent toutes les contributions filtrées, sur toutes les pages. Le ZIP contient les transcriptions, les réponses et les enregistrements disponibles.",
+    "downloadZip": "Télécharger le ZIP avec audio",
+    "preparing": "Préparation…",
+    "exportPermission": "Choisissez une étude autorisant l’export pour télécharger ses contributions.",
+    "resetFilters": "Réinitialiser les filtres"
   },
   "insights": {
     "title": "Perspectives",
@@ -1452,13 +1461,13 @@
       "user": "Personne",
       "role": "Rôle",
       "access": "Accès",
-      "readOnly": "lecture seule",
-      "readExport": "lecture + export",
+      "readOnly": "Consulter les données",
+      "readExport": "Consulter et exporter les données",
       "remove": "Retirer",
       "empty": "Aucun accès accordé.",
       "add": "Ajouter",
       "adding": "Ajout…",
-      "hint": "Les personnes sont choisies parmi les comptes Keycloak existants : un accès ne peut donc jamais pointer vers un compte inexistant. Ajouter une personne déjà listée met à jour son rôle et son accès au lieu de créer une seconde entrée.",
+      "hint": "Les responsables gèrent les paramètres et les membres. La gestion et l’export sont des droits distincts.",
       "loadFailed": "La liste des accès n'a pas pu être chargée.",
       "addFailed": "L'accès n'a pas pu être accordé.",
       "removeFailed": "L'accès n'a pas pu être retiré.",
@@ -1558,5 +1567,16 @@
       "revealsOnly": "Divulgations uniquement",
       "auditIntro2": "Conservé dans la base de données propre au registre, donc non modifiable depuis la plateforme de recherche. Les noms de champs sont consignés, jamais les valeurs — un journal citant les données qu'il contrôle en serait une seconde copie."
     }
+  },
+  "researchWorkspace": {
+    "study": "Étude",
+    "allStudies": "Toutes les études accessibles",
+    "resourceHelp": "Choisissez une étude pour créer ses ressources. Les modèles partagés sont en lecture seule ; l’administrateur voit toutes les études.",
+    "copyToStudy": "Copier dans l’étude",
+    "readOnly": "Accès en lecture seule. Demandez les droits de gestion au responsable.",
+    "canManage": "Gérer les paramètres de l’étude",
+    "closeRecruitment": "Fermer le recrutement",
+    "reopenRecruitment": "Rouvrir le recrutement",
+    "shared": "Modèle partagé"
   }
 }

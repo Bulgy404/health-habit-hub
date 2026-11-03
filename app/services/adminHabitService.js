@@ -13,7 +13,8 @@ import { ObjectId } from 'mongodb';
  * @returns {string}
  */
 function escapeCSV(v) {
-  const s = v == null ? '' : String(v);
+  const raw = v == null ? '' : String(v);
+  const s = /^[=+@\t\r-]/.test(raw) ? `'${raw}` : raw;
   if (s.includes(',') || s.includes('"') || s.includes('\n')) {
     return `"${s.replace(/"/g, '""')}"`;
   }
@@ -48,7 +49,7 @@ function normalizeAdminLang(lang) {
  * @param {{ db, neo4jRun, group?, category?, from?, to?, lang?: string }} deps
  * @returns {Promise<Array<{id,participantId,habitName,category,group,studyId,donatedAt}>>}
  */
-async function fetchDonatedHabits({
+export async function fetchDonatedHabits({
   db,
   neo4jRun,
   group,
@@ -56,6 +57,8 @@ async function fetchDonatedHabits({
   from,
   to,
   lang,
+  studyId,
+  studyIds,
 }) {
   if (!neo4jRun) return [];
 
@@ -68,6 +71,8 @@ async function fetchDonatedHabits({
   const rows = await neo4jRun(
     `MATCH (u:User)-[d:DONATED]->(h:Habit)
      WHERE coalesce(h.is_habit, true) = true
+       AND ($studyId IS NULL OR h.studyId = $studyId)
+       AND ($studyIds IS NULL OR h.studyId IN $studyIds)
      OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
      OPTIONAL MATCH (u)-[e:ENROLLED_IN]->(st:Study)
        WHERE h.studyId IS NOT NULL AND st.uuid = h.studyId
@@ -78,14 +83,16 @@ async function fetchDonatedHabits({
             coalesce(bcioLabel, 'Other') AS category, h.studyId AS studyId,
             groupId AS groupId, coalesce(d.at, h.created_at) AS donatedAt
      ORDER BY donatedAt DESC`,
-    { transKey }
+    { transKey, studyId: studyId || null, studyIds: studyIds ?? null }
   );
 
   // Resolve group ObjectId → label per study.
-  const studyIds = [...new Set(rows.map((r) => r.studyId).filter(Boolean))];
+  const referencedStudyIds = [
+    ...new Set(rows.map((r) => r.studyId).filter(Boolean)),
+  ];
   const groupLabelByStudy = {};
-  if (studyIds.length > 0) {
-    const oids = studyIds
+  if (referencedStudyIds.length > 0) {
+    const oids = referencedStudyIds
       .map((s) => {
         try {
           return new ObjectId(s);
@@ -110,22 +117,28 @@ async function fetchDonatedHabits({
     }
   }
 
-  let mapped = rows.map((r) => {
-    const gid = r.groupId ? String(r.groupId) : null;
-    const label =
-      gid && r.studyId
-        ? (groupLabelByStudy[String(r.studyId)]?.[gid] ?? gid)
-        : null;
-    return {
-      id: r.id,
-      participantId: r.participantId ?? '',
-      habitName: r.habitName ?? '',
-      category: r.category ?? 'Other',
-      group: label,
-      studyId: r.studyId ? String(r.studyId) : null,
-      donatedAt: toIso(r.donatedAt),
-    };
-  });
+  let mapped = rows
+    .filter(
+      (r) =>
+        (!studyId || String(r.studyId) === studyId) &&
+        (studyIds == null || studyIds.includes(String(r.studyId)))
+    )
+    .map((r) => {
+      const gid = r.groupId ? String(r.groupId) : null;
+      const label =
+        gid && r.studyId
+          ? (groupLabelByStudy[String(r.studyId)]?.[gid] ?? gid)
+          : null;
+      return {
+        id: r.id,
+        participantId: r.participantId ?? '',
+        habitName: r.habitName ?? '',
+        category: r.category ?? 'Other',
+        group: label,
+        studyId: r.studyId ? String(r.studyId) : null,
+        donatedAt: toIso(r.donatedAt),
+      };
+    });
 
   // Filters (applied in JS; created_at is stored as an ISO string).
   if (from) mapped = mapped.filter((r) => r.donatedAt && r.donatedAt >= from);
@@ -151,7 +164,12 @@ async function fetchDonatedHabits({
  * @param {{ neo4jRun, lang?: string }} deps
  * @returns {Promise<string[]>}
  */
-export async function listHabitCategories({ neo4jRun, lang }) {
+export async function listHabitCategories({
+  neo4jRun,
+  lang,
+  studyId,
+  studyIds,
+}) {
   if (!neo4jRun) return [];
   const normalizedLang = normalizeAdminLang(lang);
   const transKey = `bcio_concept_label_${normalizedLang}`;
@@ -159,12 +177,14 @@ export async function listHabitCategories({ neo4jRun, lang }) {
   const rows = await neo4jRun(
     `MATCH (u:User)-[:DONATED]->(h:Habit)
      WHERE coalesce(h.is_habit, true) = true
+       AND ($studyId IS NULL OR h.studyId = $studyId)
+       AND ($studyIds IS NULL OR h.studyId IN $studyIds)
      OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
      WITH h, head(collect(DISTINCT coalesce(properties(b)[$transKey], b.bcio_concept_label))) AS bcioLabel
      WITH DISTINCT coalesce(bcioLabel, 'Other') AS category
      RETURN category
      ORDER BY category`,
-    { transKey }
+    { transKey, studyId: studyId || null, studyIds: studyIds ?? null }
   );
   return rows.map((r) => r.category);
 }
@@ -175,10 +195,11 @@ export async function listHabitCategories({ neo4jRun, lang }) {
  * @param {{ neo4jRun, userId: string }} deps
  * @returns {Promise<Array<{id,habitName,category,isHabit,studyId,donatedAt}>>}
  */
-export async function getParticipantHabits({ neo4jRun, userId }) {
+export async function getParticipantHabits({ neo4jRun, userId, studyId }) {
   if (!neo4jRun) return [];
   const rows = await neo4jRun(
     `MATCH (u:User {userID: $userId})-[d:DONATED]->(h:Habit)
+     WHERE $studyId IS NULL OR h.studyId = $studyId
      OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
      WITH h, d, head(collect(DISTINCT b.bcio_concept_label)) AS bcioLabel
      RETURN h.uuid AS id, h.sentence AS habitName,
@@ -186,7 +207,7 @@ export async function getParticipantHabits({ neo4jRun, userId }) {
             coalesce(h.is_habit, true) AS isHabit, h.studyId AS studyId,
             coalesce(d.at, h.created_at) AS donatedAt
      ORDER BY donatedAt DESC`,
-    { userId: String(userId) }
+    { userId: String(userId), studyId: studyId ?? null }
   );
   return rows.map((r) => ({
     id: r.id,
@@ -213,6 +234,8 @@ export async function getHabitsFeed({
   page = 1,
   limit = 20,
   lang,
+  studyId,
+  studyIds,
 }) {
   const pageNum = Math.max(1, page);
   const limitNum = Math.min(100, Math.max(1, limit));
@@ -226,6 +249,8 @@ export async function getHabitsFeed({
     from,
     to,
     lang,
+    studyId,
+    studyIds,
   });
 
   return {
@@ -249,6 +274,8 @@ export async function buildHabitsCSV({
   from,
   to,
   lang,
+  studyId,
+  studyIds,
 }) {
   const docs = await fetchDonatedHabits({
     db,
@@ -258,11 +285,25 @@ export async function buildHabitsCSV({
     from,
     to,
     lang,
+    studyId,
+    studyIds,
   });
 
-  const header = 'participantId,habitName,category,group,donatedAt';
+  return donationsCSV(docs);
+}
+
+export function donationsCSV(docs) {
+  const header = 'participantId,habitName,category,group,donatedAt,id,studyId';
   const rows = docs.map((d) =>
-    [d.participantId, d.habitName, d.category, d.group ?? '', d.donatedAt]
+    [
+      d.participantId,
+      d.habitName,
+      d.category,
+      d.group ?? '',
+      d.donatedAt,
+      d.id,
+      d.studyId,
+    ]
       .map(escapeCSV)
       .join(',')
   );

@@ -14,10 +14,10 @@
  * @param {string} userId     - The userID property on Habit nodes
  * @returns {Promise<number>}
  */
-export async function countHabitsByUser(neo4jRun, userId) {
+export async function countHabitsByUser(neo4jRun, userId, studyId) {
   const records = await neo4jRun(
-    'MATCH (h:Habit {userID: $userId}) RETURN count(h) AS cnt',
-    { userId }
+    'MATCH (h:Habit {userID: $userId}) WHERE $studyId IS NULL OR h.studyId = $studyId RETURN count(h) AS cnt',
+    { userId, studyId: studyId ?? null }
   );
   const cnt = records[0]?.cnt;
   return typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);

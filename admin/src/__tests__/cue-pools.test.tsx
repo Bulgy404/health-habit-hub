@@ -5,7 +5,7 @@ import CuePoolsPage from "../app/(admin)/cue-pools/page";
 
 jest.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { accessToken: "test-token" },
+    data: { accessToken: "test-token", roles: ["admin"] },
     status: "authenticated",
   }),
 }));

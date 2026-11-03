@@ -1,4 +1,10 @@
 import express from 'express';
+import { isPrivileged } from '../../middleware/roles.js';
+import {
+  resourceFilter,
+  requireResourceStudy,
+  authorizeResource,
+} from '../../services/researchResourceAccess.js';
 import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../../utils/getDb.js';
@@ -493,13 +499,112 @@ export function createSurveysRouter({ db, neo4jRun } = {}) {
     }
   );
 
+  // Every questionnaire route checks ownership here, including direct ID/slug access.
+  router.use('/questionnaires', async (req, res, next) => {
+    try {
+      const database = await getDb();
+      const parts = req.path.split('/').filter(Boolean);
+      if (req.method === 'GET' && parts.length === 0) {
+        req.resourceFilter = await resourceFilter(
+          database,
+          req.user,
+          req.query.studyId
+        );
+      } else if (req.method === 'POST' && parts.length === 0) {
+        req.resourceStudyId = req.query.studyId
+          ? await requireResourceStudy(
+              database,
+              req.user,
+              req.query.studyId,
+              true
+            )
+          : null;
+        if (!isPrivileged(req.user) && !req.resourceStudyId)
+          return res.status(400).json({ error: 'Select a study' });
+      } else if (parts.length) {
+        const query =
+          parts[1] === 'active'
+            ? { slug: parts[0] }
+            : ObjectId.isValid(parts[0])
+              ? { _id: new ObjectId(parts[0]) }
+              : { _id: null };
+        req.resource = await database
+          .collection('questionnaires')
+          .findOne(query);
+        await authorizeResource(
+          database,
+          req.user,
+          req.resource,
+          req.method !== 'GET' && parts[1] !== 'copy'
+        );
+      }
+      next();
+    } catch (err) {
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/questionnaires/{id}/copy:
+   *   post:
+   *     summary: Copy an accessible questionnaire into a managed study
+   *     tags: [Admin]
+   *     security: [{ bearerAuth: [] }]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *       - in: query
+   *         name: studyId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       201: { description: Study-owned copy created with a new slug }
+   *       403: { description: Source not accessible or target study not manageable }
+   */
+  router.post('/questionnaires/:id/copy', async (req, res) => {
+    try {
+      const database = await getDb();
+      const studyId = await requireResourceStudy(
+        database,
+        req.user,
+        req.query.studyId,
+        true
+      );
+      const { _id, ...source } = req.resource;
+      const id = new ObjectId();
+      const slug = `copy-${id}`;
+      await database.collection('questionnaires').insertOne({
+        ...source,
+        _id: id,
+        slug,
+        studyId,
+        isLibrary: false,
+        active: true,
+        createdBy: String(req.user.sub),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      await syncQuestionnaireGraph(database, slug);
+      res.status(201).json({ id: String(id), slug });
+    } catch (err) {
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
+    }
+  });
+
   // ── Questionnaire CRUD (admin) ────────────────────────────────────────────
 
   // GET /api/v1/admin/questionnaires
   router.get('/questionnaires', async (req, res) => {
     try {
       const database = await getDb();
-      const query = {};
+      const query = { ...req.resourceFilter };
       if (req.query.library === 'true') query.isLibrary = true;
       const docs = await database
         .collection('questionnaires')
@@ -508,6 +613,13 @@ export function createSurveysRouter({ db, neo4jRun } = {}) {
       res.json(
         docs.map((q) => ({
           id: q._id.toString(),
+          studyId: q.studyId ? String(q.studyId) : null,
+          canEdit: isPrivileged(req.user)
+            ? q.isLibrary !== true
+            : !!q.studyId &&
+              (req.studyScope?.manageableStudyIds ?? []).some(
+                (id) => String(id) === String(q.studyId)
+              ),
           slug: q.slug,
           title: q.title,
           description: q.description || {},
@@ -545,6 +657,7 @@ export function createSurveysRouter({ db, neo4jRun } = {}) {
       }
       res.json({
         id: doc._id.toString(),
+        studyId: doc.studyId ? String(doc.studyId) : null,
         slug: doc.slug || null,
         title: doc.title,
         description: doc.description || {},
@@ -630,6 +743,8 @@ export function createSurveysRouter({ db, neo4jRun } = {}) {
         const now = new Date();
         const doc = {
           slug: finalSlug,
+          studyId: req.resourceStudyId ?? null,
+          createdBy: req.user?.sub ?? null,
           title,
           description: description || {},
           version: version || '1',

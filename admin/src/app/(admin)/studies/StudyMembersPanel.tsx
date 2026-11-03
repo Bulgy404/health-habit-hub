@@ -20,9 +20,8 @@ import styles from "@/components/admin-page.module.css";
 /**
  * Who may read and export this study.
  *
- * `lead` is a label for the person running the study, not a capability — it
- * does not let them manage this list. Deciding who may read research data
- * adjacent to identifiable participants is an operator decision.
+ * Admins and study leads can manage collaborators. Leads choose only from
+ * researcher accounts already provisioned by the platform operator.
  *
  * People are chosen from the realm rather than typed in: a mistyped `sub` used
  * to be stored happily and then render like any other grant while gating
@@ -32,10 +31,14 @@ import styles from "@/components/admin-page.module.css";
 export function StudyMembersPanel({
   studyId,
   token,
+  isAdmin = true,
 }: {
   studyId: string;
   token: string;
+  isAdmin?: boolean;
 }) {
+  const tw = useTranslations("researchWorkspace");
+  const [canManage, setCanManage] = useState(false);
   const t = useTranslations("identity");
   const [members, setMembers] = useState<StudyMember[]>([]);
   const [total, setTotal] = useState(0);
@@ -92,7 +95,7 @@ export function StudyMembersPanel({
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const data = await searchTeamUsers(token, q);
+        const data = await searchTeamUsers(token, q, isAdmin ? undefined : studyId);
         if (seq === searchSeq.current) setResults(data.users);
       } catch {
         if (seq === searchSeq.current) setResults([]);
@@ -101,12 +104,10 @@ export function StudyMembersPanel({
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [query, token]);
+  }, [query, token, isAdmin, studyId]);
 
   function stage(user: TeamUser) {
-    setStaged((prev) =>
-      prev.some((u) => u.id === user.id) ? prev : [...prev, user],
-    );
+    setStaged((prev) => (prev.some((u) => u.id === user.id) ? prev : [...prev, user]));
     setQuery("");
     setResults([]);
   }
@@ -124,7 +125,8 @@ export function StudyMembersPanel({
           username: u.username,
           role,
           scope,
-        })),
+          canManage,
+        }))
       );
       setStaged([]);
       await load();
@@ -169,9 +171,7 @@ export function StudyMembersPanel({
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>{t("members.title")}</h3>
-      <p className={styles.muted}>
-        {enforced ? t("members.enforced") : t("members.open")}
-      </p>
+      <p className={styles.muted}>{enforced ? t("members.enforced") : t("members.open")}</p>
 
       {error && (
         <p role="alert" className={styles.error}>
@@ -197,9 +197,7 @@ export function StudyMembersPanel({
                   <div className={styles.code}>{m.userId}</div>
                   {reach?.userId === m.userId && (
                     <div className={styles.detailSection}>
-                      <span className={styles.detailLabel}>
-                        {t("members.reachTitle")}
-                      </span>
+                      <span className={styles.detailLabel}>{t("members.reachTitle")}</span>
                       <ul className={styles.detailText}>
                         {reach.rows.map((r) => (
                           <li key={r.studyId}>
@@ -216,22 +214,24 @@ export function StudyMembersPanel({
                 </td>
                 <td>{t(`members.roleName.${m.role}`)}</td>
                 <td>
-                  {m.scope === "export"
-                    ? t("members.readExport")
-                    : t("members.readOnly")}
+                  {(m.role === "lead" || m.canManage) && <div>{tw("canManage")}</div>}
+                  {m.scope === "export" ? t("members.readExport") : t("members.readOnly")}
                 </td>
                 <td>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className={styles.actionBtn}
+                      onClick={() => void onShowReach(m)}
+                      aria-expanded={reach?.userId === m.userId}
+                    >
+                      {t("members.reach")}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={styles.actionBtn}
-                    onClick={() => void onShowReach(m)}
-                    aria-expanded={reach?.userId === m.userId}
-                  >
-                    {t("members.reach")}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
+                    disabled={!isAdmin && m.role === "lead"}
                     onClick={() => setConfirming(m)}
                   >
                     {t("members.remove")}
@@ -274,6 +274,14 @@ export function StudyMembersPanel({
         </div>
       )}
 
+      <label>
+        <input
+          type="checkbox"
+          checked={canManage}
+          onChange={(e) => setCanManage(e.target.checked)}
+        />{" "}
+        {tw("canManage")}
+      </label>
       <div className={styles.filters}>
         <input
           className={styles.input}
@@ -289,7 +297,7 @@ export function StudyMembersPanel({
           aria-label={t("members.role")}
         >
           <option value="researcher">{t("members.roleName.researcher")}</option>
-          <option value="lead">{t("members.roleName.lead")}</option>
+          {isAdmin && <option value="lead">{t("members.roleName.lead")}</option>}
         </select>
         <select
           className={styles.select}
@@ -306,9 +314,7 @@ export function StudyMembersPanel({
           onClick={() => void onAdd()}
           disabled={staged.length === 0 || busy}
         >
-          {busy
-            ? t("members.adding")
-            : t("members.addCount", { count: staged.length })}
+          {busy ? t("members.adding") : t("members.addCount", { count: staged.length })}
         </button>
       </div>
 
@@ -318,11 +324,7 @@ export function StudyMembersPanel({
         <ul className={styles.detailText}>
           {results.map((u) => (
             <li key={u.id}>
-              <button
-                type="button"
-                className={styles.actionBtn}
-                onClick={() => stage(u)}
-              >
+              <button type="button" className={styles.actionBtn} onClick={() => stage(u)}>
                 {u.username}
                 {u.email ? ` — ${u.email}` : ""}
               </button>
@@ -339,9 +341,7 @@ export function StudyMembersPanel({
               key={u.id}
               type="button"
               className={styles.badge}
-              onClick={() =>
-                setStaged((prev) => prev.filter((s) => s.id !== u.id))
-              }
+              onClick={() => setStaged((prev) => prev.filter((s) => s.id !== u.id))}
               aria-label={t("members.unselect", { user: u.username })}
             >
               {u.username} ×

@@ -1,3 +1,4 @@
+import { studyDataFilter, studyResponseFilter } from './studyDataScope.js';
 // app/services/studyExportService.js
 //
 // Builds a complete, downloadable snapshot of a study and all data associated
@@ -67,7 +68,7 @@ function sanitizeParticipant(p) {
  * @param {{ db: object, id: string }} deps
  * @returns {Promise<object|null>} export bundle, or null if the study is absent
  */
-export async function exportStudyData({ db, id }) {
+export async function exportStudyData({ db, id, strictStudy = false }) {
   let oid;
   try {
     oid = new ObjectId(id);
@@ -92,7 +93,12 @@ export async function exportStudyData({ db, id }) {
   const verified = resolveIdentityConfig(study).mode === 'verified';
   const participants =
     userIds.length && !verified
-      ? (await safeFind(db, 'participants', byUser)).map(sanitizeParticipant)
+      ? (await safeFind(db, 'participants', byUser)).map((p) => {
+          const clean = sanitizeParticipant(p);
+          if (strictStudy && 'recoveryPhrase' in clean)
+            clean.recoveryPhrase = '[redacted]';
+          return clean;
+        })
       : [];
   const questionnaireAssignments = await safeFind(
     db,
@@ -112,7 +118,23 @@ export async function exportStudyData({ db, id }) {
   };
 
   for (const coll of USER_SCOPED_COLLECTIONS) {
-    collections[coll] = userIds.length ? await safeFind(db, coll, byUser) : [];
+    let filter = byUser;
+    if (strictStudy) {
+      filter = { ...byUser, ...studyDataFilter(id) };
+      if (coll === 'form_responses')
+        filter = { ...byUser, ...(await studyResponseFilter(db, id)) };
+      if (coll === 'daily_behavior_logs') {
+        const intentions = await safeFind(db, 'implementation_intentions', {
+          ...byUser,
+          ...studyDataFilter(id),
+        });
+        filter = {
+          ...byUser,
+          intentionId: { $in: intentions.map((h) => h._id) },
+        };
+      }
+    }
+    collections[coll] = userIds.length ? await safeFind(db, coll, filter) : [];
   }
 
   // Rewrite every raw Keycloak sub to its study-local subject code. The sub is

@@ -34,6 +34,7 @@ export const VALIDATOR = {
     ],
     properties: {
       _id: { bsonType: 'objectId' },
+      studyId: { bsonType: ['objectId', 'null'] },
       text: { bsonType: 'object' },
       languages: {
         bsonType: 'array',

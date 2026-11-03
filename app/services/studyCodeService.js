@@ -329,6 +329,16 @@ export async function redeemCode({ db, userId, code, neo4jRun }) {
   if (!doc) return { notFound: true };
 
   if (doc.expiresAt && doc.expiresAt < new Date()) return { expired: true };
+  const acceptingStudy = await db
+    .collection(STUDIES)
+    .findOne({ _id: doc.studyId });
+  if (
+    !acceptingStudy ||
+    acceptingStudy.deletedAt ||
+    acceptingStudy.isActive === false ||
+    acceptingStudy.recruitmentOpen === false
+  )
+    return { closed: true };
 
   // 1. Atomically claim a redemption slot.
   const claimed = await _claimRedemptionSlot(db, upperCode, doc.maxRedemptions);
@@ -442,6 +452,14 @@ export async function redeemIdentityCode({
       return { notFound: true };
     }
 
+    if (
+      study.isActive === false ||
+      study.deletedAt ||
+      study.recruitmentOpen === false
+    ) {
+      await identityClient.release(reservationId);
+      return { closed: true };
+    }
     const group = await _selectGroupWeighted(db, study);
 
     const enrollResult = await createEnrollment(neo4jRun, {
@@ -545,7 +563,8 @@ export async function skipCode({ db, userId, neo4jRun }) {
       { returnDocument: 'after' }
     );
 
-  if (!study) return { noDefaultStudy: true };
+  if (!study || study.recruitmentOpen === false)
+    return { noDefaultStudy: true };
   if (!study.groups || study.groups.length === 0) return { noGroups: true };
 
   // Derive group index from the counter (1-based → 0-based).
@@ -609,6 +628,16 @@ export async function switchStudy({ db, userId, code, neo4jRun }) {
   const doc = await db.collection(CODES).findOne({ code: upperCode });
   if (!doc) return { notFound: true };
   if (doc.expiresAt && doc.expiresAt < new Date()) return { expired: true };
+  const acceptingStudy = await db
+    .collection(STUDIES)
+    .findOne({ _id: doc.studyId });
+  if (
+    !acceptingStudy ||
+    acceptingStudy.deletedAt ||
+    acceptingStudy.isActive === false ||
+    acceptingStudy.recruitmentOpen === false
+  )
+    return { closed: true };
 
   if (doc.studyId.toString() === current.studyId) {
     return { alreadyInStudy: true };
@@ -683,7 +712,8 @@ export async function leaveStudy({ db, userId, neo4jRun }) {
   const defaultStudy = await db
     .collection(STUDIES)
     .findOne({ isDefault: true, isActive: true });
-  if (!defaultStudy) return { noDefaultStudy: true };
+  if (!defaultStudy || defaultStudy.recruitmentOpen === false)
+    return { noDefaultStudy: true };
   if (!defaultStudy.groups || defaultStudy.groups.length === 0) {
     return { noGroups: true };
   }

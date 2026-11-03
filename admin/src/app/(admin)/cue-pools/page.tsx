@@ -9,6 +9,8 @@ import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
 import sharedStyles from "@/components/admin-page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
+import { useResourceStudy } from "@/lib/useResourceStudy";
+import { ResourceStudySelect } from "@/components/resource-study-select";
 import { useResearcherGuard } from "@/lib/useResearcherGuard";
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
@@ -42,8 +44,10 @@ export default function CuePoolsPage() {
   const { data: session } = useSession();
   const t = useTranslations("cuePools");
   const tc = useTranslations("common");
+  const tw = useTranslations("researchWorkspace");
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
+  const resourceScope = useResourceStudy(token);
   const [page, setPage] = useState(1);
   const [filterQuality, setFilterQuality] = useState("");
   const [filterLang, setFilterLang] = useState("");
@@ -55,7 +59,7 @@ export default function CuePoolsPage() {
     error,
     limit,
     refetch: fetchCues,
-  } = useCuePoolsData(token, page, filterQuality, filterLang);
+  } = useCuePoolsData(token, page, filterQuality, filterLang, resourceScope.studyId);
 
   const [showForm, setShowForm] = useState(false);
   const [newText, setNewText] = useState<LocaleText>({});
@@ -97,7 +101,7 @@ export default function CuePoolsPage() {
     setCreating(true);
     setCreateError("");
     try {
-      await apiFetch(API_BASE, token, {
+      await apiFetch(`${API_BASE}${resourceScope.query}`, token, {
         method: "POST",
         body: JSON.stringify({
           text: newLanguages.reduce<LocaleText>((acc, lang) => {
@@ -151,10 +155,14 @@ export default function CuePoolsPage() {
         const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
         return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
       });
-      const data = await apiFetch(apiUrl("/admin/cue-pools/import"), token, {
-        method: "POST",
-        body: JSON.stringify({ cues }),
-      });
+      const data = await apiFetch(
+        `${apiUrl("/admin/cue-pools/import")}${resourceScope.query}`,
+        token,
+        {
+          method: "POST",
+          body: JSON.stringify({ cues }),
+        }
+      );
       setImportResult(data as { inserted: number; skipped: number });
       await fetchCues(1);
       setPage(1);
@@ -182,6 +190,7 @@ export default function CuePoolsPage() {
 
   return (
     <div className={styles.page}>
+      <ResourceStudySelect scope={resourceScope} />
       <div className={styles.header}>
         <div className={styles.headerText}>
           <h1 className={styles.title}>{t("title")}</h1>
@@ -201,11 +210,15 @@ export default function CuePoolsPage() {
           <button
             className={styles.importButton}
             onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
+            disabled={importing || !resourceScope.canManage}
           >
             {importing ? t("importing") : t("importCsv")}
           </button>
-          <button className={styles.addButton} onClick={() => setShowForm((v) => !v)}>
+          <button
+            className={styles.addButton}
+            disabled={!resourceScope.canManage}
+            onClick={() => setShowForm((v) => !v)}
+          >
             {showForm ? tc("cancel") : t("addCue")}
           </button>
         </div>
@@ -315,7 +328,11 @@ export default function CuePoolsPage() {
             </div>
           </div>
           <div className={styles.formFooter}>
-            <button className={styles.saveBtn} onClick={handleCreate} disabled={creating}>
+            <button
+              className={styles.saveBtn}
+              onClick={handleCreate}
+              disabled={creating || !resourceScope.canManage}
+            >
               <SpinnerLabel loading={creating} label={t("create")} />
             </button>
           </div>
@@ -374,6 +391,7 @@ export default function CuePoolsPage() {
             <thead>
               <tr>
                 <th>{t("textHeader")}</th>
+                <th>{tw("study")}</th>
                 <th>{t("qualityLabel")}</th>
                 <th>{t("dimensionsHeader")}</th>
                 <th>{t("domainLabel")}</th>
@@ -384,7 +402,7 @@ export default function CuePoolsPage() {
             <tbody>
               {Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className={sharedStyles.skeletonRow}>
-                  {Array.from({ length: 6 }).map((__, j) => (
+                  {Array.from({ length: 7 }).map((__, j) => (
                     <td key={j}>
                       <span className={sharedStyles.skeletonBar} style={{ width: "80%" }} />
                     </td>
@@ -403,6 +421,7 @@ export default function CuePoolsPage() {
               <thead>
                 <tr>
                   <th>{t("textHeader")}</th>
+                  <th>{tw("study")}</th>
                   <th>{t("qualityLabel")}</th>
                   <th>{t("dimensionsHeader")}</th>
                   <th>{t("domainLabel")}</th>
@@ -414,6 +433,12 @@ export default function CuePoolsPage() {
                 {cues.map((cue) => (
                   <tr key={cue.id}>
                     <td>{previewText(cue.text)}</td>
+                    <td>
+                      {cue.studyId
+                        ? (resourceScope.studies.find((s) => s.id === cue.studyId)?.name ??
+                          cue.studyId)
+                        : tw("shared")}
+                    </td>
                     <td>
                       <span
                         className={`${styles.qualityBadge} ${
@@ -435,7 +460,7 @@ export default function CuePoolsPage() {
                       <button
                         className={styles.deleteBtn}
                         onClick={() => handleDelete(cue.id)}
-                        disabled={deleting === cue.id}
+                        disabled={deleting === cue.id || cue.canEdit === false}
                       >
                         {deleting === cue.id ? "…" : tc("delete")}
                       </button>

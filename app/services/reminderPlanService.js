@@ -1,3 +1,4 @@
+import { studyDataFilter } from './studyDataScope.js';
 /**
  * Adaptive reminder planning — computes how often a participant should be
  * reminded of an implementation intention, fading reminders as the habit
@@ -597,11 +598,16 @@ export async function computeReminderPlans({
   userId,
   now = new Date(),
   onFrequencyChange,
+  studyId,
 }) {
   const config = await readReminderConfig(db);
   const intentions = await db
     .collection('implementation_intentions')
-    .find({ userId: String(userId), status: 'active' })
+    .find({
+      userId: String(userId),
+      status: 'active',
+      ...studyDataFilter(studyId),
+    })
     .toArray();
 
   const plans = await Promise.all(

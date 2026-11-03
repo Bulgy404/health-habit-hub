@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help \
-        dev stop seed seed-user verify-keycloak fix-keycloak logs logs-all ios reset \
+        dev stop seed seed-user seed-researcher verify-keycloak fix-keycloak logs logs-all ios reset \
         monitoring monitoring-stop logs-prometheus logs-grafana \
         format test test-backend test-identity test-flutter test-python test-admin test-alert-email seed-habits \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
@@ -14,6 +14,7 @@ help: ## Show this help message
 
 dev: ## Start local services (docker-compose.local.yml)
 	docker compose -f docker-compose.local.yml up -d --build
+	$(MAKE) seed-researcher
 
 stop: ## Stop local services
 	docker compose -f docker-compose.local.yml down
@@ -23,6 +24,9 @@ seed: ## Seed local MongoDB, Neo4j, Keycloak, and Neo4j community habit graph
 	$(MAKE) verify-keycloak || ( $(MAKE) fix-keycloak && $(MAKE) verify-keycloak )
 	$(MAKE) seed-habits MODE=e2e
 	$(MAKE) seed-user
+
+seed-researcher: ## Provision the local researcher account configured in .env
+	node scripts/seed-researcher.mjs
 
 seed-user: ## Seed QA test participant(s) with rich history (COUNT=1-5, default 1 — see scripts/seed-test-user.js)
 	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && node scripts/seed-test-user.js

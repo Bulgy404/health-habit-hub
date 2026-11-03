@@ -220,6 +220,7 @@ export const createStudySchema = z.object({
 
 export const updateStudySchema = z
   .object({
+    recruitmentOpen: z.boolean().optional(),
     name: shortString.optional(),
     description: longString.optional(),
     groups: z.array(studyGroupSchema).min(1).max(8).optional(),

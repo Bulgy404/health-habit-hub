@@ -478,7 +478,7 @@ test('buildHabitsCSV returns csv string with header', async () => {
   const lines = csv.split('\n');
   assert.strictEqual(
     lines[0],
-    'participantId,habitName,category,group,donatedAt'
+    'participantId,habitName,category,group,donatedAt,id,studyId'
   );
   assert.ok(lines[1].startsWith('p1,Walk,exercise,'));
 });

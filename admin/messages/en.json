@@ -480,7 +480,16 @@
     "selfReportWellbeing": "Wellbeing impact",
     "detailQuestionnaire": "Questionnaire: {slug}",
     "detailNoExtras": "No transcript, audio, or questionnaire response for this donation.",
-    "detailClose": "Close"
+    "detailClose": "Close",
+    "studyLabel": "Study",
+    "allStudies": "All accessible studies",
+    "noStudy": "No study",
+    "downloadTitle": "Download donations",
+    "downloadHelp": "Downloads include all matching donations across every page. ZIP includes transcripts, questionnaire answers and original audio where available.",
+    "downloadZip": "Download ZIP with audio",
+    "preparing": "Preparing download…",
+    "exportPermission": "Choose a study with export permission to download its donations.",
+    "resetFilters": "Reset filters"
   },
   "insights": {
     "title": "Insights",
@@ -1452,13 +1461,13 @@
       "user": "User",
       "role": "Role",
       "access": "Access",
-      "readOnly": "read only",
-      "readExport": "read + export",
+      "readOnly": "View data",
+      "readExport": "View and export data",
       "remove": "Remove",
       "empty": "No researchers have been given access.",
       "add": "Add",
       "adding": "Adding…",
-      "hint": "People are picked from existing Keycloak accounts, so a grant can never point at an account that does not exist. Adding someone who is already listed updates their role and access rather than creating a second entry.",
+      "hint": "Study leads manage settings and collaborators. Management and export permissions are separate.",
       "loadFailed": "Could not load members.",
       "addFailed": "Could not add the member.",
       "removeFailed": "Could not remove the member.",
@@ -1558,5 +1567,16 @@
       "revealsOnly": "Reveals only",
       "auditIntro2": "Held in the register's own database, so it cannot be altered from the research platform. Field names are recorded, never values — an audit log that quoted the data it audits would be a second copy of it."
     }
+  },
+  "researchWorkspace": {
+    "study": "Study",
+    "allStudies": "All accessible studies",
+    "resourceHelp": "Select a study to create resources for it. Shared templates are read-only; the administrator sees resources from every study.",
+    "copyToStudy": "Copy to study",
+    "readOnly": "Read-only access. Ask the study lead for management permission.",
+    "canManage": "Manage study settings",
+    "closeRecruitment": "Close recruitment",
+    "reopenRecruitment": "Reopen recruitment",
+    "shared": "Shared template"
   }
 }

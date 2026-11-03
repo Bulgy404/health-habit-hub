@@ -1,5 +1,7 @@
 import express from 'express';
 import { createReadStream } from 'node:fs';
+import { donationScope } from '../../services/donationAccessService.js';
+import { donationAudioPath } from '../../services/donationExportService.js';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { ObjectId } from 'mongodb';
@@ -60,6 +62,40 @@ export function createHabitDonationsRouter({
     };
   }
 
+  router.get('/habit-donations/studies', async (req, res) => {
+    try {
+      const database = await getDb();
+      const ids = await donationScope(database, req.user);
+      const studies = await database
+        .collection('studies')
+        .find(
+          ids == null ? {} : { _id: { $in: ids.map((id) => new ObjectId(id)) } }
+        )
+        .toArray();
+      const exportIds =
+        ids == null
+          ? null
+          : await database
+              .collection('study_memberships')
+              .find({ userId: String(req.user.sub), scope: 'export' })
+              .toArray();
+      res.json({
+        studies: studies.map((s) => ({
+          id: String(s._id),
+          name: s.name,
+          groups: (s.groups ?? []).map((g) => g.label),
+          canExport:
+            exportIds == null ||
+            exportIds.some((m) => String(m.studyId) === String(s._id)),
+        })),
+      });
+    } catch (err) {
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/habit-donations/:uuid
   router.get('/habit-donations/:uuid', async (req, res) => {
     try {
@@ -76,11 +112,21 @@ export function createHabitDonationsRouter({
         return res.status(404).json({ error: 'Donation not found' });
       }
 
+      const ids = await donationScope(
+        database,
+        req.user,
+        donation.studyId ? String(donation.studyId) : undefined
+      );
+      if (ids && !ids.includes(String(donation.studyId)))
+        return res.status(403).json({ error: 'Study access denied' });
       let questionnaireResponse = null;
       if (donation.questionnaireResponseId) {
         questionnaireResponse = await database
           .collection('form_responses')
-          .findOne({ _id: new ObjectId(donation.questionnaireResponseId) });
+          .findOne({
+            _id: new ObjectId(donation.questionnaireResponseId),
+            habitUuid: uuid,
+          });
       }
 
       const selfReport =
@@ -104,7 +150,9 @@ export function createHabitDonationsRouter({
       });
     } catch (err) {
       log.error({ err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -128,6 +176,17 @@ export function createHabitDonationsRouter({
         return res.status(404).json({ error: 'Audio not found' });
       }
 
+      const download =
+        req.query.download === '1' || req.query.download === 'true';
+      const ids = await donationScope(
+        database,
+        req.user,
+        donation.studyId ? String(donation.studyId) : undefined,
+        download
+      );
+      if (ids && !ids.includes(String(donation.studyId)))
+        return res.status(403).json({ error: 'Study access denied' });
+
       // The filename comes from the stored Mongo doc (server-generated at
       // upload time — see voiceTranscribeRouter.js), never from the request,
       // but is still resolved defensively: reject anything that would
@@ -144,13 +203,13 @@ export function createHabitDonationsRouter({
 
       let fileStat;
       try {
-        fileStat = await stat(filePath);
+        fileStat = await stat(
+          await donationAudioPath(storageDir, donation.audioClip.filename)
+        );
       } catch {
         return res.status(404).json({ error: 'Audio file missing on disk' });
       }
 
-      const download =
-        req.query.download === '1' || req.query.download === 'true';
       res.set({
         'Content-Type':
           donation.audioClip.mimeType || 'application/octet-stream',
@@ -162,7 +221,9 @@ export function createHabitDonationsRouter({
       createReadStream(filePath).pipe(res);
     } catch (err) {
       log.error({ err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 

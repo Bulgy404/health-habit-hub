@@ -26,6 +26,21 @@ const donation1 = {
 
 function mockFetchImplementation(overrides: { total?: number; results?: unknown[] } = {}) {
   return jest.fn().mockImplementation((url: string) => {
+    if (url.includes("/admin/habit-donations/studies")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          studies: [
+            {
+              id: "123456789012345678901234",
+              name: "Walking study",
+              groups: ["G1", "G2"],
+              canExport: true,
+            },
+          ],
+        }),
+      });
+    }
     if (url.includes("/admin/habits/categories")) {
       return Promise.resolve({
         ok: true,
@@ -79,7 +94,7 @@ describe("DonationsPage", () => {
     const { container } = render(<DonationsPage />);
     await screen.findByText("Morning walk");
 
-    const groupSelect = container.querySelectorAll("select")[0] as HTMLSelectElement;
+    const groupSelect = container.querySelectorAll("select")[1] as HTMLSelectElement;
     await user.selectOptions(groupSelect, "G2");
 
     await waitFor(() => {
@@ -97,7 +112,7 @@ describe("DonationsPage", () => {
 
     // The category dropdown is populated from /admin/habits/categories.
     await screen.findByRole("option", { name: "Physical activity" });
-    const categorySelect = container.querySelectorAll("select")[1] as HTMLSelectElement;
+    const categorySelect = container.querySelectorAll("select")[2] as HTMLSelectElement;
     await user.selectOptions(categorySelect, "Physical activity");
 
     await waitFor(() => {
@@ -170,4 +185,27 @@ describe("DonationsPage", () => {
     render(<DonationsPage />);
     expect(await screen.findByText(/no donations match these filters/i)).toBeInTheDocument();
   });
+});
+
+it("filters both the feed and ZIP export by study", async () => {
+  const user = userEvent.setup();
+  render(<DonationsPage />);
+  await screen.findByRole("option", { name: "Walking study" });
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Study" }),
+    "123456789012345678901234"
+  );
+  await waitFor(() =>
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/feed\?.*studyId=123456789012345678901234/),
+      expect.anything()
+    )
+  );
+  await user.click(screen.getByRole("button", { name: /download zip with audio/i }));
+  await waitFor(() =>
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/export\?format=zip.*studyId=123456789012345678901234/),
+      expect.anything()
+    )
+  );
 });

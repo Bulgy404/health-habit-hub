@@ -15,19 +15,31 @@ import { ROLES } from '../../middleware/roles.js';
 function makeDb() {
   const donations = [];
   const formResponses = [];
+  const memberships = [];
 
   function collectionFor(name) {
     if (name === 'habit_donations') return donations;
     if (name === 'form_responses') return formResponses;
+    if (name === 'study_memberships') return memberships;
     throw new Error(`Unexpected collection: ${name}`);
   }
 
   return {
     donations,
     formResponses,
+    memberships,
     collection(name) {
       const store = collectionFor(name);
       return {
+        find(query) {
+          return {
+            async toArray() {
+              return store.filter(
+                (d) => !query.userId || d.userId === query.userId
+              );
+            },
+          };
+        },
         async findOne(query) {
           return (
             store.find((d) => {
@@ -184,5 +196,56 @@ test('GET /:uuid/audio — streams the file inline by default, attachment with ?
   assert.match(
     download.headers.get('content-disposition'),
     /^attachment; filename="/
+  );
+});
+
+test('researchers cannot open another study donation or audio by UUID', async () => {
+  const uuid = 'bbbbbbbb-1111-4562-b3fc-2c963f66afa6';
+  db.donations.push({
+    uuid,
+    studyId: new ObjectId().toString(),
+    audioClip: { filename: 'private.wav' },
+  });
+  for (const suffix of ['', '/audio', '/audio?download=1']) {
+    const res = await fetch(
+      `${baseUrl}/api/v1/admin/habit-donations/${uuid}${suffix}`,
+      { headers: { 'x-test-roles': 'researcher' } }
+    );
+    assert.equal(res.status, 403);
+  }
+});
+
+test('membership permits details and playback but read scope refuses downloads', async () => {
+  const uuid = 'cccccccc-1111-4562-b3fc-2c963f66afa6';
+  const studyId = new ObjectId();
+  db.memberships.push({ userId: 'test-admin', studyId, scope: 'read' });
+  writeFileSync(join(audioDir, `${uuid}.wav`), 'member-audio');
+  db.donations.push({
+    uuid,
+    studyId: String(studyId),
+    audioClip: { filename: `${uuid}.wav` },
+  });
+  const headers = { 'x-test-roles': 'researcher' };
+  assert.equal(
+    (
+      await fetch(`${baseUrl}/api/v1/admin/habit-donations/${uuid}`, {
+        headers,
+      })
+    ).status,
+    200
+  );
+  const audio = await fetch(
+    `${baseUrl}/api/v1/admin/habit-donations/${uuid}/audio`,
+    { headers }
+  );
+  assert.equal(await audio.text(), 'member-audio');
+  assert.equal(
+    (
+      await fetch(
+        `${baseUrl}/api/v1/admin/habit-donations/${uuid}/audio?download=1`,
+        { headers }
+      )
+    ).status,
+    403
   );
 });

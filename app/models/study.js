@@ -145,6 +145,7 @@ export const VALIDATOR = {
       description: { bsonType: ['string', 'null'] },
       isDefault: { bsonType: 'bool' },
       isActive: { bsonType: 'bool' },
+      recruitmentOpen: { bsonType: 'bool' },
       // Optional: absence is treated as enabled (true) for backward compatibility.
       recommenderEnabled: { bsonType: 'bool' },
       // §7.1 Habit Stacking — study-wide toggle; a group's value overrides.

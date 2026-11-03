@@ -5,7 +5,7 @@ import StudiesPage from "../app/(admin)/studies/page";
 
 jest.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { accessToken: "test-token" },
+    data: { accessToken: "test-token", roles: ["admin"] },
     status: "authenticated",
   }),
 }));
@@ -290,11 +290,9 @@ describe("StudiesPage — Knowledge tab", () => {
     await user.click(knowledgeTab);
 
     expect(
-      await screen.findByRole("heading", { name: /papers the recommender may use/i }),
+      await screen.findByRole("heading", { name: /papers the recommender may use/i })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: /use every paper/i }),
-    ).toBeChecked();
+    expect(screen.getByRole("radio", { name: /use every paper/i })).toBeChecked();
   });
 
   it("Habit Creation no longer carries the paper selection", async () => {
@@ -314,9 +312,7 @@ describe("StudiesPage — Knowledge tab", () => {
     await user.click(await screen.findByRole("button", { name: /^habit creation$/i }));
 
     await waitFor(() => {
-      expect(
-        screen.queryByRole("heading", { name: /papers the recommender may use/i }),
-      ).toBeNull();
+      expect(screen.queryByRole("heading", { name: /papers the recommender may use/i })).toBeNull();
     });
   });
 });

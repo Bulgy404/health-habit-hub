@@ -66,8 +66,17 @@ export function createQuestionnairesRouter({ db } = {}) {
         .collection('questionnaires')
         .find({ active: true })
         .toArray();
+      let visible = docs;
+      if (docs.some((q) => q.studyId)) {
+        const enrollment = await database
+          .collection('enrollments')
+          .findOne({ userId: req.user?.sub });
+        visible = docs.filter(
+          (q) => !q.studyId || String(q.studyId) === String(enrollment?.studyId)
+        );
+      }
       res.json(
-        docs.map((q) => {
+        visible.map((q) => {
           const languages = q.languages || ['en'];
           return {
             slug: q.slug,
@@ -214,6 +223,13 @@ export function createQuestionnairesRouter({ db } = {}) {
         .findOne({ slug, active: true });
       if (!doc) {
         return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      if (doc.studyId) {
+        const enrollment = await database
+          .collection('enrollments')
+          .findOne({ userId: req.user?.sub });
+        if (String(doc.studyId) !== String(enrollment?.studyId))
+          return res.status(404).json({ error: 'Questionnaire not found' });
       }
       res.json(resolveQuestionnaire(doc, lang));
     } catch (err) {

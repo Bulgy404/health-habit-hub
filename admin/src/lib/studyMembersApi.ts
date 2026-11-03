@@ -20,17 +20,13 @@ export interface StudyMember {
   username: string | null;
   role: MemberRole;
   scope: MemberScope;
+  canManage?: boolean;
   createdAt: string;
   createdBy: string | null;
 }
 
 export interface StudyMembersResponse {
-  /**
-   * Whether membership actually gates access for this study today. False on an
-   * anonymous study — members can still be listed and added, they simply have
-   * no effect until the study becomes verified. Surfacing this stops "I added
-   * someone and nothing happened" from looking like a bug.
-   */
+  /** Membership gates research-role access on every study. */
   enforced: boolean;
   /** Total across every page, so the UI can say "12 of 240" honestly. */
   total: number;
@@ -44,6 +40,7 @@ export interface MemberInput {
   username?: string;
   role: MemberRole;
   scope: MemberScope;
+  canManage?: boolean;
 }
 
 /** One study a given researcher can reach — the per-person view of the same data. */
@@ -128,6 +125,17 @@ export function listMembershipsForUser(
  * picking from here is what keeps a mistyped `sub` from becoming a grant that
  * looks live and gates nothing.
  */
-export function searchTeamUsers(token: string, query: string): Promise<{ users: TeamUser[] }> {
-  return apiFetch(apiUrl(`/admin/team/search?q=${encodeURIComponent(query)}`), token);
+export function searchTeamUsers(
+  token: string,
+  query: string,
+  studyId?: string
+): Promise<{ users: TeamUser[] }> {
+  return apiFetch(
+    apiUrl(
+      studyId
+        ? `/admin/studies/${studyId}/members/search?q=${encodeURIComponent(query)}`
+        : `/admin/team/search?q=${encodeURIComponent(query)}`
+    ),
+    token
+  );
 }

@@ -291,6 +291,7 @@ export async function resolveHabitConfig({
     cueSource,
     cueCount,
     cuePoolId,
+    studyId: enrollment?.studyId ?? null,
     lang,
   });
 

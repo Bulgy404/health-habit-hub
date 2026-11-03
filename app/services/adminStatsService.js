@@ -1,3 +1,4 @@
+import { studyDataFilter } from './studyDataScope.js';
 import { logger } from '../utils/logger.js';
 import { countHabitsByUser } from '../db/adminQueries.js';
 import { getParticipantWindows } from './questionnaireScheduleService.js';
@@ -46,7 +47,7 @@ function buildTimeline(participant, surveyResponses, adoptedIntentions) {
  * @param {{ db: object, neo4jRun: Function|null, id: string }} deps
  * @returns {Promise<object|null>}
  */
-export async function getParticipantProgress({ db, neo4jRun, id }) {
+export async function getParticipantProgress({ db, neo4jRun, id, studyId }) {
   // Try admin-created participant first; fall back to any study enrollment
   const participant = await db
     .collection('participants')
@@ -61,13 +62,13 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
 
   const surveyResponses = await db
     .collection('survey_responses')
-    .find({ participantId: id })
+    .find({ participantId: id, ...studyDataFilter(studyId) })
     .toArray();
 
   let habitsCount = 0;
   if (neo4jRun) {
     try {
-      habitsCount = await countHabitsByUser(neo4jRun, id);
+      habitsCount = await countHabitsByUser(neo4jRun, id, studyId);
     } catch (err) {
       log.error({ err: err }, '[adminStatsService] error');
       // Neo4j unavailable; habitsCount stays 0
@@ -75,7 +76,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   } else {
     const habitDocs = await db
       .collection('habit_donations')
-      .find({ participantId: id })
+      .find({ participantId: id, ...studyDataFilter(studyId) })
       .toArray();
     habitsCount = habitDocs.length;
   }
@@ -83,7 +84,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   // Scheduled questionnaire windows + completion for this participant.
   let questionnaires = [];
   try {
-    questionnaires = await getParticipantWindows({ db, userId: id });
+    questionnaires = await getParticipantWindows({ db, userId: id, studyId });
   } catch (err) {
     log.error({ err }, '[adminStatsService] questionnaire windows error');
   }
@@ -94,6 +95,10 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   let createdHabits = [];
   try {
     createdHabits = await listIntentions({ db, userId: id });
+    if (studyId)
+      createdHabits = createdHabits.filter(
+        (h) => h.studyId === String(studyId)
+      );
   } catch (err) {
     log.error({ err }, '[adminStatsService] intentions error');
   }
@@ -108,7 +113,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   // record exists for it today, so do not fabricate a count.
   const dismissed = 0;
   const timeline = buildTimeline(
-    participant ?? {},
+    studyId ? {} : (participant ?? {}),
     surveyResponses,
     adoptedIntentions
   );
@@ -120,7 +125,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   try {
     const rows = await db
       .collection(SRHI_COLLECTION)
-      .find({ userId: String(id) })
+      .find({ userId: String(id), ...studyDataFilter(studyId) })
       .sort({ scheduledFor: 1 })
       .toArray();
     const submitted = rows.filter((r) => r.submittedAt != null);

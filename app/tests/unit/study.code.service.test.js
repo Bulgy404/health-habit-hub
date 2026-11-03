@@ -442,6 +442,7 @@ test('redeemCode returns exhausted when maxRedemptions reached', async () => {
   const studyId = new ObjectId();
   const groupId = new ObjectId();
   const db = makeDb({
+    studies: [{ _id: studyId, groups: [{ id: groupId }] }],
     studyCodes: [
       {
         code: 'HHH-FULL0',
@@ -463,6 +464,7 @@ test('redeemCode returns alreadyEnrolled when user already has enrollment', asyn
   const studyId = new ObjectId();
   const groupId = new ObjectId();
   const db = makeDb({
+    studies: [{ _id: studyId, groups: [{ id: groupId }] }],
     studyCodes: [
       {
         code: 'HHH-VALID',

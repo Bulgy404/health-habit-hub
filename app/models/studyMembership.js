@@ -4,11 +4,9 @@
  * Per-study researcher access. Until this existed the `researcher` role granted
  * access to EVERY study and every export, with no way to narrow it.
  *
- * Rolled out deliberately narrowly: scoping is enforced only where
- * `identity.researcherScoping === 'scoped'`, which `resolveIdentityConfig`
- * forces on for verified studies and leaves 'open' everywhere else. Turning it
- * on globally would break every existing researcher on the day it shipped;
- * this gets the protection exactly where identity data exists and nowhere else.
+ * Both research roles require membership on every study. A lead manages
+ * its configuration and collaborators; other members need canManage=true
+ * to change configuration. Export is a separate scope. Admins see all studies.
  *
  * Schema:
  *   _id        ObjectId
@@ -34,6 +32,7 @@ export const VALIDATOR = {
       studyId: { bsonType: 'objectId' },
       role: { bsonType: 'string', enum: ['researcher', 'lead'] },
       scope: { bsonType: 'string', enum: ['read', 'export'] },
+      canManage: { bsonType: 'bool' },
       createdAt: { bsonType: 'date' },
       createdBy: { bsonType: ['string', 'null'] },
     },

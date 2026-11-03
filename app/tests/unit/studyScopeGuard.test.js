@@ -26,7 +26,13 @@ const studies = [
   },
 ];
 const memberships = [
-  { userId: 'partner', studyId: OWN, role: 'researcher', scope: 'read' },
+  {
+    userId: 'partner',
+    studyId: OWN,
+    role: 'researcher',
+    scope: 'read',
+    canManage: true,
+  },
   {
     userId: 'partner',
     studyId: EXPORTABLE,
@@ -244,8 +250,6 @@ for (const role of [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER]) {
         ['DELETE', ''],
         ['POST', '/delete'],
         ['PUT', '/default'],
-        ['GET', '/members'],
-        ['POST', '/members'],
       ]) {
         const r = await call(
           method,
@@ -261,20 +265,17 @@ for (const role of [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER]) {
       assert.equal(identity.status, 403);
     });
 
-    test('cannot create a study', async () => {
+    test('can create a study', async () => {
       caller = { sub: 'partner', roles: [role] };
-      assert.equal((await call('POST', '/studies', { name: 'x' })).status, 403);
+      assert.equal((await call('POST', '/studies', { name: 'x' })).status, 200);
     });
 
     test('is refused every admin route outside their studies', async () => {
       caller = { sub: 'partner', roles: [role] };
       for (const [method, path] of [
         ['GET', '/participants'],
-        ['GET', '/cue-pools'],
-        ['POST', '/questionnaires'],
         ['GET', '/comments'],
         ['GET', '/insights'],
-        ['GET', '/habits/feed'],
         ['GET', '/settings'],
         ['GET', '/team'],
         ['GET', '/audit-log'],
@@ -284,6 +285,19 @@ for (const role of [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER]) {
       ]) {
         const r = await call(method, path, method === 'GET' ? undefined : {});
         assert.equal(r.status, 403, `${method} ${path}`);
+      }
+    });
+
+    test('allows donation routes to enforce their own per-record scope', async () => {
+      caller = { sub: 'partner', roles: [role] };
+      for (const path of [
+        '/habits/feed',
+        '/habits/feed/export',
+        '/habits/categories',
+        '/habit-donations/studies',
+        '/habit-donations/3fa85f64-5717-4562-b3fc-2c963f66afa6/audio',
+      ]) {
+        assert.equal((await call('GET', path)).status, 200);
       }
     });
 

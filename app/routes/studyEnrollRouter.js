@@ -135,6 +135,8 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
           neo4jRun,
           identityClient,
         });
+        if (vResult.closed)
+          return res.status(409).json({ error: 'Study recruitment is closed' });
         if (vResult.notFound)
           return res.status(404).json({ error: 'Code not found' });
         if (vResult.alreadyEnrolled)
@@ -159,6 +161,8 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
 
       if (result.notFound)
         return res.status(404).json({ error: 'Code not found' });
+      if (result.closed)
+        return res.status(409).json({ error: 'Study recruitment is closed' });
       if (result.expired)
         return res.status(410).json({ error: 'Code has expired' });
       if (result.exhausted)
@@ -381,6 +385,8 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
       }
       if (result.notFound)
         return res.status(404).json({ error: 'Code not found' });
+      if (result.closed)
+        return res.status(409).json({ error: 'Study recruitment is closed' });
       if (result.expired)
         return res.status(410).json({ error: 'Code has expired' });
       if (result.exhausted)

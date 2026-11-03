@@ -1,3 +1,4 @@
+import { studyDataFilter, studyResponseFilter } from './studyDataScope.js';
 // app/services/questionnaireScheduleService.js
 import { ObjectId } from 'mongodb';
 import { ASSIGNMENTS, WINDOWS } from '../models/questionnaireSchedule.js';
@@ -939,10 +940,13 @@ export async function getStudyScheduleCalendar({ db, studyId }) {
  * newest first — powers the admin answer viewer.
  * @param {{ db, userId }} deps
  */
-export async function getParticipantResponses({ db, userId }) {
+export async function getParticipantResponses({ db, userId, studyId }) {
   const docs = await db
     .collection('form_responses')
-    .find({ userId: String(userId) })
+    .find({
+      userId: String(userId),
+      ...(await studyResponseFilter(db, studyId)),
+    })
     .sort({ submittedAt: -1 })
     .toArray();
   return docs.map((d) => ({
@@ -954,10 +958,10 @@ export async function getParticipantResponses({ db, userId }) {
 }
 
 /** All scheduled windows for one participant (for the admin detail view). */
-export async function getParticipantWindows({ db, userId }) {
+export async function getParticipantWindows({ db, userId, studyId }) {
   const wins = await db
     .collection(WINDOWS)
-    .find({ userId: String(userId) })
+    .find({ userId: String(userId), ...studyDataFilter(studyId) })
     .sort({ scheduledFor: 1 })
     .toArray();
   return wins.map((w) => ({

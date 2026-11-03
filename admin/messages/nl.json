@@ -64,7 +64,7 @@
       "identity": "Identiteitsregister",
       "identityRequests": "Her-identificatie",
       "identityAudit": "Identiteitslogboek",
-      "consentDocuments": "Toestemmings\u00addocumenten"
+      "consentDocuments": "Toestemmings­documenten"
     },
     "language": "Taal",
     "toggleTheme": "Thema wisselen",
@@ -480,7 +480,16 @@
     "selfReportWellbeing": "Invloed op welzijn",
     "detailQuestionnaire": "Vragenlijst: {slug}",
     "detailNoExtras": "Geen transcript, audio of vragenlijstantwoord voor deze donatie.",
-    "detailClose": "Sluiten"
+    "detailClose": "Sluiten",
+    "studyLabel": "Studie",
+    "allStudies": "Alle toegankelijke studies",
+    "noStudy": "Geen studie",
+    "downloadTitle": "Bijdragen downloaden",
+    "downloadHelp": "Downloads bevatten alle overeenkomende bijdragen op alle pagina’s. De ZIP bevat transcripties, antwoorden en beschikbare originele audio.",
+    "downloadZip": "ZIP met audio downloaden",
+    "preparing": "Download voorbereiden…",
+    "exportPermission": "Kies een studie met exportrechten om de bijdragen te downloaden.",
+    "resetFilters": "Filters wissen"
   },
   "insights": {
     "title": "Inzichten",
@@ -1452,13 +1461,13 @@
       "user": "Persoon",
       "role": "Rol",
       "access": "Toegang",
-      "readOnly": "alleen lezen",
-      "readExport": "lezen + exporteren",
+      "readOnly": "Gegevens bekijken",
+      "readExport": "Gegevens bekijken en exporteren",
       "remove": "Verwijderen",
       "empty": "Nog geen toegang verleend.",
       "add": "Toevoegen",
       "adding": "Bezig met toevoegen…",
-      "hint": "Personen worden gekozen uit bestaande Keycloak-accounts, zodat een toekenning nooit naar een niet-bestaand account kan wijzen. Iemand toevoegen die al in de lijst staat werkt rol en toegang bij in plaats van een tweede vermelding aan te maken.",
+      "hint": "Studieleiders beheren instellingen en leden. Beheer- en exportrechten zijn afzonderlijk.",
       "loadFailed": "De toegangslijst kon niet worden geladen.",
       "addFailed": "De toegang kon niet worden verleend.",
       "removeFailed": "De toegang kon niet worden ingetrokken.",
@@ -1558,5 +1567,16 @@
       "revealsOnly": "Alleen onthullingen",
       "auditIntro2": "Staat in de eigen database van het register en kan dus niet vanaf het onderzoeksplatform worden gewijzigd. Veldnamen worden vastgelegd, nooit waarden — een logboek dat de gecontroleerde gegevens citeert, zou er een tweede kopie van zijn."
     }
+  },
+  "researchWorkspace": {
+    "study": "Studie",
+    "allStudies": "Alle toegankelijke studies",
+    "resourceHelp": "Kies een studie om bronnen aan te maken. Gedeelde sjablonen zijn alleen-lezen; de beheerder ziet bronnen van alle studies.",
+    "copyToStudy": "Naar studie kopiëren",
+    "readOnly": "Alleen-lezen. Vraag de studieleider om beheerrechten.",
+    "canManage": "Studie-instellingen beheren",
+    "closeRecruitment": "Werving sluiten",
+    "reopenRecruitment": "Werving heropenen",
+    "shared": "Gedeeld sjabloon"
   }
 }

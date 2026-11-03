@@ -42,6 +42,7 @@ interface DonationDetail {
 interface DonationDetailModalProps {
   uuid: string;
   token: string;
+  canExport?: boolean;
   onClose: () => void;
 }
 
@@ -54,7 +55,12 @@ interface DonationDetailModalProps {
  * pointed at directly as an <audio src>, matching how the CSV export on the
  * parent page already handles authenticated binary downloads.
  */
-export function DonationDetailModal({ uuid, token, onClose }: DonationDetailModalProps) {
+export function DonationDetailModal({
+  uuid,
+  token,
+  onClose,
+  canExport = false,
+}: DonationDetailModalProps) {
   const t = useTranslations("donations");
   const [detail, setDetail] = useState<DonationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -167,7 +173,12 @@ export function DonationDetailModal({ uuid, token, onClose }: DonationDetailModa
                 !audioError && <p className={styles.muted}>{t("audioLoading")}</p>
               )}
               <div style={{ marginTop: "0.5rem" }}>
-                <button className={styles.actionBtn} onClick={handleDownload}>
+                <button
+                  className={styles.actionBtn}
+                  disabled={!canExport}
+                  title={!canExport ? t("exportPermission") : undefined}
+                  onClick={handleDownload}
+                >
                   {t("downloadAudio")}
                 </button>
               </div>
@@ -217,9 +228,10 @@ export function DonationDetailModal({ uuid, token, onClose }: DonationDetailModa
             </div>
           )}
 
-          {!detail.audioClip && !detail.questionnaireResponse && !detail.selfReport && detail.inputMode !== "voice" && (
-            <p className={styles.muted}>{t("detailNoExtras")}</p>
-          )}
+          {!detail.audioClip &&
+            !detail.questionnaireResponse &&
+            !detail.selfReport &&
+            detail.inputMode !== "voice" && <p className={styles.muted}>{t("detailNoExtras")}</p>}
         </>
       )}
 

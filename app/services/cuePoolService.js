@@ -14,8 +14,10 @@ export async function createCue({
   quality,
   dimensions,
   domain,
+  studyId = null,
 }) {
   const doc = {
+    studyId,
     text,
     languages,
     quality,
@@ -39,8 +41,9 @@ export async function listCues({
   language,
   page = 1,
   limit = 50,
+  resourceFilter = {},
 }) {
-  const filter = {};
+  const filter = { ...resourceFilter };
   if (quality) filter.quality = String(quality);
   // Mongo matches a scalar against an array field as "array contains value".
   if (language) filter.languages = String(language);
@@ -82,6 +85,7 @@ export async function pickAssignedCues({
   cueCount,
   cuePoolId = null,
   lang = 'en',
+  studyId = null,
 }) {
   if (cueSource === 'self_selected') return [];
 
@@ -90,7 +94,13 @@ export async function pickAssignedCues({
   if (!quality) return [];
 
   const n = cueCount === 'multi' ? 2 : 1;
-  const match = { quality };
+  const match = {
+    quality,
+    $or: [
+      { studyId: null },
+      ...(studyId ? [{ studyId: new ObjectId(studyId) }] : []),
+    ],
+  };
   if (cuePoolId) {
     try {
       match._id = new ObjectId(cuePoolId);
@@ -114,6 +124,7 @@ export async function pickAssignedCues({
 function serialize(doc) {
   return {
     id: doc._id.toString(),
+    studyId: doc.studyId ? String(doc.studyId) : null,
     text: doc.text,
     languages: doc.languages || [],
     quality: doc.quality,
@@ -131,7 +142,7 @@ function serialize(doc) {
  * @param {{ db: object, rows: Array<object> }} deps
  * @returns {Promise<{ inserted: number, skipped: number }>}
  */
-export async function importCues({ db, rows }) {
+export async function importCues({ db, rows, studyId = null }) {
   if (!rows || rows.length === 0) return { inserted: 0, skipped: 0 };
 
   const valid = [];
@@ -162,6 +173,7 @@ export async function importCues({ db, rows }) {
     }
 
     valid.push({
+      studyId,
       text,
       languages,
       quality,

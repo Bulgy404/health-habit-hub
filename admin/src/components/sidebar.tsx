@@ -94,15 +94,20 @@ const NAV_SECTIONS: NavSection[] = [
     titleKey: "operations",
     items: [
       { href: "/participants", labelKey: "participants", Icon: Users, adminOnly: true },
-      { href: "/donations", labelKey: "donations", Icon: Gift, adminOnly: true },
+      { href: "/donations", labelKey: "donations", Icon: Gift, studyScoped: true },
       { href: "/comments", labelKey: "comments", Icon: MessageSquare, adminOnly: true },
     ],
   },
   {
     titleKey: "configuration",
     items: [
-      { href: "/cue-pools", labelKey: "cuePools", Icon: Crosshair },
-      { href: "/questionnaires", labelKey: "questionnaires", Icon: ClipboardList },
+      { href: "/cue-pools", labelKey: "cuePools", Icon: Crosshair, studyScoped: true },
+      {
+        href: "/questionnaires",
+        labelKey: "questionnaires",
+        Icon: ClipboardList,
+        studyScoped: true,
+      },
       { href: "/profile-fields", labelKey: "profileFields", Icon: UserCircle, adminOnly: true },
       { href: "/knowledge-base", labelKey: "knowledgeBase", Icon: BookOpen, adminOnly: true },
       {
@@ -158,8 +163,8 @@ export function Sidebar() {
 
   const isAdmin = (session?.roles ?? []).includes("admin");
   // Identity pages follow the identity roles, not `admin` — see NavItem.
-  const hasIdentityRole = ["identity-manager", "study-nurse", "monitor"].some(
-    (r) => (session?.roles ?? []).includes(r)
+  const hasIdentityRole = ["identity-manager", "study-nurse", "monitor"].some((r) =>
+    (session?.roles ?? []).includes(r)
   );
   const studyScoped = isStudyScoped(session?.roles);
 

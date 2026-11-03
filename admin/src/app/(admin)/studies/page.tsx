@@ -90,6 +90,10 @@ interface StudySummary {
   name: string;
   description: string;
   isActive: boolean;
+  recruitmentOpen?: boolean;
+  canManage?: boolean;
+  canExport?: boolean;
+  isLead?: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
   /**
@@ -270,7 +274,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
     setLoading(true);
     try {
       const [qs, data, cal] = await Promise.all([
-        apiFetch(QUESTIONNAIRES_API, token),
+        apiFetch(`${QUESTIONNAIRES_API}?studyId=${study.id}`, token),
         apiFetch(base, token),
         apiFetch(`${API_BASE}/${study.id}/questionnaire-calendar`, token).catch(() => ({
           calendar: [],
@@ -1977,19 +1981,14 @@ function HabitCreationTab({
     Record<string, boolean>
   >(() =>
     Object.fromEntries(
-      study.groups.map((g) => [
-        g.id,
-        g.selfHabitCreationEnabled ?? study.selfHabitCreationEnabled,
-      ])
+      study.groups.map((g) => [g.id, g.selfHabitCreationEnabled ?? study.selfHabitCreationEnabled])
     )
   );
 
   // ── Unified entry mode ("freeText" | "structured" | "voice") — shared by
   // the New Habit wizard and the community donation flow. ───────────────────
   const [entryModeScope, setEntryModeScope] = useState<"study" | "group">(() =>
-    study.groups.some(
-      (g) => g.donationInputMode != null || g.structuredActivityKeys != null
-    )
+    study.groups.some((g) => g.donationInputMode != null || g.structuredActivityKeys != null)
       ? "group"
       : "study"
   );
@@ -2010,9 +2009,7 @@ function HabitCreationTab({
   );
 
   // ── Which optional donation questions show (frequency / health / wellbeing) ─
-  const [donationQuestionsScope, setDonationQuestionsScope] = useState<
-    "study" | "group"
-  >(() =>
+  const [donationQuestionsScope, setDonationQuestionsScope] = useState<"study" | "group">(() =>
     study.groups.some(
       (g) =>
         g.donationAskFrequency != null ||
@@ -2022,12 +2019,11 @@ function HabitCreationTab({
       ? "group"
       : "study"
   );
-  const [studyDonationQuestions, setStudyDonationQuestions] =
-    useState<DonationQuestionsValue>({
-      frequency: study.donationAskFrequency,
-      healthBenefit: study.donationAskHealthBenefit,
-      wellbeing: study.donationAskWellbeing,
-    });
+  const [studyDonationQuestions, setStudyDonationQuestions] = useState<DonationQuestionsValue>({
+    frequency: study.donationAskFrequency,
+    healthBenefit: study.donationAskHealthBenefit,
+    wellbeing: study.donationAskWellbeing,
+  });
   const [groupDonationQuestions, setGroupDonationQuestions] = useState<
     Record<string, DonationQuestionsValue>
   >(() =>
@@ -2036,8 +2032,7 @@ function HabitCreationTab({
         g.id,
         {
           frequency: g.donationAskFrequency ?? study.donationAskFrequency,
-          healthBenefit:
-            g.donationAskHealthBenefit ?? study.donationAskHealthBenefit,
+          healthBenefit: g.donationAskHealthBenefit ?? study.donationAskHealthBenefit,
           wellbeing: g.donationAskWellbeing ?? study.donationAskWellbeing,
         },
       ])
@@ -2047,10 +2042,12 @@ function HabitCreationTab({
   // ── Post-donation questionnaire (a pool slug, or none) ────────────────────
   const [donationQuestionnaires, setDonationQuestionnaires] = useState<QuestionnaireSummary[]>([]);
   useEffect(() => {
-    apiFetch(QUESTIONNAIRES_API, token)
-      .then((qs) => setDonationQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []))
+    apiFetch(`${QUESTIONNAIRES_API}?studyId=${study.id}`, token)
+      .then((qs) =>
+        setDonationQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : [])
+      )
       .catch(() => setDonationQuestionnaires([]));
-  }, [token]);
+  }, [token, study.id]);
   // null/absent = inherit the study value; '' = this group explicitly has no
   // questionnaire; a non-empty string = a slug override (see
   // habitConfigService.js's resolveHabitConfig for the matching backend logic).
@@ -2297,8 +2294,7 @@ function HabitCreationTab({
     } catch (err) {
       setErrors((p) => ({
         ...p,
-        donationQuestions:
-          err instanceof Error ? err.message : t("saveFailedGeneric"),
+        donationQuestions: err instanceof Error ? err.message : t("saveFailedGeneric"),
       }));
     } finally {
       setSaving((p) => ({ ...p, donationQuestions: false }));
@@ -2528,7 +2524,6 @@ function HabitCreationTab({
         </div>
       </div>
 
-
       <div className={styles.reminderTypeSection} data-testid="habit-creation-section-onboarding">
         <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.onboardingLabel")}</p>
         <span className={styles.hint}>{t("habitCreationTab.onboardingHint")}</span>
@@ -2692,7 +2687,9 @@ function HabitCreationTab({
                       }))
                     }
                   >
-                    <option value="freeText">{t("habitCreationTab.entryModeFreeTextOption")}</option>
+                    <option value="freeText">
+                      {t("habitCreationTab.entryModeFreeTextOption")}
+                    </option>
                     <option value="structured">
                       {t("habitCreationTab.entryModeStructuredOption")}
                     </option>
@@ -2745,9 +2742,7 @@ function HabitCreationTab({
         className={styles.reminderTypeSection}
         data-testid="habit-creation-section-donationQuestions"
       >
-        <p className={styles.cueConfigGroupLabel}>
-          {t("habitCreationTab.donationQuestionsLabel")}
-        </p>
+        <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.donationQuestionsLabel")}</p>
         <span className={styles.hint}>{t("habitCreationTab.donationQuestionsHint")}</span>
         {errors.donationQuestions && (
           <div className={styles.errorMsg}>{errors.donationQuestions}</div>
@@ -2756,9 +2751,7 @@ function HabitCreationTab({
         {donationQuestionsScope === "study" ? (
           <DonationQuestionsToggles
             value={studyDonationQuestions}
-            onChange={(patch) =>
-              setStudyDonationQuestions((v) => ({ ...v, ...patch }))
-            }
+            onChange={(patch) => setStudyDonationQuestions((v) => ({ ...v, ...patch }))}
             t={t}
           />
         ) : (
@@ -2790,9 +2783,7 @@ function HabitCreationTab({
           className={styles.checkboxLabel}
           checked={donationQuestionsScope === "group"}
           disabled={study.groups.length === 0}
-          onChange={(e) =>
-            setDonationQuestionsScope(e.target.checked ? "group" : "study")
-          }
+          onChange={(e) => setDonationQuestionsScope(e.target.checked ? "group" : "study")}
           label={t("habitCreationTab.perGroupLabel")}
         />
         {study.groups.length === 0 && (
@@ -2800,9 +2791,7 @@ function HabitCreationTab({
         )}
 
         <div className={styles.cueConfigFooter}>
-          {saved.donationQuestions && (
-            <span className={styles.savedMsg}>{t("saved")}</span>
-          )}
+          {saved.donationQuestions && <span className={styles.savedMsg}>{t("saved")}</span>}
           <button
             className={styles.saveBtn}
             onClick={handleSaveDonationQuestions}
@@ -2854,9 +2843,7 @@ function HabitCreationTab({
                 <select
                   className={styles.select}
                   value={groupDonationQSlug[g.id] ?? ""}
-                  onChange={(e) =>
-                    setGroupDonationQSlug((p) => ({ ...p, [g.id]: e.target.value }))
-                  }
+                  onChange={(e) => setGroupDonationQSlug((p) => ({ ...p, [g.id]: e.target.value }))}
                 >
                   <option value="">{t("habitCreationTab.donationQuestionnaireNoneOption")}</option>
                   {donationQuestionnaires
@@ -4421,6 +4408,8 @@ function StudyModal({
   const t = useTranslations("studies");
   const tc = useTranslations("common");
   const isEdit = initial !== null;
+  const canManageStudy = isAdmin || !isEdit || initial?.canManage === true;
+  const tw = useTranslations("researchWorkspace");
   const [activeTab, setActiveTab] = useState<ModalTab>("details");
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -4631,7 +4620,7 @@ function StudyModal({
               .filter(
                 ([tabKey]) =>
                   !(studyScoped && (tabKey === "identity" || tabKey === "knowledge")) &&
-                  (tabKey !== "access" || isAdmin)
+                  (tabKey !== "access" || isAdmin || initial?.isLead === true)
               )
               .map(([tabKey, tabLabel]) => (
                 <button
@@ -4668,137 +4657,149 @@ function StudyModal({
             // `activeTab` changes (ordinary React unmount); only the
             // incoming one fades in.
           }
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
+          {!canManageStudy && (
+            <p role="status" className={styles.hint}>
+              {tw("readOnly")}
+            </p>
+          )}
+          <fieldset
+            disabled={!canManageStudy && activeTab !== "participants"}
+            style={{ border: 0, padding: 0, minWidth: 0 }}
           >
-            {activeTab === "details" ? (
-              <>
-                {error && <div className={styles.errorMsg}>{error}</div>}
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+            >
+              {activeTab === "details" ? (
+                <>
+                  {error && <div className={styles.errorMsg}>{error}</div>}
 
-                {isEdit && initial?.isDefault && (
-                  <div className={styles.defaultBadgeRow}>
-                    <span className={styles.badgeDefault}>{t("modal.defaultBadge")}</span>
-                  </div>
-                )}
+                  {isEdit && initial?.isDefault && (
+                    <div className={styles.defaultBadgeRow}>
+                      <span className={styles.badgeDefault}>{t("modal.defaultBadge")}</span>
+                    </div>
+                  )}
 
-                <div className={styles.formGrid}>
-                  <div className={`${styles.formGroup} ${styles.formFull}`}>
-                    <label className={styles.label}>{t("modal.fields.nameLabel")}</label>
-                    <input
-                      className={styles.input}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={t("modal.fields.namePlaceholder")}
-                    />
-                    <span className={styles.hint}>{t("modal.fields.nameHint")}</span>
-                  </div>
+                  <div className={styles.formGrid}>
+                    <div className={`${styles.formGroup} ${styles.formFull}`}>
+                      <label className={styles.label}>{t("modal.fields.nameLabel")}</label>
+                      <input
+                        className={styles.input}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder={t("modal.fields.namePlaceholder")}
+                      />
+                      <span className={styles.hint}>{t("modal.fields.nameHint")}</span>
+                    </div>
 
-                  <div className={`${styles.formGroup} ${styles.formFull}`}>
-                    <label className={styles.label}>{tc("description")}</label>
-                    <textarea
-                      className={styles.textarea}
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder={t("modal.fields.descriptionPlaceholder")}
-                    />
-                    <span className={styles.hint}>{t("modal.fields.descriptionHint")}</span>
-                  </div>
+                    <div className={`${styles.formGroup} ${styles.formFull}`}>
+                      <label className={styles.label}>{tc("description")}</label>
+                      <textarea
+                        className={styles.textarea}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder={t("modal.fields.descriptionPlaceholder")}
+                      />
+                      <span className={styles.hint}>{t("modal.fields.descriptionHint")}</span>
+                    </div>
 
-                  <div className={`${styles.formGroup} ${styles.formFull}`}>
-                    <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
-                    <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
-                    <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
-                    <span className={styles.hint}>{t("modal.fields.habitCreationMovedHint")}</span>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>{t("modal.fields.groupCountLabel")}</label>
-                    <select
-                      className={styles.select}
-                      value={groupCount}
-                      onChange={(e) => handleGroupCountChange(Number(e.target.value))}
-                    >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                      <option value={4}>4</option>
-                    </select>
-                    <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
-                    {isEdit && groupCount < (initial?.groups.length ?? groupCount) && (
-                      <span className={styles.hint} style={{ color: "#b45309" }}>
-                        {t("modal.fields.groupCountRemovalWarning")}
+                    <div className={`${styles.formGroup} ${styles.formFull}`}>
+                      <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                      />
+                      <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
+                      <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
+                      <span className={styles.hint}>
+                        {t("modal.fields.habitCreationMovedHint")}
                       </span>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                <div className={styles.groupLabelsSection}>
-                  <p className={styles.groupLabelsTitle}>{t("modal.fields.groupLabelsTitle")}</p>
-                  <div className={styles.groupLabelsGrid}>
-                    {Array.from({ length: groupCount }).map((_, i) => (
-                      <div key={i} className={styles.formGroup}>
-                        <label className={styles.label}>
-                          {t("groupFallbackLabel", { index: i + 1 })}
-                        </label>
-                        <input
-                          className={styles.input}
-                          value={groupLabels[i] ?? ""}
-                          onChange={(e) => handleGroupLabelChange(i, e.target.value)}
-                          placeholder={t("groupFallbackLabel", { index: i + 1 })}
-                        />
-                      </div>
-                    ))}
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>{t("modal.fields.groupCountLabel")}</label>
+                      <select
+                        className={styles.select}
+                        value={groupCount}
+                        onChange={(e) => handleGroupCountChange(Number(e.target.value))}
+                      >
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                        <option value={4}>4</option>
+                      </select>
+                      <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
+                      {isEdit && groupCount < (initial?.groups.length ?? groupCount) && (
+                        <span className={styles.hint} style={{ color: "#b45309" }}>
+                          {t("modal.fields.groupCountRemovalWarning")}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </>
-            ) : activeTab === "questionnaires" ? (
-              initial && <QuestionnairesTab study={initial} token={token} />
-            ) : activeTab === "codes" ? (
-              initial && <CodesTab study={initial} token={token} />
-            ) : activeTab === "participants" ? (
-              initial && <ParticipantsTab study={initial} token={token} />
-            ) : activeTab === "cue-config" ? (
-              initial && <CueConfigTab study={initial} token={token} />
-            ) : activeTab === "habit-creation" ? (
-              initial && (
-                <HabitCreationTab study={initial} token={token} isAdmin={isAdmin} />
-              )
-            ) : activeTab === "knowledge" ? (
-              initial && (
-                <KnowledgeScopePanel
-                  studyId={initial.id}
-                  token={token}
-                  initialFiles={initial.knowledgeBaseFiles}
-                  isDefaultStudy={initial.isDefault}
-                />
-              )
-            ) : activeTab === "reminders" ? (
-              initial && <RemindersTab study={initial} token={token} />
-            ) : activeTab === "behavior-change" ? (
-              initial && <BehaviorChangeTab study={initial} token={token} />
-            ) : activeTab === "identity" ? (
-              initial && (
-                <IdentityTabPanel
-                  studyId={initial.id}
-                  participantCount={initial.participantCount}
-                  token={token}
-                />
-              )
-            ) : activeTab === "access" ? (
-              initial && <StudyMembersPanel studyId={initial.id} token={token} />
-            ) : (
-              initial && <GamificationTab study={initial} token={token} />
-            )}
-          </motion.div>
+
+                  <div className={styles.groupLabelsSection}>
+                    <p className={styles.groupLabelsTitle}>{t("modal.fields.groupLabelsTitle")}</p>
+                    <div className={styles.groupLabelsGrid}>
+                      {Array.from({ length: groupCount }).map((_, i) => (
+                        <div key={i} className={styles.formGroup}>
+                          <label className={styles.label}>
+                            {t("groupFallbackLabel", { index: i + 1 })}
+                          </label>
+                          <input
+                            className={styles.input}
+                            value={groupLabels[i] ?? ""}
+                            onChange={(e) => handleGroupLabelChange(i, e.target.value)}
+                            placeholder={t("groupFallbackLabel", { index: i + 1 })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : activeTab === "questionnaires" ? (
+                initial && <QuestionnairesTab study={initial} token={token} />
+              ) : activeTab === "codes" ? (
+                initial && <CodesTab study={initial} token={token} />
+              ) : activeTab === "participants" ? (
+                initial && <ParticipantsTab study={initial} token={token} />
+              ) : activeTab === "cue-config" ? (
+                initial && <CueConfigTab study={initial} token={token} />
+              ) : activeTab === "habit-creation" ? (
+                initial && <HabitCreationTab study={initial} token={token} isAdmin={isAdmin} />
+              ) : activeTab === "knowledge" ? (
+                initial && (
+                  <KnowledgeScopePanel
+                    studyId={initial.id}
+                    token={token}
+                    initialFiles={initial.knowledgeBaseFiles}
+                    isDefaultStudy={initial.isDefault}
+                  />
+                )
+              ) : activeTab === "reminders" ? (
+                initial && <RemindersTab study={initial} token={token} />
+              ) : activeTab === "behavior-change" ? (
+                initial && <BehaviorChangeTab study={initial} token={token} />
+              ) : activeTab === "identity" ? (
+                initial && (
+                  <IdentityTabPanel
+                    studyId={initial.id}
+                    participantCount={initial.participantCount}
+                    token={token}
+                  />
+                )
+              ) : activeTab === "access" ? (
+                initial && (
+                  <StudyMembersPanel studyId={initial.id} token={token} isAdmin={isAdmin} />
+                )
+              ) : (
+                initial && <GamificationTab study={initial} token={token} />
+              )}
+            </motion.div>
+          </fieldset>
         </div>
 
         {confirmDefaultOpen && (
@@ -4918,11 +4919,33 @@ function StudyModal({
                 )}
               </div>
             )}
+            {isEdit && canManageStudy && !initial?.isDefault && (
+              <button
+                className={styles.cancelBtn}
+                onClick={async () => {
+                  try {
+                    await apiFetch(`${API_BASE}/${initial!.id}`, token, {
+                      method: "PUT",
+                      body: JSON.stringify({ recruitmentOpen: initial!.recruitmentOpen === false }),
+                    });
+                    onSaved();
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
+                  }
+                }}
+              >
+                {tw(initial?.recruitmentOpen !== false ? "closeRecruitment" : "reopenRecruitment")}
+              </button>
+            )}
             <div className={styles.modalFooterRight}>
               <button className={styles.cancelBtn} onClick={onClose}>
                 {tc("cancel")}
               </button>
-              <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+              <button
+                className={styles.saveBtn}
+                onClick={handleSave}
+                disabled={saving || !canManageStudy}
+              >
                 <SpinnerLabel
                   loading={saving}
                   label={isEdit ? t("modal.footer.saveChanges") : t("modal.footer.create")}
@@ -4951,7 +4974,7 @@ export default function StudiesPage() {
   const [actionError, setActionError] = useState("");
   const { data: session } = useSession();
   const isAdmin = (session?.roles ?? []).includes("admin");
-  // A study-researcher sees only their studies and cannot create new ones.
+  // Both research roles see member studies and may create a study of their own.
   const studyScoped = isStudyScoped(session?.roles);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -5013,11 +5036,9 @@ export default function StudiesPage() {
           <h1 className={styles.title}>{t("title")}</h1>
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
-        {!studyScoped && (
-          <button className={styles.addButton} onClick={handleOpenCreate}>
-            {t("newStudy")}
-          </button>
-        )}
+        <button className={styles.addButton} onClick={handleOpenCreate}>
+          {t("newStudy")}
+        </button>
       </div>
 
       {actionError && <div className={styles.errorMsg}>{actionError}</div>}

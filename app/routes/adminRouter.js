@@ -1,4 +1,6 @@
 import express from 'express';
+import { donationScope } from '../services/donationAccessService.js';
+import { buildDonationZip } from '../services/donationExportService.js';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { config } from '../utils/config.js';
@@ -297,15 +299,19 @@ export function createAdminRouter({
    * @swagger
    * /admin/habits/feed/export:
    *   get:
-   *     summary: Export donated habits as CSV
-   *     description: Downloads all donated habits as a CSV file. Supports filtering by group, category, and date range.
+   *     summary: Export donated habits as CSV or ZIP with audio
+   *     description: Downloads every matching donation across all pages. ZIP includes original audio, transcripts, questionnaire responses, and self-report data. Researchers need export membership for the selected studies.
    *     tags: [Admin]
    *     security:
    *       - bearerAuth: []
    *     parameters:
    *       - in: query
+   *         name: studyId
+   *         schema: { type: string }
+   *         description: Study at donation time; restricted to current memberships for researchers
+   *       - in: query
    *         name: group
-   *         schema: { type: string, enum: [G1, G2, G3, G4] }
+   *         schema: { type: string }
    *         description: Filter by study group
    *       - in: query
    *         name: category
@@ -323,11 +329,13 @@ export function createAdminRouter({
    *         example: "2026-03-31"
    *       - in: query
    *         name: format
-   *         schema: { type: string, enum: [csv], default: csv }
+   *         schema: { type: string, enum: [csv, zip], default: csv }
    *     responses:
    *       200:
-   *         description: CSV file
+   *         description: CSV summary or ZIP archive
    *         content:
+   *           application/zip:
+   *             schema: { type: string, format: binary }
    *           text/csv:
    *             schema:
    *               type: string
@@ -552,11 +560,20 @@ export function createAdminRouter({
       const categories = await listHabitCategories({
         neo4jRun: queryNeo4j,
         lang: req.query.lang,
+        studyId: req.query.studyId,
+        studyIds: await donationScope(
+          await getDb(),
+          req.user,
+          req.query.studyId,
+          req.path.endsWith('/export')
+        ),
       });
       res.json({ categories });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -567,14 +584,14 @@ export function createAdminRouter({
       const from = req.query.from ?? req.query.dateFrom;
       const to = req.query.to ?? req.query.dateTo;
 
-      if (format !== 'csv') {
+      if (!['csv', 'zip'].includes(format)) {
         return res
           .status(400)
-          .json({ error: "Invalid format. Only 'csv' is supported." });
+          .json({ error: "Invalid format. Use 'csv' or 'zip'." });
       }
 
       const database = await getDb();
-      const csv = await buildHabitsCSV({
+      const exportOptions = {
         db: database,
         neo4jRun: queryNeo4j,
         group,
@@ -582,7 +599,26 @@ export function createAdminRouter({
         from,
         to,
         lang: req.query.lang,
-      });
+        studyId: req.query.studyId,
+        studyIds: await donationScope(
+          await getDb(),
+          req.user,
+          req.query.studyId,
+          req.path.endsWith('/export')
+        ),
+      };
+      if (format === 'zip') {
+        const zip = await buildDonationZip({
+          ...exportOptions,
+          audioStorageDir,
+        });
+        res.set({
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="habit-donations.zip"',
+        });
+        return res.send(zip);
+      }
+      const csv = await buildHabitsCSV(exportOptions);
 
       res.set({
         'Content-Type': 'text/csv',
@@ -591,7 +627,9 @@ export function createAdminRouter({
       res.send(csv);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -606,8 +644,12 @@ export function createAdminRouter({
    *       - bearerAuth: []
    *     parameters:
    *       - in: query
+   *         name: studyId
+   *         schema: { type: string }
+   *         description: Study at donation time; restricted to current memberships for researchers
+   *       - in: query
    *         name: group
-   *         schema: { type: string, enum: [G1, G2, G3, G4] }
+   *         schema: { type: string }
    *       - in: query
    *         name: category
    *         schema: { type: string }
@@ -675,11 +717,20 @@ export function createAdminRouter({
         page: parseInt(page, 10) || 1,
         limit: parseInt(limit, 10) || 20,
         lang: req.query.lang,
+        studyId: req.query.studyId,
+        studyIds: await donationScope(
+          await getDb(),
+          req.user,
+          req.query.studyId,
+          req.path.endsWith('/export')
+        ),
       });
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 

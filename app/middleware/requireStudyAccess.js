@@ -26,6 +26,8 @@ export async function checkStudyAccess({
   user,
   studyId,
   requireExport = false,
+  requireManage = false,
+  requireLead = false,
 }) {
   const roles = user?.realm_access?.roles ?? [];
   if (roles.includes(ROLES.ADMIN)) {
@@ -65,6 +67,18 @@ export async function checkStudyAccess({
           'This study restricts access to named members. Ask a study ' +
           'administrator to add you.',
       },
+    };
+  }
+  if (
+    (requireLead && membership.role !== 'lead') ||
+    (requireManage &&
+      membership.role !== 'lead' &&
+      membership.canManage !== true)
+  ) {
+    return {
+      ok: false,
+      status: 403,
+      body: { error: 'study_management_not_permitted' },
     };
   }
   if (requireExport && membership.scope !== 'export') {

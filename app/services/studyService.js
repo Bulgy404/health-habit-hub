@@ -170,6 +170,7 @@ export async function listStudies({ db, page = 1, limit = 20, onlyIds }) {
       description: s.description ?? null,
       isDefault: s.isDefault,
       isActive: s.isActive,
+      recruitmentOpen: s.recruitmentOpen !== false,
       recommenderEnabled: s.recommenderEnabled !== false,
       knowledgeBaseFiles: s.knowledgeBaseFiles ?? null,
       onboardingEnabled: s.onboardingEnabled !== false,
@@ -234,6 +235,7 @@ export async function createStudy({
   endOfStudyNotification,
   reminders,
   neo4jRun,
+  creator = null,
 }) {
   const now = new Date();
   const studyGroups = groups.map((g, i) => ({
@@ -300,6 +302,23 @@ export async function createStudy({
   };
 
   const result = await db.collection(STUDIES).insertOne(doc);
+  if (creator) {
+    try {
+      await db.collection('study_memberships').insertOne({
+        studyId: result.insertedId,
+        userId: String(creator.sub),
+        username: creator.preferred_username ?? null,
+        role: 'lead',
+        scope: 'export',
+        canManage: true,
+        createdAt: now,
+        createdBy: String(creator.sub),
+      });
+    } catch (err) {
+      await db.collection(STUDIES).deleteOne({ _id: result.insertedId });
+      throw err;
+    }
+  }
 
   // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided).
   // A brand-new study has no questionnaire_assignments yet — the
@@ -345,6 +364,7 @@ export async function getStudy({ db, id }) {
     description: study.description ?? null,
     isDefault: study.isDefault,
     isActive: study.isActive,
+    recruitmentOpen: study.recruitmentOpen !== false,
     recommenderEnabled: study.recommenderEnabled !== false,
     knowledgeBaseFiles: study.knowledgeBaseFiles ?? null,
     onboardingEnabled: study.onboardingEnabled !== false,
@@ -413,6 +433,8 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
 
   if (updates.name !== undefined) $set.name = updates.name;
   if (updates.description !== undefined) $set.description = updates.description;
+  if (updates.recruitmentOpen !== undefined)
+    $set.recruitmentOpen = updates.recruitmentOpen;
   if (updates.isActive !== undefined) $set.isActive = updates.isActive;
   if (updates.recommenderEnabled !== undefined)
     $set.recommenderEnabled = updates.recommenderEnabled;

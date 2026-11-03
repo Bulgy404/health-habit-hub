@@ -7,6 +7,8 @@ export type Lang = keyof Required<LocaleText>;
 
 export interface Cue {
   id: string;
+  studyId?: string | null;
+  canEdit?: boolean;
   text: LocaleText;
   quality: "low" | "high";
   dimensions: { stability: number; salience: number; specificity: number };
@@ -30,7 +32,8 @@ export function useCuePoolsData(
   token: string,
   page: number,
   filterQuality: string,
-  filterLang: string
+  filterLang: string,
+  studyId = ""
 ) {
   const limit = 25;
   const [cues, setCues] = useState<Cue[]>([]);
@@ -52,6 +55,7 @@ export function useCuePoolsData(
           page: String(p),
           limit: String(limit),
         });
+        if (studyId) params.set("studyId", studyId);
         if (filterQuality) params.set("quality", filterQuality);
         if (filterLang) params.set("language", filterLang);
         const data = await apiFetch(`${API_BASE}?${params}`, token);
@@ -65,7 +69,7 @@ export function useCuePoolsData(
         if (requestId === requestRef.current) setLoading(false);
       }
     },
-    [token, filterQuality, filterLang]
+    [token, filterQuality, filterLang, studyId]
   );
 
   useEffect(() => {

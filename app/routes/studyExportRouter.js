@@ -1,3 +1,4 @@
+import { isPrivileged } from '../middleware/roles.js';
 // app/routes/studyExportRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
@@ -24,7 +25,11 @@ export function createStudyExportRouter({ db } = {}) {
           buildSrhiCsv({ db: database, studyId }),
           buildDailyLogsCsv({ db: database, studyId }),
           buildDropoutCsv({ db: database, studyId }),
-          buildQuestionnaireResponsesCsv({ db: database, studyId }),
+          buildQuestionnaireResponsesCsv({
+            db: database,
+            studyId,
+            strictStudy: !isPrivileged(req.user),
+          }),
         ]);
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader(

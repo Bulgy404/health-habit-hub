@@ -13,11 +13,14 @@ const log = logger.child({ module: 'studyScopeGuard' });
 const STUDY_PATH = /^\/studies\/([^/]+)(\/.*)?$/;
 
 // What either research role may do on a study they are a member of: the same
-// study pages a researcher uses, minus the operator decisions — deleting a
-// study, making it the default, and managing who else is a member. Paths are
-// relative to /studies/:id.
+// study pages a researcher uses, minus operator-only deletion/default selection.
+// Mutations require management permission; membership management requires lead.
+// Paths are relative to /studies/:id.
 const STUDY_ROUTES = [
   ['GET', /^$/],
+  ['GET', /^\/members(\/search)?$/],
+  ['POST', /^\/members$/],
+  ['DELETE', /^\/members\/[^/]+$/],
   ['PUT', /^$/],
   ['PATCH', /^\/allocation$/],
   ['PATCH', /^\/groups\/[^/]+\/(cue-config|config)$/],
@@ -35,17 +38,29 @@ const STUDY_ROUTES = [
 ];
 
 // Outside a study: the study list (filtered below), the questionnaire library,
-// which the study page reads to offer questionnaires for assignment, and the
-// activity-type catalog, which it reads to label a structured-entry study's
-// activities. Both are read only and hold no study's data.
+// which the study page reads to offer questionnaires for assignment. Resource
+// routers enforce ownership on questionnaire/cue writes. The shared activity
+// catalog stays read-only for researchers.
 // Notification campaigns are handled separately because the study they belong
 // to is in the query, the body or the stored campaign rather than the path.
 const OTHER_ROUTES = [
   ['GET', /^\/?$/],
   ['GET', /^\/studies\/?$/],
+  ['POST', /^\/studies\/?$/],
+  ['POST', /^\/questionnaires$/],
+  ['POST', /^\/questionnaires\/[^/]+\/copy$/],
+  ['PUT', /^\/questionnaires\/[^/]+$/],
+  ['PATCH', /^\/questionnaires\/[^/]+\/active$/],
+  ['DELETE', /^\/questionnaires\/[^/]+$/],
+  ['GET', /^\/cue-pools\/?$/],
+  ['POST', /^\/cue-pools(\/import)?\/?$/],
+  ['DELETE', /^\/cue-pools\/[^/]+$/],
   ['GET', /^\/questionnaires\/?$/],
   ['GET', /^\/questionnaires\/[^/]+$/],
   ['GET', /^\/activity-types\/?$/],
+  // These routes enforce donation-time study membership themselves.
+  ['GET', /^\/habits\/(categories|feed|feed\/export)$/],
+  ['GET', /^\/habit-donations\/(studies|[0-9a-fA-F-]{36}(\/audio)?)$/],
 ];
 
 // One participant's detail, which the analytics page opens from a study's
@@ -108,15 +123,23 @@ export function createStudyScopeGuard({ getDb }) {
         }
         // Whether the study is anonymous or verified is the operator's call.
         if (req.method === 'PUT' && subPath === '' && req.body) {
-          if (Object.hasOwn(req.body, 'identity')) return forbidden(res);
+          if (
+            ['identity', 'knowledgeBaseFiles', 'isDefault'].some((key) =>
+              Object.hasOwn(req.body, key)
+            )
+          )
+            return forbidden(res);
         }
         const result = await checkStudyAccess({
           db: await getDb(),
           user: req.user,
           studyId: studyMatch[1],
           requireExport: /^\/export(\/zip)?$/.test(subPath),
+          requireManage: req.method !== 'GET',
+          requireLead: /^\/members/.test(subPath),
         });
         if (!result.ok) return res.status(result.status).json(result.body);
+        req.studyAccess = result;
         return next();
       }
 
@@ -133,7 +156,10 @@ export function createStudyScopeGuard({ getDb }) {
           user: req.user,
           studyId: String(enrollment.studyId),
         });
-        if (result.ok) return next();
+        if (result.ok) {
+          req.participantStudyId = String(enrollment.studyId);
+          return next();
+        }
         return res.status(result.status).json(result.body);
       }
 
@@ -147,6 +173,14 @@ export function createStudyScopeGuard({ getDb }) {
         return forbidden(res);
       }
 
+      if (
+        req.method === 'POST' &&
+        /^\/studies\/?$/.test(req.path) &&
+        ['identity', 'knowledgeBaseFiles', 'isDefault'].some((key) =>
+          Object.hasOwn(req.body ?? {}, key)
+        )
+      )
+        return forbidden(res);
       const db = await getDb();
       const memberships = await db
         .collection(MEMBERSHIPS)
@@ -158,6 +192,9 @@ export function createStudyScopeGuard({ getDb }) {
         // Read by the study list, which shows only these studies.
         req.studyScope = {
           studyIds: memberships.map((m) => new ObjectId(m.studyId)),
+          manageableStudyIds: memberships
+            .filter((m) => m.role === 'lead' || m.canManage === true)
+            .map((m) => new ObjectId(m.studyId)),
         };
         return next();
       }
@@ -169,7 +206,12 @@ export function createStudyScopeGuard({ getDb }) {
             : forbidden(res);
         }
         if (req.method === 'POST') {
-          const ok = await campaignStaysInStudy(db, req.body, memberOf);
+          const manageable = new Set(
+            memberships
+              .filter((m) => m.role === 'lead' || m.canManage === true)
+              .map((m) => String(m.studyId))
+          );
+          const ok = await campaignStaysInStudy(db, req.body, manageable);
           return ok ? next() : forbidden(res);
         }
         return forbidden(res);
@@ -181,7 +223,11 @@ export function createStudyScopeGuard({ getDb }) {
           .collection(CAMPAIGNS)
           .findOne({ _id: new ObjectId(one[1]) });
         if (!campaign) return res.status(404).json({ error: 'Not found' });
-        return memberOf.has(String(campaign.studyId ?? ''))
+        return memberships.some(
+          (m) =>
+            String(m.studyId) === String(campaign.studyId ?? '') &&
+            (m.role === 'lead' || m.canManage === true)
+        )
           ? next()
           : forbidden(res);
       }

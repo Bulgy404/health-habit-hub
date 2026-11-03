@@ -5,7 +5,7 @@ import QuestionnairesPage from "../app/(admin)/questionnaires/page";
 
 jest.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { accessToken: "test-token" },
+    data: { accessToken: "test-token", roles: ["admin"] },
     status: "authenticated",
   }),
 }));
@@ -143,7 +143,12 @@ describe("QuestionnairesPage", () => {
     const user = userEvent.setup();
 
     (global.fetch as jest.Mock)
-      // first call: list load
+      // Study selector loads before the questionnaire list.
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ studies: [], total: 0 }),
+      } as unknown as Response)
+      // questionnaire list
       .mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValue([

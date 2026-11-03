@@ -299,7 +299,7 @@ describe("StudyMembersPanel", () => {
   it("spells out the read/export distinction rather than showing a bare enum", async () => {
     global.fetch = mockMembersApi({ members: [RITA] });
     render(<StudyMembersPanel studyId="s1" token="t" />);
-    expect(await screen.findByText("read + export")).toBeInTheDocument();
+    expect(await screen.findByText("View and export data")).toBeInTheDocument();
     expect(screen.getByText("rita")).toBeInTheDocument();
   });
 

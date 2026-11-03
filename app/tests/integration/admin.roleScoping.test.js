@@ -146,10 +146,10 @@ async function get(path, token) {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-test('GET /api/v1/admin/cue-pools - researcher cannot edit shared cross-study configuration', async () => {
+test('GET /api/v1/admin/cue-pools - researcher can browse shared templates', async () => {
   const token = makeToken(['researcher']);
   const res = await get('/api/v1/admin/cue-pools', token);
-  assert.strictEqual(res.status, 403);
+  assert.strictEqual(res.status, 200);
 });
 
 test('GET /api/v1/admin/cue-pools - admin is allowed', async () => {

@@ -277,6 +277,19 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         });
       }
 
+      const definition = await database
+        .collection('questionnaires')
+        .findOne({ slug: questionnaireSlug });
+      if (definition?.studyId && !donationRecord) {
+        const enrollment = await database
+          .collection('enrollments')
+          .findOne({ userId });
+        if (String(enrollment?.studyId) !== String(definition.studyId))
+          return res
+            .status(403)
+            .json({ error: 'Questionnaire not available in your study' });
+      }
+
       // A scheduled questionnaire (has ever had a window generated for it)
       // can only be (re)submitted while it has an open window due now — this
       // is what actually blocks editing/resubmitting a completed one, not
@@ -342,6 +355,16 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       } catch (err) {
         log.error({ err }, '[questionnaire-responses] window link error');
       }
+
+      const responseStudyId =
+        donationRecord?.studyId ?? window?.studyId ?? definition?.studyId;
+      if (responseStudyId)
+        await database
+          .collection('form_responses')
+          .updateOne(
+            { _id: insertedId },
+            { $set: { studyId: responseStudyId } }
+          );
 
       // Sync to Neo4j — non-blocking: errors are logged but never surface to the
       // caller (a graph outage must never fail a participant's submission).

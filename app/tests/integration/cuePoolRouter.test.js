@@ -10,8 +10,12 @@ function makeDb() {
   return {
     store,
     collection(name) {
+      if (name === 'studies') return { findOne: async () => null };
       assert.strictEqual(name, 'cue_pools');
       return {
+        async findOne(q) {
+          return store.find((d) => String(d._id) === String(q._id)) ?? null;
+        },
         async insertOne(doc) {
           const saved = { ...doc, _id: new ObjectId() };
           store.push(saved);
@@ -64,6 +68,10 @@ before(async () => {
   db = makeDb();
   app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    req.user = { sub: 'admin', realm_access: { roles: ['admin'] } };
+    next();
+  });
   app.use('/api/v1/admin/cue-pools', createCuePoolRouter({ db }));
   server = createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

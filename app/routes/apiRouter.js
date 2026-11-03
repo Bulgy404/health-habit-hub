@@ -314,7 +314,7 @@ export function createApiRouter({
   // Cue pool management (admin + researcher only)
   router.use(
     '/admin/cue-pools',
-    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    requireRole(...PORTAL_ROLES),
     createCuePoolRouter({ db })
   );
 

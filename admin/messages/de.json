@@ -64,7 +64,7 @@
       "identity": "Identitätsregister",
       "identityRequests": "Re-Identifizierung",
       "identityAudit": "Identitäts-Protokoll",
-      "consentDocuments": "Einwilligungs\u00addokumente"
+      "consentDocuments": "Einwilligungs­dokumente"
     },
     "language": "Sprache",
     "toggleTheme": "Design wechseln",
@@ -480,7 +480,16 @@
     "selfReportWellbeing": "Auswirkung auf das Wohlbefinden",
     "detailQuestionnaire": "Fragebogen: {slug}",
     "detailNoExtras": "Kein Transkript, keine Audioaufnahme oder Fragebogenantwort für diese Spende.",
-    "detailClose": "Schließen"
+    "detailClose": "Schließen",
+    "studyLabel": "Studie",
+    "allStudies": "Alle zugänglichen Studien",
+    "noStudy": "Keine Studie",
+    "downloadTitle": "Spenden herunterladen",
+    "downloadHelp": "Downloads enthalten alle passenden Spenden auf allen Seiten. Die ZIP enthält Transkripte, Fragebogenantworten und verfügbare Originalaufnahmen.",
+    "downloadZip": "ZIP mit Audio herunterladen",
+    "preparing": "Download wird vorbereitet…",
+    "exportPermission": "Wählen Sie eine Studie mit Exportberechtigung, um ihre Spenden herunterzuladen.",
+    "resetFilters": "Filter zurücksetzen"
   },
   "insights": {
     "title": "Einblicke",
@@ -1452,13 +1461,13 @@
       "user": "Person",
       "role": "Rolle",
       "access": "Zugriff",
-      "readOnly": "nur lesen",
-      "readExport": "lesen + exportieren",
+      "readOnly": "Daten ansehen",
+      "readExport": "Daten ansehen und exportieren",
       "remove": "Entfernen",
       "empty": "Noch kein Zugriff vergeben.",
       "add": "Hinzufügen",
       "adding": "Wird hinzugefügt…",
-      "hint": "Personen werden aus bestehenden Keycloak-Konten ausgewählt, sodass eine Berechtigung nie auf ein nicht existierendes Konto zeigen kann. Wird eine bereits gelistete Person hinzugefügt, werden Rolle und Zugriff aktualisiert statt ein zweiter Eintrag angelegt.",
+      "hint": "Studienleitungen verwalten Einstellungen und Mitglieder. Verwaltungs- und Exportrechte sind getrennt.",
       "loadFailed": "Die Zugriffsliste konnte nicht geladen werden.",
       "addFailed": "Der Zugriff konnte nicht vergeben werden.",
       "removeFailed": "Der Zugriff konnte nicht entzogen werden.",
@@ -1558,5 +1567,16 @@
       "revealsOnly": "Nur Offenlegungen",
       "auditIntro2": "Liegt in der eigenen Datenbank des Registers und kann daher von der Forschungsplattform aus nicht verändert werden. Protokolliert werden Feldnamen, nie Werte — ein Protokoll, das die geprüften Daten zitiert, wäre eine zweite Kopie davon."
     }
+  },
+  "researchWorkspace": {
+    "study": "Studie",
+    "allStudies": "Alle zugänglichen Studien",
+    "resourceHelp": "Wählen Sie eine Studie, um Inhalte dafür zu erstellen. Gemeinsame Vorlagen sind schreibgeschützt; die Administration sieht Inhalte aller Studien.",
+    "copyToStudy": "In Studie kopieren",
+    "readOnly": "Nur Lesezugriff. Bitten Sie die Studienleitung um Verwaltungsrechte.",
+    "canManage": "Studieneinstellungen verwalten",
+    "closeRecruitment": "Rekrutierung schließen",
+    "reopenRecruitment": "Rekrutierung wieder öffnen",
+    "shared": "Gemeinsame Vorlage"
   }
 }

@@ -484,6 +484,7 @@ export function createParticipantsRouter({
         db: database,
         neo4jRun,
         id,
+        studyId: req.participantStudyId,
       });
 
       if (result === null) {
@@ -550,6 +551,7 @@ export function createParticipantsRouter({
       const habits = await getParticipantHabits({
         neo4jRun,
         userId: req.params.id,
+        studyId: req.participantStudyId,
       });
       res.json({ habits });
     } catch (err) {
@@ -565,6 +567,7 @@ export function createParticipantsRouter({
       const responses = await getParticipantResponses({
         db: database,
         userId: req.params.id,
+        studyId: req.participantStudyId,
       });
       res.json({ responses });
     } catch (err) {
@@ -582,7 +585,11 @@ export function createParticipantsRouter({
       if (!participant) {
         return res.status(404).json({ error: 'Participant not found' });
       }
-      const plans = await computeReminderPlans({ db: database, userId: id });
+      const plans = await computeReminderPlans({
+        db: database,
+        userId: id,
+        studyId: req.participantStudyId,
+      });
       res.json({ plans });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

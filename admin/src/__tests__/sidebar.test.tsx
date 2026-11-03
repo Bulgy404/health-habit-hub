@@ -49,7 +49,7 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(screen.getByText("Studies")).toBeInTheDocument();
     expect(screen.getByText("Analytics")).toBeInTheDocument();
-    expect(screen.queryByText("Questionnaires")).not.toBeInTheDocument();
+    expect(screen.getByText("Questionnaires")).toBeInTheDocument();
     expect(screen.queryByText("Knowledge Base")).not.toBeInTheDocument();
     expect(screen.queryByText("Activity Types")).not.toBeInTheDocument();
     expect(screen.queryByText("App Settings")).not.toBeInTheDocument();
@@ -71,8 +71,8 @@ describe("Sidebar", () => {
     expect(screen.getByText("Analytics")).toBeInTheDocument();
     expect(screen.getByText("Help")).toBeInTheDocument();
     // Shared across studies, so hidden from an account limited to its own.
-    expect(screen.queryByText("Questionnaires")).not.toBeInTheDocument();
-    expect(screen.queryByText("Cue Pools")).not.toBeInTheDocument();
+    expect(screen.getByText("Questionnaires")).toBeInTheDocument();
+    expect(screen.getByText("Cue Pools")).toBeInTheDocument();
     expect(screen.queryByText("Participants")).not.toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("Sidebar", () => {
       update: jest.fn(),
     });
     render(<Sidebar />);
-    expect(screen.queryByText("Questionnaires")).not.toBeInTheDocument();
+    expect(screen.getByText("Questionnaires")).toBeInTheDocument();
   });
 
   it("shows all nav items for admin", () => {

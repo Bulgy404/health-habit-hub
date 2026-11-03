@@ -1,4 +1,7 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
+import { isStudyScoped, isPrivileged } from '../../middleware/roles.js';
+import { assertStudyResource } from '../../services/researchResourceAccess.js';
 import { makeGetDb } from '../../utils/getDb.js';
 import {
   listStudies,
@@ -105,10 +108,27 @@ export function createStudiesRouter({
         limit,
         onlyIds: req.studyScope?.studyIds,
       });
+      if (req.studyScope) {
+        const memberships = await database
+          .collection('study_memberships')
+          .find({ userId: String(req.user.sub) })
+          .toArray();
+        result.studies = result.studies.map((s) => {
+          const m = memberships.find((m) => String(m.studyId) === s.id);
+          return {
+            ...s,
+            canManage: m?.role === 'lead' || m?.canManage === true,
+            canExport: m?.scope === 'export',
+            isLead: m?.role === 'lead',
+          };
+        });
+      }
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -130,6 +150,15 @@ export function createStudiesRouter({
         reminders,
       } = req.body;
       const database = await getDb();
+      await validateStudyResources(database, null, req.body);
+      // A new study can reference shared templates only; private resources are attached after creation.
+      for (const id of questionnaires ?? [])
+        await assertStudyResource(
+          database,
+          'questionnaires',
+          { _id: new ObjectId(id) },
+          null
+        );
       const study = await createStudy({
         db: database,
         name,
@@ -145,6 +174,7 @@ export function createStudiesRouter({
         endOfStudyNotification,
         reminders,
         neo4jRun,
+        creator: isStudyScoped(req.user) ? req.user : null,
       });
       res.locals.auditAction = 'create_study';
       res.locals.auditResourceType = 'study';
@@ -170,7 +200,9 @@ export function createStudiesRouter({
       });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -183,10 +215,24 @@ export function createStudiesRouter({
         const database = await getDb();
         const study = await getStudy({ db: database, id: req.params.id });
         if (!study) return res.status(404).json({ error: 'Study not found' });
-        res.json(study);
+        res.json({
+          ...study,
+          canManage:
+            isPrivileged(req.user) ||
+            req.studyAccess?.membership?.role === 'lead' ||
+            req.studyAccess?.membership?.canManage === true,
+          canExport:
+            isPrivileged(req.user) ||
+            req.studyAccess?.membership?.scope === 'export',
+          isLead:
+            isPrivileged(req.user) ||
+            req.studyAccess?.membership?.role === 'lead',
+        });
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -195,6 +241,8 @@ export function createStudiesRouter({
   router.put('/studies/:id', validate(updateStudySchema), async (req, res) => {
     try {
       const database = await getDb();
+
+      await validateStudyResources(database, req.params.id, req.body);
 
       // A consent slug pointing at a document that is missing, still a draft,
       // or still carrying ⟦…⟧ placeholders 404s the participant AFTER they
@@ -238,7 +286,9 @@ export function createStudiesRouter({
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -259,7 +309,9 @@ export function createStudiesRouter({
         res.json({ updated: true });
       } catch (err) {
         log.error({ err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -271,6 +323,13 @@ export function createStudiesRouter({
     async (req, res) => {
       try {
         const { cueCount, cueSource, cuePoolId, maxHabits } = req.body;
+        if (cuePoolId)
+          await assertStudyResource(
+            await getDb(),
+            'cue_pools',
+            { _id: new ObjectId(cuePoolId) },
+            req.params.id
+          );
         const database = await getDb();
         const result = await updateGroupCueConfig({
           db: database,
@@ -288,7 +347,9 @@ export function createStudiesRouter({
         res.json({ updated: true });
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -300,6 +361,7 @@ export function createStudiesRouter({
     async (req, res) => {
       try {
         const database = await getDb();
+        await validateStudyResources(database, req.params.id, req.body);
         const result = await updateGroupConfig({
           db: database,
           studyId: req.params.id,
@@ -311,7 +373,9 @@ export function createStudiesRouter({
         res.json({ updated: true });
       } catch (err) {
         log.error({ err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -344,7 +408,9 @@ export function createStudiesRouter({
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -386,6 +452,7 @@ export function createStudiesRouter({
         const database = await getDb();
         const bundle = await exportStudyData({
           db: database,
+          strictStudy: !isPrivileged(req.user),
           id: req.params.id,
         });
         if (!bundle) return res.status(404).json({ error: 'Study not found' });
@@ -402,7 +469,9 @@ export function createStudiesRouter({
         res.send(JSON.stringify(bundle, null, 2));
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -490,7 +559,9 @@ export function createStudiesRouter({
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -504,7 +575,9 @@ export function createStudiesRouter({
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -533,7 +606,9 @@ export function createStudiesRouter({
         res.status(201).json({ codes: result.codes });
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -558,7 +633,9 @@ export function createStudiesRouter({
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -579,7 +656,9 @@ export function createStudiesRouter({
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -605,7 +684,9 @@ export function createStudiesRouter({
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -622,7 +703,9 @@ export function createStudiesRouter({
       res.json({ assignments, completion });
     } catch (err) {
       log.error({ err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -637,7 +720,9 @@ export function createStudiesRouter({
       res.json({ calendar });
     } catch (err) {
       log.error({ err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
@@ -649,6 +734,12 @@ export function createStudiesRouter({
       try {
         const { questionnaireId, groupId, cadence } = req.body;
         const database = await getDb();
+        await assertStudyResource(
+          database,
+          'questionnaires',
+          { _id: new ObjectId(questionnaireId) },
+          req.params.id
+        );
         const result = await createAssignment({
           db: database,
           studyId: req.params.id,
@@ -675,7 +766,9 @@ export function createStudiesRouter({
         res.status(201).json({ id: result.id });
       } catch (err) {
         log.error({ err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -699,7 +792,9 @@ export function createStudiesRouter({
         res.json({ updated: true });
       } catch (err) {
         log.error({ err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -721,7 +816,9 @@ export function createStudiesRouter({
         res.json({ ok: true });
       } catch (err) {
         log.error({ err }, 'unhandled route error');
-        res.status(500).json({ error: 'Internal server error' });
+        res
+          .status(err.status || 500)
+          .json({ error: err.status ? err.message : 'Internal server error' });
       }
     }
   );
@@ -772,9 +869,44 @@ export function createStudiesRouter({
       });
     } catch (err) {
       log.error({ err: err }, '[studies] error');
-      res.status(500).json({ error: 'Internal server error' });
+      res
+        .status(err.status || 500)
+        .json({ error: err.status ? err.message : 'Internal server error' });
     }
   });
 
   return router;
+}
+
+async function validateStudyResources(db, studyId, body) {
+  for (const id of body.questionnaires ?? [])
+    await assertStudyResource(
+      db,
+      'questionnaires',
+      { _id: new ObjectId(id) },
+      studyId
+    );
+  if (body.donationQuestionnaireSlug)
+    await assertStudyResource(
+      db,
+      'questionnaires',
+      { slug: body.donationQuestionnaireSlug },
+      studyId
+    );
+  for (const group of body.groups ?? []) {
+    if (group.cueConfig?.cuePoolId)
+      await assertStudyResource(
+        db,
+        'cue_pools',
+        { _id: new ObjectId(group.cueConfig.cuePoolId) },
+        studyId
+      );
+    if (group.donationQuestionnaireSlug)
+      await assertStudyResource(
+        db,
+        'questionnaires',
+        { slug: group.donationQuestionnaireSlug },
+        studyId
+      );
+  }
 }

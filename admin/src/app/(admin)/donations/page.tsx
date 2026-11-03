@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
-import { useAdminGuard } from "@/lib/useAdminGuard";
+import { useSession } from "next-auth/react";
+import { Download, FileDown } from "lucide-react";
+import local from "./donations.module.css";
 import { DonationDetailModal } from "./DonationDetailModal";
 import styles from "@/components/admin-page.module.css";
 
@@ -13,6 +15,7 @@ interface Donation {
   habitName: string;
   category: string;
   group: string | null;
+  studyId: string | null;
   donatedAt: string | null;
 }
 
@@ -32,6 +35,7 @@ function normalise(raw: unknown): Donation {
     participantId: String(j.participantId ?? ""),
     habitName: String(j.habitName ?? ""),
     category: String(j.category ?? ""),
+    studyId: j.studyId ? String(j.studyId) : null,
     group: j.group != null ? String(j.group) : null,
     donatedAt: j.donatedAt ? String(j.donatedAt) : null,
   };
@@ -48,7 +52,8 @@ function fmt(ts: string | null): string {
  * and CSV export. Moved here from the mobile admin section.
  */
 export default function DonationsPage() {
-  const { token } = useAdminGuard();
+  const { data: session } = useSession();
+  const token = session?.accessToken ?? "";
   const t = useTranslations("donations");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -58,15 +63,36 @@ export default function DonationsPage() {
     limit: PAGE_SIZE,
     results: [],
   });
+  const requestId = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [studyId, setStudyId] = useState("");
+  const [studies, setStudies] = useState<
+    { id: string; name: string; groups: string[]; canExport: boolean }[]
+  >([]);
+  const [exporting, setExporting] = useState(false);
   const [group, setGroup] = useState("");
   const [category, setCategory] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    apiFetch(apiUrl("/admin/habit-donations/studies"), token)
+      .then((data) => {
+        if (!cancelled) setStudies(data.studies ?? []);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // The category filter is a dropdown of the actual BCIO labels in use
   // (localised to the admin's own language), not free text — a substring/
@@ -75,17 +101,22 @@ export default function DonationsPage() {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    apiFetch(apiUrl(`/admin/habits/categories?lang=${locale}`), token)
+    apiFetch(
+      apiUrl(
+        `/admin/habits/categories?${new URLSearchParams({ lang: locale, ...(studyId ? { studyId } : {}) })}`
+      ),
+      token
+    )
       .then((data) => {
         if (!cancelled) setCategories((data?.categories ?? []) as string[]);
       })
       .catch(() => {
-        // Non-fatal: the dropdown just falls back to "All categories".
+        if (!cancelled) setCategories([]);
       });
     return () => {
       cancelled = true;
     };
-  }, [token, locale]);
+  }, [token, locale, studyId]);
 
   function buildQuery(): string {
     const params = new URLSearchParams({
@@ -93,6 +124,7 @@ export default function DonationsPage() {
       limit: String(PAGE_SIZE),
       lang: locale,
     });
+    if (studyId) params.set("studyId", studyId);
     if (group) params.set("group", group);
     if (category) params.set("category", category);
     if (dateFrom) params.set("dateFrom", dateFrom);
@@ -102,9 +134,11 @@ export default function DonationsPage() {
 
   const load = useCallback(async () => {
     if (!token) return;
+    const currentRequest = ++requestId.current;
     setLoading(true);
     try {
       const data = await apiFetch(apiUrl(`/admin/habits/feed?${buildQuery()}`), token);
+      if (currentRequest !== requestId.current) return;
       setFeed({
         total: Number(data?.total ?? 0),
         page: Number(data?.page ?? 1),
@@ -113,21 +147,30 @@ export default function DonationsPage() {
       });
       setError(null);
     } catch (e) {
+      if (currentRequest !== requestId.current) return;
+      setFeed({ total: 0, page: 1, limit: PAGE_SIZE, results: [] });
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, group, category, dateFrom, dateTo, locale]);
+  }, [token, studyId, page, group, category, dateFrom, dateTo, locale]);
 
   useEffect(() => {
+    const generation = requestId;
     load();
+    return () => {
+      generation.current++;
+    };
   }, [load]);
 
-  async function handleExport() {
+  async function handleExport(format: "csv" | "zip") {
     if (!token) return;
+    setExporting(true);
+    setError(null);
     try {
-      const params = new URLSearchParams({ format: "csv", lang: locale });
+      const params = new URLSearchParams({ format, lang: locale });
+      if (studyId) params.set("studyId", studyId);
       if (group) params.set("group", group);
       if (category) params.set("category", category);
       if (dateFrom) params.set("dateFrom", dateFrom);
@@ -140,16 +183,23 @@ export default function DonationsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `habit-donations-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `habit-donations-${new Date().toISOString().slice(0, 10)}.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("exportFailed"));
+    } finally {
+      setExporting(false);
     }
   }
 
+  const selectedStudy = studies.find((s) => s.id === studyId);
+  const canExport =
+    session?.roles?.includes("admin") ||
+    (studyId ? selectedStudy?.canExport : studies.length > 0 && studies.every((s) => s.canExport));
+  const groups = [...new Set((selectedStudy ? [selectedStudy] : studies).flatMap((s) => s.groups))];
   const totalPages = Math.max(1, Math.ceil(feed.total / PAGE_SIZE));
 
   return (
@@ -159,13 +209,55 @@ export default function DonationsPage() {
           <h1 className={styles.title}>{t("title")}</h1>
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
-        <button className={styles.addButton} onClick={handleExport}>
-          {t("exportCsv")}
-        </button>
       </div>
 
+      <section className={local.downloadPanel} aria-label={t("downloadTitle")}>
+        <div>
+          <h2>{t("downloadTitle")}</h2>
+          <p>{t("downloadHelp")}</p>
+          {!canExport && <p>{t("exportPermission")}</p>}
+        </div>
+        <div className={local.downloadActions}>
+          <button
+            className={styles.secondaryButton}
+            disabled={exporting || !canExport}
+            onClick={() => handleExport("csv")}
+          >
+            <FileDown size={18} aria-hidden="true" />
+            {t("exportCsv")}
+          </button>
+          <button
+            className={styles.addButton}
+            disabled={exporting || !canExport}
+            onClick={() => handleExport("zip")}
+          >
+            <Download size={18} aria-hidden="true" />
+            {t(exporting ? "preparing" : "downloadZip")}
+          </button>
+        </div>
+      </section>
       <div className={styles.filters}>
-        <div className={styles.filterGroup}>
+        <label className={styles.filterGroup}>
+          <span className={styles.filterLabel}>{t("studyLabel")}</span>
+          <select
+            className={styles.select}
+            value={studyId}
+            onChange={(e) => {
+              setPage(1);
+              setStudyId(e.target.value);
+              setGroup("");
+              setCategory("");
+            }}
+          >
+            <option value="">{t("allStudies")}</option>
+            {studies.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("groupLabel")}</span>
           <select
             className={styles.select}
@@ -176,13 +268,14 @@ export default function DonationsPage() {
             }}
           >
             <option value="">{t("filterAll")}</option>
-            <option value="G1">G1</option>
-            <option value="G2">G2</option>
-            <option value="G3">G3</option>
-            <option value="G4">G4</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
           </select>
-        </div>
-        <div className={styles.filterGroup}>
+        </label>
+        <label className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("categoryLabel")}</span>
           <select
             className={styles.select}
@@ -199,8 +292,8 @@ export default function DonationsPage() {
               </option>
             ))}
           </select>
-        </div>
-        <div className={styles.filterGroup}>
+        </label>
+        <label className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("fromLabel")}</span>
           <input
             type="date"
@@ -211,8 +304,8 @@ export default function DonationsPage() {
               setDateFrom(e.target.value);
             }}
           />
-        </div>
-        <div className={styles.filterGroup}>
+        </label>
+        <label className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("toLabel")}</span>
           <input
             type="date"
@@ -223,7 +316,20 @@ export default function DonationsPage() {
               setDateTo(e.target.value);
             }}
           />
-        </div>
+        </label>
+        <button
+          className={styles.secondaryButton}
+          onClick={() => {
+            setPage(1);
+            setStudyId("");
+            setGroup("");
+            setCategory("");
+            setDateFrom("");
+            setDateTo("");
+          }}
+        >
+          {t("resetFilters")}
+        </button>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
@@ -235,6 +341,7 @@ export default function DonationsPage() {
               <tr>
                 <th>{t("habitHeader")}</th>
                 <th>{t("categoryLabel")}</th>
+                <th>{t("studyLabel")}</th>
                 <th>{t("groupLabel")}</th>
                 <th>{t("participantHeader")}</th>
                 <th>{t("donatedHeader")}</th>
@@ -243,7 +350,7 @@ export default function DonationsPage() {
             <tbody>
               {Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className={styles.skeletonRow}>
-                  {Array.from({ length: 5 }).map((__, j) => (
+                  {Array.from({ length: 6 }).map((__, j) => (
                     <td key={j}>
                       <span className={styles.skeletonBar} style={{ width: "80%" }} />
                     </td>
@@ -261,6 +368,7 @@ export default function DonationsPage() {
                 <tr>
                   <th>{t("habitHeader")}</th>
                   <th>{t("categoryLabel")}</th>
+                  <th>{t("studyLabel")}</th>
                   <th>{t("groupLabel")}</th>
                   <th>{t("participantHeader")}</th>
                   <th>{t("donatedHeader")}</th>
@@ -273,8 +381,15 @@ export default function DonationsPage() {
                     className={styles.clickableRow}
                     onClick={() => setSelectedUuid(d.id)}
                   >
-                    <td>{d.habitName || "—"}</td>
+                    <td>
+                      <button className={local.habitButton} onClick={() => setSelectedUuid(d.id)}>
+                        {d.habitName || "—"}
+                      </button>
+                    </td>
                     <td>{d.category ? <span className={styles.badge}>{d.category}</span> : "—"}</td>
+                    <td>
+                      {studies.find((s) => s.id === d.studyId)?.name ?? d.studyId ?? t("noStudy")}
+                    </td>
                     <td>{d.group ?? "—"}</td>
                     <td>
                       <span className={styles.code}>{d.participantId || "—"}</span>
@@ -285,7 +400,7 @@ export default function DonationsPage() {
                 {feed.results.length === 0 && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       style={{ textAlign: "center", padding: "2rem" }}
                       className={styles.muted}
                     >
@@ -323,6 +438,13 @@ export default function DonationsPage() {
         <DonationDetailModal
           uuid={selectedUuid}
           token={token}
+          canExport={
+            session?.roles?.includes("admin") ||
+            studies.some(
+              (s) =>
+                s.id === feed.results.find((d) => d.id === selectedUuid)?.studyId && s.canExport
+            )
+          }
           onClose={() => setSelectedUuid(null)}
         />
       )}

@@ -1,4 +1,6 @@
 import express from 'express';
+import { isPrivileged } from '../../middleware/roles.js';
+import { checkStudyAccess } from '../../middleware/requireStudyAccess.js';
 import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../../utils/getDb.js';
 import { requireRole } from '../../middleware/requireRole.js';
@@ -6,7 +8,6 @@ import { ROLES } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 import { COLLECTION as MEMBERSHIPS } from '../../models/studyMembership.js';
 import { COLLECTION as STUDIES } from '../../models/study.js';
-import { resolveIdentityConfig } from '../../services/identityConfig.js';
 
 const log = logger.child({ module: 'studyMembersRouter' });
 
@@ -41,6 +42,8 @@ function validateMember(member) {
   }
   if (!ROLE_VALUES.includes(role)) return 'invalid_role';
   if (!SCOPE_VALUES.includes(scope)) return 'invalid_scope';
+  if (member.canManage !== undefined && typeof member.canManage !== 'boolean')
+    return 'invalid_management_permission';
   return null;
 }
 
@@ -51,6 +54,7 @@ function shapeMember(m) {
     username: m.username ?? null,
     role: m.role,
     scope: m.scope,
+    canManage: m.role === 'lead' || m.canManage === true,
     createdAt: m.createdAt,
     createdBy: m.createdBy ?? null,
   };
@@ -59,9 +63,8 @@ function shapeMember(m) {
 /**
  * Per-study researcher membership.
  *
- * Admin-only. A `lead` is a label for the person running the study, not a
- * capability: it does not let them manage the member list, because deciding
- * who may read identifiable-adjacent research data is an operator decision.
+ * Admins and study leads manage membership. Leads can add existing researcher
+ * accounts, but cannot promote/demote leads or grant export beyond their own scope.
  *
  * Every grant and revocation records WHO was affected and at WHAT scope in the
  * admin audit log, not merely which study was touched. That detail is the
@@ -71,6 +74,66 @@ function shapeMember(m) {
 export function createStudyMembersRouter({ db, keycloak } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  async function leadOnly(req, res, next) {
+    if (isPrivileged(req.user)) return next();
+    try {
+      const result = await checkStudyAccess({
+        db: await getDb(),
+        user: req.user,
+        studyId: req.params.id,
+        requireLead: true,
+      });
+      if (!result.ok) return res.status(result.status).json(result.body);
+      req.memberAccess = result;
+      next();
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  /**
+   * @swagger
+   * /admin/studies/{id}/members/search:
+   *   get:
+   *     summary: Find existing researcher accounts to add to a study
+   *     tags: [Admin]
+   *     security: [{ bearerAuth: [] }]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *       - in: query
+   *         name: q
+   *         schema: { type: string, minLength: 2 }
+   *     responses:
+   *       200: { description: Matching researcher IDs and usernames only }
+   *       403: { description: Requires study lead or operator }
+   */
+  router.get('/studies/:id/members/search', leadOnly, async (req, res) => {
+    try {
+      const q = String(req.query.q ?? '')
+        .trim()
+        .toLowerCase();
+      if (q.length < 2) return res.json({ users: [] });
+      // Only researcher accounts provisioned by the operator, never participant accounts.
+      const lists = await Promise.all(
+        [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER].map((role) =>
+          keycloak.listUsersByRole(role)
+        )
+      );
+      const users = [...new Map(lists.flat().map((u) => [u.id, u])).values()]
+        .filter(
+          (u) => u.enabled !== false && u.username?.toLowerCase().includes(q)
+        )
+        .slice(0, 25)
+        .map((u) => ({ id: u.id, username: u.username, email: null }));
+      res.json({ users });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   /** Resolve the study id, or send the response and return null. */
   async function studyFor(req, res) {
@@ -138,40 +201,35 @@ export function createStudyMembersRouter({ db, keycloak } = {}) {
    *       403:
    *         description: Caller does not have admin role
    */
-  router.get(
-    '/studies/:id/members',
-    requireRole(ROLES.ADMIN),
-    async (req, res) => {
-      try {
-        const ctx = await studyFor(req, res);
-        if (!ctx) return;
+  router.get('/studies/:id/members', leadOnly, async (req, res) => {
+    try {
+      const ctx = await studyFor(req, res);
+      if (!ctx) return;
 
-        const { limit, skip } = parsePaging(req.query);
-        const collection = ctx.database.collection(MEMBERSHIPS);
-        const [members, total] = await Promise.all([
-          collection
-            .find({ studyId: ctx.oid })
-            .sort({ createdAt: 1 })
-            .skip(skip)
-            .limit(limit)
-            .toArray(),
-          collection.countDocuments({ studyId: ctx.oid }),
-        ]);
+      const { limit, skip } = parsePaging(req.query);
+      const collection = ctx.database.collection(MEMBERSHIPS);
+      const [members, total] = await Promise.all([
+        collection
+          .find({ studyId: ctx.oid })
+          .sort({ createdAt: 1 })
+          .skip(skip)
+          .limit(limit)
+          .toArray(),
+        collection.countDocuments({ studyId: ctx.oid }),
+      ]);
 
-        res.json({
-          enforced:
-            resolveIdentityConfig(ctx.study).researcherScoping === 'scoped',
-          total,
-          limit,
-          skip,
-          members: members.map(shapeMember),
-        });
-      } catch (err) {
-        log.error({ err }, 'failed to list study members');
-        res.status(500).json({ error: 'Internal server error' });
-      }
+      res.json({
+        enforced: true,
+        total,
+        limit,
+        skip,
+        members: members.map(shapeMember),
+      });
+    } catch (err) {
+      log.error({ err }, 'failed to list study members');
+      res.status(500).json({ error: 'Internal server error' });
     }
-  );
+  });
 
   /**
    * @swagger
@@ -274,101 +332,132 @@ export function createStudyMembersRouter({ db, keycloak } = {}) {
    *       400:
    *         description: Invalid role, scope or user id, or an id nobody holds
    */
-  router.post(
-    '/studies/:id/members',
-    requireRole(ROLES.ADMIN),
-    async (req, res) => {
-      const body = req.body ?? {};
-      const incoming = Array.isArray(body.members) ? body.members : [body];
+  router.post('/studies/:id/members', leadOnly, async (req, res) => {
+    const body = req.body ?? {};
+    const incoming = Array.isArray(body.members) ? body.members : [body];
 
-      if (incoming.length === 0) {
-        return res.status(400).json({ error: 'no_members' });
-      }
-      if (incoming.length > MAX_BULK) {
-        return res
-          .status(400)
-          .json({ error: 'too_many_members', max: MAX_BULK });
-      }
+    if (incoming.length === 0) {
+      return res.status(400).json({ error: 'no_members' });
+    }
+    if (incoming.length > MAX_BULK) {
+      return res.status(400).json({ error: 'too_many_members', max: MAX_BULK });
+    }
 
-      for (const [index, member] of incoming.entries()) {
-        const problem = validateMember(member);
-        if (problem) {
-          return res.status(400).json({ error: problem, index });
-        }
-      }
-
-      try {
-        const ctx = await studyFor(req, res);
-        if (!ctx) return;
-
-        // Resolve every id before writing any of them, so a bad id in the
-        // middle of a batch cannot leave half the grants applied.
-        const resolved = [];
-        for (const [index, member] of incoming.entries()) {
-          const userId = member.userId.trim();
-          let keycloakUsername;
-          try {
-            keycloakUsername = await resolveUsername(userId);
-          } catch (err) {
-            if (err.code === 'unknown_user') {
-              return res
-                .status(400)
-                .json({ error: 'unknown_user', index, userId });
-            }
-            throw err;
-          }
-          resolved.push({
-            userId,
-            // Keycloak is authoritative when it answered; the caller-supplied
-            // label is only a fallback for the no-client case.
-            username:
-              keycloakUsername ??
-              (typeof member.username === 'string'
-                ? member.username.trim() || null
-                : null),
-            role: member.role,
-            scope: member.scope,
-          });
-        }
-
-        await ctx.database.collection(MEMBERSHIPS).bulkWrite(
-          resolved.map((m) => ({
-            updateOne: {
-              filter: { userId: m.userId, studyId: ctx.oid },
-              update: {
-                $set: {
-                  username: m.username,
-                  role: m.role,
-                  scope: m.scope,
-                },
-                $setOnInsert: {
-                  userId: m.userId,
-                  studyId: ctx.oid,
-                  createdAt: new Date(),
-                  createdBy: req.user?.sub ?? null,
-                },
-              },
-              upsert: true,
-            },
-          }))
-        );
-
-        res.locals.auditAction = 'grant_study_membership';
-        res.locals.auditResourceType = 'study';
-        res.locals.auditResourceId = req.params.id;
-        res.locals.auditDetail = resolved
-          .map(
-            (m) =>
-              `${m.username ?? m.userId} (${m.userId}) as ${m.role}/${m.scope}`
-          )
-          .join('; ');
-        res.json({ ok: true, granted: resolved.length });
-      } catch (err) {
-        log.error({ err }, 'failed to add a study member');
-        res.status(500).json({ error: 'Internal server error' });
+    for (const [index, member] of incoming.entries()) {
+      const problem = validateMember(member);
+      if (problem) {
+        return res.status(400).json({ error: problem, index });
       }
     }
-  );
+
+    try {
+      if (!isPrivileged(req.user)) {
+        if (
+          incoming.some(
+            (m) =>
+              m.role === 'lead' ||
+              (m.scope === 'export' &&
+                req.memberAccess.membership.scope !== 'export')
+          )
+        )
+          return res.status(403).json({
+            error: 'Cannot grant lead or permissions beyond your own access',
+          });
+        const collection = (await getDb()).collection(MEMBERSHIPS);
+        for (const member of incoming) {
+          const existing = await collection.findOne({
+            studyId: new ObjectId(req.params.id),
+            userId: member.userId?.trim(),
+          });
+          if (existing?.role === 'lead')
+            return res
+              .status(403)
+              .json({ error: 'Only the operator can change a study lead' });
+        }
+      }
+      const ctx = await studyFor(req, res);
+      if (!ctx) return;
+
+      // Resolve every id before writing any of them, so a bad id in the
+      // middle of a batch cannot leave half the grants applied.
+      const resolved = [];
+      for (const [index, member] of incoming.entries()) {
+        const userId = member.userId.trim();
+        if (!isPrivileged(req.user)) {
+          const lists = await Promise.all(
+            [ROLES.RESEARCHER, ROLES.STUDY_RESEARCHER].map((role) =>
+              keycloak.listUsersByRole(role)
+            )
+          );
+          if (!lists.flat().some((u) => u.id === userId && u.enabled !== false))
+            return res
+              .status(400)
+              .json({ error: 'Select an existing researcher account' });
+        }
+        let keycloakUsername;
+        try {
+          keycloakUsername = await resolveUsername(userId);
+        } catch (err) {
+          if (err.code === 'unknown_user') {
+            return res
+              .status(400)
+              .json({ error: 'unknown_user', index, userId });
+          }
+          throw err;
+        }
+        resolved.push({
+          userId,
+          // Keycloak is authoritative when it answered; the caller-supplied
+          // label is only a fallback for the no-client case.
+          username:
+            keycloakUsername ??
+            (typeof member.username === 'string'
+              ? member.username.trim() || null
+              : null),
+          role: member.role,
+          scope: member.scope,
+          canManage: member.canManage === true,
+        });
+      }
+
+      await ctx.database.collection(MEMBERSHIPS).bulkWrite(
+        resolved.map((m) => ({
+          updateOne: {
+            filter: { userId: m.userId, studyId: ctx.oid },
+            update: {
+              $set: {
+                username: m.username,
+                role: m.role,
+                scope: m.scope,
+                canManage: m.role === 'lead' || m.canManage === true,
+              },
+              $setOnInsert: {
+                userId: m.userId,
+                studyId: ctx.oid,
+                createdAt: new Date(),
+                createdBy: req.user?.sub ?? null,
+              },
+            },
+            upsert: true,
+          },
+        }))
+      );
+
+      res.locals.auditAction = 'grant_study_membership';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = req.params.id;
+      res.locals.auditDetail = resolved
+        .map(
+          (m) =>
+            `${m.username ?? m.userId} (${m.userId}) as ${m.role}/${m.scope}; management=${m.role === 'lead' || m.canManage === true}`
+        )
+        .join('; ');
+      res.json({ ok: true, granted: resolved.length });
+    } catch (err) {
+      log.error({ err }, 'failed to add a study member');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   /**
    * @swagger
@@ -391,39 +480,39 @@ export function createStudyMembersRouter({ db, keycloak } = {}) {
    *       200:
    *         description: Removed, or there was nothing to remove
    */
-  router.delete(
-    '/studies/:id/members/:userId',
-    requireRole(ROLES.ADMIN),
-    async (req, res) => {
-      try {
-        const ctx = await studyFor(req, res);
-        if (!ctx) return;
+  router.delete('/studies/:id/members/:userId', leadOnly, async (req, res) => {
+    try {
+      const ctx = await studyFor(req, res);
+      if (!ctx) return;
 
-        const collection = ctx.database.collection(MEMBERSHIPS);
-        // Read first, so the audit entry can name what was actually revoked.
-        // After the delete there is nothing left to describe.
-        const existing = await collection.findOne({
-          userId: req.params.userId,
-          studyId: ctx.oid,
-        });
-        const result = await collection.deleteOne({
-          userId: req.params.userId,
-          studyId: ctx.oid,
-        });
+      const collection = ctx.database.collection(MEMBERSHIPS);
+      // Read first, so the audit entry can name what was actually revoked.
+      // After the delete there is nothing left to describe.
+      const existing = await collection.findOne({
+        userId: req.params.userId,
+        studyId: ctx.oid,
+      });
+      if (!isPrivileged(req.user) && existing?.role === 'lead')
+        return res
+          .status(403)
+          .json({ error: 'Only the operator can remove a study lead' });
+      const result = await collection.deleteOne({
+        userId: req.params.userId,
+        studyId: ctx.oid,
+      });
 
-        res.locals.auditAction = 'revoke_study_membership';
-        res.locals.auditResourceType = 'study';
-        res.locals.auditResourceId = req.params.id;
-        res.locals.auditDetail = existing
-          ? `${existing.username ?? existing.userId} (${existing.userId}) had ${existing.role}/${existing.scope}`
-          : `${req.params.userId} (no membership to revoke)`;
-        res.json({ removed: result.deletedCount > 0 });
-      } catch (err) {
-        log.error({ err }, 'failed to remove a study member');
-        res.status(500).json({ error: 'Internal server error' });
-      }
+      res.locals.auditAction = 'revoke_study_membership';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = req.params.id;
+      res.locals.auditDetail = existing
+        ? `${existing.username ?? existing.userId} (${existing.userId}) had ${existing.role}/${existing.scope}`
+        : `${req.params.userId} (no membership to revoke)`;
+      res.json({ removed: result.deletedCount > 0 });
+    } catch (err) {
+      log.error({ err }, 'failed to remove a study member');
+      res.status(500).json({ error: 'Internal server error' });
     }
-  );
+  });
 
   return router;
 }

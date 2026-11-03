@@ -112,3 +112,23 @@ describe("StudiesPage — researcher roles", () => {
     expect(await screen.findByText(/activity type catalog/i)).toBeInTheDocument();
   });
 });
+
+it.each(["researcher", "study-researcher"])(
+  "lets %s start a new study while keeping infrastructure settings hidden",
+  async (role) => {
+    mockRoles = [role];
+    const user = userEvent.setup();
+    render(<StudiesPage />);
+    await user.click(screen.getByRole("button", { name: /new study/i }));
+    expect(screen.getAllByText(/new study/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /^identity$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^knowledge/i })).not.toBeInTheDocument();
+  }
+);
+
+it("shows a read-only collaborator disabled study settings", async () => {
+  mockRoles = ["researcher"];
+  await openTab(/^details$/i);
+  expect(screen.getByText(/read-only access/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+});

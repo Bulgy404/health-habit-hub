@@ -66,6 +66,10 @@ export interface StudySummary {
   name: string;
   description: string;
   isActive: boolean;
+  recruitmentOpen?: boolean;
+  canManage?: boolean;
+  canExport?: boolean;
+  isLead?: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
   /**
@@ -102,8 +106,17 @@ export interface StudySummary {
 const API_BASE = apiUrl("/admin/studies");
 
 async function fetchStudies(token: string): Promise<StudySummary[]> {
-  const data = await apiFetch<StudySummary[] | { studies?: StudySummary[] }>(API_BASE, token);
-  return Array.isArray(data) ? data : (data.studies ?? []);
+  const all: StudySummary[] = [];
+  for (let page = 1; ; page++) {
+    const data = await apiFetch<StudySummary[] | { studies?: StudySummary[]; total?: number }>(
+      `${API_BASE}?page=${page}&limit=100`,
+      token
+    );
+    const batch = Array.isArray(data) ? data : (data.studies ?? []);
+    all.push(...batch);
+    if (Array.isArray(data) || all.length >= (data.total ?? all.length) || !batch.length)
+      return all;
+  }
 }
 
 /**

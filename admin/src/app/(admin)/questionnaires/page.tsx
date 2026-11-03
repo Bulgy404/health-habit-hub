@@ -10,6 +10,8 @@ import { ToggleSwitch } from "@/components/toggle-switch";
 import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
+import { useResourceStudy } from "@/lib/useResourceStudy";
+import { ResourceStudySelect } from "@/components/resource-study-select";
 import { useResearcherGuard } from "@/lib/useResearcherGuard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -44,6 +46,8 @@ interface Question {
 
 interface QuestionnaireSummary {
   id: string;
+  studyId?: string | null;
+  canEdit?: boolean;
   slug: string;
   title: LocaleText;
   description: LocaleText;
@@ -272,11 +276,13 @@ function QuestionCard({
 // ── Form modal (create / edit custom) ─────────────────────────────────────────
 
 function QuestionnaireModal({
+  studyId,
   initial,
   token,
   onClose,
   onSaved,
 }: {
+  studyId?: string;
   initial: QuestionnaireDetail | null;
   token: string;
   onClose: () => void;
@@ -373,7 +379,7 @@ function QuestionnaireModal({
           body: JSON.stringify(payload),
         });
       } else {
-        await apiFetch(API_BASE, token, {
+        await apiFetch(`${API_BASE}${studyId ? `?studyId=${studyId}` : ""}`, token, {
           method: "POST",
           body: JSON.stringify(payload),
         });
@@ -716,8 +722,15 @@ export default function QuestionnairesPage() {
   const t = useTranslations("questionnaires");
   const tc = useTranslations("common");
 
+  const resourceScope = useResourceStudy(token);
+  const tw = useTranslations("researchWorkspace");
   const [tab, setTab] = useState<Tab>("library");
-  const { questionnaires, loading, error, refetch: fetchList } = useQuestionnairesData(token);
+  const {
+    questionnaires,
+    loading,
+    error,
+    refetch: fetchList,
+  } = useQuestionnairesData(token, resourceScope.studyId);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<QuestionnaireDetail | null>(null);
@@ -765,6 +778,17 @@ export default function QuestionnairesPage() {
       setModalOpen(true);
     } catch {
       setActionError(t("loadDetailsFailed"));
+    }
+  }
+
+  async function handleCopy(q: QuestionnaireSummary) {
+    setActionError("");
+    try {
+      await apiFetch(`${API_BASE}/${q.id}/copy${resourceScope.query}`, token, { method: "POST" });
+      setTab("custom");
+      await fetchList();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : t("saveFailed"));
     }
   }
 
@@ -817,12 +841,17 @@ export default function QuestionnairesPage() {
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         {tab === "custom" && (
-          <button className={styles.addButton} onClick={handleOpenCreate}>
+          <button
+            className={styles.addButton}
+            disabled={!resourceScope.canManage}
+            onClick={handleOpenCreate}
+          >
             {t("addQuestionnaireButton")}
           </button>
         )}
       </div>
 
+      <ResourceStudySelect scope={resourceScope} />
       {/* Tabs */}
       <div className={styles.tabs}>
         <button
@@ -860,6 +889,7 @@ export default function QuestionnairesPage() {
                 <thead>
                   <tr>
                     <th>{t("titleHeader")}</th>
+                    <th>{tw("study")}</th>
                     <th>{t("slugHeader")}</th>
                     <th>{t("scopeHeader")}</th>
                     <th>{t("languagesHeader")}</th>
@@ -871,7 +901,7 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {libraryQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className={styles.emptyState}>{t("noLibraryQuestionnaires")}</div>
                       </td>
                     </tr>
@@ -880,10 +910,20 @@ export default function QuestionnairesPage() {
                       <tr key={q.id}>
                         <td>{previewText(q.title)}</td>
                         <td>
+                          {q.studyId
+                            ? (resourceScope.studies.find((s) => s.id === q.studyId)?.name ??
+                              q.studyId)
+                            : tw("shared")}
+                        </td>
+                        <td>
                           <span className={styles.slugCell}>{q.slug}</span>
                         </td>
                         <td>
-                          {q.scope === "habit" ? t("scopeHabitOption") : q.scope === "donation" ? t("scopeDonationOption") : t("scopeStudyOption")}
+                          {q.scope === "habit"
+                            ? t("scopeHabitOption")
+                            : q.scope === "donation"
+                              ? t("scopeDonationOption")
+                              : t("scopeStudyOption")}
                         </td>
                         <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                         <td>{q.questionCount}</td>
@@ -898,6 +938,13 @@ export default function QuestionnairesPage() {
                               }}
                             >
                               {t("preview")}
+                            </button>
+                            <button
+                              className={styles.actionBtn}
+                              disabled={!resourceScope.studyId || !resourceScope.canManage}
+                              onClick={() => handleCopy(q)}
+                            >
+                              {tw("copyToStudy")}
                             </button>
                           </div>
                         </td>
@@ -916,6 +963,7 @@ export default function QuestionnairesPage() {
                 <thead>
                   <tr>
                     <th>{t("titleHeader")}</th>
+                    <th>{tw("study")}</th>
                     <th>{t("slugHeader")}</th>
                     <th>{tc("status")}</th>
                     <th>{t("scopeHeader")}</th>
@@ -929,7 +977,7 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {customQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={9}>
+                      <td colSpan={10}>
                         <div className={styles.emptyState}>{t("noCustomQuestionnaires")}</div>
                       </td>
                     </tr>
@@ -939,6 +987,12 @@ export default function QuestionnairesPage() {
                       return (
                         <tr key={q.id}>
                           <td>{previewText(q.title)}</td>
+                          <td>
+                            {q.studyId
+                              ? (resourceScope.studies.find((s) => s.id === q.studyId)?.name ??
+                                q.studyId)
+                              : tw("shared")}
+                          </td>
                           <td>
                             <span className={styles.slugCell}>{q.slug ?? "—"}</span>
                           </td>
@@ -950,7 +1004,11 @@ export default function QuestionnairesPage() {
                             </span>
                           </td>
                           <td>
-                            {q.scope === "habit" ? t("scopeHabitOption") : q.scope === "donation" ? t("scopeDonationOption") : t("scopeStudyOption")}
+                            {q.scope === "habit"
+                              ? t("scopeHabitOption")
+                              : q.scope === "donation"
+                                ? t("scopeDonationOption")
+                                : t("scopeStudyOption")}
                           </td>
                           <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                           <td>{q.questionCount}</td>
@@ -960,6 +1018,20 @@ export default function QuestionnairesPage() {
                             <div className={styles.actions}>
                               <button
                                 className={styles.actionBtn}
+                                disabled={!resourceScope.studyId || !resourceScope.canManage}
+                                onClick={() => handleCopy(q)}
+                              >
+                                {tw("copyToStudy")}
+                              </button>
+                              <button
+                                className={styles.actionBtn}
+                                onClick={() => setPreviewTarget(q)}
+                              >
+                                {t("preview")}
+                              </button>
+                              <button
+                                className={styles.actionBtn}
+                                disabled={q.canEdit === false}
                                 onClick={() => handleOpenEdit(q)}
                               >
                                 {tc("edit")}
@@ -972,7 +1044,7 @@ export default function QuestionnairesPage() {
                                     setActionError("");
                                   }
                                 }}
-                                disabled={isAssigned}
+                                disabled={isAssigned || q.canEdit === false}
                                 title={isAssigned ? t("assignedCannotDelete") : undefined}
                               >
                                 {tc("delete")}
@@ -992,6 +1064,7 @@ export default function QuestionnairesPage() {
 
       {modalOpen && (
         <QuestionnaireModal
+          studyId={resourceScope.studyId}
           initial={editTarget}
           token={token}
           onClose={handleModalClose}
