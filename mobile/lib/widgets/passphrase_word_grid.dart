@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Displays a 24-word (or any length) recovery passphrase as a numbered
 /// 3-column grid of word chips.

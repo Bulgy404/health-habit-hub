@@ -4,19 +4,19 @@
 /// GoRouter, theming, and localisation delegates.
 library;
 
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'analytics/analytics_service.dart';
-import 'l10n/app_localizations.dart';
+import 'l10n/ui_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/study_config_provider.dart';
 import 'providers/theme_provider.dart';
 import 'router/app_router.dart';
 import 'theme/app_colors.dart';
+import 'theme/legacy_ui_bridge.dart';
 
 // ---------------------------------------------------------------------------
 // Sheet/dialog shape shared by both themes — see _buildLightTheme/_buildDarkTheme
@@ -347,12 +347,14 @@ class _HhhAppState extends ConsumerState<HhhApp> {
     return MaterialApp.router(
       title: 'Health Habit Hub',
       // Duo system controls can reserve either side of the window.
-      builder: (context, child) => ColoredBox(
-        color: Theme.of(context).colorScheme.surface,
-        child: SafeArea(
-          top: false,
-          bottom: false,
-          child: child ?? const SizedBox.shrink(),
+      builder: (context, child) => LegacyUiBridge(
+        child: ColoredBox(
+          color: Theme.of(context).colorScheme.surface,
+          child: SafeArea(
+            top: false,
+            bottom: false,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
       debugShowCheckedModeBanner: false,
@@ -361,12 +363,7 @@ class _HhhAppState extends ConsumerState<HhhApp> {
       themeMode: themeMode,
       locale: locale,
       routerConfig: router,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: const [
         Locale('en'),
         Locale('de'),

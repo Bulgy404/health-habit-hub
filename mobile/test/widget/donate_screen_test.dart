@@ -6,7 +6,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +17,7 @@ import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/features/questionnaire/questionnaire_service.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/models/survey.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/show_in_graph_provider.dart';

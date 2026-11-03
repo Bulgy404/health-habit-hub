@@ -2,7 +2,7 @@
 /// praise messages that accompany a badge/tier-up notification.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Static display metadata for a badge key.
 class BadgeMeta {

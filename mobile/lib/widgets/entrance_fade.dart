@@ -4,7 +4,7 @@
 /// cards building up gradually while a request is in flight.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Fades and slides [child] in once, over [animation]'s [interval] slice.
 /// Give each item in a list its own [Interval] (e.g. `Interval(i * 0.3,

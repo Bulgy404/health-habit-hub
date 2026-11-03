@@ -2,8 +2,8 @@
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
-import 'package:flutter/cupertino.dart' show CupertinoSwitch;
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoSwitch;
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../analytics/analytics_service.dart';

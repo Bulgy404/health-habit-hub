@@ -5,7 +5,7 @@
 // regression guard for the bounded-iteration fix that keeps this
 // synchronous, main-thread simulation from janking the Explore page when a
 // dimension has many bubbles.
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/widgets/bubble_graph/bubble_graph_data.dart';
 

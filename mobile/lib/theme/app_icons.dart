@@ -7,7 +7,7 @@
 /// hardcoded hex, so the color side of the language stays unified too.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class AppIcons {
   const AppIcons._();

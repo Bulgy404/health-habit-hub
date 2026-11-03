@@ -7,8 +7,8 @@
 // request in initState (GET /profile). In the test environment this request
 // fails quickly. All tests use pumpAndSettle() to drain Dio's async timers so
 // no pending timers remain after the test.
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/models/survey.dart';

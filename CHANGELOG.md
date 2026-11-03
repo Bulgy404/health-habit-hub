@@ -154,6 +154,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Move app UI and tests to the standalone Material/Cupertino libraries and
+  Google Fonts 9, retaining the Figtree themes and Duo adaptive layouts. Use
+  matching localization delegates for all five languages and bridge legacy
+  chart themes/localizations until their upstream migration is complete.
+
 - Adapt Duo layouts to independent side safe areas, wide-window navigation,
   readable habit-list widths, and graph fitting after window resize.
 - Remove generated Gradle caches from maintained plugin folders and ignore

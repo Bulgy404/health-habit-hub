@@ -2,7 +2,7 @@
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_1_behavior.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../analytics/analytics_service.dart';

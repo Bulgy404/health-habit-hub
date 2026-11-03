@@ -1,6 +1,7 @@
+import 'package:hhh/l10n/ui_localizations.dart';
 // mobile/test/widget/srhi_form_test.dart
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
@@ -56,7 +57,7 @@ Widget _buildSubject(
       ),
     ],
     child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: SrhiFormScreen(
         intentionId: 'intent-1',

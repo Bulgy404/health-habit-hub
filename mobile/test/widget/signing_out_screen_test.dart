@@ -6,8 +6,8 @@
 // keychain making the storage deletes fail). The happy path through the
 // settings hub is covered in user_settings_screen_test.dart; this file pins
 // the failure path.
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
