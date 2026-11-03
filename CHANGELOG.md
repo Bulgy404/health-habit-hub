@@ -154,6 +154,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Adapt Duo layouts to independent side safe areas, wide-window navigation,
+  readable habit-list widths, and graph fitting after window resize.
+- Remove generated Gradle caches from maintained plugin folders and ignore
+  future copies.
+- Migrate Android to AGP 9 built-in Kotlin so updated plugins compile;
+  require Flutter 3.47 / Dart 3.13 and retain Flutter-compatible legacy AGP DSL.
+- Upgrade compatible stable Flutter dependencies, including Riverpod 3.4.3,
+  GoRouter 18.1.2, Dio 5.11.1, secure storage 11.2.0, charts 1.3.0,
+  Sentry 10.3.0, and PostHog 5.58.4. Retain the reviewed native plugin fixes;
+  Google Fonts remains on 8.2.1 until the separate Material UI migration.
+- Store generated campaigns, screenshots, videos, and PDFs in the project
+  OneDrive assets folder rather than Git. Ignore future `/output/` exports;
+  see `docs/marketing-assets.md` for the verified archive location.
+
 - iOS builds and archives now work directly in Xcode with the maintained native
   plugin fixes installed as normal project dependencies. The temporary build
   helper is optional. Disable only the quoted-framework-header style diagnostic

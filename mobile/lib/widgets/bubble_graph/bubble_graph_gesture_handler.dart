@@ -5,6 +5,8 @@
 /// bubbles can be dragged to new positions within the canvas.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
@@ -16,8 +18,13 @@ import 'bubble_graph_painter.dart';
 /// The further past the bound, the less the position follows — matches the
 /// Apple "Designing Fluid Interfaces" formula so bubbles resist leaving the
 /// canvas instead of stopping dead at the edge.
-double _rubberband(double overshoot, double dimension, [double constant = 0.55]) {
-  return (overshoot * dimension * constant) / (dimension + constant * overshoot.abs());
+double _rubberband(
+  double overshoot,
+  double dimension, [
+  double constant = 0.55,
+]) {
+  return (overshoot * dimension * constant) /
+      (dimension + constant * overshoot.abs());
 }
 
 /// A zoomable, pannable canvas that renders a list of [BubbleNode]s.
@@ -61,11 +68,14 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
   late List<Offset> _dragOffsets;
 
   late Size _canvasSize;
+  final _transformation = TransformationController();
+  Size? _viewport;
 
   /// Per-bubble momentum animations, keyed by bubble index. Two independent
   /// controllers (x, y) per bubble so the fling can decompose into
   /// independent-axis friction, matching each axis's own release velocity.
-  final Map<int, (AnimationController, AnimationController)> _flingControllers = {};
+  final Map<int, (AnimationController, AnimationController)> _flingControllers =
+      {};
 
   @override
   void initState() {
@@ -85,6 +95,7 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
       cx.dispose();
       cy.dispose();
     }
+    _transformation.dispose();
     super.dispose();
   }
 
@@ -95,6 +106,7 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
     _basePositions = result.$1;
     _canvasSize = result.$2;
     _dragOffsets = List.filled(_basePositions.length, Offset.zero);
+    _viewport = null;
   }
 
   /// Cancels any in-flight momentum fling for [index] so a fresh grab starts
@@ -123,12 +135,21 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
         if (withinBounds) return value;
         final overshoot = value < 0 ? value : value - dimension;
         final bound = value < 0 ? 0.0 : dimension;
-        return bound + _rubberband(overshoot, dimension.clamp(1.0, double.infinity));
+        return bound +
+            _rubberband(overshoot, dimension.clamp(1.0, double.infinity));
       }
 
       final resolvedAbsolute = Offset(
-        resolve(nextAbsolute.dx, delta.dx, _canvasSize.width == 0 ? r * 2 : _canvasSize.width),
-        resolve(nextAbsolute.dy, delta.dy, _canvasSize.height == 0 ? r * 2 : _canvasSize.height),
+        resolve(
+          nextAbsolute.dx,
+          delta.dx,
+          _canvasSize.width == 0 ? r * 2 : _canvasSize.width,
+        ),
+        resolve(
+          nextAbsolute.dy,
+          delta.dy,
+          _canvasSize.height == 0 ? r * 2 : _canvasSize.height,
+        ),
       );
       _dragOffsets[index] = resolvedAbsolute - base;
     });
@@ -138,7 +159,9 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
   /// moving past the release point and settles instead of stopping dead.
   /// Animates [_dragOffsets] only, same as [_onBubbleDrag].
   void _onBubbleDragEnd(int index, Offset velocity) {
-    if (velocity.distance < 80) return; // negligible flick — treat as a tap-drag
+    if (velocity.distance < 80) {
+      return; // negligible flick — treat as a tap-drag
+    }
     final base = _basePositions[index];
     final startAbsolute = base + _dragOffsets[index];
 
@@ -169,36 +192,62 @@ class BubbleCanvasWidgetState extends State<BubbleCanvasWidget>
 
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      constrained: false,
-      boundaryMargin: const EdgeInsets.all(300),
-      minScale: 0.2,
-      maxScale: 4.0,
-      child: SizedBox(
-        width: _canvasSize.width,
-        height: _canvasSize.height,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            for (int i = 0; i < widget.bubbles.length; i++)
-              Positioned(
-                // Static base position — see _basePositions' doc comment.
-                left: _basePositions[i].dx - widget.bubbles[i].radius,
-                top: _basePositions[i].dy - widget.bubbles[i].radius,
-                child: Transform.translate(
-                  offset: _dragOffsets[i],
-                  child: BubbleChipWidget(
-                    bubble: widget.bubbles[i],
-                    onTap: () => widget.onTap(widget.bubbles[i]),
-                    onDrag: (delta) => _onBubbleDrag(i, delta),
-                    onDragStart: () => _onBubbleDragStart(i),
-                    onDragEnd: (velocity) => _onBubbleDragEnd(i, velocity),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        if (size.isFinite && size != _viewport && !_canvasSize.isEmpty) {
+          _viewport = size;
+          final scale = math
+              .min(
+                1.0,
+                math.min(
+                  (size.width - 32) / _canvasSize.width,
+                  (size.height - 32) / _canvasSize.height,
                 ),
-              ),
-          ],
-        ),
-      ),
+              )
+              .clamp(0.2, 1.0);
+          _transformation.value = Matrix4.identity()
+            ..translateByDouble(
+              (size.width - _canvasSize.width * scale) / 2,
+              (size.height - _canvasSize.height * scale) / 2,
+              0,
+              1,
+            )
+            ..scaleByDouble(scale, scale, 1, 1);
+        }
+        return InteractiveViewer(
+          transformationController: _transformation,
+          constrained: false,
+          boundaryMargin: const EdgeInsets.all(300),
+          minScale: 0.2,
+          maxScale: 4.0,
+          child: SizedBox(
+            width: _canvasSize.width,
+            height: _canvasSize.height,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < widget.bubbles.length; i++)
+                  Positioned(
+                    // Static base position — see _basePositions' doc comment.
+                    left: _basePositions[i].dx - widget.bubbles[i].radius,
+                    top: _basePositions[i].dy - widget.bubbles[i].radius,
+                    child: Transform.translate(
+                      offset: _dragOffsets[i],
+                      child: BubbleChipWidget(
+                        bubble: widget.bubbles[i],
+                        onTap: () => widget.onTap(widget.bubbles[i]),
+                        onDrag: (delta) => _onBubbleDrag(i, delta),
+                        onDragStart: () => _onBubbleDragStart(i),
+                        onDragEnd: (velocity) => _onBubbleDragEnd(i, velocity),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

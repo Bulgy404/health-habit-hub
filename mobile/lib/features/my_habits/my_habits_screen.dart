@@ -86,128 +86,138 @@ class MyHabitsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(habitConfigProvider);
-          ref.invalidate(intentionsProvider);
-          ref.invalidate(dueSrhiProvider);
-          ref.invalidate(allHabitsActivityProvider);
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: ContributionGraphWidget(
-                  counts: activityAsync.value ?? const {},
-                ),
-              ),
-            ),
-            dueSrhiAsync.when(
-              data: (windows) {
-                if (windows.isEmpty) {
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                }
-                final first = windows.first;
-                final srhiItems =
-                    configAsync.value?.srhiItems ?? const <SrhiItem>[];
-                final matchedIntention = intentionsAsync.value
-                    ?.where((i) => i.id == first.intentionId)
-                    .firstOrNull;
-                final behaviorLabel = matchedIntention?.behaviorLabel ?? '';
-                return SliverToBoxAdapter(
-                  child: _SrhiPromptCard(
-                    windows: windows,
-                    srhiItems: srhiItems,
-                    behaviorLabel: behaviorLabel,
-                  ),
-                );
-              },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, _) =>
-                  const SliverToBoxAdapter(child: SizedBox.shrink()),
-            ),
-            // Only relevant once there's an actual dot to explain — a user
-            // with no habits yet has nothing on screen for this hint to
-            // point at.
-            if (intentionsAsync.value?.any((i) => i.status == 'active') ??
-                false)
-              const SliverToBoxAdapter(child: _DotLegendCard()),
-            intentionsAsync.when(
-              data: (intentions) {
-                final active = intentions
-                    .where((i) => i.status == 'active')
-                    .toList();
-                if (active.isEmpty) {
-                  final canCreate =
-                      configAsync.value?.selfHabitCreationEnabled ?? false;
-                  return SliverFillRemaining(
-                    child: EmptyState(
-                      icon: Icons.checklist_rtl,
-                      message: l10n.noHabitsYet,
-                      ctaLabel: canCreate ? l10n.newHabit : null,
-                      onCta: canCreate
-                          ? () => context.push('/habits/new/behavior')
-                          : null,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(habitConfigProvider);
+              ref.invalidate(intentionsProvider);
+              ref.invalidate(dueSrhiProvider);
+              ref.invalidate(allHabitsActivityProvider);
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: ContributionGraphWidget(
+                      counts: activityAsync.value ?? const {},
                     ),
-                  );
-                }
-                // §7.1 Habit Stacking — order stacked habits directly beneath
-                // their anchor and indent them so the "staircase" is visible.
-                final ordered = _orderWithStacks(active);
-                return SliverList.builder(
-                  itemCount: ordered.length,
-                  itemBuilder: (context, i) => _HabitCard(
-                    intention: ordered[i].intention,
-                    isStackedChild: ordered[i].isStackedChild,
-                    isLastStackedChild: ordered[i].isLastStackedChild,
                   ),
-                );
-              },
-              loading: () => const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: HabitListSkeleton(),
                 ),
-              ),
-              error: (e, _) =>
-                  SliverFillRemaining(child: Center(child: Text(e.toString()))),
-            ),
-            // Automaticity-graduation flow — habits that became self-sustained
-            // (an SRHI check confirmed strong habit strength after a silent
-            // week) are greyed out here rather than removed, with a way back.
-            intentionsAsync.when(
-              data: (intentions) {
-                final graduated = intentions
-                    .where((i) => i.isGraduated)
-                    .toList();
-                if (graduated.isEmpty) {
-                  return const SliverToBoxAdapter(child: SizedBox.shrink());
-                }
-                return SliverMainAxisGroup(
-                  slivers: [
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
-                        child: Text(
-                          'Graduated habits',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                dueSrhiAsync.when(
+                  data: (windows) {
+                    if (windows.isEmpty) {
+                      return const SliverToBoxAdapter(child: SizedBox.shrink());
+                    }
+                    final first = windows.first;
+                    final srhiItems =
+                        configAsync.value?.srhiItems ?? const <SrhiItem>[];
+                    final matchedIntention = intentionsAsync.value
+                        ?.where((i) => i.id == first.intentionId)
+                        .firstOrNull;
+                    final behaviorLabel = matchedIntention?.behaviorLabel ?? '';
+                    return SliverToBoxAdapter(
+                      child: _SrhiPromptCard(
+                        windows: windows,
+                        srhiItems: srhiItems,
+                        behaviorLabel: behaviorLabel,
                       ),
+                    );
+                  },
+                  loading: () =>
+                      const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  error: (_, _) =>
+                      const SliverToBoxAdapter(child: SizedBox.shrink()),
+                ),
+                // Only relevant once there's an actual dot to explain — a user
+                // with no habits yet has nothing on screen for this hint to
+                // point at.
+                if (intentionsAsync.value?.any((i) => i.status == 'active') ??
+                    false)
+                  const SliverToBoxAdapter(child: _DotLegendCard()),
+                intentionsAsync.when(
+                  data: (intentions) {
+                    final active = intentions
+                        .where((i) => i.status == 'active')
+                        .toList();
+                    if (active.isEmpty) {
+                      final canCreate =
+                          configAsync.value?.selfHabitCreationEnabled ?? false;
+                      return SliverFillRemaining(
+                        child: EmptyState(
+                          icon: Icons.checklist_rtl,
+                          message: l10n.noHabitsYet,
+                          ctaLabel: canCreate ? l10n.newHabit : null,
+                          onCta: canCreate
+                              ? () => context.push('/habits/new/behavior')
+                              : null,
+                        ),
+                      );
+                    }
+                    // §7.1 Habit Stacking — order stacked habits directly beneath
+                    // their anchor and indent them so the "staircase" is visible.
+                    final ordered = _orderWithStacks(active);
+                    return SliverList.builder(
+                      itemCount: ordered.length,
+                      itemBuilder: (context, i) => _HabitCard(
+                        intention: ordered[i].intention,
+                        isStackedChild: ordered[i].isStackedChild,
+                        isLastStackedChild: ordered[i].isLastStackedChild,
+                      ),
+                    );
+                  },
+                  loading: () => const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: HabitListSkeleton(),
                     ),
-                    SliverList.builder(
-                      itemCount: graduated.length,
-                      itemBuilder: (context, i) =>
-                          _GraduatedHabitCard(intention: graduated[i]),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  ),
+                  error: (e, _) => SliverFillRemaining(
+                    child: Center(child: Text(e.toString())),
+                  ),
+                ),
+                // Automaticity-graduation flow — habits that became self-sustained
+                // (an SRHI check confirmed strong habit strength after a silent
+                // week) are greyed out here rather than removed, with a way back.
+                intentionsAsync.when(
+                  data: (intentions) {
+                    final graduated = intentions
+                        .where((i) => i.isGraduated)
+                        .toList();
+                    if (graduated.isEmpty) {
+                      return const SliverToBoxAdapter(child: SizedBox.shrink());
+                    }
+                    return SliverMainAxisGroup(
+                      slivers: [
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+                            child: Text(
+                              'Graduated habits',
+                              style: TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        SliverList.builder(
+                          itemCount: graduated.length,
+                          itemBuilder: (context, i) =>
+                              _GraduatedHabitCard(intention: graduated[i]),
+                        ),
+                      ],
+                    );
+                  },
+                  loading: () =>
+                      const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  error: (_, _) =>
+                      const SliverToBoxAdapter(child: SizedBox.shrink()),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -391,8 +401,9 @@ class _HabitCard extends ConsumerWidget {
     // coloured left accent border. A quick at-a-glance signal that doesn't
     // depend on reading the label.
     final bool isQuit = intention.habitType == HabitType.quit;
-    final Color typeColor =
-        isQuit ? Colors.red.shade400 : Colors.green.shade500;
+    final Color typeColor = isQuit
+        ? Colors.red.shade400
+        : Colors.green.shade500;
 
     final card = Card(
       margin: EdgeInsets.only(
@@ -449,9 +460,7 @@ class _HabitCard extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 intention.behaviorLabel,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w700),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -462,11 +471,12 @@ class _HabitCard extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           intention.intentionStatement,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(153),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withAlpha(153),
+                              ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -519,7 +529,11 @@ class _HabitCard extends ConsumerWidget {
                                         ).textTheme.labelSmall,
                                       ),
                                       const Spacer(),
-                                      Icon(trendIcon, size: 16, color: trendColor),
+                                      Icon(
+                                        trendIcon,
+                                        size: 16,
+                                        color: trendColor,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         '${latest.toStringAsFixed(1)} / 7',
@@ -615,7 +629,9 @@ class _HabitCard extends ConsumerWidget {
                           // diagnosable instead of silently doing nothing.
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(l10n.couldNotLogToday(e.toString())),
+                              content: Text(
+                                l10n.couldNotLogToday(e.toString()),
+                              ),
                             ),
                           );
                         }
@@ -737,7 +753,8 @@ class _StackConnectorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _StackConnectorPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.continuesBelow != continuesBelow;
+      oldDelegate.color != color ||
+      oldDelegate.continuesBelow != continuesBelow;
 }
 
 /// Invalidates every provider a log change (today's checkbox, or a
@@ -928,8 +945,10 @@ class _LogCheckboxState extends State<_LogCheckbox>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, value: widget.checked ? 1 : 0);
+    _controller = AnimationController(
+      vsync: this,
+      value: widget.checked ? 1 : 0,
+    );
   }
 
   @override
@@ -979,11 +998,7 @@ class _LogCheckboxState extends State<_LogCheckbox>
                 opacity: t,
                 child: Transform.scale(
                   scale: t,
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 26,
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 26),
                 ),
               ),
             );
@@ -1103,21 +1118,22 @@ class _DotLegendCardState extends State<_DotLegendCard> {
                     _DotLegendRow(
                       color: Colors.red,
                       textColor: colors.onGreenLight,
-                      text:
-                          'Red: this habit is new, so reminders come daily.',
+                      text: 'Red: this habit is new, so reminders come daily.',
                     ),
                     const SizedBox(height: 4),
                     _DotLegendRow(
                       color: Colors.amber,
                       textColor: colors.onGreenLight,
-                      text: 'Amber: you\'re building momentum, and reminders '
+                      text:
+                          'Amber: you\'re building momentum, and reminders '
                           'are easing off.',
                     ),
                     const SizedBox(height: 4),
                     _DotLegendRow(
                       color: Colors.green,
                       textColor: colors.onGreenLight,
-                      text: 'Green: the habit is sticking, and reminders '
+                      text:
+                          'Green: the habit is sticking, and reminders '
                           'have mostly faded away.',
                     ),
                   ],
@@ -1163,10 +1179,9 @@ class _DotLegendRow extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: textColor,
-              height: 1.3,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: textColor, height: 1.3),
           ),
         ),
       ],
@@ -1209,10 +1224,7 @@ class _GraduatedHabitCard extends ConsumerWidget {
                   ),
                   Text(
                     'Graduated — this habit is fully self-sustained.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),

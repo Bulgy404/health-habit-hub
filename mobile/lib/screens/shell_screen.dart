@@ -424,53 +424,77 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
     );
     final currentVisibleIndex = matchedIndex >= 0 ? matchedIndex : 0;
 
-    return Scaffold(
-      body: widget.navigationShell,
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              width: 1,
+    void selectDestination(int visibleIndex) {
+      final tab = visibleTabs[visibleIndex];
+      if (tab.path == '/habits') {
+        ref.invalidate(dueSrhiProvider);
+        ref.invalidate(intentionsProvider);
+        ref.invalidate(allHabitsActivityProvider);
+      }
+      widget.navigationShell.goBranch(
+        tab.branch,
+        initialLocation: tab.branch == widget.navigationShell.currentIndex,
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 840) {
+          return Scaffold(
+            body: Row(
+              children: [
+                SafeArea(
+                  child: NavigationRail(
+                    selectedIndex: currentVisibleIndex,
+                    labelType: NavigationRailLabelType.all,
+                    onDestinationSelected: selectDestination,
+                    destinations: visibleTabs
+                        .map(
+                          (tab) => NavigationRailDestination(
+                            icon: Icon(tab.icon),
+                            label: Text(tab.label),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(child: widget.navigationShell),
+              ],
+            ),
+          );
+        }
+        return Scaffold(
+          body: widget.navigationShell,
+          bottomNavigationBar: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: DefaultTextStyle.merge(
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              child: NavigationBar(
+                selectedIndex: currentVisibleIndex,
+                onDestinationSelected: selectDestination,
+                destinations: visibleTabs
+                    .map(
+                      (tab) => NavigationDestination(
+                        icon: Icon(tab.icon),
+                        label: tab.label,
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ),
-        ),
-        child: DefaultTextStyle.merge(
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          child: NavigationBar(
-            selectedIndex: currentVisibleIndex,
-            onDestinationSelected: (visibleIndex) {
-              final branchIndex = visibleTabs[visibleIndex].branch;
-              // The My Habits branch (StatefulShellBranch keeps its Navigator
-              // and provider state alive across tab switches, so a weekly
-              // SRHI check-in that became due while another tab was open —
-              // or during this same session — otherwise only ever appears
-              // after a manual pull-to-refresh). Cheap to refetch and safe to
-              // invalidate even when nothing changed.
-              if (visibleTabs[visibleIndex].path == '/habits') {
-                ref.invalidate(dueSrhiProvider);
-                ref.invalidate(intentionsProvider);
-                ref.invalidate(allHabitsActivityProvider);
-              }
-              widget.navigationShell.goBranch(
-                branchIndex,
-                initialLocation:
-                    branchIndex == widget.navigationShell.currentIndex,
-              );
-            },
-            destinations: visibleTabs
-                .map(
-                  (tab) => NavigationDestination(
-                    icon: Icon(tab.icon),
-                    label: tab.label,
-                  ),
-                )
-                .toList(),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

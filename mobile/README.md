@@ -107,3 +107,15 @@ header imports. This setting applies to that one diagnostic; it does not change
 header resolution or turn off other compiler warnings. After updating the
 project, use **Product → Clean Build Folder** before archiving in Xcode to
 replace the old archive diagnostics.
+
+## Dependency maintenance (November 2026)
+
+Use Flutter 3.47+ / Dart 3.13+. Android uses AGP 9 built-in Kotlin
+(`android.builtInKotlin=true`); the app no longer applies the separate Kotlin
+Android plugin. Keep `android.newDsl=false` until Flutter supports AGP's new
+extension types. These switches are independent.
+
+Compatible stable package releases are recorded in `pubspec.lock`. Google Fonts
+is intentionally on 8.2.1: version 9 changes its Material/Cupertino types and
+requires the separate app-wide UI library migration. See `third_party/README.md`
+for the native fixes that remain necessary in current upstream plugin sources.

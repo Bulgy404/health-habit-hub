@@ -20,6 +20,8 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.0.1" apply false
+    // Supply a Kotlin compiler above AGP 9.0's bundled 2.2.10 without
+    // applying the legacy Android Kotlin plugin to any module.
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
 }
 
