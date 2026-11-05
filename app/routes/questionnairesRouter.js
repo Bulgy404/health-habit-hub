@@ -132,11 +132,26 @@ export function createQuestionnairesRouter({ db } = {}) {
    *                       questionnaireTitle: { type: string }
    *                       occurrence: { type: integer }
    *                       scheduledFor: { type: string, format: date-time }
+   *                       scheduledDate: { type: string, format: date }
+   *                       closesAt: { type: string, format: date-time, nullable: true }
+   *                       timeZone: { type: string }
+   *                       isLate: { type: boolean }
    *                       isDue: { type: boolean }
+   *                 completedQuestionnaires:
+   *                   type: array
+   *                   description: Scheduled check-ins for today that have already been completed; never used for reminders.
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       windowId: { type: string }
+   *                       questionnaireSlug: { type: string }
+   *                       questionnaireTitle: { type: string }
+   *                       scheduledDate: { type: string, format: date }
+   *                       isCompleted: { type: boolean }
    *                       intentionId:
    *                         type: string
    *                         nullable: true
-   *                         description: Present for habit-scoped items (e.g. `questionnaireSlug: "srhi"`)
+   *                         description: Present for habit-scoped items such as SRHI
    *                 studyEndDate:
    *                   type: string
    *                   format: date-time

@@ -48,6 +48,7 @@ interface DeviceInfo {
 }
 
 interface QuestionnaireWindow {
+  status?: string;
   questionnaireSlug: string;
   occurrence: number;
   scheduledFor: string | null;
@@ -617,6 +618,7 @@ export default function ParticipantsPage() {
           dismissed: Number(data?.recommendations?.dismissed ?? 0),
         },
         questionnaires: (data?.questionnaires ?? []).map((q: Record<string, unknown>) => ({
+          status: String(q.status ?? ""),
           questionnaireSlug: String(q.questionnaireSlug ?? ""),
           occurrence: Number(q.occurrence ?? 0),
           scheduledFor: q.scheduledFor ? String(q.scheduledFor) : null,
@@ -1295,7 +1297,7 @@ export default function ParticipantsPage() {
                               </button>
                             </>
                           ) : (
-                            <span className={styles.muted}>{t("pending")}</span>
+                            <span className={styles.muted}>{t(q.status === "missed" ? "missed" : "pending")}</span>
                           )}
                         </span>
                       </div>

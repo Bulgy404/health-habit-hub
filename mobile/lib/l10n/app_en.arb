@@ -1093,8 +1093,12 @@
   "@srhiChartTooltip": {
     "description": "Tooltip shown when tapping a point on the SRHI chart",
     "placeholders": {
-      "week": { "type": "int" },
-      "score": { "type": "String" }
+      "week": {
+        "type": "int"
+      },
+      "score": {
+        "type": "String"
+      }
     }
   },
   "automaticityTitle": "Automaticity",
@@ -1117,8 +1121,12 @@
   "@automaticityChartTooltip": {
     "description": "Tooltip shown when tapping a point on the automaticity chart",
     "placeholders": {
-      "week": { "type": "int" },
-      "percent": { "type": "String" }
+      "week": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "String"
+      }
     }
   },
   "srhiExplanationTitle": "What's SRHI?",
@@ -2382,5 +2390,54 @@
   "achievementsLockedTag": "Locked",
   "@achievementsLockedTag": {
     "description": "Small tag shown on a not-yet-earned badge tile"
-  }
+  },
+  "questionnaireDatedTitle": "{title} — {date}",
+  "questionnaireScheduledFor": "Scheduled for {date}",
+  "questionnaireAnswerForDate": "Please answer about {date}. Keep the reference periods stated in each question.",
+  "questionnaireStartCheckIn": "Start check-in",
+  "questionnaireDeadline": "Submit before {deadline}",
+  "questionnairePreviousCheckIns": "Previous check-ins · {count} outstanding",
+  "@questionnaireDatedTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@questionnaireScheduledFor": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@questionnaireAnswerForDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@questionnaireStartCheckIn": {
+    "placeholders": {}
+  },
+  "@questionnaireDeadline": {
+    "placeholders": {
+      "deadline": {
+        "type": "String"
+      }
+    }
+  },
+  "@questionnairePreviousCheckIns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "questionnaireCompletedToday": "Today’s check-in completed",
+  "questionnaireCheckInUnavailable": "This check-in is already completed or its answer deadline has passed. Return to your tasks to choose an available check-in."
 }

@@ -4,6 +4,29 @@ This document describes all database migration scripts available in the `scripts
 
 ---
 
+## Dated questionnaire check-ins and late-answer policies (#70)
+
+No backfill or destructive migration is required. Deploy the Node backend and
+admin portal, then the updated participant app. Existing assignments without
+`responsePolicy` retain unlimited late completion; new assignments default to
+scheduled-day-only in `Europe/Berlin`. Existing response records are unchanged;
+new scheduled responses carry the selected occurrence and scheduled date.
+
+After deployment, open **Studies → Questionnaires → Details** for each study/group
+assignment. Confirm the intended timezone and choose whether late answers are
+allowed and for how many additional calendar days. Use **Preview effect on
+outstanding check-ins** before saving. The policy applies to unanswered occurrences
+already in the database: shortening it can expire tasks, and extending it can
+reopen them. Expired records are retained and reported as missed; no cleanup script
+should delete them. Answer reference dates remain the original scheduled dates.
+
+Older clients that omit `windowId` remain supported, but the backend chooses the
+latest eligible occurrence. Update the participant app for dated cards, the
+Previous check-ins section, and explicit occurrence selection. Rolling back the
+backend removes deadline enforcement, so coordinate rollback with study admins.
+
+---
+
 ## Legacy n10s/RDF schema — retired without data migration
 
 The legacy n10s schema (`hhh__Habit`, `hhh__Donor`, `hhh__ExperimentalSetting`,

@@ -42,6 +42,7 @@ class QuestionnaireService {
     required String questionnaireSlug,
     required Map<String, dynamic> answers,
     String? habitUuid,
+    String? windowId,
   }) async {
     await _dio.post<void>(
       '$_baseUrl/questionnaire-responses',
@@ -49,6 +50,7 @@ class QuestionnaireService {
         'questionnaireSlug': questionnaireSlug,
         'answers': answers,
         'habitUuid': ?habitUuid,
+        'windowId': ?windowId,
       },
     );
   }
@@ -68,8 +70,10 @@ class QuestionnaireService {
       '$_baseUrl/questionnaires/due',
       queryParameters: {'lang': lang},
     );
-    final list =
-        (response.data?['questionnaires'] as List<dynamic>?) ?? const [];
+    final list = [
+      ...?response.data?['questionnaires'] as List<dynamic>?,
+      ...?response.data?['completedQuestionnaires'] as List<dynamic>?,
+    ];
     return list
         .cast<Map<String, dynamic>>()
         .map(DueQuestionnaire.fromJson)
@@ -115,6 +119,11 @@ class DueQuestionnaire {
     required this.occurrence,
     required this.scheduledFor,
     required this.isDue,
+    this.scheduledDate,
+    this.closesAt,
+    this.timeZone,
+    this.isLate = false,
+    this.isCompleted = false,
   });
 
   /// The scheduled window id.
@@ -135,6 +144,19 @@ class DueQuestionnaire {
   /// Whether it is due now (`scheduledFor <= now`).
   final bool isDue;
 
+  /// Calendar date and deadline in the assignment's timezone.
+  final String? scheduledDate;
+  final DateTime? closesAt;
+  final String? timeZone;
+  final bool isLate;
+  final bool isCompleted;
+
+  /// Stable route context identifying the exact occurrence being answered.
+  String get route => Uri(
+    path: '/questionnaire/$slug',
+    queryParameters: {'windowId': windowId, 'scheduledDate': ?scheduledDate},
+  ).toString();
+
   /// Deserialises from the `/questionnaires/due` API response.
   factory DueQuestionnaire.fromJson(Map<String, dynamic> json) =>
       DueQuestionnaire(
@@ -146,6 +168,11 @@ class DueQuestionnaire {
             ? DateTime.tryParse(json['scheduledFor'].toString())
             : null,
         isDue: json['isDue'] == true,
+        scheduledDate: json['scheduledDate']?.toString(),
+        closesAt: DateTime.tryParse(json['closesAt']?.toString() ?? ''),
+        timeZone: json['timeZone']?.toString(),
+        isLate: json['isLate'] == true,
+        isCompleted: json['isCompleted'] == true,
       );
 }
 
@@ -155,8 +182,9 @@ final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
 });
 
 /// The participant's due + upcoming scheduled questionnaires.
-final dueQuestionnairesProvider =
-    FutureProvider<List<DueQuestionnaire>>((ref) async {
+final dueQuestionnairesProvider = FutureProvider<List<DueQuestionnaire>>((
+  ref,
+) async {
   final lang = ref.watch(localeProvider).languageCode;
   return ref.watch(questionnaireServiceProvider).fetchDueQuestionnaires(lang);
 });
@@ -164,15 +192,15 @@ final dueQuestionnairesProvider =
 /// Fetches a [QuestionnaireDefinition] by [slug].
 final questionnaireProvider =
     FutureProvider.family<QuestionnaireDefinition, String>((ref, slug) async {
-  final service = ref.watch(questionnaireServiceProvider);
-  final lang = ref.watch(localeProvider).languageCode;
-  return service.fetchQuestionnaire(slug, lang);
-});
+      final service = ref.watch(questionnaireServiceProvider);
+      final lang = ref.watch(localeProvider).languageCode;
+      return service.fetchQuestionnaire(slug, lang);
+    });
 
 /// Fetches all questionnaires assigned to the current participant's study.
 final participantQuestionnairesProvider =
     FutureProvider<List<ParticipantQuestionnaire>>((ref) async {
-  final service = ref.watch(questionnaireServiceProvider);
-  final lang = ref.watch(localeProvider).languageCode;
-  return service.fetchParticipantQuestionnaires(lang);
-});
+      final service = ref.watch(questionnaireServiceProvider);
+      final lang = ref.watch(localeProvider).languageCode;
+      return service.fetchParticipantQuestionnaires(lang);
+    });

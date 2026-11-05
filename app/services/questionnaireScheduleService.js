@@ -1,3 +1,4 @@
+import { annotateWindows } from './questionnaireResponsePolicy.js';
 import { studyDataFilter, studyResponseFilter } from './studyDataScope.js';
 // app/services/questionnaireScheduleService.js
 import { ObjectId } from 'mongodb';
@@ -348,15 +349,47 @@ export async function regenerateStudyWindows({ db, studyId, neo4jRun }) {
  * @returns {Promise<null|{occurrence: number|null, scheduledFor: Date|null,
  *   assignmentId: *, studyId: *, intentionId: *}>}
  */
+export async function selectQuestionnaireWindow({
+  db,
+  userId,
+  questionnaireSlug,
+  windowId,
+}) {
+  const windows = await db
+    .collection(WINDOWS)
+    .find({
+      userId: String(userId),
+      questionnaireSlug,
+    })
+    .sort({ scheduledFor: -1 })
+    .toArray();
+  const annotated = await annotateWindows(db, windows);
+  const eligible = annotated.filter(
+    (w) => w.status === 'open' && w.assignmentActive
+  );
+  return {
+    scheduled: windows.length > 0,
+    window: windowId
+      ? (eligible.find((w) => String(w._id) === String(windowId)) ?? null)
+      : (eligible[0] ?? null),
+  };
+}
+
 export async function markWindowSubmitted({
   db,
   userId,
   questionnaireSlug,
   responseId,
   submittedAt,
+  windowId,
 }) {
   const updated = await db.collection(WINDOWS).findOneAndUpdate(
-    { userId: String(userId), questionnaireSlug, submittedAt: null },
+    {
+      userId: String(userId),
+      questionnaireSlug,
+      submittedAt: null,
+      ...(windowId ? { _id: toOid(windowId) } : {}),
+    },
     {
       $set: {
         submittedAt: submittedAt ?? new Date(),
@@ -401,15 +434,23 @@ export async function getQuestionnaireCompletionStatus({ db, userId, slugs }) {
   const bySlug = new Map();
   if (slugs.length === 0) return bySlug;
   const now = new Date();
-  const windows = await db
+  const rawWindows = await db
     .collection(WINDOWS)
     .find(
       { userId: String(userId), questionnaireSlug: { $in: slugs } },
-      { projection: { questionnaireSlug: 1, submittedAt: 1, scheduledFor: 1 } }
+      {
+        projection: {
+          questionnaireSlug: 1,
+          submittedAt: 1,
+          scheduledFor: 1,
+          assignmentId: 1,
+        },
+      }
     )
     .sort({ scheduledFor: 1 })
     .toArray();
 
+  const windows = await annotateWindows(db, rawWindows, now);
   for (const w of windows) {
     const entry = bySlug.get(w.questionnaireSlug) ?? {
       available: false,
@@ -420,7 +461,11 @@ export async function getQuestionnaireCompletionStatus({ db, userId, slugs }) {
       if (!entry.completedAt || w.submittedAt > entry.completedAt) {
         entry.completedAt = w.submittedAt;
       }
-    } else if (entry.nextDueAt === null) {
+    } else if (
+      w.status !== 'missed' &&
+      w.assignmentActive &&
+      entry.nextDueAt === null
+    ) {
       // Windows are sorted by scheduledFor ascending, so the first open one
       // seen per slug is the earliest — no need to compare later ones.
       entry.nextDueAt = w.scheduledFor;
@@ -466,7 +511,12 @@ export async function topUpContinuousWindows({
     intentionId: iOid,
     submittedAt: null,
   };
-  const openCount = await db.collection(WINDOWS).countDocuments(filter);
+  // Missed/overdue windows must not consume the future buffer, including
+  // legacy assignments that still allow unlimited retrospective answers.
+  const openCount = await db.collection(WINDOWS).countDocuments({
+    ...filter,
+    scheduledFor: { $gte: new Date() },
+  });
   if (openCount >= CONTINUOUS_TOPUP_CAP) return 0;
   const need = CONTINUOUS_TOPUP_CAP - openCount;
 
@@ -482,7 +532,11 @@ export async function topUpContinuousWindows({
     1,
     Math.round(assignment.cadence.intervalDays ?? 7)
   );
-  const ops = Array.from({ length: need }, (_, k) => ({
+  const catchup = Math.max(
+    0,
+    Math.floor((Date.now() - last.scheduledFor.getTime()) / (interval * DAY_MS))
+  );
+  const ops = Array.from({ length: need + catchup }, (_, k) => ({
     updateOne: {
       filter: {
         userId: String(userId),
@@ -575,6 +629,10 @@ export async function listAssignments({ db, studyId }) {
     questionnaireSlug: a.questionnaireSlug,
     questionnaireTitle: a.questionnaireTitle ?? a.questionnaireSlug,
     cadence: a.cadence,
+    responsePolicy: a.responsePolicy ?? {
+      lateDays: null,
+      timeZone: 'Europe/Berlin',
+    },
     cadenceSummary: cadenceSummary(a.cadence),
     active: a.active !== false,
     occurrences: scheduleOffsets(a.cadence).length,
@@ -618,6 +676,7 @@ export async function createAssignment({
   groupId,
   questionnaireId,
   cadence,
+  responsePolicy = { lateDays: 0, timeZone: 'Europe/Berlin' },
   neo4jRun,
 }) {
   const sOid = toOid(studyId);
@@ -660,6 +719,7 @@ export async function createAssignment({
         questionnaire.languages || ['en']
       ) || questionnaire.slug,
     cadence,
+    responsePolicy,
     active: true,
     createdAt: now,
     updatedAt: now,
@@ -692,6 +752,8 @@ export async function updateAssignment({
   if (!sOid || !aOid) return { notFound: true };
   const $set = { updatedAt: new Date() };
   if (updates.cadence !== undefined) $set.cadence = updates.cadence;
+  if (updates.responsePolicy !== undefined)
+    $set.responsePolicy = updates.responsePolicy;
   if (updates.active !== undefined) $set.active = updates.active;
   const res = await db
     .collection(ASSIGNMENTS)
@@ -780,7 +842,7 @@ export async function getDueQuestionnaires({
     body: study.endOfStudyNotification?.body ?? '',
   };
 
-  const wins = await db
+  let wins = await db
     .collection(WINDOWS)
     .find({
       userId: String(userId),
@@ -801,22 +863,39 @@ export async function getDueQuestionnaires({
       intentionId: w.intentionId ?? null,
     });
   }
-  await Promise.all(
+  const toppedUp = await Promise.all(
     [...openSeries.values()].map((s) =>
       topUpContinuousWindows({ db, userId, ...s }).catch(() => {})
     )
   );
 
-  if (wins.length === 0) {
-    return {
-      reminders,
-      questionnaires: [],
-      studyEndDate,
-      endOfStudyNotification,
-    };
+  if (toppedUp.some((n) => n > 0)) {
+    wins = await db
+      .collection(WINDOWS)
+      .find({
+        userId: String(userId),
+        submittedAt: null,
+        scheduledFor: { $lte: horizon },
+      })
+      .sort({ scheduledFor: 1 })
+      .toArray();
   }
+  const completed = await db
+    .collection(WINDOWS)
+    .find({
+      userId: String(userId),
+      submittedAt: { $gte: new Date(now.getTime() - 2 * DAY_MS) },
+      scheduledFor: { $lte: now },
+    })
+    .sort({ scheduledFor: 1 })
+    .toArray();
+  const completedToday = (await annotateWindows(db, completed, now)).filter(
+    (w) => w.status === 'completed' && !w.isLate && w.assignmentActive
+  );
 
-  const slugs = [...new Set(wins.map((w) => w.questionnaireSlug))];
+  const slugs = [
+    ...new Set([...wins, ...completedToday].map((w) => w.questionnaireSlug)),
+  ];
   const qDocs = await db
     .collection('questionnaires')
     .find({ slug: { $in: slugs } })
@@ -831,7 +910,9 @@ export async function getDueQuestionnaires({
     ])
   );
 
-  const questionnaires = wins
+  const annotated = await annotateWindows(db, wins, now);
+  const questionnaires = annotated
+    .filter((w) => w.status !== 'missed' && w.assignmentActive)
     .filter((w) => bySlug[w.questionnaireSlug]?.active !== false)
     .map((w) => ({
       windowId: w._id.toString(),
@@ -840,10 +921,30 @@ export async function getDueQuestionnaires({
         bySlug[w.questionnaireSlug]?.title ?? w.questionnaireSlug,
       occurrence: w.occurrence,
       scheduledFor: w.scheduledFor,
+      scheduledDate: w.scheduledDate,
+      closesAt: w.closesAt,
+      isLate: w.isLate,
+      timeZone: w.timeZone,
       isDue: w.scheduledFor <= now,
     }));
 
-  return { reminders, questionnaires, studyEndDate, endOfStudyNotification };
+  return {
+    reminders,
+    questionnaires,
+    studyEndDate,
+    endOfStudyNotification,
+    completedQuestionnaires: completedToday.map((w) => ({
+      windowId: w._id.toString(),
+      questionnaireSlug: w.questionnaireSlug,
+      questionnaireTitle:
+        bySlug[w.questionnaireSlug]?.title ?? w.questionnaireSlug,
+      occurrence: w.occurrence,
+      scheduledFor: w.scheduledFor,
+      scheduledDate: w.scheduledDate,
+      isDue: false,
+      isCompleted: true,
+    })),
+  };
 }
 
 /**
@@ -964,7 +1065,11 @@ export async function getParticipantWindows({ db, userId, studyId }) {
     .find({ userId: String(userId), ...studyDataFilter(studyId) })
     .sort({ scheduledFor: 1 })
     .toArray();
-  return wins.map((w) => ({
+  const annotated = await annotateWindows(db, wins);
+  return annotated.map((w) => ({
+    status: w.status,
+    closesAt: w.closesAt,
+    scheduledDate: w.scheduledDate,
     questionnaireSlug: w.questionnaireSlug,
     occurrence: w.occurrence,
     scheduledFor: w.scheduledFor,

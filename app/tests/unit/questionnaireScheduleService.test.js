@@ -325,8 +325,12 @@ function makeTopUpDb({ assignment, windows = [] } = {}) {
       }
       if (name === 'questionnaire_windows') {
         return {
-          countDocuments: async () =>
-            windows.filter((w) => w.submittedAt === null).length,
+          countDocuments: async (filter) =>
+            windows.filter(
+              (w) =>
+                w.submittedAt === null &&
+                w.scheduledFor >= filter.scheduledFor.$gte
+            ).length,
           find: () => ({
             sort: () => ({
               limit: () => ({
@@ -391,7 +395,7 @@ test('topUpContinuousWindows: no-op when the buffer is already full', async () =
   const windows = Array.from({ length: 12 }, (_, i) => ({
     occurrence: i + 1,
     submittedAt: null,
-    scheduledFor: new Date(2026, 0, 1 + i * 7),
+    scheduledFor: new Date(Date.now() + (1 + i * 7) * 86400000),
     studyId: new ObjectId(),
     groupId: null,
     questionnaireId: new ObjectId(),
@@ -418,7 +422,7 @@ test('topUpContinuousWindows: tops up the buffer to 12 when below', async () => 
   const windows = Array.from({ length: 5 }, (_, i) => ({
     occurrence: i + 1,
     submittedAt: null,
-    scheduledFor: new Date(Date.UTC(2026, 0, 1 + i * 7)),
+    scheduledFor: new Date(Date.now() + (1 + i * 7) * 86400000),
     studyId: new ObjectId(),
     groupId: null,
     questionnaireId: new ObjectId(),
@@ -443,6 +447,31 @@ test('topUpContinuousWindows: tops up the buffer to 12 when below', async () => 
   assert.strictEqual(first.filter.occurrence, 6);
   assert.deepStrictEqual(
     first.update.$setOnInsert.scheduledFor,
-    new Date(Date.UTC(2026, 0, 1 + 4 * 7) + 7 * 24 * 60 * 60 * 1000)
+    new Date(windows[4].scheduledFor.getTime() + 7 * 24 * 60 * 60 * 1000)
   );
+});
+
+test('topUpContinuousWindows: daily legacy backlog does not prevent today and future occurrences', async () => {
+  const assignmentId = new ObjectId();
+  const last = new Date(Date.now() - 20 * 86400000);
+  const db = makeTopUpDb({
+    assignment: {
+      _id: assignmentId,
+      active: true,
+      cadence: { mode: 'interval', intervalDays: 1, continuous: true },
+    },
+    windows: [{ occurrence: 12, submittedAt: null, scheduledFor: last }],
+  });
+  const count = await topUpContinuousWindows({
+    db,
+    userId: 'u1',
+    assignmentId,
+  });
+  assert.ok(count >= 32);
+  assert.ok(
+    db._bulk.some(
+      (op) => op.updateOne.update.$setOnInsert.scheduledFor >= new Date()
+    )
+  );
+  assert.equal(db._bulk[0].updateOne.filter.occurrence, 13);
 });

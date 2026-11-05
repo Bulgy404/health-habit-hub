@@ -560,5 +560,13 @@
   "progressSection": "Progress",
   "achievementsTitle": "Achievements",
   "achievementsSubtitle": "Badges you've earned, and badges still to unlock.",
-  "achievementsLockedTag": "Locked"
+  "achievementsLockedTag": "Locked",
+  "questionnaireDatedTitle": "{title} — {date}",
+  "questionnaireScheduledFor": "Prévu pour le {date}",
+  "questionnaireAnswerForDate": "Répondez pour le {date}. Respectez les périodes de référence indiquées dans chaque question.",
+  "questionnaireStartCheckIn": "Commencer",
+  "questionnaireDeadline": "Envoyer avant le {deadline}",
+  "questionnairePreviousCheckIns": "Bilans précédents · {count} en attente",
+  "questionnaireCompletedToday": "Bilan du jour terminé",
+  "questionnaireCheckInUnavailable": "Ce bilan est déjà terminé ou son délai est dépassé. Revenez à vos tâches pour choisir un bilan disponible."
 }

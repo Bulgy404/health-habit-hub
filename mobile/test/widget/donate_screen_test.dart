@@ -20,6 +20,7 @@ import 'package:hhh/models/survey.dart';
 import 'package:hhh/l10n/ui_localizations.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
+import 'package:hhh/providers/locale_provider.dart';
 import 'package:hhh/providers/show_in_graph_provider.dart';
 import 'package:hhh/screens/donate_screen.dart';
 import 'package:hhh/services/auth_service.dart';
@@ -36,6 +37,11 @@ final _fakeDio = Dio();
 // ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
+
+class _FakeLocaleNotifier extends LocaleNotifier {
+  @override
+  Locale build() => const Locale('en');
+}
 
 class _FakeAuthService extends AuthService {
   @override
@@ -69,11 +75,13 @@ class _FakeSurveyService extends SurveyService {
 Widget _buildSubject(
   _FakeSurveyService surveyService, {
   List<MyHabit> myHabits = const [],
+  List<DueQuestionnaire> questionnaires = const [],
   String donationInputMode = 'freeText',
   List<BehaviorOption> behaviorOptions = const [],
 }) {
   return ProviderScope(
     overrides: [
+      localeProvider.overrideWith(_FakeLocaleNotifier.new),
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       surveyServiceProvider.overrideWithValue(surveyService),
       // Return empty stats immediately to avoid any network calls.
@@ -91,7 +99,7 @@ Widget _buildSubject(
       ),
       // No due questionnaires — avoids a real network call to /questionnaires/due.
       dueQuestionnairesProvider.overrideWith(
-        (_) async => const <DueQuestionnaire>[],
+        (_) async => questionnaires,
       ),
       // Avoids a real network call to /me/habit-config (DonateFormWidget
       // reads donationInputModeProvider, which derives from this).
@@ -184,6 +192,25 @@ Widget _buildRoutedSubject({
 // ---------------------------------------------------------------------------
 
 void main() {
+  testWidgets('dated current check-ins stay visible and previous check-ins start collapsed', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final today = DueQuestionnaire(windowId: 'today', slug: 'sliq', title: 'Lifestyle check-in',
+      occurrence: 3, scheduledFor: DateTime(2026, 11, 5), scheduledDate: '2026-11-05', isDue: true);
+    final previous = DueQuestionnaire(windowId: 'previous', slug: 'sliq', title: 'Lifestyle check-in',
+      occurrence: 2, scheduledFor: DateTime(2026, 11, 4), scheduledDate: '2026-11-04', isDue: true, isLate: true);
+    await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing(), questionnaires: [today, previous]));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Lifestyle check-in — Thursday, November 5, 2026'), findsOneWidget);
+    expect(find.textContaining('Lifestyle check-in — Wednesday, November 4, 2026'), findsNothing);
+    final header = find.text('Previous check-ins · 1 outstanding');
+    await tester.ensureVisible(header);
+    await tester.tap(header);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Lifestyle check-in — Wednesday, November 4, 2026'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows AppBar with correct title', (tester) async {
     await tester.pumpWidget(_buildSubject(_FakeSurveyService.loading()));
     await tester.pump();

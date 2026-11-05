@@ -733,3 +733,112 @@ test('GET /api/v1/participant/questionnaires - reports available/completedAt, an
   );
   assert.strictEqual(resubmitRes.status, 409);
 });
+
+test('scheduled answers preserve the selected original date and reject expired or foreign occurrences', async () => {
+  const assignmentId = new ObjectId();
+  const studyId = new ObjectId();
+  const now = new Date();
+  now.setUTCHours(0, 0, 0, 0);
+  const assignment = {
+    _id: assignmentId,
+    studyId,
+    active: true,
+    questionnaireSlug: 'daily-check-in',
+    cadence: { mode: 'fixed' },
+    responsePolicy: { lateDays: 1, timeZone: 'UTC' },
+  };
+  mockDb._seed('questionnaire_assignments', [assignment]);
+  const windows = [-3, -1, 0].map((day, index) => ({
+    _id: new ObjectId(),
+    userId: 'daily-participant',
+    studyId,
+    assignmentId,
+    questionnaireSlug: 'daily-check-in',
+    occurrence: index + 1,
+    scheduledFor: new Date(+now + day * 86400000),
+    submittedAt: null,
+  }));
+  mockDb._seed('questionnaire_windows', windows);
+  const token = makeToken(['user'], 'daily-participant');
+  const submit = (id) =>
+    post(
+      '/api/v1/questionnaire-responses',
+      {
+        questionnaireSlug: 'daily-check-in',
+        windowId: String(id),
+        answers: { q1: 'fine' },
+      },
+      token
+    );
+  assert.equal((await submit(windows[0]._id)).status, 409);
+  assert.equal((await submit(new ObjectId())).status, 409);
+  assert.equal(
+    (
+      await post(
+        '/api/v1/questionnaire-responses',
+        {
+          questionnaireSlug: 'daily-check-in',
+          windowId: String(windows[2]._id),
+          answers: {},
+        },
+        makeToken(['user'], 'another-participant')
+      )
+    ).status,
+    409
+  );
+  assert.equal((await submit(windows[2]._id)).status, 201);
+  const remaining = await mockDb
+    .collection('questionnaire_windows')
+    .findOne({ _id: windows[1]._id });
+  assert.equal(
+    remaining.submittedAt,
+    null,
+    'today completion must not consume yesterday'
+  );
+  const response = await mockDb
+    .collection('form_responses')
+    .findOne({ windowId: windows[2]._id });
+  assert.equal(response.scheduledDate, now.toISOString().slice(0, 10));
+  assert.equal(String(response.windowId), String(windows[2]._id));
+  assert.equal(response.occurrence, 3);
+  assert.equal((await submit(windows[2]._id)).status, 409);
+  assert.equal(
+    (await submit(windows[1]._id)).status,
+    201,
+    'late answer is allowed within the grace period'
+  );
+});
+
+test('admin policy preview reports expirations without changing outstanding windows', async () => {
+  const studyId = new ObjectId();
+  const assignmentId = new ObjectId();
+  mockDb._seed('studies', [
+    { _id: studyId, name: 'Policy preview', groups: [] },
+  ]);
+  mockDb._seed('questionnaire_assignments', [
+    { _id: assignmentId, studyId, active: true },
+  ]);
+  const window = {
+    _id: new ObjectId(),
+    assignmentId,
+    userId: 'preview-user',
+    scheduledFor: new Date(Date.now() - 3 * 86400000),
+    submittedAt: null,
+  };
+  mockDb._seed('questionnaire_windows', [window]);
+  const response = await post(
+    `/api/v1/admin/studies/${studyId}/questionnaire-assignments/${assignmentId}/response-policy-preview`,
+    { responsePolicy: { lateDays: 0, timeZone: 'Europe/Berlin' } },
+    makeToken(['admin'])
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { newlyMissed: 1, reopened: 0 });
+  assert.equal(
+    (
+      await mockDb
+        .collection('questionnaire_windows')
+        .findOne({ _id: window._id })
+    ).submittedAt,
+    null
+  );
+});

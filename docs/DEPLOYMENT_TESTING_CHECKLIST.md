@@ -465,3 +465,30 @@ participant.
       Japanese for obviously broken/untranslated strings
 - [ ] Time zone handling: an SRHI/questionnaire scheduled for "due today" behaves
       consistently between the admin's server time and the participant's local time
+
+## Dated questionnaire check-ins and answer deadlines (#70)
+
+- [ ] In Studies → Questionnaires → Details, verify scheduled-day-only, limited
+      (1–365 additional calendar days), and unlimited policies on study-wide and
+      group assignments. Confirm timezone validation and persistence after reload.
+- [ ] Preview a policy change: confirm counts of newly missed/reopened occurrences
+      and verify the preview itself makes no changes. Save and inspect the tasks.
+- [ ] Existing assignments without a policy retain unlimited late completion; new
+      assignments default to scheduled-day-only. No historical answers are deleted.
+- [ ] With daily check-ins, today's dated card is visible and permitted earlier
+      ones start collapsed under Previous check-ins. Completed today shows a confirmation.
+- [ ] A late check-in repeats its original date inside the form. Answering today
+      completes today's occurrence and leaves yesterday's unanswered.
+- [ ] Reject expired, future, already submitted, and another participant's window
+      IDs. Verify original scheduled date and actual submission time in stored responses.
+- [ ] Expiry occurs at the exclusive local-midnight boundary, including a DST
+      transition. Missed check-ins disappear from tasks and remain in admin progress.
+- [ ] Continuous daily schedules still provide current/future check-ins after a
+      long absence, including assignments with unlimited late answers.
+- [ ] Verify English/German layouts at phone width; ad-hoc donation questionnaires
+      and the separate SRHI flow continue to work.
+
+Automated coverage: `app/tests/unit/questionnaireResponsePolicy.test.js`,
+`app/tests/unit/questionnaireScheduleService.test.js`,
+`app/tests/integration/admin.questionnaire.library.test.js`,
+`admin/src/__tests__/studies.test.tsx`, and the questionnaire/share Flutter tests.

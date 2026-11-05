@@ -76,6 +76,21 @@ You can stop using the app at any time — simply stop opening it. There is no n
 
 ---
 
+## Scheduled questionnaires
+
+The **Share** tab shows each check-in with its scheduled date. Open the check-in
+for the date you want to answer. Inside the form, the date stays visible: answer
+for that original date and follow any reference periods stated in the questions.
+
+If your study permits late answers, older check-ins appear in the collapsed
+**Previous check-ins** section with their dates and, where applicable, deadlines.
+Open that section to complete an earlier check-in. A check-in disappears from
+your tasks when its answer deadline passes. A completed check-in for today shows
+a confirmation instead of another completion button. Your study coordinator
+controls the deadlines; you do not need to complete expired check-ins.
+
+---
+
 ## Questions?
 
 If you have any questions or run into a problem not covered here, contact your study coordinator using the details on your token card or in your invitation email.

@@ -399,7 +399,8 @@
     "exportSelected": "Exporter la sélection (CSV)",
     "deleteSelected": "Supprimer la sélection",
     "confirmBulkAnonymise": "Anonymiser {count} participants sélectionnés ? Cette action est irréversible.",
-    "bulkParticipantsCreated": "{count} participants créés"
+    "bulkParticipantsCreated": "{count} participants créés",
+    "missed": "Manqué"
   },
   "cuePools": {
     "title": "Bassins de repères",
@@ -997,7 +998,19 @@
         "deleteFailed": "Échec de la suppression de l'assignation",
         "noTimeSlots": "Ajoutez au moins une semaine ou un jour avant d'enregistrer.",
         "missingInterval": "Définissez un intervalle (jours) avant d'enregistrer."
-      }
+      },
+      "lateAnswers": "Réponses tardives",
+      "lateNone": "Le jour prévu uniquement",
+      "lateLimited": "Autoriser pour une durée limitée",
+      "lateUnlimited": "Autoriser sans date limite",
+      "lateDays": "Jours calendaires supplémentaires",
+      "timezone": "Fuseau horaire (p. ex. Europe/Berlin)",
+      "invalidTimezone": "Saisissez un fuseau horaire valide, par exemple Europe/Berlin.",
+      "lateHint": "Les bilans se clôturent à la fin du jour prévu, plus les jours supplémentaires, dans ce fuseau horaire. Les réponses concernent toujours la date initiale. Les bilans expirés sont marqués comme manqués.",
+      "lateExistingHint": "Cette règle s’applique aussi aux bilans en attente. Raccourcir le délai peut les retirer des tâches ; le prolonger peut les rouvrir.",
+      "previewPolicy": "Aperçu des effets sur les bilans en attente",
+      "policyImpact": "{newlyMissed} bilans seront marqués comme manqués ; {reopened} seront rouverts.",
+      "invalidLateDays": "Saisissez un nombre entier de jours supplémentaires entre 1 et 365."
     },
     "codesTab": {
       "allocationTitle": "Répartition des groupes",

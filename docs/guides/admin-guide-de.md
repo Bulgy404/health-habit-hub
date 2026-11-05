@@ -258,14 +258,28 @@ Fragebögen werden Teilnehmenden über Studien zugänglich gemacht — auf einem
 
 **Schritt 1.** Zu **Studies** in der Seitenleiste navigieren, eine vorhandene Studie öffnen oder eine neue erstellen.
 
-**Schritt 2.** Den Tab **Questionnaires** öffnen. Jeder Fragebogen (Bibliothek und benutzerdefiniert) wird mit einem Ein/Aus-Schalter aufgelistet. **Standardmäßig ist nichts aktiviert** — ein Admin muss jeden Fragebogen explizit für die Studie aktivieren, auch SLIQ, RAND-36 und SRHI.
+**Schritt 2.** Den Tab **Questionnaires** öffnen. Jeder Fragebogen (Bibliothek und benutzerdefiniert) wird mit einem Ein/Aus-Schalter aufgelistet. **Standardmäßig ist nichts aktiviert** — ein Admin muss jeden Fragebogen explizit für die Studie aktivieren, auch SLIQ und RAND-36. SRHI wird separat automatisch für Gewohnheiten angeboten und hier nicht zugewiesen.
 
 **Schritt 3.** Einen Fragebogen **aktivieren**. Dies öffnet einen eingebetteten Zeitplan-Editor:
 
 - **Wiederkehrendes Intervall oder feste Studienwochen/-tage**, wie zuvor (z. B. alle 7 Tage, oder Baseline/Woche 4/Woche 8).
 - Bei studienbezogenen Fragebögen ein editierbares Feld **„Erste Fälligkeit" (Tage nach Einschreibung)**.
-- Bei gewohnheitsbezogenen Fragebögen (z. B. SRHI) kein Feld für die erste Fälligkeit — ein Hinweis erklärt, dass der erste Check-in automatisch ~5 Sekunden nach Erstellung einer Gewohnheit gesendet wird und der Fragebogen einmal pro Gewohnheit statt einmal pro Person gilt.
+- Bei gewohnheitsbezogenen Fragebögen (benutzerdefinierte Instrumente) kein Feld für die erste Fälligkeit — ein Hinweis erklärt, dass der erste Check-in automatisch ~5 Sekunden nach Erstellung einer Gewohnheit gesendet wird und der Fragebogen einmal pro Gewohnheit statt einmal pro Person gilt.
 - Ein Kontrollkästchen **„Fortlaufend (kein Enddatum)"** — statt einer festen Anzahl von Wiederholungen ankreuzen, um den Fragebogen unbegrenzt fortlaufend zuzustellen (z. B. ein dauerhafter wöchentlicher Check-in ohne geplantes Ende). Es werden jeweils bis zu 12 kommende Termine geplant und automatisch nachgefüllt, sobald Teilnehmende sie beantworten.
+
+**Nachträgliche Antworten und Datum.** Unter **Details** wählen Sie **Nur am
+vorgesehenen Tag**, **Für begrenzte Zeit erlauben** (1–365 zusätzliche Kalendertage)
+oder **Ohne Frist erlauben**. Prüfen Sie die **Zeitzone des Zeitplans**, zum Beispiel
+`Europe/Berlin`. Die Frist endet um Mitternacht nach dem letzten erlaubten Tag.
+Antworten beziehen sich auf das ursprüngliche Datum; die in den Fragen genannten
+Bezugszeiträume gelten weiterhin. Gruppenüberschreibungen haben eigene Fristen.
+
+Bei bestehenden Zuweisungen zeigt **Auswirkungen auf offene Check-ins anzeigen**,
+wie viele Termine verpasst oder wieder geöffnet würden. Speichern wendet die Regel
+auch auf vorhandene unbeantwortete Termine an. Bestehende Zuweisungen erlauben bis
+zur Änderung unbegrenzt nachträgliche Antworten; neue erlauben sie nur am geplanten
+Tag. Verpasste Termine bleiben im Teilnehmendenfortschritt sichtbar und erscheinen
+nicht mehr in den Aufgaben der Teilnehmenden.
 
 **Schritt 4.** Im Zeitplan-Editor auf **Save** klicken, um den Zeitplan zu bestätigen — eingeschriebene Teilnehmende sehen den Fragebogen entsprechend diesem Turnus. Den Schalter wieder auszuschalten deaktiviert ihn (es werden keine neuen Termine mehr generiert), ohne den konfigurierten Zeitplan zu verwerfen — er lässt sich also später leicht wieder aktivieren.
 

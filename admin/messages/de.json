@@ -399,7 +399,8 @@
     "exportSelected": "Auswahl exportieren (CSV)",
     "deleteSelected": "Auswahl löschen",
     "confirmBulkAnonymise": "{count} ausgewählte Teilnehmende anonymisieren? Dies kann nicht rückgängig gemacht werden.",
-    "bulkParticipantsCreated": "{count} Teilnehmende erstellt"
+    "bulkParticipantsCreated": "{count} Teilnehmende erstellt",
+    "missed": "Verpasst"
   },
   "cuePools": {
     "title": "Cue-Pools",
@@ -1048,7 +1049,19 @@
         "deleteFailed": "Zuweisung konnte nicht gelöscht werden",
         "noTimeSlots": "Füge mindestens eine Woche oder einen Tag hinzu, bevor du speicherst.",
         "missingInterval": "Lege ein Intervall (Tage) fest, bevor du speicherst."
-      }
+      },
+      "lateAnswers": "Nachträgliche Antworten",
+      "lateNone": "Nur am vorgesehenen Tag",
+      "lateLimited": "Für begrenzte Zeit erlauben",
+      "lateUnlimited": "Ohne Frist erlauben",
+      "lateDays": "Zusätzliche Kalendertage",
+      "timezone": "Zeitzone des Zeitplans (z. B. Europe/Berlin)",
+      "invalidTimezone": "Bitte eine gültige Zeitzone wie Europe/Berlin eingeben.",
+      "lateHint": "Die Frist endet am Ende des vorgesehenen Tages zuzüglich der zusätzlichen Tage in dieser Zeitzone. Antworten beziehen sich immer auf das ursprüngliche Datum. Abgelaufene Check-ins werden als verpasst geführt.",
+      "lateExistingHint": "Speichern wendet die Regel auch auf vorhandene unbeantwortete Check-ins an. Eine kürzere Frist kann sie aus den Aufgaben entfernen; eine längere Frist kann sie wieder öffnen.",
+      "previewPolicy": "Auswirkungen auf offene Check-ins anzeigen",
+      "policyImpact": "{newlyMissed} Check-ins werden als verpasst geführt; {reopened} werden wieder geöffnet.",
+      "invalidLateDays": "Bitte eine ganze Anzahl zusätzlicher Tage zwischen 1 und 365 eingeben."
     },
     "codesTab": {
       "allocationTitle": "Gruppenzuteilung",

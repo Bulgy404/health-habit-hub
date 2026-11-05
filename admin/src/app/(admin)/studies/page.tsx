@@ -217,7 +217,18 @@ interface Cadence {
   days?: number[];
 }
 
+interface PolicyImpact {
+  newlyMissed: number;
+  reopened: number;
+}
+
+interface ResponsePolicy {
+  lateDays: number | null;
+  timeZone: string;
+}
+
 interface ScheduleAssignment {
+  responsePolicy: ResponsePolicy;
   id: string;
   groupId: string | null;
   questionnaireId: string;
@@ -363,13 +374,14 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
   async function handleCreate(
     q: QuestionnaireSummary,
     cadence: Cadence,
-    groupId: string | null = null
+    groupId: string | null = null,
+    responsePolicy?: ResponsePolicy
   ) {
     setBusy(q.id, true);
     try {
       await apiFetch(base, token, {
         method: "POST",
-        body: JSON.stringify({ questionnaireId: q.id, groupId, cadence }),
+        body: JSON.stringify({ questionnaireId: q.id, groupId, cadence, responsePolicy }),
       });
       if (!groupId) {
         // Only the study-wide create corresponds to the pending flag — a
@@ -393,13 +405,14 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
   async function handleUpdateCadence(
     q: QuestionnaireSummary,
     assignment: ScheduleAssignment,
-    cadence: Cadence
+    cadence: Cadence,
+    responsePolicy?: ResponsePolicy
   ) {
     setBusy(q.id, true);
     try {
       await apiFetch(`${base}/${assignment.id}`, token, {
         method: "PUT",
-        body: JSON.stringify({ cadence }),
+        body: JSON.stringify({ cadence, responsePolicy }),
       });
       await load();
     } catch (e) {
@@ -407,6 +420,16 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
     } finally {
       setBusy(q.id, false);
     }
+  }
+
+  async function previewPolicy(
+    assignment: ScheduleAssignment,
+    responsePolicy: ResponsePolicy
+  ): Promise<PolicyImpact> {
+    return await apiFetch(`${base}/${assignment.id}/response-policy-preview`, token, {
+      method: "POST",
+      body: JSON.stringify({ responsePolicy }),
+    });
   }
 
   async function handleRemove(q: QuestionnaireSummary, assignment: ScheduleAssignment) {
@@ -497,9 +520,12 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
             <CadenceEditor
               questionnaire={q}
               assignment={assignment}
+              onPreview={assignment ? (policy) => previewPolicy(assignment, policy) : undefined}
               disabled={editorDisabled || busy}
-              onSave={(cadence) =>
-                assignment ? handleUpdateCadence(q, assignment, cadence) : handleCreate(q, cadence)
+              onSave={(cadence, policy) =>
+                assignment
+                  ? handleUpdateCadence(q, assignment, cadence, policy)
+                  : handleCreate(q, cadence, null, policy)
               }
               onRemove={assignment ? () => handleRemove(q, assignment) : undefined}
             />
@@ -523,6 +549,13 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
                     >
                       {t("scheduleTab.remove")}
                     </button>
+                    <CadenceEditor
+                      questionnaire={q}
+                      assignment={o}
+                      disabled={busy}
+                      onPreview={(policy) => previewPolicy(o, policy)}
+                      onSave={(cadence, policy) => handleUpdateCadence(q, o, cadence, policy)}
+                    />
                   </div>
                 ))}
               </div>
@@ -533,7 +566,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
                 questionnaire={q}
                 groups={study.groups}
                 excludeGroupIds={overrides.map((o) => o.groupId).filter((g): g is string => !!g)}
-                onAdd={(groupId, cadence) => handleCreate(q, cadence, groupId)}
+                onAdd={(groupId, cadence, policy) => handleCreate(q, cadence, groupId, policy)}
               />
             )}
           </div>
@@ -588,16 +621,31 @@ function CadenceEditor({
   disabled,
   onSave,
   onRemove,
+  onPreview,
 }: {
   questionnaire: QuestionnaireSummary;
   assignment: ScheduleAssignment | undefined;
   disabled: boolean;
-  onSave: (cadence: Cadence) => Promise<void>;
+  onSave: (cadence: Cadence, policy: ResponsePolicy) => Promise<void>;
   onRemove?: () => void;
+  onPreview?: (policy: ResponsePolicy) => Promise<PolicyImpact>;
 }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
+  const [impact, setImpact] = useState<PolicyImpact | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const initial = assignment?.cadence;
+  const [lateMode, setLateMode] = useState(
+    assignment
+      ? assignment.responsePolicy?.lateDays == null
+        ? "unlimited"
+        : assignment.responsePolicy.lateDays === 0
+          ? "none"
+          : "limited"
+      : "none"
+  );
+  const [lateDays, setLateDays] = useState(String(assignment?.responsePolicy?.lateDays || 1));
+  const [timeZone, setTimeZone] = useState(assignment?.responsePolicy?.timeZone ?? "Europe/Berlin");
   const isHabitScoped = questionnaire.scope === "habit";
   const [mode, setMode] = useState<"interval" | "fixed">(initial?.mode ?? "interval");
   const [startOffsetDays, setStartOffsetDays] = useState(initial?.startOffsetDays ?? 0);
@@ -650,9 +698,24 @@ function CadenceEditor({
       if (days.length) cadence.days = days;
     }
 
+    if (
+      lateMode === "limited" &&
+      (!Number.isInteger(Number(lateDays)) || Number(lateDays) < 1 || Number(lateDays) > 365)
+    ) {
+      setError(t("scheduleTab.invalidLateDays"));
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(cadence);
+      try {
+        new Intl.DateTimeFormat("en", { timeZone });
+      } catch {
+        throw new Error(t("scheduleTab.invalidTimezone"));
+      }
+      await onSave(cadence, {
+        lateDays: lateMode === "none" ? 0 : lateMode === "unlimited" ? null : Number(lateDays),
+        timeZone,
+      });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
@@ -765,6 +828,103 @@ function CadenceEditor({
         </div>
       )}
 
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            {t("scheduleTab.lateAnswers")}
+            <select
+              className={styles.select}
+              value={lateMode}
+              disabled={disabled}
+              onChange={(e) => {
+                setLateMode(e.target.value);
+                setImpact(null);
+              }}
+            >
+              <option value="none">{t("scheduleTab.lateNone")}</option>
+              <option value="limited">{t("scheduleTab.lateLimited")}</option>
+              <option value="unlimited">{t("scheduleTab.lateUnlimited")}</option>
+            </select>
+          </label>
+        </div>
+        {lateMode === "limited" && (
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              {t("scheduleTab.lateDays")}
+              <input
+                className={styles.select}
+                type="number"
+                min={1}
+                max={365}
+                value={lateDays}
+                disabled={disabled}
+                onChange={(e) => {
+                  setLateDays(e.target.value);
+                  setImpact(null);
+                }}
+              />
+            </label>
+          </div>
+        )}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            {t("scheduleTab.timezone")}
+            <input
+              className={styles.select}
+              value={timeZone}
+              disabled={disabled}
+              onChange={(e) => {
+                setTimeZone(e.target.value);
+                setImpact(null);
+              }}
+            />
+          </label>
+        </div>
+      </div>
+      <p className={styles.hint}>{t("scheduleTab.lateHint")}</p>
+      {assignment && <p className={styles.hint}>{t("scheduleTab.lateExistingHint")}</p>}
+
+      {onPreview && (
+        <button
+          className={styles.saveBtn}
+          disabled={
+            disabled ||
+            previewing ||
+            (lateMode === "limited" &&
+              (!Number.isInteger(Number(lateDays)) ||
+                Number(lateDays) < 1 ||
+                Number(lateDays) > 365))
+          }
+          onClick={async () => {
+            setPreviewing(true);
+            setError("");
+            try {
+              setImpact(
+                await onPreview({
+                  lateDays:
+                    lateMode === "none" ? 0 : lateMode === "unlimited" ? null : Number(lateDays),
+                  timeZone,
+                })
+              );
+            } catch (e) {
+              setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
+            } finally {
+              setPreviewing(false);
+            }
+          }}
+        >
+          {t("scheduleTab.previewPolicy")}
+        </button>
+      )}
+      {impact && (
+        <p className={styles.hint} role="status">
+          {t("scheduleTab.policyImpact", {
+            newlyMissed: impact.newlyMissed,
+            reopened: impact.reopened,
+          })}
+        </p>
+      )}
+
       {error && <div className={styles.errorMsg}>{error}</div>}
       <div className={styles.cueConfigFooter}>
         {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
@@ -796,7 +956,7 @@ function GroupOverrideForm({
   questionnaire: QuestionnaireSummary;
   groups: StudyGroup[];
   excludeGroupIds: string[];
-  onAdd: (groupId: string, cadence: Cadence) => Promise<void>;
+  onAdd: (groupId: string, cadence: Cadence, policy: ResponsePolicy) => Promise<void>;
 }) {
   const t = useTranslations("studies");
   const available = groups.filter((g) => !excludeGroupIds.includes(g.id));
@@ -839,8 +999,8 @@ function GroupOverrideForm({
         questionnaire={questionnaire}
         assignment={undefined}
         disabled={false}
-        onSave={async (cadence) => {
-          await onAdd(groupId, cadence);
+        onSave={async (cadence, policy) => {
+          await onAdd(groupId, cadence, policy);
           setShow(false);
         }}
       />

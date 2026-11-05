@@ -75,6 +75,8 @@ Widget _buildSubject(Dio dio, {String? habitUuid}) {
         builder: (context, state) => QuestionnaireScreen(
           slug: state.pathParameters['slug'] ?? '',
           habitUuid: state.uri.queryParameters['habitUuid'],
+          windowId: habitUuid == null ? '507f1f77bcf86cd799439011' : null,
+          scheduledDate: habitUuid == null ? '2026-11-05' : null,
         ),
         routes: [
           GoRoute(
@@ -161,6 +163,8 @@ void main() {
 
     await tester.pumpWidget(_buildSubject(dio));
     await tester.pumpAndSettle();
+
+    expect(find.textContaining('Please answer about Thursday, November 5, 2026'), findsOneWidget);
 
     // Q1: single choice.
     expect(find.text('Question 1 of 4'), findsOneWidget);

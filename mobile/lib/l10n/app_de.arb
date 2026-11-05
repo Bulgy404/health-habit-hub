@@ -707,5 +707,13 @@
   "progressSection": "Progress",
   "achievementsTitle": "Achievements",
   "achievementsSubtitle": "Badges you've earned, and badges still to unlock.",
-  "achievementsLockedTag": "Locked"
+  "achievementsLockedTag": "Locked",
+  "questionnaireDatedTitle": "{title} — {date}",
+  "questionnaireScheduledFor": "Vorgesehen für {date}",
+  "questionnaireAnswerForDate": "Bitte beantworte den Check-in für {date}. Beachte die in den Fragen genannten Bezugszeiträume.",
+  "questionnaireStartCheckIn": "Check-in starten",
+  "questionnaireDeadline": "Abgeben vor {deadline}",
+  "questionnairePreviousCheckIns": "Frühere Check-ins · {count} offen",
+  "questionnaireCompletedToday": "Heutiger Check-in abgeschlossen",
+  "questionnaireCheckInUnavailable": "Dieser Check-in ist bereits abgeschlossen oder die Frist ist abgelaufen. Wähle in deinen Aufgaben einen verfügbaren Check-in."
 }

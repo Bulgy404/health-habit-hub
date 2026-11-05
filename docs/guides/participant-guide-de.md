@@ -84,6 +84,22 @@ Sie können die Nutzung der App jederzeit beenden — hören Sie einfach auf, si
 
 ---
 
+## Geplante Fragebögen
+
+Im Tab **Share / Teilen** sehen Sie bei jedem Check-in das vorgesehene Datum.
+Öffnen Sie den Check-in für den Tag, den Sie beantworten möchten. Das Datum bleibt
+im Formular sichtbar. Antworten Sie für diesen ursprünglichen Tag und beachten
+Sie die in den Fragen genannten Bezugszeiträume.
+
+Wenn Ihre Studie nachträgliche Antworten erlaubt, finden Sie ältere Termine im
+eingeklappten Bereich **Frühere Check-ins**, jeweils mit Datum und gegebenenfalls
+Abgabefrist. Öffnen Sie den Bereich, um einen früheren Check-in zu beantworten.
+Nach Ablauf der Frist verschwindet er aus Ihren Aufgaben. Ein abgeschlossener
+Check-in für heute zeigt eine Bestätigung. Die Studienleitung legt die Fristen
+fest; abgelaufene Check-ins müssen Sie nicht nachholen.
+
+---
+
 ## Fragen?
 
 Wenn Sie Fragen haben oder auf ein hier nicht behandeltes Problem stoßen, wenden Sie sich an Ihren Studienkoordinator über die Kontaktdaten auf Ihrer Token-Karte oder in Ihrer Einladungs-E-Mail.

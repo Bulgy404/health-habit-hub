@@ -361,16 +361,36 @@ const cadenceSchema = z
     }
   );
 
+const responsePolicySchema = z
+  .object({
+    // null explicitly means unlimited, 0 means scheduled day only.
+    lateDays: z.number().int().min(0).max(365).nullable(),
+    timeZone: z
+      .string()
+      .max(100)
+      .refine((value) => {
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: value });
+          return true;
+        } catch {
+          return false;
+        }
+      }, 'Use a valid IANA timezone'),
+  })
+  .strict();
+
 export const createQuestionnaireAssignmentSchema = z.object({
   questionnaireId: mongoId,
   // null / omitted = study-wide (all groups); otherwise a specific group id.
   groupId: mongoId.nullable().optional(),
   cadence: cadenceSchema,
+  responsePolicy: responsePolicySchema.optional(),
 });
 
 export const updateQuestionnaireAssignmentSchema = z
   .object({
     cadence: cadenceSchema.optional(),
+    responsePolicy: responsePolicySchema.optional(),
     active: z.boolean().optional(),
   })
   .strict();

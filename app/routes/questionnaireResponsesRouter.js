@@ -1,4 +1,5 @@
 import express from 'express';
+import { ObjectId } from 'mongodb';
 import neo4j from 'neo4j-driver';
 import { config } from '../utils/config.js';
 import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
@@ -8,7 +9,7 @@ import { mergeUserAndHabits } from '../db/userQueries.js';
 import { createQuestionnaireResponse } from '../db/questionnaireQueries.js';
 import {
   markWindowSubmitted,
-  getQuestionnaireCompletionStatus,
+  selectQuestionnaireWindow,
 } from '../services/questionnaireScheduleService.js';
 import { requireServiceToken } from '../middleware/requireServiceToken.js';
 import { isValidUuid } from '../utils/constants.js';
@@ -216,6 +217,9 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
    *               questionnaireSlug:
    *                 type: string
    *                 example: sliq
+   *               windowId:
+   *                 type: string
+   *                 description: Exact scheduled occurrence to answer; must belong to the participant, be due, and be within its answer deadline.
    *               answers:
    *                 type: object
    *                 description: Map of questionId to answer value
@@ -244,7 +248,12 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const { questionnaireSlug, answers, habitUuid } = req.body;
+      const { questionnaireSlug, answers, habitUuid, windowId } = req.body;
+      if (
+        windowId !== undefined &&
+        (typeof windowId !== 'string' || !ObjectId.isValid(windowId))
+      )
+        return res.status(400).json({ error: 'Invalid scheduled check-in' });
       if (!questionnaireSlug || typeof questionnaireSlug !== 'string') {
         return res.status(400).json({ error: 'questionnaireSlug is required' });
       }
@@ -298,18 +307,19 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       // ungated, matching its previous always-open behaviour. A verified
       // post-donation submission (donationRecord above) always bypasses this
       // check — it's a one-off ad-hoc fill by construction, never scheduled.
+      let selectedWindow = null;
       if (!donationRecord) {
-        const status = (
-          await getQuestionnaireCompletionStatus({
-            db: database,
-            userId,
-            slugs: [questionnaireSlug],
-          })
-        ).get(questionnaireSlug);
-        if (status && !status.available) {
+        const selection = await selectQuestionnaireWindow({
+          db: database,
+          userId,
+          questionnaireSlug,
+          windowId,
+        });
+        selectedWindow = selection.window;
+        if ((selection.scheduled || windowId) && !selectedWindow) {
           return res.status(409).json({
             error:
-              'This questionnaire is not currently due — it may already be completed, or the next occurrence is not open yet.',
+              'This check-in is completed, not yet due, or its answer deadline has passed.',
           });
         }
       }
@@ -323,6 +333,15 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
           answers,
           submittedAt,
           ...(donationRecord ? { habitUuid } : {}),
+          ...(selectedWindow
+            ? {
+                windowId: selectedWindow._id,
+                scheduledFor: selectedWindow.scheduledFor,
+                scheduledDate: selectedWindow.scheduledDate,
+                occurrence: selectedWindow.occurrence,
+                timeZone: selectedWindow.timeZone,
+              }
+            : {}),
         });
 
       if (donationRecord) {
@@ -337,23 +356,27 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         );
       }
 
-      // Mark the participant's next scheduled window for this questionnaire as
-      // completed and link it to the response (best-effort — ad-hoc / unscheduled
-      // submissions simply have no window to close). The returned window tells
-      // us which scheduled occurrence this fill belongs to, which is carried
-      // into the graph below so recurring questionnaires can be analysed by
-      // study week rather than by calendar date.
+      // Close only the selected scheduled occurrence. Donation/ad-hoc fills
+      // never consume a scheduled window; concurrent duplicates are rejected.
+      // Keep the original occurrence/date for the research graph below.
       let window = null;
-      try {
+      if (selectedWindow) {
         window = await markWindowSubmitted({
           db: database,
           userId,
           questionnaireSlug,
           responseId: insertedId,
           submittedAt,
+          windowId: selectedWindow._id,
         });
-      } catch (err) {
-        log.error({ err }, '[questionnaire-responses] window link error');
+        if (!window) {
+          await database
+            .collection('form_responses')
+            .deleteOne({ _id: insertedId });
+          return res
+            .status(409)
+            .json({ error: 'This check-in was already completed.' });
+        }
       }
 
       const responseStudyId =

@@ -1945,4 +1945,39 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get achievementsLockedTag => 'Locked';
+
+  @override
+  String questionnaireDatedTitle(String title, String date) {
+    return '$title — $date';
+  }
+
+  @override
+  String questionnaireScheduledFor(String date) {
+    return 'Prévu pour le $date';
+  }
+
+  @override
+  String questionnaireAnswerForDate(String date) {
+    return 'Répondez pour le $date. Respectez les périodes de référence indiquées dans chaque question.';
+  }
+
+  @override
+  String get questionnaireStartCheckIn => 'Commencer';
+
+  @override
+  String questionnaireDeadline(String deadline) {
+    return 'Envoyer avant le $deadline';
+  }
+
+  @override
+  String questionnairePreviousCheckIns(int count) {
+    return 'Bilans précédents · $count en attente';
+  }
+
+  @override
+  String get questionnaireCompletedToday => 'Bilan du jour terminé';
+
+  @override
+  String get questionnaireCheckInUnavailable =>
+      'Ce bilan est déjà terminé ou son délai est dépassé. Revenez à vos tâches pour choisir un bilan disponible.';
 }

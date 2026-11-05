@@ -3469,6 +3469,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Locked'**
   String get achievementsLockedTag;
+
+  /// No description provided for @questionnaireDatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} — {date}'**
+  String questionnaireDatedTitle(String title, String date);
+
+  /// No description provided for @questionnaireScheduledFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled for {date}'**
+  String questionnaireScheduledFor(String date);
+
+  /// No description provided for @questionnaireAnswerForDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Please answer about {date}. Keep the reference periods stated in each question.'**
+  String questionnaireAnswerForDate(String date);
+
+  /// No description provided for @questionnaireStartCheckIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Start check-in'**
+  String get questionnaireStartCheckIn;
+
+  /// No description provided for @questionnaireDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit before {deadline}'**
+  String questionnaireDeadline(String deadline);
+
+  /// No description provided for @questionnairePreviousCheckIns.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous check-ins · {count} outstanding'**
+  String questionnairePreviousCheckIns(int count);
+
+  /// No description provided for @questionnaireCompletedToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s check-in completed'**
+  String get questionnaireCompletedToday;
+
+  /// No description provided for @questionnaireCheckInUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This check-in is already completed or its answer deadline has passed. Return to your tasks to choose an available check-in.'**
+  String get questionnaireCheckInUnavailable;
 }
 
 class _AppLocalizationsDelegate

@@ -2755,6 +2755,266 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /questionnaires:
+    get:
+      summary: List active questionnaire definitions
+      description: Returns all active questionnaire definitions (slug, title, description, version, question count).
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of active questionnaire definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    slug:
+                      type: string
+                      example: sliq
+                    title:
+                      type: string
+                    description:
+                      type: string
+                    version:
+                      type: string
+                    questionCount:
+                      type: integer
+        '401':
+          description: Missing or invalid JWT
+  /questionnaires/due:
+    get:
+      summary: The participant's due + upcoming scheduled questionnaires
+      description: >
+        Returns questionnaires due now or within the next 30 days for the authenticated participant, their reminder
+        settings, and their study's end date / end-of-study notification config (present even when no questionnaires are
+        currently due). Includes each active habit's per-week SRHI check-in (`questionnaireSlug: "srhi"`), which keeps
+        recurring for as long as the habit stays active.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Due questionnaires and study reminder/end-of-study config
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reminders:
+                    type: object
+                    description: Effective questionnaire-reminder config (group override, else study default)
+                    properties:
+                      mode:
+                        type: string
+                        enum:
+                          - 'off'
+                          - admin_fixed
+                      time:
+                        type: string
+                        nullable: true
+                        example: '09:00'
+                  questionnaires:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        windowId:
+                          type: string
+                        questionnaireSlug:
+                          type: string
+                        questionnaireTitle:
+                          type: string
+                        occurrence:
+                          type: integer
+                        scheduledFor:
+                          type: string
+                          format: date-time
+                        scheduledDate:
+                          type: string
+                          format: date
+                        closesAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        timeZone:
+                          type: string
+                        isLate:
+                          type: boolean
+                        isDue:
+                          type: boolean
+                  completedQuestionnaires:
+                    type: array
+                    description: Scheduled check-ins for today that have already been completed; never used for reminders.
+                    items:
+                      type: object
+                      properties:
+                        windowId:
+                          type: string
+                        questionnaireSlug:
+                          type: string
+                        questionnaireTitle:
+                          type: string
+                        scheduledDate:
+                          type: string
+                          format: date
+                        isCompleted:
+                          type: boolean
+                        intentionId:
+                          type: string
+                          nullable: true
+                          description: Present for habit-scoped items such as SRHI
+                  studyEndDate:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  endOfStudyNotification:
+                    type: object
+                    description: Effective mode/time merged with the study's title/body content
+                    properties:
+                      mode:
+                        type: string
+                        enum:
+                          - 'off'
+                          - admin_fixed
+                      time:
+                        type: string
+                        nullable: true
+                        example: '09:00'
+                      title:
+                        type: string
+                      body:
+                        type: string
+        '401':
+          description: Missing or invalid JWT
+  /questionnaires/{slug}:
+    get:
+      summary: Get a questionnaire definition by slug
+      description: Returns the full questionnaire definition including all questions and options.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: Questionnaire slug (e.g. sliq, rand-36)
+          example: sliq
+      responses:
+        '200':
+          description: Full questionnaire definition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  version:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          description: Missing or invalid JWT
+        '404':
+          description: Questionnaire not found
+  /questionnaire-responses:
+    post:
+      summary: Submit a questionnaire response
+      description: Saves the authenticated user's answers for a questionnaire to the form_responses MongoDB collection.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - questionnaireSlug
+                - answers
+              properties:
+                questionnaireSlug:
+                  type: string
+                  example: sliq
+                windowId:
+                  type: string
+                  description: >-
+                    Exact scheduled occurrence to answer; must belong to the participant, be due, and be within its
+                    answer deadline.
+                answers:
+                  type: object
+                  description: Map of questionId to answer value
+                  example:
+                    sliq_diet: '2'
+                    sliq_activity: '3'
+      responses:
+        '201':
+          description: Response saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          description: Missing required fields
+        '401':
+          description: Missing or invalid JWT
+        '409':
+          description: Questionnaire is scheduled but not currently due — already completed, or the next occurrence isn't open yet
+  /questionnaire-responses/me:
+    get:
+      summary: Get all questionnaire responses for the authenticated user
+      description: Returns all responses submitted by the authenticated user, ordered by most recent first.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of responses
+        '401':
+          description: Missing or invalid JWT
+  /questionnaire-responses/me/{slug}:
+    get:
+      summary: Get the most recent response for a specific questionnaire
+      description: Returns the most recent response submitted by the authenticated user for the given questionnaire slug.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: Questionnaire slug (e.g. sliq, rand-36)
+      responses:
+        '200':
+          description: The most recent response
+        '401':
+          description: Missing or invalid JWT
+        '404':
+          description: No response found for this slug
   /onboarding/redeem-code:
     post:
       summary: Redeem a study enrollment code

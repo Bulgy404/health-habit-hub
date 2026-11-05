@@ -20,13 +20,85 @@ class QuestionnaireScreen extends ConsumerWidget {
   /// habit donation — see [QuestionnaireFormWidget.habitUuid].
   final String? habitUuid;
 
+  /// Selected scheduled occurrence, distinct from ad-hoc donation forms.
+  final String? windowId;
+  final String? scheduledDate;
+
   /// Creates a [QuestionnaireScreen] for [slug].
-  const QuestionnaireScreen({super.key, required this.slug, this.habitUuid});
+  const QuestionnaireScreen({
+    super.key,
+    required this.slug,
+    this.habitUuid,
+    this.windowId,
+    this.scheduledDate,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final definitionAsync = ref.watch(questionnaireProvider(slug));
     final l10n = AppLocalizations.of(context)!;
+    if (habitUuid == null && windowId == null) {
+      final due = ref.watch(dueQuestionnairesProvider);
+      return due.when(
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        error: (_, _) => Scaffold(
+          body: Center(
+            child: FilledButton(
+              onPressed: () => ref.invalidate(dueQuestionnairesProvider),
+              child: Text(l10n.retry),
+            ),
+          ),
+        ),
+        data: (items) {
+          final eligible =
+              items.where((q) => q.slug == slug && q.isDue).toList()..sort(
+                (a, b) => (b.scheduledFor ?? DateTime(1970)).compareTo(
+                  a.scheduledFor ?? DateTime(1970),
+                ),
+              );
+          if (eligible.isEmpty) {
+            final assigned = ref.watch(participantQuestionnairesProvider);
+            // Unscheduled questionnaires remain available through Profile.
+            if (assigned.isLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final adHoc =
+                assigned.value?.any((q) => q.slug == slug && q.available) ??
+                false;
+            if (adHoc) {
+              return Scaffold(
+                appBar: AppBar(title: Text(l10n.questionnaireFallbackTitle)),
+                body: definitionAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, _) =>
+                      Center(child: Text(l10n.failedToLoadQuestionnaire)),
+                  data: (definition) => QuestionnaireFormWidget(
+                    definition: definition,
+                    onSubmitted: () => context.pushReplacement(
+                      '/questionnaire/$slug/confirmation',
+                    ),
+                  ),
+                ),
+              );
+            }
+            return Scaffold(
+              appBar: AppBar(title: Text(l10n.questionnaireFallbackTitle)),
+              body: Center(child: Text(l10n.questionnaireCheckInUnavailable)),
+            );
+          }
+          final selected = eligible.first;
+          return QuestionnaireScreen(
+            slug: slug,
+            windowId: selected.windowId,
+            scheduledDate: selected.scheduledDate,
+          );
+        },
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -61,6 +133,8 @@ class QuestionnaireScreen extends ConsumerWidget {
         data: (definition) => QuestionnaireFormWidget(
           definition: definition,
           habitUuid: habitUuid,
+          windowId: windowId,
+          scheduledDate: scheduledDate,
           onSubmitted: () => context.pushReplacement(
             habitUuid != null
                 ? '/questionnaire/$slug/confirmation?habitUuid=$habitUuid'

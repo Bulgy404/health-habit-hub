@@ -1919,4 +1919,39 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get achievementsLockedTag => 'Locked';
+
+  @override
+  String questionnaireDatedTitle(String title, String date) {
+    return '$title — $date';
+  }
+
+  @override
+  String questionnaireScheduledFor(String date) {
+    return 'Gepland voor $date';
+  }
+
+  @override
+  String questionnaireAnswerForDate(String date) {
+    return 'Beantwoord deze check-in voor $date. Houd de referentieperioden in elke vraag aan.';
+  }
+
+  @override
+  String get questionnaireStartCheckIn => 'Check-in starten';
+
+  @override
+  String questionnaireDeadline(String deadline) {
+    return 'Indienen vóór $deadline';
+  }
+
+  @override
+  String questionnairePreviousCheckIns(int count) {
+    return 'Eerdere check-ins · $count openstaand';
+  }
+
+  @override
+  String get questionnaireCompletedToday => 'Check-in van vandaag voltooid';
+
+  @override
+  String get questionnaireCheckInUnavailable =>
+      'Deze check-in is al voltooid of de deadline is verstreken. Ga terug naar je taken om een beschikbare check-in te kiezen.';
 }

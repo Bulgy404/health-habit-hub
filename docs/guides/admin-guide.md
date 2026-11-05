@@ -256,14 +256,27 @@ Questionnaires are linked to participants through studies, on a single unified *
 
 **Step 1.** Navigate to **Studies** in the sidebar, and open an existing study or create a new one.
 
-**Step 2.** Open the **Questionnaires** tab. Every questionnaire (library and custom) is listed with an on/off toggle. **Nothing is on by default** — an admin must explicitly turn each one on for the study, including SLIQ, RAND-36, and SRHI.
+**Step 2.** Open the **Questionnaires** tab. Every questionnaire (library and custom) is listed with an on/off toggle. **Nothing is on by default** — an admin must explicitly turn each one on for the study, including SLIQ and RAND-36. SRHI has a separate automatic habit check-in flow and is not assigned here.
 
 **Step 3.** Turn a questionnaire **on**. This reveals an inline cadence editor for it:
 
 - **Recurring interval or fixed study weeks/days**, same options as before (e.g. every 7 days, or baseline/week 4/week 8).
 - For study-scoped questionnaires, an editable **"First due" (days after enrollment)** field.
-- For habit-scoped questionnaires (e.g. SRHI), no "first due" field — a note explains the first check-in is delivered automatically ~5 seconds after the participant creates a habit, and the questionnaire applies once per habit rather than once per participant.
+- For habit-scoped questionnaires (custom habit instruments), no "first due" field — a note explains the first check-in is delivered automatically ~5 seconds after the participant creates a habit, and the questionnaire applies once per habit rather than once per participant.
 - A **"Continuous (no end date)"** checkbox — check this instead of setting a fixed occurrence count to keep delivering the questionnaire indefinitely (e.g. an ongoing weekly check-in with no planned end). Up to 12 upcoming occurrences are kept scheduled at a time and topped up automatically as participants complete them.
+
+**Late answers and dates.** In **Details**, choose **Scheduled day only**,
+**Allow for a limited time** (1–365 additional calendar days), or **Allow without
+a deadline**. Confirm the **Schedule timezone** using an IANA name such as
+`Europe/Berlin`. The deadline is midnight after the last allowed calendar day;
+participants still answer for the original scheduled date, following the reference
+periods stated in each question. A group override has its own answer policy.
+
+For an existing assignment, use **Preview effect on outstanding check-ins** to see
+how many would become missed or reopen before saving. The change applies to
+already unanswered check-ins too. Existing assignments keep unlimited late answers
+until changed; new assignments default to scheduled-day-only. Missed occurrences
+remain visible in participant progress, but disappear from participant tasks.
 
 **Step 4.** Click **Save** on the cadence editor to confirm the schedule — participants enrolled in the study will see the questionnaire according to that cadence. Turning the toggle off again deactivates it (windows stop being generated) without losing the configured cadence, so it's easy to re-enable later.
 

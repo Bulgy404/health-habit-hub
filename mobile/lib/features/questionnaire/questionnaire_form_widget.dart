@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +23,8 @@ class QuestionnaireFormWidget extends ConsumerStatefulWidget {
   /// When set, identifies this as a post-donation questionnaire fill tied to
   /// one specific habit donation — see [QuestionnaireService.submitResponse].
   final String? habitUuid;
+  final String? windowId;
+  final String? scheduledDate;
 
   /// Creates a [QuestionnaireFormWidget].
   const QuestionnaireFormWidget({
@@ -29,6 +32,8 @@ class QuestionnaireFormWidget extends ConsumerStatefulWidget {
     required this.definition,
     required this.onSubmitted,
     this.habitUuid,
+    this.windowId,
+    this.scheduledDate,
   });
 
   @override
@@ -55,7 +60,7 @@ class _QuestionnaireFormWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final slug = widget.definition.slug;
+    final slug = widget.windowId ?? widget.habitUuid ?? widget.definition.slug;
     final formState = ref.watch(questionnaireFormProvider(slug));
     final notifier = ref.read(questionnaireFormProvider(slug).notifier);
     final questions = widget.definition.questions;
@@ -67,6 +72,18 @@ class _QuestionnaireFormWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.scheduledDate != null)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              AppLocalizations.of(context)!.questionnaireAnswerForDate(
+                DateFormat.yMMMMEEEEd(
+                  Localizations.localeOf(context).toString(),
+                ).format(DateTime.parse(widget.scheduledDate!)),
+              ),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
         _ProgressHeader(current: currentIdx + 1, total: total),
         Expanded(
           child: SingleChildScrollView(
@@ -201,6 +218,7 @@ class _QuestionnaireFormWidgetState
         questionnaireSlug: widget.definition.slug,
         answers: answers,
         habitUuid: widget.habitUuid,
+        windowId: widget.windowId,
       );
       if (!mounted) return;
       notifier.reset();
@@ -221,7 +239,7 @@ class _QuestionnaireFormWidgetState
       setState(() {
         _isSubmitting = false;
         _error = err.response?.statusCode == 409
-            ? l10n.questionnaireAlreadyCompleted
+            ? l10n.questionnaireCheckInUnavailable
             : l10n.submissionFailed;
       });
     } catch (_) {

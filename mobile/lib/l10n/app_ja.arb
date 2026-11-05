@@ -1579,5 +1579,13 @@
   "progressSection": "Progress",
   "achievementsTitle": "Achievements",
   "achievementsSubtitle": "Badges you've earned, and badges still to unlock.",
-  "achievementsLockedTag": "Locked"
+  "achievementsLockedTag": "Locked",
+  "questionnaireDatedTitle": "{title} — {date}",
+  "questionnaireScheduledFor": "予定日：{date}",
+  "questionnaireAnswerForDate": "{date}について回答してください。各質問に記載された対象期間に従ってください。",
+  "questionnaireStartCheckIn": "回答を開始",
+  "questionnaireDeadline": "提出期限：{deadline}より前",
+  "questionnairePreviousCheckIns": "過去のチェックイン · 未回答{count}件",
+  "questionnaireCompletedToday": "今日のチェックインは完了しました",
+  "questionnaireCheckInUnavailable": "このチェックインは完了済みか、回答期限を過ぎています。タスクに戻り、回答可能なチェックインを選んでください。"
 }

@@ -399,7 +399,8 @@
     "exportSelected": "Export selected (CSV)",
     "deleteSelected": "Delete selected",
     "confirmBulkAnonymise": "Anonymise {count} selected participants? This cannot be undone.",
-    "bulkParticipantsCreated": "{count} participants created"
+    "bulkParticipantsCreated": "{count} participants created",
+    "missed": "Missed"
   },
   "cuePools": {
     "title": "Cue Pools",
@@ -1048,7 +1049,19 @@
         "deleteFailed": "Failed to delete assignment",
         "noTimeSlots": "Add at least one week or day before saving.",
         "missingInterval": "Set an interval (days) before saving."
-      }
+      },
+      "lateAnswers": "Late answers",
+      "lateNone": "Scheduled day only",
+      "lateLimited": "Allow for a limited time",
+      "lateUnlimited": "Allow without a deadline",
+      "lateDays": "Additional calendar days",
+      "timezone": "Schedule timezone (e.g. Europe/Berlin)",
+      "invalidTimezone": "Enter a valid timezone, such as Europe/Berlin.",
+      "lateHint": "Check-ins close at the end of the scheduled day plus any additional days, in this timezone. Answers always refer to the original scheduled date. Expired check-ins are recorded as missed.",
+      "lateExistingHint": "Saving applies this policy to existing unanswered check-ins too. Shortening the deadline can remove them from participant tasks; extending it can reopen them.",
+      "previewPolicy": "Preview effect on outstanding check-ins",
+      "policyImpact": "{newlyMissed} check-ins will become missed; {reopened} will reopen.",
+      "invalidLateDays": "Enter a whole number of additional days between 1 and 365."
     },
     "codesTab": {
       "allocationTitle": "Group allocation",

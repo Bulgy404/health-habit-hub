@@ -1056,10 +1056,20 @@ Questionnaire responses submitted by participants via `POST /api/v1/questionnair
 | `userId`            | String    | Yes      | Keycloak `sub` of the submitting participant                                                                                                                                                                                                                                                                                                               |
 | `questionnaireSlug` | String    | Yes      | Slug of the completed questionnaire                                                                                                                                                                                                                                                                                                                        |
 | `answers`           | Object    | Yes      | Map of `questionId → answer value`                                                                                                                                                                                                                                                                                                                         |
-| `submitted_at`      | Date      | Yes      | Timestamp of submission                                                                                                                                                                                                                                                                                                                                    |
+| `submittedAt`      | Date      | Yes      | Timestamp of submission                                                                                                                                                                                                                                                                                                                                    |
 | `habitUuid`         | String    | No       | Only present for a post-donation questionnaire fill (see `habit_donations` below) — the same `uuid` as the donated habit's Neo4j `Habit` node. Set only after server-side verification that the caller owns a matching, not-yet-answered `habit_donations` record for that slug; a submission carrying an invalid/reused `habitUuid` is stored without it. |
 
-Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at router startup.
+Scheduled responses also store these fields (absent from legacy and ad-hoc responses):
+
+| Field | BSON type | Meaning |
+| --- | --- | --- |
+| `windowId` | ObjectId | The exact completed `questionnaire_windows._id` |
+| `scheduledFor` | Date | Original due instant of that occurrence |
+| `scheduledDate` | String | Original calendar date (`YYYY-MM-DD`) in the assignment timezone |
+| `timeZone` | String | IANA timezone used to interpret the scheduled date |
+| `occurrence` | Int | 1-based occurrence number within the assignment |
+
+Compound index on `(userId, questionnaireSlug, submittedAt DESC)` is created at router startup.
 
 **Example document:**
 
@@ -1072,27 +1082,22 @@ Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at
     "sliq_diet": "2",
     "sliq_activity": "3"
   },
-  "submitted_at": { "$date": "2026-03-20T10:00:00Z" }
+  "submittedAt": { "$date": "2026-03-20T10:00:00Z" }
 }
 ```
 
-On submission the response is also linked to the participant's next open
-`questionnaire_windows` entry for that questionnaire (marking that scheduled
-timepoint complete). Ad-hoc submissions with no matching window simply store the
-response without linking.
+On submission, `selectQuestionnaireWindow` validates that the selected `windowId`
+belongs to the authenticated participant and questionnaire, is due, is unanswered,
+and is within the assignment's answer deadline. `markWindowSubmitted` closes that
+specific occurrence with an open-state guard; another request cannot complete it
+twice. Legacy clients omitting `windowId` select the latest eligible occurrence.
+An invalid window ID is rejected with `400`; an unavailable occurrence with `409`.
+The selected date is stored alongside the actual `submittedAt`, so late answers can
+be analysed for their original scheduled day rather than their submission day.
 
-**Resubmission is rejected, not just hidden.** Before inserting, the handler
-calls `getQuestionnaireCompletionStatus` (see `questionnaire_windows` below):
-if the slug has ever had a window but none is currently open-and-due, the
-request is rejected with `409` — answers can't be changed once a window
-closes, and a new submission isn't accepted until the next occurrence's
-window opens. A slug that has never had any window (an ad-hoc questionnaire
-outside the assignment/window system) is left ungated, matching its previous
-always-open behaviour. This is enforced server-side, independent of the
-Flutter app's greyed-out UI — a stale client cache can't bypass it. A verified
-post-donation submission (a valid `habitUuid`, see `habit_donations` below)
-always bypasses this check outright — it's a one-off ad-hoc fill by
-construction, never scheduled.
+Questionnaires with no scheduled windows remain available for ad-hoc submission.
+Verified post-donation submissions bypass scheduling and never close a scheduled
+window. See `habit_donations` below for donation ownership checks.
 
 ---
 
@@ -1254,6 +1259,26 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 | `active`                  | Boolean          | Yes      | The single on/off flag for this questionnaire in this study — gates both availability and whether windows are generated. Never defaulted `true` automatically; an admin must explicitly turn it on. |
 | `createdAt` / `updatedAt` | Date             | Yes      | Timestamps                                                                                                                                                                                          |
 
+**Answer policy.** Optional `responsePolicy: { lateDays, timeZone }` is stored on
+this assignment, independently of the questionnaire definition and cadence:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `responsePolicy.lateDays` | Integer or null | `0`: scheduled day only; `1`–`365`: additional calendar days; `null`: unlimited late completion |
+| `responsePolicy.timeZone` | String | Valid IANA timezone; default `Europe/Berlin` |
+
+A new assignment defaults to `{ lateDays: 0, timeZone: "Europe/Berlin" }`.
+Missing policies on existing assignments preserve unlimited late completion.
+Deadlines are exclusive midnight boundaries after the scheduled day plus the
+configured additional days, calculated in the assignment timezone, including DST.
+For example, 5 November 2026 plus two days in `Europe/Berlin` closes at
+8 November 00:00 CET (`2026-11-07T23:00:00Z`).
+
+Policy edits apply to existing unanswered windows. A shortened deadline can mark
+occurrences missed; extending it can reopen them. The authenticated admin endpoint
+`POST .../questionnaire-assignments/:assignmentId/response-policy-preview` accepts
+`{ responsePolicy }` and returns `{ newlyMissed, reopened }` without modifying data.
+
 **Cadence** is one of two shapes:
 
 - **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences, continuous? }`. Due dates = `anchor + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1` (see **Scope & anchor** below for what "anchor" means). When `continuous: true`, `occurrences` is ignored and windows are generated on a rolling basis instead of a fixed count — see **Continuous delivery** below.
@@ -1264,7 +1289,7 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 - `scope: 'study'` (default) — anchored at the participant's **enrollment**. `startOffsetDays` ("first due") is admin-editable. Windows are generated per participant (`intentionId: null`).
 - `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below), via `generateHabitCreationWindows`. SRHI is _not_ an assignment at all — see the note in `questionnaires` above — it uses a completely separate, unconditional pipeline (`srhiService.generateWindows`, writing to `srhi_responses`) invoked directly by `POST /habits/intentions`, with no `questionnaire_assignments` row and no scope check.
 
-**Continuous delivery.** A `continuous: true` interval cadence never generates all its windows upfront — only a rolling buffer capped at 12 future/open windows at a time (`CONTINUOUS_TOPUP_CAP`). The buffer is topped back up to 12 opportunistically whenever a window is submitted (`markWindowSubmitted`) or when the participant's due-list is read (`getDueQuestionnaires`), extending from the last existing window's `scheduledFor` rather than recomputing from the original enrollment/habit-creation date.
+**Continuous delivery.** A `continuous: true` interval cadence never generates all its windows upfront — only a rolling buffer capped at 12 future unanswered windows at a time (`CONTINUOUS_TOPUP_CAP`). Overdue windows do not consume this future buffer. Catch-up generation preserves missed occurrences rather than skipping them. The buffer is topped back up to 12 opportunistically whenever a window is submitted (`markWindowSubmitted`) or when the participant's due-list is read (`getDueQuestionnaires`), extending from the last existing window's `scheduledFor` rather than recomputing from the original enrollment/habit-creation date.
 
 A group-scoped assignment for a questionnaire overrides the study-wide
 assignment for that same questionnaire. Unique index on
@@ -1281,6 +1306,7 @@ assignment for that same questionnaire. Unique index on
   "questionnaireSlug": "sliq",
   "questionnaireTitle": "Simple Lifestyle Indicator Questionnaire",
   "cadence": { "mode": "fixed", "weeks": [0, 4, 8], "days": [3] },
+  "responsePolicy": { "lateDays": 2, "timeZone": "Europe/Berlin" },
   "active": true,
   "createdAt": { "$date": "2026-03-01T09:00:00Z" },
   "updatedAt": { "$date": "2026-03-01T09:00:00Z" }
@@ -1315,6 +1341,16 @@ assignment is newly created/activated.
 | `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset` for study-scoped, or habit `createdAt + ~5s + offset` for habit-scoped windows)                                                                |
 | `submittedAt`       | Date \| null     | Yes      | When completed (null = open)                                                                                                                                                   |
 | `responseId`        | ObjectId \| null | Yes      | Ref to the `form_responses` entry it was answered with                                                                                                                         |
+
+`submittedAt: null` means unanswered, which can be upcoming, answerable, or
+missed; it no longer implies the occurrence can be completed. On read,
+`questionnaireResponsePolicy.js` derives `status` (`upcoming`, `open`, `missed`,
+`completed`), `scheduledDate`, `closesAt`, `timeZone`, and `isLate` from the current
+assignment policy. These derived fields are not persisted on the window, and no
+expiry job or data deletion is required. Admin participant progress includes the
+status. `GET /questionnaires/due` omits expired occurrences and includes scheduling
+context for answerable/upcoming ones; completed occurrences scheduled for today
+are returned separately as `completedQuestionnaires`, outside the reminder list.
 
 Unique index on `(userId, assignmentId, occurrence, intentionId)` — `intentionId` is part
 of the key so a habit-scoped questionnaire's per-habit window series (multiple occurrences

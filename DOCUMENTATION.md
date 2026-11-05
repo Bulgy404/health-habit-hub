@@ -1456,10 +1456,27 @@ assignment's cadence anchors to, not a separate per-assignment flag:
   actually created a relevant habit — see `docs/data-model.md` → `questionnaires` /
   `questionnaire_windows` for the exact visibility rule.
 
-Submitting a response marks the next open window complete. Completion is shown as
+Submitting a response completes the selected scheduled occurrence (`windowId`). Older clients without a window ID complete the latest eligible occurrence. Completion is shown as
 **completed / total** per questionnaire (the count reflects *submitted* windows, not merely
 scheduled ones) in the study's Questionnaires tab, and per-occurrence with an exact timestamp
 (`t("doneOn")`) in a participant's Progress modal.
+
+**Late-answer policy (Studies → Questionnaires → Details).** Each study-wide or group assignment
+has `responsePolicy: { lateDays, timeZone }`: `lateDays: 0` permits answers on the scheduled day
+only; 1–365 adds calendar days; `null` allows unlimited late completion. Deadlines are exclusive
+midnight boundaries in the assignment's IANA timezone (default `Europe/Berlin`), including daylight
+saving changes. New assignments default to scheduled-day-only. Existing assignments without a
+policy retain unlimited late completion until an admin changes them. A preview reports how many
+outstanding occurrences would expire or reopen before saving; changes apply to existing unanswered
+windows too. Expired windows remain in the database and are reported as `missed` in participant
+progress, but cannot be submitted and disappear from participant tasks.
+
+Share shows dated current check-ins, completed-today confirmations, and a collapsed Previous
+check-ins section for permitted late answers. The original scheduled date remains visible inside
+the form. Answers refer to that date while preserving each question's original reference period.
+Responses store `windowId`, `scheduledFor`, `scheduledDate`, `timeZone`, `occurrence`, and the actual
+`submittedAt`; concurrent/repeated submissions cannot complete an occurrence twice. Continuous
+schedules replenish even when previous occurrences expire without being answered.
 
 **Completed questionnaires can't be resubmitted, and the Flutter app reflects this.** A
 questionnaire is only fillable while it has an open `questionnaire_windows` entry due now

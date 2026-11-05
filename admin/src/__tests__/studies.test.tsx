@@ -316,3 +316,56 @@ describe("StudiesPage — Knowledge tab", () => {
     });
   });
 });
+
+it("previews and saves a limited late-answer policy on an existing assignment", async () => {
+  const user = userEvent.setup();
+  const assignment = {
+    id: "assignment-1",
+    questionnaireId: "q-1",
+    questionnaireSlug: "sliq",
+    questionnaireTitle: "SLIQ",
+    groupId: null,
+    active: true,
+    occurrences: 8,
+    cadence: { mode: "interval", intervalDays: 1, occurrences: 8 },
+    cadenceSummary: "8× daily",
+    responsePolicy: { lateDays: null, timeZone: "Europe/Berlin" },
+  };
+  (global.fetch as jest.Mock).mockImplementation(async (input: string, options?: RequestInit) => {
+    let body: unknown = [];
+    if (String(input).endsWith("/response-policy-preview")) body = { newlyMissed: 3, reopened: 0 };
+    else if (String(input).includes("questionnaire-assignments"))
+      body = { assignments: [assignment], completion: [] };
+    else if (String(input).includes("questionnaire-calendar")) body = { calendar: [] };
+    else if (String(input).includes("/questionnaires?"))
+      body = [{ id: "q-1", slug: "sliq", title: { en: "SLIQ" }, active: true, isLibrary: true }];
+    else if (String(input).includes("/studies")) body = [mockStudy];
+    return { ok: true, json: async () => body };
+  });
+  render(<StudiesPage />);
+  await user.click(await screen.findByText("Study A"));
+  await user.click(await screen.findByRole("button", { name: /^questionnaires$/i }));
+  await user.click((await screen.findAllByRole("button", { name: /^details$/i })).at(-1)!);
+  const lateAnswers = await screen.findByLabelText("Late answers");
+  expect(lateAnswers).toHaveValue("unlimited");
+  await user.selectOptions(lateAnswers, "limited");
+  const days = screen.getByLabelText("Additional calendar days");
+  await user.clear(days);
+  await user.type(days, "2");
+  await user.click(screen.getByRole("button", { name: /preview effect/i }));
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "3 check-ins will become missed; 0 will reopen."
+  );
+  const saves = screen.getAllByRole("button", { name: /^save$/i });
+  await user.click(saves[0]);
+  await waitFor(() => {
+    expect(
+      (global.fetch as jest.Mock).mock.calls.some(
+        ([url, opts]) =>
+          String(url).endsWith("/questionnaire-assignments/assignment-1") &&
+          opts?.method === "PUT" &&
+          JSON.parse(opts.body).responsePolicy.lateDays === 2
+      )
+    ).toBe(true);
+  });
+});

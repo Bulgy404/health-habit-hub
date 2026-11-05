@@ -189,6 +189,8 @@ const options = {
     path.join(__dirname, 'routes', 'habitsRouter.js'),
     path.join(__dirname, 'routes', 'recommendRouter.js'),
     path.join(__dirname, 'routes', 'profileRouter.js'),
+    path.join(__dirname, 'routes', 'questionnairesRouter.js'),
+    path.join(__dirname, 'routes', 'questionnaireResponsesRouter.js'),
     path.join(__dirname, 'routes', 'studyEnrollRouter.js'),
   ],
 };

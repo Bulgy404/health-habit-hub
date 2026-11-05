@@ -9,6 +9,7 @@ library;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -155,6 +156,13 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// A "today's task" card for a scheduled questionnaire that is currently due.
   Widget _questionnaireTaskCard(DueQuestionnaire q) {
     final l10n = AppLocalizations.of(context)!;
+    final date = q.scheduledDate != null
+        ? DateTime.tryParse(q.scheduledDate!)
+        : q.scheduledFor?.toLocal();
+    final dateLabel = date == null
+        ? ''
+        : DateFormat.yMMMMEEEEd(Localizations.localeOf(context).toString())
+              .format(date);
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF4F46E5),
@@ -176,7 +184,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            q.title,
+            dateLabel.isEmpty
+                ? q.title
+                : l10n.questionnaireDatedTitle(q.title, dateLabel),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -186,13 +196,22 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            l10n.donateQuestionnaireDueSubtitle,
+            q.isLate
+                ? l10n.questionnaireAnswerForDate(dateLabel)
+                : l10n.questionnaireScheduledFor(dateLabel),
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
+          if (q.closesAt != null)
+            Text(
+              l10n.questionnaireDeadline(
+                '${DateFormat.yMMMd(Localizations.localeOf(context).toString()).add_Hm().format(q.closesAt!.toLocal())} (${q.closesAt!.toLocal().timeZoneName})',
+              ),
+              style: const TextStyle(color: Colors.white),
+            ),
           const SizedBox(height: 14),
           PressableScale(
             onTap: () async {
-              await context.push('/questionnaire/${q.slug}');
+              await context.push(q.route);
               if (mounted) ref.invalidate(dueQuestionnairesProvider);
             },
             child: Container(
@@ -202,7 +221,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 borderRadius: BorderRadius.circular(100),
               ),
               child: Text(
-                l10n.donateCompleteButton,
+                q.isLate
+                    ? l10n.donateCompleteButton
+                    : l10n.questionnaireStartCheckIn,
                 style: const TextStyle(
                   color: Color(0xFF4F46E5),
                   fontWeight: FontWeight.w800,
@@ -315,18 +336,16 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 const SizedBox(width: 8),
                 Text(
                   l10n.donateWhyShareTitle,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               l10n.donateWhyShareBody,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(height: 1.45),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(height: 1.45),
             ),
             const SizedBox(height: 8),
             InkWell(
@@ -334,12 +353,14 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    l10n.readMoreAboutProject,
-                    style: const TextStyle(
-                      color: Color(0xFF45B700),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                  Flexible(
+                    child: Text(
+                      l10n.readMoreAboutProject,
+                      style: const TextStyle(
+                        color: Color(0xFF45B700),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -535,9 +556,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         if (statusCode == 401) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.donateUnauthorized)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.donateUnauthorized)));
           return;
         }
         if (statusCode == 502 || statusCode == 503) {
@@ -546,17 +566,15 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           );
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     } catch (e) {
       debugPrint('ShareHabitScreen._submit: $e');
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     }
   }
@@ -578,6 +596,15 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             .toList() ??
         const <DueQuestionnaire>[];
 
+    final completedCheckIns =
+        ref
+            .watch(dueQuestionnairesProvider)
+            .value
+            ?.where((q) => q.isCompleted)
+            .toList() ??
+        const <DueQuestionnaire>[];
+    final currentCheckIns = dueList.where((q) => !q.isLate).toList();
+    final previousCheckIns = dueList.where((q) => q.isLate).toList();
     final myHabits = ref.watch(myStatsProvider).value?.habits ?? const [];
     final shareCounts = _shareCountsFromHabits(myHabits);
     final sharedToday = myHabits.any(
@@ -597,9 +624,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             // ── Share activity graph ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: ContributionGraphWidget(
-                counts: shareCounts,
-              ),
+              child: ContributionGraphWidget(counts: shareCounts),
             ),
             // ── Today's tasks ─────────────────────────────────────────────────
             Padding(
@@ -631,10 +656,33 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               ),
             ),
             // A card per questionnaire that is currently due.
-            for (final q in dueList)
+            for (final q in currentCheckIns)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: _questionnaireTaskCard(q),
+              ),
+
+            for (final q in completedCheckIns)
+              ListTile(
+                leading: Icon(
+                  AppIcons.success,
+                  color: context.appColors.primary,
+                ),
+                title: Text(q.title),
+                subtitle: Text(l10n.questionnaireCompletedToday),
+              ),
+            if (previousCheckIns.isNotEmpty)
+              ExpansionTile(
+                title: Text(
+                  l10n.questionnairePreviousCheckIns(previousCheckIns.length),
+                ),
+                children: [
+                  for (final q in previousCheckIns.reversed)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: _questionnaireTaskCard(q),
+                    ),
+                ],
               ),
 
             // ── Why share? ────────────────────────────────────────────────────

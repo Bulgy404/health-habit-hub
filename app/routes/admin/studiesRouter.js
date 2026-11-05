@@ -1,3 +1,4 @@
+import { windowAvailability } from '../../services/questionnaireResponsePolicy.js';
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { isStudyScoped, isPrivileged } from '../../middleware/roles.js';
@@ -732,7 +733,7 @@ export function createStudiesRouter({
     validate(createQuestionnaireAssignmentSchema),
     async (req, res) => {
       try {
-        const { questionnaireId, groupId, cadence } = req.body;
+        const { questionnaireId, groupId, cadence, responsePolicy } = req.body;
         const database = await getDb();
         await assertStudyResource(
           database,
@@ -746,6 +747,7 @@ export function createStudiesRouter({
           groupId: groupId ?? null,
           questionnaireId,
           cadence,
+          responsePolicy,
           neo4jRun,
         });
         if (result.notFound)
@@ -769,6 +771,54 @@ export function createStudiesRouter({
         res
           .status(err.status || 500)
           .json({ error: err.status ? err.message : 'Internal server error' });
+      }
+    }
+  );
+
+  router.post(
+    '/studies/:id/questionnaire-assignments/:assignmentId/response-policy-preview',
+    validate(updateQuestionnaireAssignmentSchema),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const assignment = await database
+          .collection('questionnaire_assignments')
+          .findOne({
+            _id: new ObjectId(req.params.assignmentId),
+            studyId: new ObjectId(req.params.id),
+          });
+        if (!assignment)
+          return res.status(404).json({ error: 'Assignment not found' });
+        if (!req.body.responsePolicy)
+          return res.status(400).json({ error: 'Response policy required' });
+        const windows = await database
+          .collection('questionnaire_windows')
+          .find({
+            assignmentId: assignment._id,
+            submittedAt: null,
+          })
+          .toArray();
+        const now = new Date();
+        let newlyMissed = 0,
+          reopened = 0;
+        for (const w of windows) {
+          const before = windowAvailability(
+            w,
+            assignment.responsePolicy,
+            now
+          ).status;
+          const after = windowAvailability(
+            w,
+            req.body.responsePolicy,
+            now
+          ).status;
+          if (before === 'open' && after === 'missed') newlyMissed++;
+          if (before === 'missed' && after === 'open') reopened++;
+        }
+        res.json({ newlyMissed, reopened });
+      } catch (err) {
+        log.error({ err }, 'response policy preview error');
+        res.status(500).json({ error: 'Could not preview response policy' });
       }
     }
   );

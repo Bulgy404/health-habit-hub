@@ -399,7 +399,8 @@
     "exportSelected": "Selectie exporteren (CSV)",
     "deleteSelected": "Selectie verwijderen",
     "confirmBulkAnonymise": "{count} geselecteerde deelnemers anonimiseren? Dit kan niet ongedaan worden gemaakt.",
-    "bulkParticipantsCreated": "{count} deelnemers aangemaakt"
+    "bulkParticipantsCreated": "{count} deelnemers aangemaakt",
+    "missed": "Gemist"
   },
   "cuePools": {
     "title": "Cue-pools",
@@ -997,7 +998,19 @@
         "deleteFailed": "Toewijzing kon niet worden verwijderd",
         "noTimeSlots": "Voeg minstens één week of dag toe voordat je opslaat.",
         "missingInterval": "Stel een interval (dagen) in voordat je opslaat."
-      }
+      },
+      "lateAnswers": "Late antwoorden",
+      "lateNone": "Alleen op de geplande dag",
+      "lateLimited": "Voor beperkte tijd toestaan",
+      "lateUnlimited": "Zonder deadline toestaan",
+      "lateDays": "Extra kalenderdagen",
+      "timezone": "Tijdzone (bijv. Europe/Berlin)",
+      "invalidTimezone": "Voer een geldige tijdzone in, bijvoorbeeld Europe/Berlin.",
+      "lateHint": "Check-ins sluiten aan het einde van de geplande dag plus de extra dagen, in deze tijdzone. Antwoorden gaan altijd over de oorspronkelijke datum. Verlopen check-ins worden als gemist geregistreerd.",
+      "lateExistingHint": "Deze regel geldt ook voor bestaande onbeantwoorde check-ins. Een kortere termijn kan ze uit taken verwijderen; een langere termijn kan ze heropenen.",
+      "previewPolicy": "Effect op openstaande check-ins bekijken",
+      "policyImpact": "{newlyMissed} check-ins worden gemist; {reopened} worden heropend.",
+      "invalidLateDays": "Voer een geheel aantal extra dagen tussen 1 en 365 in."
     },
     "codesTab": {
       "allocationTitle": "Groepstoewijzing",

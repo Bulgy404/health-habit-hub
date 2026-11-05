@@ -102,6 +102,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Per-assignment late-answer settings for scheduled questionnaires: scheduled day
+  only, 1–365 additional calendar days, or unlimited completion, with an explicit
+  timezone and an admin preview of check-ins that would expire or reopen ([#70](https://github.com/Bulgy404/health-habit-hub/issues/70)).
+  Existing assignments retain unlimited late answers until edited; new assignments
+  default to scheduled-day-only.
+
 - German and English long promo films on the participant and researcher pages,
   shown inside an orange iPhone frame with muted playback after two seconds
   and optional subtitles. The GitHub README includes the two English previews.
@@ -153,6 +159,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Changed
+
+- Questionnaire cards and forms show the original scheduled date. Current tasks
+  and completed-today confirmations are separate from a collapsed Previous
+  check-ins section; expired occurrences appear as missed in admin progress ([#70](https://github.com/Bulgy404/health-habit-hub/issues/70)).
 
 - Move app UI and tests to the standalone Material/Cupertino libraries and
   Google Fonts 9, retaining the Figtree themes and Duo adaptive layouts. Use
@@ -229,6 +239,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     switching needs a backend change first.
 
 ### Fixed
+
+- Questionnaire submissions now complete the selected occurrence instead of
+  consuming the oldest unanswered check-in. Responses retain the scheduled date,
+  occurrence, timezone, and actual submission timestamp. Expired, foreign, and
+  already completed occurrences are rejected. Continuous schedules keep advancing
+  even when earlier check-ins remain unanswered ([#70](https://github.com/Bulgy404/health-habit-hub/issues/70)).
 
 - Researchers could not load the activity-type catalog on a study's
   **Habit Creation** tab. The catalog was admin-only, so for everyone else
